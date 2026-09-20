@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Simulator-only vehicle and battery identity bound to a run-local simulation profile manifest. ai_compatible must remain false; no existing X500 model support or C9 connection is implied.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "drone.observation.metadata/3.0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "origin": {
+      "enum": [
+        "px4_sitl",
+        "synthetic_contract_fixture"
+      ]
+    },
+    "clock": {
+      "type": "object"
+    },
+    "frames": {
+      "type": "object"
+    },
+    "vehicle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "minLength": 1,
+          "not": {
+            "const": "x500_reference"
+          }
+        },
+        "profile_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rotor_count": {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 8
+        },
+        "motor_order": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "nominal_series_cells": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nominal_parallel_cells": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "nominal_capacity_ah": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "battery_profile_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "profile_id",
+        "profile_revision",
+        "rotor_count",
+        "motor_order",
+        "nominal_series_cells",
+        "nominal_parallel_cells",
+        "nominal_capacity_ah",
+        "battery_profile_id"
+      ]
+    },
+    "actuation": {
+      "type": "object"
+    },
+    "semantic_bindings": {
+      "type": "object",
+      "minProperties": 9
+    },
+    "conversion_history": {
+      "type": "array"
+    },
+    "ai_compatible": {
+      "const": false
+    },
+    "simulation_profile_manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "const": "reference/vehicle-profile.json"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "run_id",
+    "origin",
+    "clock",
+    "frames",
+    "vehicle",
+    "actuation",
+    "semantic_bindings",
+    "conversion_history",
+    "ai_compatible",
+    "simulation_profile_manifest"
+  ]
+}

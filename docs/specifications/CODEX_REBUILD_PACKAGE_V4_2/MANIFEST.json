@@ -1,0 +1,88 @@
+{
+  "schema": "codex.package.integrity/1.0",
+  "version": "4.2",
+  "created_at_utc": "2026-10-13T08:36:22.902245+00:00",
+  "scope": "All delivered files except this manifest; no application verification",
+  "files": [
+    {
+      "path": "00_SCOPE_AND_REVIEW.md",
+      "bytes": 3530,
+      "sha256": "8affff7bfc2adc7d5ce73e2fa5490faa0a4110f415bdd44c6227752b8fea4112"
+    },
+    {
+      "path": "00_SHARED_DATA_CONTRACT.md",
+      "bytes": 22569,
+      "sha256": "802ae6aebd381abac2d24634b0037dec1b735f11300b1e0a3cc6c014476d29ea"
+    },
+    {
+      "path": "00_SKILL_LINKS.md",
+      "bytes": 950,
+      "sha256": "fb97ee1394eeaca36d0b2ae3ef42eeb1599abce497dd449ccfbf408c040aaa79"
+    },
+    {
+      "path": "00_SOURCE_NOTES.md",
+      "bytes": 6815,
+      "sha256": "27bc8d0af6a47e3487aaf7ef424f220d8cce46621fc1020f05e4768256761f1c"
+    },
+    {
+      "path": "01_SIMULATION_CODEX_SPEC.md",
+      "bytes": 70077,
+      "sha256": "2854f0299f33755ff358fa0662b95228214b2b06e9ca598fe798d40185029f5b"
+    },
+    {
+      "path": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "bytes": 97739,
+      "sha256": "11964f166e3ff8167f544e341babd692fd14923857dddc6b2836ecd84a5e94f8"
+    },
+    {
+      "path": "03_FINAL_REVIEW.md",
+      "bytes": 5620,
+      "sha256": "8dc83ddc70191abfe0fe7989c433830f654cef04e8b5599ffd6601f96576dde1"
+    },
+    {
+      "path": "04_CHANGELOG_V3_TO_V4.md",
+      "bytes": 7125,
+      "sha256": "674e37aebe9db17a33e9e92b96f4b9e873a1c6e9181f2993b288bda9dec464cb"
+    },
+    {
+      "path": "04_CHANGELOG_V4_1_TO_V4_2.md",
+      "bytes": 3993,
+      "sha256": "b68462ab90f3d9f9e1f725ea44227aa59755f8ac1f0bc20223320e4cd5d31db5"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 6139,
+      "sha256": "99217542d7ea48cd0708acdeb3d3e7e038c9b37e69a1edb0a9831605856c122f"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8890,
+      "sha256": "a26c98df46c21bc4cc1072430405d161b178b9beb86ae9f5cf79f42608bb0d6b"
+    },
+    {
+      "path": "checks/baseline_provenance.json",
+      "bytes": 3052,
+      "sha256": "385219cd54ae882a4908d5fb517f1e02d431a09b9707529fa33f05c7d11d83f8"
+    },
+    {
+      "path": "checks/requirements.txt",
+      "bytes": 14,
+      "sha256": "0969da99a0bc2a1b71ed50584560f4588a37567ac63af3ddbaf3c4617ca5621a"
+    },
+    {
+      "path": "checks/requirements_trace.json",
+      "bytes": 24456,
+      "sha256": "6db8920092599deda2b960ae1a3213f77a45828df6652af34fc606d5fdb4d8b8"
+    },
+    {
+      "path": "checks/validation_report.json",
+      "bytes": 5934,
+      "sha256": "3a3487e3c671fd629cdf2dadc7c66a121d07a0150f219509090cb85db199ce59"
+    },
+    {
+      "path": "checks/verify_package.py",
+      "bytes": 24220,
+      "sha256": "d2e2e442bed2902e6f05227b3218c49e5c539b39134e9e4965188023e0e21bbb"
+    }
+  ]
+}

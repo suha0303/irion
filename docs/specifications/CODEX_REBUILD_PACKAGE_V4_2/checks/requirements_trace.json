@@ -1,0 +1,707 @@
+{
+  "schema": "codex.requirements.trace/1.0",
+  "version": "4.2",
+  "count": 68,
+  "scope": "문서 위치 확인; 실제 구현 검증 아님",
+  "requirements": [
+    {
+      "id": "P01",
+      "requirement": "사용자가 지정한 정확한 네 원문·최우선 적용",
+      "file": "00_SKILL_LINKS.md",
+      "heading": "# 최우선 적용 스킬 링크",
+      "line": 1,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "P02",
+      "requirement": "PX4 유지·필요한 PX4 수정·다른 기술 재선정",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 1. Codex 작업 요청",
+      "line": 22,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "P03",
+      "requirement": "전처리 전체를 AI 파트에서 구현",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 1. Codex 작업 요청",
+      "line": 22,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "P04",
+      "requirement": "실측 없이 공개 자료·가정·증거 범위 구분",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 8. 공개 자료 보정과 검증",
+      "line": 372,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S01",
+      "requirement": "기준 기체·부품·배터리 프로파일과 파라미터 출처",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 3. 기체·부품 프로파일",
+      "line": 117,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S02",
+      "requirement": "설치·환경 조사·버전 및 patch 재현",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "### 2.1 저장소 조사",
+      "line": 76,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S03",
+      "requirement": "단위·좌표·simulation clock·수치 step",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 4. 단위·좌표·시간",
+      "line": 158,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S04",
+      "requirement": "모터·ESC 평균 전기·회전·열·DC 전력",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 5. 통합 전동계 core",
+      "line": 196,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S05",
+      "requirement": "프로펠러 부하·동체 항력·힘·모멘트 책임",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 6. 프로펠러·기체 힘",
+      "line": 278,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S06",
+      "requirement": "배터리 1RC·열·셀/팩 환산·전압 feedback",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 7. 배터리 전기·열 모델",
+      "line": 322,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S07",
+      "requirement": "공개 자료 취득·피팅·독립 비교",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 8. 공개 자료 보정과 검증",
+      "line": 372,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S08",
+      "requirement": "바람·정상 편차·센서 특성",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 9. 바람·센서·정상 환경",
+      "line": 394,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S09",
+      "requirement": "PX4 명령과 실제 반응 구분·센서·원시 exporter",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 10. PX4와 simulator 연결",
+      "line": 433,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S10",
+      "requirement": "자동 비행·평가용 물리 이상·외부 적용 요청",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 11. 자동 비행과 평가용 이상",
+      "line": 463,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S11",
+      "requirement": "CLI·오류·프로세스 종료·campaign 재개",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 12. 실제 제공할 CLI",
+      "line": 524,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "S12",
+      "requirement": "분석식·에너지·dt 수렴·실제 SITL 시험",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 13. 시험·측정·완료 기준",
+      "line": 548,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A01",
+      "requirement": "X500 DRONE-RAW/ULog 파싱·source 감사; BIN은 후속 참고",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 3. 원본 자료 감사와 source profile",
+      "line": 105,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A02",
+      "requirement": "공통 텔레메트리와 19/15 특징 capability",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 4. 관측 capability와 특징 프로파일",
+      "line": 142,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A03",
+      "requirement": "단위·모터 순서·좌표·센서 의미",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 4.2 모터 위치·좌표",
+      "line": 172,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A04",
+      "requirement": "file/live 공통 전처리·인과 필터·결측·segment",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 5. 시간 정렬과 인과 처리",
+      "line": 182,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A05",
+      "requirement": "관측 기반 특징·60초 문맥·창·학습 정규화",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 6. 모델 특징·문맥·창",
+      "line": 245,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A06",
+      "requirement": "독립 run·원본/paired/retry 계보 분할",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 7.1 그룹부터 분리",
+      "line": 310,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A07",
+      "requirement": "정상 학습/validation/calibration·독립 정상/이상 시험",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 7.2 정상 데이터의 역할",
+      "line": 329,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A08",
+      "requirement": "LSTM forecast architecture·정상 예측 학습",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 8. LSTM 미래 예측기",
+      "line": 362,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A09",
+      "requirement": "Transformer forecast·같은 task 공정 비교",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 9. Transformer 미래 예측기",
+      "line": 385,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A10",
+      "requirement": "공통 loss·trainer·seed·checkpoint·baseline",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 10. 공통 학습기와 baseline",
+      "line": 411,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A11",
+      "requirement": "추진/배터리 점수·정상 보정·경보 상태기계",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 11. 이상 점수와 경보 보정",
+      "line": 477,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A12",
+      "requirement": "독립 bundle·replay/live·장애 복구·prediction",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 12. bundle과 실시간 추론",
+      "line": 523,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A13",
+      "requirement": "사건별 탐지·오경보/시간·지연·coverage·비용",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 13. 평가와 비교 보고서",
+      "line": 620,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A14",
+      "requirement": "회사 기체/파운데이션 모델·미세조정은 후속 범위로 분리",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 14. 장기 목표와 후속 확장 — 현재 범위 제외",
+      "line": 727,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "deferred_not_required"
+    },
+    {
+      "id": "A15",
+      "requirement": "실행 CLI·smoke와 연구 학습 산출물",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 15. 실제 제공할 CLI",
+      "line": 742,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "A16",
+      "requirement": "미래 정보·정답 변경 시험·학습/배포/경보 시험",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 16. 자동 시험과 합격 기준",
+      "line": 772,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "I01",
+      "requirement": "원시 관측·정답·공개 명판 metadata 분리",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C2. 실행 산출물",
+      "line": 22,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "I02",
+      "requirement": "sample/available time·quality·watermark",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C3. 원시 이벤트",
+      "line": 45,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "I03",
+      "requirement": "스키마 호환·공통 fixture·실제 연결 시험",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C9. 연결 완료 기준",
+      "line": 190,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "I04",
+      "requirement": "양쪽이 같은 live 연결 경로로 시작",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C10. 파일·실시간 인수인계의 첫 실행 경로",
+      "line": 195,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "I05",
+      "requirement": "기본 관측 역할·binding·run 종료 상태",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C11. 관측 인수인계의 완결성",
+      "line": 231,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "I06",
+      "requirement": "완료 직전 검증·명령·exit code·artifact 증거",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C12. 완료 보고의 증거 연결",
+      "line": 253,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N01",
+      "requirement": "건강 적격성과 정상 환경 다양성",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "### 9.2 정상 조건 변화와 건강 적격성",
+      "line": 414,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N02",
+      "requirement": "LSTM·Transformer 정상 미래 예측 학습",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 1.1 유지하는 제품 목적과 v4의 학습 과제",
+      "line": 30,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N03",
+      "requirement": "명시적 입력/정답/target4",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "#### 6.3.1 입력과 target을 구분한다",
+      "line": 286,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N04",
+      "requirement": "실제 기억 범위와 지연",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "#### 6.3.2 실제로 보는 시간과 지연",
+      "line": 292,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N05",
+      "requirement": "금지 신호와 truth allowlist",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 4.1 공통 기준 프로파일",
+      "line": 144,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N06",
+      "requirement": "정상 기준 적응으로 열화 흡수 방지",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 6.4 정규화",
+      "line": 300,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N07",
+      "requirement": "X500 독립 비행 기본 평가와 동일 자산 시간 순서 추적 분리",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 7.1 그룹부터 분리",
+      "line": 310,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N08",
+      "requirement": "독립 정상 calibration·미사용 최종 시험",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 7.2 정상 데이터의 역할",
+      "line": 329,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N09",
+      "requirement": "미래 target 입력 차단",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 8.2 decoder 입력과 학습",
+      "line": 379,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N10",
+      "requirement": "forecast 전용 loss/score",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 11.1 확정된 forecast와 실측의 오차",
+      "line": 479,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N11",
+      "requirement": "불변 forecast/target 대기/실제 decision",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 12.2 실시간 엔진과 미래값 대기",
+      "line": 545,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N12",
+      "requirement": "입출력 schema·실제 단위 예시",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 12.3 forecast record와 decision record",
+      "line": 562,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N13",
+      "requirement": "기존 열화/급성 이상 시간 평가",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 13.2 사건과 episode: 급성 발생과 기존 열화",
+      "line": 627,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N14",
+      "requirement": "열화 전용 독립 시험 행렬",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 13.6 필수 시험 행렬과 검출 주장",
+      "line": 669,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N15",
+      "requirement": "동일 asset 비행 간 추적",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 13.7 비행 간 열화 의심 추적",
+      "line": 689,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N16",
+      "requirement": "별도 조건부 진단은 후속 선택이며 forecast와 혼용하지 않음",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 13.8 forecast만으로 부족할 때의 별도 비교",
+      "line": 717,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "deferred_not_required"
+    },
+    {
+      "id": "N18",
+      "requirement": "비행 전 상태 열화의 물리 생성",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "#### 11.3.1 발생 형식",
+      "line": 503,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N19",
+      "requirement": "severity sweep과 수명 예측 구분",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "#### 11.3.2 정상 대조와 열화 수준 비교",
+      "line": 511,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N20",
+      "requirement": "확장 health/event/asset 계약",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C13. 건강 적격성·기존 열화·asset 계보",
+      "line": 263,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N21",
+      "requirement": "forecast 시각 계약",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C14. 미래 예측의 정보·시각 계약",
+      "line": 292,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N22",
+      "requirement": "v4 인수 fixture",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C15. v4 추가 인수인계 fixture",
+      "line": 302,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "N23",
+      "requirement": "신규 회귀/인과성 시험 명세",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "### 16.6 v4 추가 회귀 시험",
+      "line": 811,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "X01",
+      "requirement": "현재 X500 한 기준 구성·다기체는 장기 목표",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "## 0. 현재 범위와 장기 목표",
+      "line": 8,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required",
+      "required_terms": [
+        "X500 기준 기체 한 구성",
+        "다기체 데이터 수집",
+        "not_in_scope"
+      ]
+    },
+    {
+      "id": "X02",
+      "requirement": "AI 현재 X500 예측·검증 범위",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 0. 현재 범위와 장기 목표",
+      "line": 8,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required",
+      "required_terms": [
+        "X500 기준 기체 한 구성",
+        "다기체 데이터 수집",
+        "not_in_scope"
+      ]
+    },
+    {
+      "id": "X03",
+      "requirement": "현재 양쪽 계약 X500·run holdout·범위 밖 상태",
+      "file": "00_SHARED_DATA_CONTRACT.md",
+      "heading": "## C0. 현재 적용 범위",
+      "line": 5,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required",
+      "required_terms": [
+        "x500_run_holdout",
+        "same_asset_future",
+        "not_in_scope"
+      ]
+    },
+    {
+      "id": "X04",
+      "requirement": "현재 X500 CLI에서 회사 기체 이전 제외",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 15. 실제 제공할 CLI",
+      "line": 742,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required",
+      "required_terms": [
+        "native_logs/flight.ulg",
+        "configs/sources/px4.yaml"
+      ]
+    },
+    {
+      "id": "X05",
+      "requirement": "X500 현재 완료 기준과 후속 구분",
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "heading": "## 17. 완료 체크리스트와 진행 기록",
+      "line": 832,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "X06",
+      "requirement": "X500 quad-X와 기준 팩 하나",
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "heading": "### 3.1 프로파일이 표현할 것",
+      "line": 119,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "X07",
+      "requirement": "범용 adapter를 미리 만들지 않는 작업 지침",
+      "file": "AGENTS.md",
+      "heading": "## 현재 범위",
+      "line": 20,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    },
+    {
+      "id": "X08",
+      "requirement": "검토용 범위 요약",
+      "file": "00_SCOPE_AND_REVIEW.md",
+      "heading": "## 이번 검토에서 볼 결정",
+      "line": 17,
+      "check_kind": "document_presence",
+      "implementation_verified": false,
+      "scope_status": "current_required"
+    }
+  ]
+}

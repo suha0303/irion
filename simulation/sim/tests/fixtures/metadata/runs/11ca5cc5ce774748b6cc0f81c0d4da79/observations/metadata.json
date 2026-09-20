@@ -1,0 +1,259 @@
+{
+  "schema": "drone.observation.metadata/2.0",
+  "run_id": "11ca5cc5ce774748b6cc0f81c0d4da79",
+  "origin": "px4_sitl",
+  "clock": {
+    "id": "px4-boot",
+    "unit": "us",
+    "mode": "capture_replay",
+    "epoch": "simulation_boot"
+  },
+  "frames": {
+    "body": "FRD",
+    "navigation": "NED",
+    "quaternion": "wxyz_body_to_navigation"
+  },
+  "vehicle": {
+    "profile_id": "x500_reference",
+    "rotor_count": 4,
+    "motor_order": [
+      "front_right",
+      "rear_left",
+      "front_left",
+      "rear_right"
+    ],
+    "nominal_series_cells": 4,
+    "nominal_capacity_ah": 12.0,
+    "profile_revision": "vtc6-4s4p-r3-long15",
+    "nominal_parallel_cells": 4,
+    "battery_profile_id": "vtc6_4s4p_r3_long15"
+  },
+  "actuation": {
+    "semantic": "esc_request",
+    "encoding": "output_count_0_1000",
+    "stage": "post_output_mapping",
+    "mapping_id": "px4-v1.16-SIM_GZ_EC-duty-v1"
+  },
+  "semantic_bindings": {
+    "motor_request": {
+      "source": "px4.uorb",
+      "topic": "actuator_outputs",
+      "instance": 0,
+      "fields": [
+        "output"
+      ],
+      "units": {
+        "output": "output_count"
+      },
+      "meaning": "post_output_mapping; divide by 1000 for ESC duty",
+      "expected_period_us": 10000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 50168
+    },
+    "body_rate": {
+      "source": "px4.uorb",
+      "topic": "vehicle_angular_velocity",
+      "instance": 0,
+      "fields": [
+        "xyz"
+      ],
+      "units": {
+        "xyz": "rad/s"
+      },
+      "meaning": "FRD bias corrected measured gyro",
+      "expected_period_us": 10000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 50169
+    },
+    "body_rate_target": {
+      "source": "px4.uorb",
+      "topic": "vehicle_rates_setpoint",
+      "instance": 0,
+      "fields": [
+        "roll",
+        "pitch",
+        "yaw"
+      ],
+      "units": {
+        "roll": "rad/s",
+        "pitch": "rad/s",
+        "yaw": "rad/s"
+      },
+      "meaning": "FRD controller target",
+      "expected_period_us": 10000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 50167
+    },
+    "attitude": {
+      "source": "px4.uorb",
+      "topic": "vehicle_attitude",
+      "instance": 0,
+      "fields": [
+        "q"
+      ],
+      "units": {
+        "q": "unitless"
+      },
+      "meaning": "wxyz FRD to NED",
+      "expected_period_us": 10000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 50168
+    },
+    "specific_force": {
+      "source": "px4.uorb",
+      "topic": "vehicle_acceleration",
+      "instance": 0,
+      "fields": [
+        "xyz"
+      ],
+      "units": {
+        "xyz": "m/s^2"
+      },
+      "meaning": "FRD specific force; rest z=-g",
+      "expected_period_us": 10000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 50168
+    },
+    "climb_rate": {
+      "source": "px4.uorb",
+      "topic": "vehicle_local_position",
+      "instance": 0,
+      "fields": [
+        "x",
+        "y",
+        "z",
+        "vz",
+        "z_valid"
+      ],
+      "units": {
+        "x": "m",
+        "y": "m",
+        "z": "m",
+        "vz": "m/s",
+        "z_valid": "boolean_as_number"
+      },
+      "meaning": "NED; climb=-vz",
+      "expected_period_us": 10000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 50162
+    },
+    "climb_rate_target": {
+      "source": "px4.uorb",
+      "topic": "vehicle_local_position_setpoint",
+      "instance": 0,
+      "fields": [
+        "vx",
+        "vy",
+        "vz"
+      ],
+      "units": {
+        "vx": "m/s",
+        "vy": "m/s",
+        "vz": "m/s"
+      },
+      "meaning": "NED actual position controller velocity target; climb=-vz",
+      "expected_period_us": 10000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 50161
+    },
+    "navigation_request": {
+      "source": "px4.uorb",
+      "topic": "trajectory_setpoint",
+      "instance": 0,
+      "fields": [
+        "velocity"
+      ],
+      "units": {
+        "velocity": "m/s"
+      },
+      "meaning": "NED; null means unavailable",
+      "expected_period_us": 10000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 5644
+    },
+    "pack_voltage_current": {
+      "source": "px4.uorb",
+      "topic": "battery_status",
+      "instance": 0,
+      "fields": [
+        "voltage_v",
+        "current_a"
+      ],
+      "units": {
+        "voltage_v": "V",
+        "current_a": "A"
+      },
+      "meaning": "discharge positive; PX4 Battery from sampled V/I; timestamp is original sensor measurement time including transport delay",
+      "expected_period_us": 100000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "sensor_profile": {
+        "period_s": 0.1,
+        "delay_s": 0.0,
+        "voltage_bias_v": 0.0,
+        "current_bias_a": 0.0,
+        "voltage_noise_std_v": 0.01,
+        "current_noise_std_a": 0.02,
+        "drift_std_v": 0.0,
+        "drift_tau_s": 10.0,
+        "quantization_v": 0.0,
+        "voltage_range_v": [
+          0.0,
+          20.0
+        ],
+        "current_range_a": [
+          0.0,
+          100.0
+        ],
+        "drop_begin_s": -1.0,
+        "drop_end_s": -1.0
+      },
+      "event_count": 5023
+    },
+    "operating_state": {
+      "source": "px4.uorb",
+      "topic": "vehicle_status",
+      "instance": 0,
+      "fields": [
+        "arming_state",
+        "nav_state",
+        "hil_state"
+      ],
+      "units": {
+        "arming_state": "enum",
+        "nav_state": "enum",
+        "hil_state": "enum"
+      },
+      "meaning": "PX4 v1.16 enum",
+      "expected_period_us": 500000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 1009
+    },
+    "landed_state": {
+      "source": "px4.uorb",
+      "topic": "vehicle_land_detected",
+      "instance": 0,
+      "fields": [
+        "landed"
+      ],
+      "units": {
+        "landed": "boolean_as_number"
+      },
+      "meaning": "PX4 land detector",
+      "expected_period_us": 1000000,
+      "availability": "recorded",
+      "capture": "uORB latest sample polling at 100Hz; native ULog separately",
+      "event_count": 509
+    }
+  },
+  "conversion_history": []
+}

@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parent_attempt_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "origin": {
+      "enum": [
+        "px4_sitl",
+        "synthetic_contract_fixture"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "termination_reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "start_utc": {
+      "type": "string",
+      "minLength": 1
+    },
+    "end_utc": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "clock": {
+      "type": "object"
+    },
+    "observation_metadata": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_lock": {
+      "type": "string",
+      "minLength": 1
+    },
+    "native_logs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "process_exit_codes": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "wall_duration_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "owned_process_groups": {
+      "type": "object"
+    },
+    "configuration": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instance": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "gz_partition": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mavlink_source_checked": {
+      "type": "boolean"
+    },
+    "wait_policy": {
+      "type": "object"
+    },
+    "progress": {
+      "type": "object"
+    },
+    "process_shutdown": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "px4_socket_cleanup": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capture_health_failure": {
+      "type": "object"
+    },
+    "primary_failure": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stage": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "stage",
+        "reason"
+      ]
+    },
+    "secondary_failures": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "stage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "reason"
+        ]
+      }
+    },
+    "clock_stall_evidence": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "px4_boot_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "stalled_wall_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "limit_wall_s": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "last_clock_advance_wall": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "phase",
+        "px4_boot_s",
+        "stalled_wall_s",
+        "limit_wall_s",
+        "last_clock_advance_wall"
+      ]
+    }
+  },
+  "required": [
+    "run_id",
+    "parent_attempt_id",
+    "origin",
+    "status",
+    "termination_reason",
+    "start_utc",
+    "end_utc",
+    "clock",
+    "observation_metadata",
+    "source_lock",
+    "native_logs"
+  ]
+}

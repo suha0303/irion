@@ -1,0 +1,85 @@
+{
+  "run_id": "b49c33da29cd4fccb4c3a72bc9402920",
+  "parent_attempt_id": null,
+  "origin": "px4_sitl",
+  "status": "completed",
+  "termination_reason": "mission_landed_disarmed",
+  "start_utc": "2026-10-16T18:50:21.909978+00:00",
+  "end_utc": "2026-10-16T18:58:26.713974+00:00",
+  "clock": {
+    "id": "px4-boot",
+    "epoch": "simulation_boot",
+    "unit": "us"
+  },
+  "observation_metadata": "observations/metadata.json",
+  "source_lock": "reference/source_lock.json",
+  "native_logs": [
+    "px4/log/2026-10-16/18_50_29.ulg"
+  ],
+  "configuration": "r3_long15",
+  "instance": 9,
+  "gz_partition": "x500_b49c33da29cd4fccb4c3a72bc9402920",
+  "mavlink_source_checked": true,
+  "owned_process_groups": {
+    "gazebo": 668308,
+    "px4": 668309
+  },
+  "wait_policy": {
+    "phase_sim_seconds": {
+      "streaming": 300,
+      "takeoff": 180,
+      "landing": 300
+    },
+    "gazebo_shutdown_method": "partition_server_control_then_signals",
+    "gazebo_service_command_wall_seconds": 15,
+    "gazebo_service_exit_wall_seconds": 600,
+    "gazebo_shutdown_wall_seconds": 600,
+    "px4_shutdown_wall_seconds": 60
+  },
+  "progress": {
+    "sim_elapsed_s": 909.4879999999999,
+    "target_s": 900.0,
+    "last_update_utc": "2026-10-16T18:58:25.943576+00:00",
+    "px4_boot_s": 928.852
+  },
+  "process_shutdown": [
+    {
+      "name": "px4",
+      "pid": 668309,
+      "grace_seconds": 60,
+      "signals": [
+        "SIGTERM"
+      ],
+      "grace_expired": false,
+      "exit_code": 0,
+      "elapsed_seconds": 0.003181631000188645
+    },
+    {
+      "name": "gazebo",
+      "pid": 668308,
+      "grace_seconds": 600,
+      "signals": [],
+      "grace_expired": false,
+      "service_stop": {
+        "service": "/server_control",
+        "acknowledged": true,
+        "request_timeout_ms": 10000,
+        "command_timeout_seconds": 15,
+        "exit_grace_seconds": 600,
+        "partition": "x500_b49c33da29cd4fccb4c3a72bc9402920",
+        "returncode": 0,
+        "stdout": "data: true\n\n",
+        "stderr": "",
+        "signal_fallback": false
+      },
+      "exit_code": 0,
+      "elapsed_seconds": 0.30418344200006686
+    }
+  ],
+  "px4_socket_cleanup": "owned_stale_socket_removed",
+  "process_exit_codes": [
+    0,
+    0
+  ],
+  "wall_duration_s": 484.7266725429945
+}

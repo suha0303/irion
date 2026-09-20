@@ -1,0 +1,646 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Simulator-only vertical multirotor observations with 4..8 motor requests. The independent verifier checks the exact count against generic metadata. This is not the X500 AI input contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "drone.raw.event/3.0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "topic": {
+      "enum": [
+        "actuator_outputs",
+        "vehicle_angular_velocity",
+        "vehicle_rates_setpoint",
+        "vehicle_attitude",
+        "vehicle_acceleration",
+        "vehicle_local_position",
+        "vehicle_local_position_setpoint",
+        "trajectory_setpoint",
+        "battery_status",
+        "vehicle_status",
+        "vehicle_land_detected"
+      ]
+    },
+    "instance": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sample_time_us": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "available_time_us": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "clock_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fields": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "field_quality": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "valid",
+          "unavailable",
+          "invalid",
+          "stale",
+          "clipped"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "run_id",
+    "source",
+    "topic",
+    "instance",
+    "seq",
+    "sample_time_us",
+    "available_time_us",
+    "clock_id",
+    "fields",
+    "field_quality"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "actuator_outputs"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "output": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 8,
+                "items": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "output"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "output"
+            ],
+            "propertyNames": {
+              "enum": [
+                "output"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "vehicle_angular_velocity"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "xyz": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "xyz"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "xyz"
+            ],
+            "propertyNames": {
+              "enum": [
+                "xyz"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "vehicle_rates_setpoint"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "roll": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "pitch": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "yaw": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "roll",
+              "pitch",
+              "yaw"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "roll",
+              "pitch",
+              "yaw"
+            ],
+            "propertyNames": {
+              "enum": [
+                "roll",
+                "pitch",
+                "yaw"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "vehicle_attitude"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "q": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "q"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "q"
+            ],
+            "propertyNames": {
+              "enum": [
+                "q"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "vehicle_acceleration"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "xyz": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "xyz"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "xyz"
+            ],
+            "propertyNames": {
+              "enum": [
+                "xyz"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "vehicle_local_position"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "y": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "z": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "vz": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "z_valid": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z",
+              "vz",
+              "z_valid"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "x",
+              "y",
+              "z",
+              "vz",
+              "z_valid"
+            ],
+            "propertyNames": {
+              "enum": [
+                "x",
+                "y",
+                "z",
+                "vz",
+                "z_valid"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "vehicle_local_position_setpoint"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "vx": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "vy": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "vz": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "vx",
+              "vy",
+              "vz"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "vx",
+              "vy",
+              "vz"
+            ],
+            "propertyNames": {
+              "enum": [
+                "vx",
+                "vy",
+                "vz"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "trajectory_setpoint"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "velocity": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "velocity"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "velocity"
+            ],
+            "propertyNames": {
+              "enum": [
+                "velocity"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "battery_status"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "voltage_v": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "current_a": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "voltage_v",
+              "current_a"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "voltage_v",
+              "current_a"
+            ],
+            "propertyNames": {
+              "enum": [
+                "voltage_v",
+                "current_a"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "vehicle_status"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "arming_state": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "nav_state": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "hil_state": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "arming_state",
+              "nav_state",
+              "hil_state"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "arming_state",
+              "nav_state",
+              "hil_state"
+            ],
+            "propertyNames": {
+              "enum": [
+                "arming_state",
+                "nav_state",
+                "hil_state"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "topic": {
+            "const": "vehicle_land_detected"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fields": {
+            "type": "object",
+            "properties": {
+              "landed": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "landed"
+            ],
+            "additionalProperties": false
+          },
+          "field_quality": {
+            "required": [
+              "landed"
+            ],
+            "propertyNames": {
+              "enum": [
+                "landed"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

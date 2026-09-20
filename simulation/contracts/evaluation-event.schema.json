@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "drone.evaluation.event/2.1"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "onset_kind": {
+      "enum": [
+        "pre_existing",
+        "in_flight_step",
+        "in_flight_ramp",
+        "unknown"
+      ]
+    },
+    "physical_onset_time_us": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "requested_time_us": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "applied_time_us": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "end_time_us": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "profile_revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "ramp_duration_us": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "degradation_boundary_time_us": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "degradation_boundary_definition": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema",
+    "run_id",
+    "event_id",
+    "kind",
+    "target",
+    "onset_kind",
+    "physical_onset_time_us",
+    "requested_time_us",
+    "applied_time_us",
+    "end_time_us",
+    "profile_revision",
+    "parameters"
+  ]
+}
