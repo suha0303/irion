@@ -1,0 +1,240 @@
+{
+  "schema": "codex.document.validation/1.0",
+  "package_version": "4.2",
+  "executed_at_utc": "2026-10-13T08:36:22.233954+00:00",
+  "command": "python checks/verify_package.py --write-report",
+  "scope": "specification files, serialized examples, reference arithmetic, requirements mapping, and optional archive hashes only",
+  "application_tests_executed": false,
+  "python_version": "3.13.5",
+  "pyyaml_version": "6.0.3",
+  "passed": 43,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "required_files",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "utf8_nonempty_no_nul",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "markdown_fences_balanced",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "active_document_versions",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "json_yaml_examples_syntax_unique_keys_finite",
+      "status": "passed",
+      "detail": {
+        "json": 16,
+        "yaml": 10
+      }
+    },
+    {
+      "name": "four_skills_six_identical_blocks",
+      "status": "passed",
+      "detail": "6 identical blocks; four exact original links"
+    },
+    {
+      "name": "shared_contract_three_copies",
+      "status": "passed",
+      "detail": "d2e8584ef971bfa0158afcd92492c9a1d708a17225c305667f2eacd4ea59f154"
+    },
+    {
+      "name": "standalone_source_ids_and_urls",
+      "status": "passed",
+      "detail": {
+        "01_SIMULATION_CODEX_SPEC.md": 11,
+        "02_AI_PREPROCESSING_CODEX_SPEC.md": 15
+      }
+    },
+    {
+      "name": "local_markdown_links_resolve",
+      "status": "passed",
+      "detail": 21
+    },
+    {
+      "name": "requirements_trace_68_positions",
+      "status": "passed",
+      "detail": 68
+    },
+    {
+      "name": "recorded_baseline_provenance",
+      "status": "passed",
+      "detail": "Recorded two direct v4.1 standalone-vs-ZIP byte comparisons"
+    },
+    {
+      "name": "seven_preserved_technical_sections",
+      "status": "passed",
+      "detail": 7
+    },
+    {
+      "name": "input_profile_dimensions",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "forecast_default_config",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "forecast_shape_example",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "forecast_and_decision_time_arithmetic",
+      "status": "passed",
+      "detail": {
+        "history_extent_seconds": 9.9,
+        "forecast_horizon_seconds": 1.0,
+        "targets": 10,
+        "scope": "document example arithmetic only"
+      }
+    },
+    {
+      "name": "reference_only_maturity_late_and_error_examples",
+      "status": "passed",
+      "detail": "Reference time predicates and zero-error example only; no learned-model or physical diagnostic claim"
+    },
+    {
+      "name": "unestablished_health_in_output_example",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "existing_and_acute_event_examples",
+      "status": "passed",
+      "detail": "Two event forms explicitly separated"
+    },
+    {
+      "name": "raw_evaluation_output_schema_boundaries",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "sensor_exclusions_in_both_specs",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "normal_health_roles",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "split_and_longitudinal_protocols",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "context_and_filter_memory_limits",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "forecast_scope_and_removed_comparison_references",
+      "status": "passed",
+      "detail": "Section 18 and related comparison instructions removed; forecast models retained"
+    },
+    {
+      "name": "forecast_score_targets_only",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "immutable_pending_and_no_backdating",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "normalization_and_adaptation_guard",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "normal_abnormal_test_matrix",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "simulator_preexisting_and_severity_boundaries",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "conditional_diagnostic_is_separate_task",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "forecast_cli_and_baselines",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "implementation_scope_not_claimed_complete",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "no_unresolved_authoring_placeholders",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "px4_and_ai_preprocessing_responsibility",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "x500_current_scope_five_copies",
+      "status": "passed",
+      "detail": "Five identical current-scope blocks: X500 now, foundation/customization later"
+    },
+    {
+      "name": "x500_shared_contract_scope",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "current_run_not_unseen_vehicle_required",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "single_vehicle_and_pack_scope",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "x500_cli_and_milestones",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "foundation_roadmap_not_current_deliverable",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "fallback_profiles_not_all_required",
+      "status": "passed",
+      "detail": null
+    },
+    {
+      "name": "history_not_active_instruction",
+      "status": "passed",
+      "detail": null
+    }
+  ]
+}

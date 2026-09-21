@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "drone.observation.metadata/2.0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "origin": {
+      "enum": [
+        "px4_sitl",
+        "synthetic_contract_fixture"
+      ]
+    },
+    "clock": {
+      "type": "object"
+    },
+    "frames": {
+      "type": "object"
+    },
+    "vehicle": {
+      "type": "object"
+    },
+    "actuation": {
+      "type": "object"
+    },
+    "semantic_bindings": {
+      "type": "object",
+      "minProperties": 9
+    },
+    "conversion_history": {
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema",
+    "run_id",
+    "origin",
+    "clock",
+    "frames",
+    "vehicle",
+    "actuation",
+    "semantic_bindings",
+    "conversion_history"
+  ]
+}

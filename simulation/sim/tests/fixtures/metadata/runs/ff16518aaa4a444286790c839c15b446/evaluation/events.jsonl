@@ -1,0 +1,1 @@
+{"schema": "drone.evaluation.event/2.1", "run_id": "ff16518aaa4a444286790c839c15b446", "event_id": "physical-change-1", "kind": "propulsion_loss_existing", "target": "propulsion", "onset_kind": "pre_existing", "physical_onset_time_us": null, "requested_time_us": 0, "applied_time_us": 0, "end_time_us": null, "profile_revision": 1, "parameters": {"friction": 4e-05}}

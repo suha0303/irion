@@ -1,0 +1,83 @@
+{
+  "schema": "codex.baseline.provenance/1.0",
+  "package_version": "4.2",
+  "baseline_zip": "CODEX_REBUILD_PACKAGE_V4_1.zip",
+  "baseline_zip_sha256": "1cfc7e91abcdf444d6a9d7f0a70e6ac412bfb78898878d1b12ffacb17d7531ef",
+  "source_obtained": "Mounted conversation v4.1 ZIP, safely extracted; two standalone attachments compared directly",
+  "baseline_verifier": {
+    "passed": 37,
+    "failed": 0,
+    "application_tests_executed": false
+  },
+  "standalone_comparisons": [
+    {
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "standalone_equals_zip": true,
+      "sha256": "08237a64f69484061bf8539e2f31f269866f0e91393ba85419e16ef824dac710"
+    },
+    {
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "standalone_equals_zip": true,
+      "sha256": "18e869ea04018393bfe19e572653495591e13c30a6d1c38c5a3db39c2fc7fd6f"
+    }
+  ],
+  "preserved_sections": [
+    {
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "start": "## 4. 단위·좌표·시간",
+      "end_prefix": "## 9. 바람·센서·정상 환경",
+      "bytes": 13445,
+      "sha256": "76bec6a37cfd52707179795138bc36e74fab1c1849cb15b12b9e9f7c086a32a9",
+      "baseline_equal": true
+    },
+    {
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "start": "## 10. PX4와 simulator 연결",
+      "end_prefix": "## 11. 자동 비행과 평가용 이상",
+      "bytes": 2185,
+      "sha256": "822453592846db07f5ade9c2e434bd388b6de0872a5c3cd2399af778be3c7ff2",
+      "baseline_equal": true
+    },
+    {
+      "file": "01_SIMULATION_CODEX_SPEC.md",
+      "start": "### 9.3 센서 모델",
+      "end_prefix": "## 10. PX4와 simulator 연결",
+      "bytes": 528,
+      "sha256": "d84368717f087ed249b0f01e9c02dc82745f6e52f6393ad6361302c549dfd3de",
+      "baseline_equal": true
+    },
+    {
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "start": "## 5. 시간 정렬과 인과 처리",
+      "end_prefix": "## 6. 모델 특징·문맥·창",
+      "bytes": 4155,
+      "sha256": "2db0de4756e59cafdc4810447cfc0d45ac6203ff15dadc6743dee4cf07a34ff7",
+      "baseline_equal": true
+    },
+    {
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "start": "### 6.1 관측 기반 변환",
+      "end_prefix": "### 6.4 정규화",
+      "bytes": 5693,
+      "sha256": "2afe1701fd8371984d1fd51c7c0b8fda9d72f907c97177895d56180f7cdf6830",
+      "baseline_equal": true
+    },
+    {
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "start": "## 8. LSTM 미래 예측기",
+      "end_prefix": "### 10.2 시작 training 설정",
+      "bytes": 4048,
+      "sha256": "7c3e2c070551fc69bc1c5d794048a4247ac7aaeb7fb3f52802a68749988f2a27",
+      "baseline_equal": true
+    },
+    {
+      "file": "02_AI_PREPROCESSING_CODEX_SPEC.md",
+      "start": "### 10.3 checkpoint와 재현성",
+      "end_prefix": "## 13. 평가와 비교 보고서",
+      "bytes": 11192,
+      "sha256": "f91c444e40aac1204645261418213705d22eeb9a5fe1628c10cc56e8a50fb6c5",
+      "baseline_equal": true
+    }
+  ],
+  "scope": "Direct document/source comparison only; no original application code executed"
+}

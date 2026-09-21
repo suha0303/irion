@@ -1,0 +1,1 @@
+{"schema": "drone.evaluation.event/2.1", "run_id": "0909b5daf3da428e996dedfe23ea657f", "event_id": "physical-change-1", "kind": "battery_resistance_existing", "target": "battery_pack", "onset_kind": "pre_existing", "physical_onset_time_us": null, "requested_time_us": 0, "applied_time_us": 0, "end_time_us": null, "profile_revision": 1, "parameters": {"r0": 0.03319632873825592}}
