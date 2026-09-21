@@ -1,0 +1,5 @@
+dataset: data/public/VAH07.csv
+metadata: data/public/metadata.json
+protocol: first_RPT_first_two_missions_fit_next_two_holdout
+ns: 4
+np: 2

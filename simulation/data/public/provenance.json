@@ -1,0 +1,40 @@
+[
+  {
+    "path": "data/public/README.txt",
+    "sha256": "16d5a583e07b6ffd8654a3d88e68751f5d9acef0c3b0090a7b9e9284d273b608",
+    "metadata": {
+      "id": 26855063,
+      "name": "README.txt",
+      "size": 5832,
+      "is_link_only": false,
+      "download_url": "https://ndownloader.figshare.com/files/26855063",
+      "supplied_md5": "d65302bc58a41b5272594ae2f8766525",
+      "computed_md5": "d65302bc58a41b5272594ae2f8766525",
+      "mimetype": "text/plain"
+    },
+    "license": {
+      "value": 1,
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "path": "data/public/VAH07.csv",
+    "sha256": "895bbfe543ac7ad1adb1eed4d03c392d0bc460d382acc6a40198c33149360223",
+    "metadata": {
+      "id": 26855069,
+      "name": "VAH07.csv",
+      "size": 20868474,
+      "is_link_only": false,
+      "download_url": "https://ndownloader.figshare.com/files/26855069",
+      "supplied_md5": "7ba1092696df05426bee98a40ca5fe22",
+      "computed_md5": "7ba1092696df05426bee98a40ca5fe22",
+      "mimetype": "text/plain"
+    },
+    "license": {
+      "value": 1,
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  }
+]

@@ -1,0 +1,55 @@
+{
+  "origin": "public_measurement",
+  "source": {
+    "id": 26855069,
+    "name": "VAH07.csv",
+    "size": 20868474,
+    "is_link_only": false,
+    "download_url": "https://ndownloader.figshare.com/files/26855069",
+    "supplied_md5": "7ba1092696df05426bee98a40ca5fe22",
+    "computed_md5": "7ba1092696df05426bee98a40ca5fe22",
+    "mimetype": "text/plain"
+  },
+  "sha256": "895bbfe543ac7ad1adb1eed4d03c392d0bc460d382acc6a40198c33149360223",
+  "license": {
+    "value": 1,
+    "name": "CC BY 4.0",
+    "url": "https://creativecommons.org/licenses/by/4.0/"
+  },
+  "cell": "VAH07 Sony-Murata VTC6",
+  "protocol": "first low-rate RPT OCV proxy; first two mission+rest fit; next two holdout",
+  "source_units": {
+    "time_s": "s",
+    "Ecell_V": "V",
+    "I_mA": "mA charging positive"
+  },
+  "conversion": "I_discharge_A=-I_mA/1000",
+  "duplicate_timestamps": 71,
+  "largest_gap_s": 30.05800151170115,
+  "measured_rpt_capacity_ah": 3.03379227558145,
+  "cell_parameters": {
+    "r0_ohm": 0.020140234813039944,
+    "r1_ohm": 0.00945403857142528,
+    "tau_s": 11.885977130280706,
+    "capacity_ah": 3.1854818893605223,
+    "ocv_offset_v": -0.05999999999999999
+  },
+  "jacobian_condition": 22631.758231322605,
+  "optimizer_success": true,
+  "fit_rmse_cell_v": [
+    0.03854048401657144,
+    0.037290074155833824
+  ],
+  "holdout_rmse_cell_v": [
+    0.036346281127084504,
+    0.03601708092926196
+  ],
+  "acceptance_cell_rmse_v": 0.15,
+  "limitations": [
+    "low-rate terminal voltage is an OCV proxy, not fully rested OCV",
+    "same cell and adjacent early missions; no independent-cell or real X500 validation",
+    "coarse 10/30-second samples do not resolve instantaneous R0; weak identifiability must be retained",
+    "thermal parameters and temperature dependence remain engineering assumptions"
+  ],
+  "comparison_status": "passed"
+}
