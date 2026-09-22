@@ -1,0 +1,9 @@
+{
+  "kv_rpm_per_v": 920,
+  "resistance_ohm": 0.115,
+  "rotor_inertia_kg_m2": 2e-05,
+  "thrust_coefficient": 1.2296996501129959e-05,
+  "torque_coefficient": 1.718657729631943e-07,
+  "provenance": "manufacturer_table_fit_plus_engineering_dynamic_thermal_assumptions",
+  "propeller_radius_m": 0.127
+}

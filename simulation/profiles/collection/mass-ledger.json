@@ -1,0 +1,124 @@
+{
+  "revision": "vtc6-4s4p",
+  "upstream_links": [
+    {
+      "name": "base_link",
+      "mass_kg": 2.0
+    },
+    {
+      "name": "rotor_0",
+      "mass_kg": 0.016076923076923075
+    },
+    {
+      "name": "rotor_1",
+      "mass_kg": 0.016076923076923075
+    },
+    {
+      "name": "rotor_2",
+      "mass_kg": 0.016076923076923075
+    },
+    {
+      "name": "rotor_3",
+      "mass_kg": 0.016076923076923075
+    }
+  ],
+  "upstream_total_mass_kg": 2.0643076923076924,
+  "prior_ledger_sha256": "5ae04b0ec786c4955c6d3e09550ca25234f65881968e4822e5533b3b92e4cca2",
+  "prior_ledger_correction": "old ledger describes upstream revolute links; current prepare_world fixes rotor joints and substitutes core J, so old locked tensor is not current effective inertia",
+  "mass_interpretation": "ASSUMPTION: upstream base_link2kg includes old8VTC6 cells+40g assembly. Not measured dry mass/BOM.",
+  "old_pack_assumed_kg": 0.4128,
+  "old_pack_box_m": [
+    0.08,
+    0.04,
+    0.07
+  ],
+  "new_pack_assumed_kg": 0.8056000000000001,
+  "new_pack_box_m": [
+    0.08,
+    0.08,
+    0.07
+  ],
+  "both_pack_positions_frd_m": [
+    0,
+    0,
+    0
+  ],
+  "inferred_body_without_old_pack_kg": 1.5872,
+  "inferred_body_without_old_pack_I_kgm2": [
+    0.02144306666666667,
+    0.021277946666666672,
+    0.0397248
+  ],
+  "new_body_mass_kg": 2.3928000000000003,
+  "new_body_I_kgm2": [
+    0.022201673333333338,
+    0.02203655333333334,
+    0.04058410666666666
+  ],
+  "total_with_rotors_kg": 2.4571076923076927,
+  "payload_policy": "existing central0.1m cube: +0.2kg and m*0.1^2/6 each principal inertia; not external eccentric payload",
+  "alternative_if_upstream_is_dry_total_kg": 2.8699076923076925,
+  "hardware_mass_or_mount_measured": false,
+  "current_fixed_rotor_positions_flu_m": [
+    [
+      0.174,
+      -0.174,
+      0.06
+    ],
+    [
+      -0.174,
+      0.174,
+      0.06
+    ],
+    [
+      0.174,
+      0.174,
+      0.06
+    ],
+    [
+      -0.174,
+      -0.174,
+      0.06
+    ]
+  ],
+  "current_total_com_flu_m": [
+    0.0,
+    0.0,
+    0.0015703265878581443
+  ],
+  "current_locked_inertia_about_base_origin_kgm2": [
+    [
+      0.024420160717948725,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.024255040717948727,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.044558066051282055
+    ]
+  ],
+  "current_locked_inertia_about_total_com_kgm2": [
+    [
+      0.02441410167320665,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.024248981673206653,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.044558066051282055
+    ]
+  ],
+  "rotor_inertia_policy": "fixed rotor physical links J included once, core relative spin as in existing model; no measured tensor claim"
+}

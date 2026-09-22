@@ -1,0 +1,91 @@
+schema: drone.vehicle/2.0
+id: quad_example
+revision: engineering-example
+frame: FRD
+rotor_count: 4
+motor_order:
+- front_right
+- rear_left
+- front_left
+- rear_right
+geometry:
+  body_mass_kg: 2.3928000000000003
+  rotor_mass_kg_each: 0.016076923076923075
+  source: explicit profile geometry; primitive body/arm visualization
+  source_type: engineering_fixture_no_vehicle_validation
+  body_inertia_diagonal_kg_m2:
+  - 0.022201673333333338
+  - 0.02203655333333334
+  - 0.04058410666666666
+  rotor_attachment: fixed; core relative axial spin; locked inertia includes J once
+  body_size_m:
+  - 0.25
+  - 0.19
+  - 0.07
+rotors:
+- position_m:
+  - 0.174
+  - 0.174
+  - -0.06
+  spin: 1
+- position_m:
+  - -0.174
+  - -0.174
+  - -0.06
+  spin: 1
+- position_m:
+  - 0.174
+  - -0.174
+  - -0.06
+  spin: -1
+- position_m:
+  - -0.174
+  - 0.174
+  - -0.06
+  spin: -1
+battery:
+  profile: quad_example_battery
+  nominal_series_cells: 4
+  nominal_capacity_ah: 12.0
+  provenance: 'battery.json: explicit engineering fixture'
+  nominal_parallel_cells: 4
+  capacity_nameplate_ah: 12.48
+  parameters_file: battery.json
+propulsion:
+  parameters_file: propulsion.json
+validity:
+  scope: hover_and_gentle_low_speed
+  hardware_validated: false
+  public_data_compared: false
+  max_air_speed_mps: 5.0
+  max_body_rate_radps: 2.0
+  max_rotor_speed_radps: 1000.0
+  outside_policy: continue_finite_physics_flag_evaluation_exclude_normal_eligibility
+  basis: Engineering fixture only; generic geometry/PX4/physics consistency tests,
+    no SITL or hardware validation
+  min_pack_voltage_v: 12.4
+  min_soc: 0.2
+sensors:
+  rates_hz:
+    imu_sensor: 250
+    magnetometer_sensor: 100
+    air_pressure_sensor: 50
+    navsat_sensor: 30
+  battery:
+    period_s: 0.1
+    delay_s: 0.0
+    voltage_bias_v: 0.0
+    current_bias_a: 0.0
+    voltage_noise_std_v: 0.01
+    current_noise_std_a: 0.02
+    drift_std_v: 0.0
+    drift_tau_s: 10.0
+    quantization_v: 0.0
+    voltage_range_v:
+    - 0.0
+    - 20.0
+    current_range_a:
+    - 0.0
+    - 100.0
+    drop_begin_s: -1.0
+    drop_end_s: -1.0
