@@ -1,0 +1,9 @@
+{
+  "kv_rpm_per_v": 620.0,
+  "resistance_ohm": 0.1,
+  "rotor_inertia_kg_m2": 4e-05,
+  "thrust_coefficient": 2.2e-05,
+  "torque_coefficient": 3.5e-07,
+  "provenance": "Unmeasured illustrative motor/propeller parameters; no manufacturer validation",
+  "propeller_radius_m": 0.14
+}
