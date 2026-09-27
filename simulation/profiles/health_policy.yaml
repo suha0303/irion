@@ -1,0 +1,52 @@
+revision: cmu-holybro-v3
+scope: X500_reference_engineering_simulation
+basis: healthy means declared baseline physical parameters; no hardware certification
+normal_health:
+  battery_r0_multiplier:
+  - 1.0
+  - 1.0
+  battery_r1_multiplier:
+  - 1.0
+  - 1.0
+  battery_capacity_multiplier:
+  - 1.0
+  - 1.0
+  motor_resistance_multiplier:
+  - 1.0
+  - 1.0
+  manufacturing_randomization: disabled_no_measured_population_distribution
+normal_operation:
+  initial_soc:
+  - 0.4
+  - 0.9
+  ambient_temperature_k:
+  - 283.15
+  - 298.15
+  central_payload_kg:
+  - 0.0
+  - 0.2
+  mean_wind_mps:
+  - 0.0
+  - 2.0
+  gust_sigma_mps:
+  - 0.0
+  - 0.4
+  mission:
+  - hover
+  - altitude
+  - horizontal
+  - yaw
+  - waypoint
+anomaly_levels:
+  configuration: profiles/scenarios/degradation-levels.yaml
+  levels:
+  - mild
+  - medium
+  - strong
+  meaning: engineering equivalent parameter changes, not hardware damage or lifetime
+limits:
+- values are engineering experiments, not measured detection limits or lifetime severity
+  curves
+- independent resets at same initial SOC are not same initial remaining Ah when Q
+  differs
+- no same_asset_future continuity is claimed

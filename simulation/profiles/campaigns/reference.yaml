@@ -1,0 +1,17 @@
+checkpoint: campaign-reference.json
+concurrency: 2
+cases:
+  - {scenario: hover_normal, seed: 17, duration: 90}
+  - {scenario: battery_resistance_existing, seed: 17, duration: 90}
+  - {scenario: altitude_normal, seed: 23, duration: 90}
+  - {scenario: horizontal_normal, seed: 29, duration: 90}
+  - {scenario: yaw_normal, seed: 31, duration: 90}
+  - {scenario: waypoint_normal, seed: 37, duration: 90}
+  - {scenario: low_soc_normal, seed: 17, duration: 90}
+  - {scenario: propulsion_loss_existing, seed: 17, duration: 90}
+  - {scenario: wind_normal, seed: 41, duration: 90}
+  - {scenario: cold_normal, seed: 43, duration: 90}
+  - {scenario: payload_normal, seed: 47, duration: 90}
+  - {scenario: battery_resistance_step, seed: 17, duration: 90}
+  - {scenario: propulsion_loss_step, seed: 17, duration: 90}
+  - {scenario: battery_capacity_existing, seed: 17, duration: 90}

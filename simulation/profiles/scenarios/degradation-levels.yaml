@@ -1,0 +1,62 @@
+revision: engineering-levels-v1
+basis: Equivalent physical parameter experiments within finite model bounds; not measured
+  damage severity or guaranteed detection thresholds. Other health parameters and
+  environment stay baseline.
+cases:
+  battery_resistance_mild_existing:
+    r0_multiplier: 1.15
+    severity: mild
+  battery_resistance_medium_existing:
+    r0_multiplier: 1.4
+    severity: medium
+  battery_resistance_strong_existing:
+    r0_multiplier: 1.7
+    severity: strong
+  battery_rc_mild_existing:
+    r1_multiplier: 1.2
+    severity: mild
+  battery_rc_medium_existing:
+    r1_multiplier: 1.5
+    severity: medium
+  battery_rc_strong_existing:
+    r1_multiplier: 1.8
+    severity: strong
+  battery_capacity_mild_existing:
+    capacity_multiplier: 0.9
+    severity: mild
+  battery_capacity_medium_existing:
+    capacity_multiplier: 0.7
+    severity: medium
+  battery_capacity_strong_existing:
+    capacity_multiplier: 0.6
+    severity: strong
+  motor_resistance_mild_existing:
+    motor_r_multiplier: 1.1
+    severity: mild
+  motor_resistance_medium_existing:
+    motor_r_multiplier: 1.2
+    severity: medium
+  motor_resistance_strong_existing:
+    motor_r_multiplier: 1.35
+    severity: strong
+  propulsion_loss_mild_existing:
+    friction: 1.0e-05
+    severity: mild
+  propulsion_loss_medium_existing:
+    friction: 4.0e-05
+    severity: medium
+  propulsion_loss_strong_existing:
+    friction: 7.0e-05
+    severity: strong
+  propeller_load_mild_existing:
+    kt_multiplier: 0.96
+    kq_multiplier: 1.04
+    severity: mild
+  propeller_load_medium_existing:
+    kt_multiplier: 0.9
+    kq_multiplier: 1.1
+    severity: medium
+  propeller_load_strong_existing:
+    kt_multiplier: 0.85
+    kq_multiplier: 1.15
+    severity: strong
