@@ -1,0 +1,7 @@
+checkpoint: remediation-20261014/sensor-campaign-v2.json
+concurrency: 2
+cases:
+  - {scenario: hover_normal, seed: 221, duration: 90}
+  - {scenario: sensor_bias_quality, seed: 221, duration: 90}
+  - {scenario: sensor_delay_quality, seed: 221, duration: 90}
+  - {scenario: sensor_dropout_quality, seed: 221, duration: 90}
