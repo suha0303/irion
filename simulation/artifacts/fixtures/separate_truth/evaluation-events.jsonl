@@ -1,0 +1,1 @@
+{"schema": "drone.evaluation.event/2.1", "run_id": "normal90", "event_id": "fixture-r0", "kind": "battery_resistance_increase", "target": "battery_pack", "onset_kind": "pre_existing", "physical_onset_time_us": null, "requested_time_us": 0, "applied_time_us": 0, "end_time_us": null, "profile_revision": 1, "parameters": {"r0_multiplier": 1.4}}

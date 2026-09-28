@@ -1,0 +1,4 @@
+{
+  "origin": "synthetic_contract_fixture",
+  "expected": "observation bytes unchanged when truth is replaced; no known physical onset"
+}

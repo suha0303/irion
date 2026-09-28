@@ -1,0 +1,4 @@
+{
+  "origin": "synthetic_contract_fixture",
+  "expected": "one missing producer sequence and 30s gap; do not impute from truth"
+}
