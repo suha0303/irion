@@ -1,0 +1,4 @@
+{
+  "origin": "synthetic_contract_fixture",
+  "expected": "availability order is seq1 then seq0; sample time is not arrival order"
+}

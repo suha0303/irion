@@ -1,0 +1,2 @@
+{"topic": "battery_status", "sample_time_us": 0, "available_time_us": 5000, "fields": {"voltage_v": 15.0, "current_a": 20.0}, "schema": "drone.raw.event/2.0", "run_id": "normal90", "source": "px4.uorb", "instance": 0, "seq": 0, "clock_id": "px4-boot", "field_quality": {"voltage_v": "valid", "current_a": "valid"}}
+{"topic": "battery_status", "sample_time_us": 100000, "available_time_

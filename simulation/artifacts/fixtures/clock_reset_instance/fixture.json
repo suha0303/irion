@@ -1,0 +1,4 @@
+{
+  "origin": "synthetic_contract_fixture",
+  "expected": "new clock/instance requires a new consumer segment"
+}

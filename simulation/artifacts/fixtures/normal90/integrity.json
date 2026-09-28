@@ -1,0 +1,26 @@
+{
+  "native_logs/capture.jsonl": {
+    "size": 1388003,
+    "sha256": "c258604d0b076cf15aa201afd1515becab7bf9d49ba1c3513fd2568d73d5c861"
+  },
+  "observations/diagnostics.jsonl": {
+    "size": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "observations/metadata.json": {
+    "size": 6094,
+    "sha256": "bc2da5baaaf0f42815ac6de89c24d12b9bb2e1bd65bfd98e7c4f992273c004f0"
+  },
+  "observations/streams.jsonl": {
+    "size": 3199393,
+    "sha256": "eafda1a1e7f952e23a366462edee29fa2af730063b6429e71c7b758b04390a7e"
+  },
+  "observations/watermarks.jsonl": {
+    "size": 15156,
+    "sha256": "cecfc27efce8f944126ce473feabcb1a9787e86fbf1b059dce57d4791ab062f6"
+  },
+  "run.json": {
+    "size": 94,
+    "sha256": "ddc06e32d331a04e09610184fd60a3041070953f9075720bba29940177223670"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "origin": "synthetic_contract_fixture",
+  "producer": "capstone_sim",
+  "C9": "deferred_ai_integration",
+  "fixtures": [
+    "normal90",
+    "delay_reordering",
+    "missing_long_gap",
+    "clock_reset_instance",
+    "partial_end",
+    "separate_truth"
+  ]
+}
