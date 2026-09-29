@@ -1,0 +1,4 @@
+{
+  "origin": "synthetic_contract_fixture",
+  "expected": "recover 1 row; retain incomplete trailing bytes separately"
+}

@@ -1,0 +1,5 @@
+duration_s: 30
+soc: 0.9
+duty: 0.55
+capacity_ah: 6
+output: bench-reference.csv

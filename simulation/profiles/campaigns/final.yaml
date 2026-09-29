@@ -1,0 +1,13 @@
+checkpoint: campaign-final.json
+concurrency: 2
+cases:
+  - {scenario: hover_normal, seed: 17, duration: 90}
+  - {scenario: battery_resistance_step, seed: 17, duration: 90}
+  - {scenario: battery_resistance_ramp, seed: 17, duration: 90}
+  - {scenario: propulsion_loss_ramp, seed: 17, duration: 90}
+  - {scenario: battery_rc_existing, seed: 17, duration: 90}
+  - {scenario: motor_resistance_existing, seed: 17, duration: 90}
+  - {scenario: propeller_load_existing, seed: 17, duration: 90}
+  - {scenario: combined_existing, seed: 17, duration: 90}
+  - {scenario: propulsion_loss_step, seed: 17, duration: 90}
+  - {scenario: wind_normal, seed: 41, duration: 90}

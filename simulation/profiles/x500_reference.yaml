@@ -1,0 +1,86 @@
+schema: drone.vehicle/2.0
+id: x500_reference
+revision: cmu-holybro-v3
+frame: FRD
+rotor_count: 4
+motor_order:
+- front_right
+- rear_left
+- front_left
+- rear_right
+geometry:
+  body_mass_kg: 2.0
+  rotor_mass_kg_each: 0.016076923076923075
+  source: PX4-gazebo-models e05f4312 x500_base
+  source_type: upstream_default
+  body_inertia_diagonal_kg_m2:
+  - 0.02166666666666667
+  - 0.02166666666666667
+  - 0.04
+  rotor_attachment: fixed; core relative axial spin; locked inertia includes J once
+rotors:
+- position_m:
+  - 0.174
+  - 0.174
+  - -0.06
+  spin: 1
+- position_m:
+  - -0.174
+  - -0.174
+  - -0.06
+  spin: 1
+- position_m:
+  - 0.174
+  - -0.174
+  - -0.06
+  spin: -1
+- position_m:
+  - -0.174
+  - 0.174
+  - -0.06
+  spin: -1
+battery:
+  profile: cmu_vah07_4s2p
+  nominal_series_cells: 4
+  nominal_capacity_ah: 6
+  provenance: CMU_VAH07_fitted_early_missions_with_weak_identifiability
+propulsion:
+  kv_rpm_per_v: 920
+  resistance_ohm: 0.115
+  rotor_inertia_kg_m2: 2.0e-05
+  thrust_coefficient: 1.2296996501129959e-05
+  torque_coefficient: 1.718657729631943e-07
+  provenance: manufacturer_table_fit_plus_engineering_dynamic_thermal_assumptions
+validity:
+  scope: hover_and_gentle_low_speed
+  hardware_validated: false
+  public_data_compared: true
+  max_air_speed_mps: 5.0
+  max_body_rate_radps: 2.0
+  max_rotor_speed_radps: 1000.0
+  outside_policy: continue_finite_physics_flag_evaluation_exclude_normal_eligibility
+  basis: engineering low-speed envelope; not measured flight limit
+sensors:
+  rates_hz:
+    imu_sensor: 250
+    magnetometer_sensor: 100
+    air_pressure_sensor: 50
+    navsat_sensor: 30
+  battery:
+    period_s: 0.1
+    delay_s: 0.0
+    voltage_bias_v: 0.0
+    current_bias_a: 0.0
+    voltage_noise_std_v: 0.01
+    current_noise_std_a: 0.02
+    drift_std_v: 0.0
+    drift_tau_s: 10.0
+    quantization_v: 0.0
+    voltage_range_v:
+    - 0.0
+    - 20.0
+    current_range_a:
+    - 0.0
+    - 100.0
+    drop_begin_s: -1.0
+    drop_end_s: -1.0

@@ -1,0 +1,37 @@
+--- a/include/gz/transport/Discovery.hh
++++ b/include/gz/transport/Discovery.hh
+@@ -143,6 +143,8 @@
+           exit(false),
+           enabled(false)
+       {
++        // Cache environment access before Start() creates receiver threads.
++        static_cast<void>(this->Version());
+         std::string gzIp;
+         if (env("GZ_IP", gzIp) && !gzIp.empty())
+         {
+@@ -1410,15 +1412,18 @@
+       /// \return The discovery version.
+       private: uint8_t Version() const
+       {
++        // Initialized by the constructor before discovery threads start.
++        // NodeShared also fixes topic-statistics mode at process startup.
++        // Retain legacy local-static symbols for existing binary consumers.
+         static std::string gzStats;
+         static int topicStats;
+-
+-        if (env("GZ_TRANSPORT_TOPIC_STATISTICS", gzStats) && !gzStats.empty())
+-        {
+-          topicStats = (gzStats == "1");
+-        }
+-
+-        return this->kWireVersion + (topicStats * 100);
++        static const uint8_t version = []()
++        {
++          if (env("GZ_TRANSPORT_TOPIC_STATISTICS", gzStats) && !gzStats.empty())
++            topicStats = (gzStats == "1");
++          return static_cast<uint8_t>(kWireVersion + topicStats * 100);
++        }();
++        return version;
+       }
+ 
+       /// \brief Register a new network interface in the discovery system.

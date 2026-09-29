@@ -1,0 +1,67 @@
+revision: vtc6-4s4p
+scope: X500_reference_VTC6_4S4P_collection_only
+basis: healthy means declared baseline physical parameters; no hardware certification
+normal_health:
+  battery_r0_multiplier:
+  - 1.0
+  - 1.0
+  battery_r1_multiplier:
+  - 1.0
+  - 1.0
+  battery_capacity_multiplier:
+  - 1.0
+  - 1.0
+  motor_resistance_multiplier:
+  - 1.0
+  - 1.0
+  manufacturing_randomization: disabled_no_measured_population_distribution
+normal_operation:
+  initial_soc:
+  - 0.4
+  - 0.9
+  ambient_temperature_k:
+  - 283.15
+  - 298.15
+  central_payload_kg:
+  - 0.0
+  - 0.2
+  mean_wind_mps:
+  - 0.0
+  - 2.0
+  gust_sigma_mps:
+  - 0.0
+  - 0.4
+  mission:
+  - hover
+  - altitude
+  - horizontal
+  - yaw
+  - waypoint
+  min_true_soc: 0.2
+  min_pack_voltage_v: 12.4
+  max_esc_command_during_mission: 0.9
+anomaly_levels:
+  configuration: profiles/scenarios/degradation-levels.yaml
+  levels:
+  - mild
+  - medium
+  - strong
+  meaning: engineering equivalent parameter changes, not hardware damage or lifetime
+limits:
+- values are engineering experiments, not measured detection limits or lifetime severity
+  curves
+- independent resets at same initial SOC are not same initial remaining Ah when Q
+  differs
+- no same_asset_future continuity is claimed
+- Collection records are not exchangeable with 4S2P or prior test runs
+- 15min normal /5min lowSOC/8min anomaly are planned durations; completion and envelope
+  checked after actual flight
+capacity_basis: manufacturer minimum 3.0Ah/cell at datasheet test conditions; conservative
+  engineering choice, not 12Ah flight-tested
+assessment:
+  common19_max_source_gap_s: 0.5
+  normal_gate: model envelope, voltage>=12.4V, trueSOC>=0.2, ESC command<=0.9
+  anomaly_gate: finite physical/solver state; normal endurance limits reported separately,
+    not automatic exclusion
+  scope: post-run simulation eligibility, not hardware damage certification or detector
+    performance

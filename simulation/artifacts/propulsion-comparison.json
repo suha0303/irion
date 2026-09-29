@@ -1,0 +1,90 @@
+{
+  "origin": "manufacturer_table_comparison",
+  "source": "https://cdn.shopify.com/s/files/1/0604/5905/7341/files/X500MotorSpec.png?v=1678791632",
+  "transcription": "manual checked table, grams force converted with standard gravity 9.80665m/s\u00b2; RPM to rad/s",
+  "fit_rows": [
+    0,
+    2,
+    4,
+    6,
+    8,
+    10,
+    12,
+    14
+  ],
+  "holdout_rows": [
+    1,
+    3,
+    5,
+    7,
+    9,
+    11,
+    13
+  ],
+  "parameters": {
+    "kt_prop": 1.2296996501129959e-05,
+    "kq_prop": 1.718657729631943e-07,
+    "friction": 4.1012149502659346e-17,
+    "coulomb": 0.008303736161277128,
+    "esc_efficiency": 0.858681252985813,
+    "resistance": 0.115
+  },
+  "holdout_thrust_max_relative": 0.06036785849835846,
+  "holdout_torque_max_absolute_nm": 0.005242986337195402,
+  "holdout_power_max_relative": 0.07537170849910968,
+  "criterion": {
+    "thrust_relative": 0.15,
+    "torque_absolute_nm": 0.015,
+    "power_relative": 0.25
+  },
+  "limits": [
+    "manufacturer aggregate bench reference, no independent lab uncertainty",
+    "torque rounded to 0.01Nm; inferred friction/ESC parameters are weakly identified",
+    "manufacturer throttle percentage is NOT our post-mapping effective duty",
+    "no measured dynamic motor transient; rotor inertia and cooling remain assumptions"
+  ],
+  "passed": true,
+  "uiuc_comparison": {
+    "different_propeller": true,
+    "model": "APC SF 10x4.7, not Holybro T1045",
+    "kt_range": [
+      1.3677514333442816e-05,
+      1.393582433029726e-05,
+      1.393582433029726e-05,
+      1.4258711826365316e-05,
+      1.4426613324320703e-05,
+      1.4762416320231485e-05,
+      1.4956148817872315e-05,
+      1.5201543314884038e-05,
+      1.5498599811266647e-05,
+      1.579565630764926e-05,
+      1.597647330544737e-05,
+      1.6170205803088204e-05,
+      1.631227630135815e-05,
+      1.6506008798998982e-05,
+      1.660933279774076e-05,
+      1.6777234295696148e-05
+    ],
+    "kq_range": [
+      2.2503099314396183e-07,
+      2.2816367518308894e-07,
+      2.2816367518308894e-07,
+      2.3181847089540383e-07,
+      2.3495115293453086e-07,
+      2.4017228966640937e-07,
+      2.4330497170553646e-07,
+      2.474818810910392e-07,
+      2.527030178229176e-07,
+      2.5792415455479615e-07,
+      2.610568365939232e-07,
+      2.652337459794259e-07,
+      2.6784431434536516e-07,
+      2.714991100576801e-07,
+      2.7358756475043155e-07,
+      2.772423604627465e-07
+    ],
+    "source": "https://m-selig.ae.illinois.edu/props/volume-1/data/apcsf_10x4.7_static_kt0835.txt",
+    "license": "copyright UIUC; public download, no explicit redistribution license identified",
+    "role": "context comparison only, not target prop validation"
+  }
+}

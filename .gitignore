@@ -1,0 +1,77 @@
+# Environments, installed third-party code, build products and caches.
+.venv/
+.python/
+.bootstrap/
+vendor/
+build/
+__pycache__/
+.cache/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.py[cod]
+*.egg-info/
+
+# Machine-specific simulator/runtime output; bootstrap recreates these.
+/simulation/runs/
+/simulation/runtime/
+/simulation/ai/runtime/
+/simulation/artifacts/*
+!/simulation/artifacts/battery-fit.json
+!/simulation/artifacts/propulsion-comparison.json
+!/simulation/artifacts/mass-inertia-ledger.json
+!/simulation/artifacts/sources/
+!/simulation/artifacts/fixtures/
+/simulation/sim/reports/
+
+# Generated datasets, working data and local task state, never collection source.
+/Data/archives/
+/Data/consumer/
+/Data/streamed/
+/Data/processed/
+/Data/speed-tests/
+/Data/gpu1200/
+/Data/operations/
+/Data/generation/installation.json
+/Data/generation/setup-report.json
+
+# Local AI environments, execution history and learned weights stay local.
+/ai/reports/
+/ai/long-run-claims/
+/ai/artifacts/
+/ai/experiments/*
+!/ai/experiments/ROUND_001/
+/ai/experiments/ROUND_001/*
+!/ai/experiments/ROUND_001/compare-8-seed0-01/
+/ai/experiments/ROUND_001/compare-8-seed0-01/*
+!/ai/experiments/ROUND_001/compare-8-seed0-01/plan.json
+/ai/ai/
+
+# Immutable local history is preserved on disk, outside the source distribution.
+old/
+/docs/archive/
+
+# User configuration, credentials and crash dumps.
+.aws/
+.ssh/
+.codex/
+.agents/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_ed25519
+known_hosts
+core
+core.[0-9]*
+
+# User-selected AI connection profiles and local execution state.
+/ai/.local/
+/ai/operations/
+/ai/outputs/
+/ai/runs/
+/ai/**/*.safetensors
+/ai/**/*.pt
+/ai/**/*.pth
