@@ -1,0 +1,4 @@
+#!/bin/sh
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export PYTHONPATH="$ROOT/sim/src${PYTHONPATH:+:$PYTHONPATH}"
+exec "$ROOT/.venv/bin/python" -m capstone_sim.cli "$@"
