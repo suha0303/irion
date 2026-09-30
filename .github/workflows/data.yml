@@ -1,0 +1,22 @@
+name: Data portability
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  cpu-data:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated CPU environment
+        run: ./Data/generation/drone-data setup --tests
+      - name: Validate clone export and relocated preprocessing
+        env:
+          PYTHONPATH: Data/generation:ai:ai/src:simulation/sim/src
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+        run: >-
+          Data/generation/.venv/bin/python -B -m pytest -q
+          Data/generation/tests ai/tests/test_pretrain_portability.py
+          ai/tests/test_pretrain_source_lock.py
