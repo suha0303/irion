@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+case "${1:-menu}" in
+  setup|doctor|export)
+    exec python3 "$ROOT/Data/generation/tools/workspace.py" "$@"
+    ;;
+  menu)
+    if [ "$#" -gt 0 ]; then shift; fi
+    exec "$ROOT/Data/generation/drone-pretrain" "$@"
+    ;;
+  --help|-h|help)
+    exec python3 "$ROOT/Data/generation/tools/workspace.py" --help
+    ;;
+  *)
+    exec "$ROOT/Data/generation/drone-pretrain" "$@"
+    ;;
+esac
