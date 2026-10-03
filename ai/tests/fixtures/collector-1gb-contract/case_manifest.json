@@ -1,0 +1,602 @@
+{
+  "schema": "x500.finite-cases/1",
+  "preparation_id": "ROUND_001/data-1gb-01",
+  "revision": "R2_1GB",
+  "status": "FROZEN_PLANNING_NOT_GENERATED",
+  "cases": [
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_5",
+      "role": "normal_train",
+      "scenario": "waypoint_normal",
+      "seed": 31015,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31015",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 1,
+      "scenario_parameters_snapshot": {
+        "mission": "waypoint"
+      },
+      "source_case_id": "ROUND_001_normal_train_5",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_calibration_8",
+      "role": "normal_calibration",
+      "scenario": "cold_normal",
+      "seed": 31038,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31038",
+      "status": "planned_not_generated",
+      "split": "calibration",
+      "generation_index": 2,
+      "scenario_parameters_snapshot": {
+        "temperature": 283.15
+      },
+      "source_case_id": "ROUND_001_normal_calibration_8",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_3",
+      "role": "normal_train",
+      "scenario": "horizontal_normal",
+      "seed": 31013,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31013",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 3,
+      "scenario_parameters_snapshot": {
+        "mission": "horizontal"
+      },
+      "source_case_id": "ROUND_001_normal_train_3",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_1",
+      "role": "normal_train",
+      "scenario": "hover_normal",
+      "seed": 31011,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31011",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 4,
+      "scenario_parameters_snapshot": {},
+      "source_case_id": "ROUND_001_normal_train_1",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_7",
+      "role": "normal_train",
+      "scenario": "wind_normal",
+      "seed": 31017,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31017",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 5,
+      "scenario_parameters_snapshot": {
+        "wind_e": 2,
+        "gust_sigma": 0.4
+      },
+      "source_case_id": "ROUND_001_normal_train_7",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_validation_7",
+      "role": "normal_validation",
+      "scenario": "wind_normal",
+      "seed": 31027,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31027",
+      "status": "planned_not_generated",
+      "split": "validation",
+      "generation_index": 6,
+      "scenario_parameters_snapshot": {
+        "wind_e": 2,
+        "gust_sigma": 0.4
+      },
+      "source_case_id": "ROUND_001_normal_validation_7",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_6",
+      "role": "normal_train",
+      "scenario": "low_soc_normal",
+      "seed": 31016,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31016",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 7,
+      "scenario_parameters_snapshot": {
+        "soc": 0.4
+      },
+      "source_case_id": "ROUND_001_normal_train_6",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_payload_normal_normal",
+      "role": "normal_dev_eval",
+      "scenario": "payload_normal",
+      "seed": 31010,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_normal_31010",
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 8,
+      "scenario_parameters_snapshot": {
+        "payload": 0.2
+      },
+      "source_case_id": "ROUND_001_dev_payload_normal_normal",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_4",
+      "role": "normal_train",
+      "scenario": "yaw_normal",
+      "seed": 31014,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31014",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 9,
+      "scenario_parameters_snapshot": {
+        "mission": "yaw"
+      },
+      "source_case_id": "ROUND_001_normal_train_4",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_calibration_6",
+      "role": "normal_calibration",
+      "scenario": "low_soc_normal",
+      "seed": 31036,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31036",
+      "status": "planned_not_generated",
+      "split": "calibration",
+      "generation_index": 10,
+      "scenario_parameters_snapshot": {
+        "soc": 0.4
+      },
+      "source_case_id": "ROUND_001_normal_calibration_6",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_calibration_1",
+      "role": "normal_calibration",
+      "scenario": "hover_normal",
+      "seed": 31031,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31031",
+      "status": "planned_not_generated",
+      "split": "calibration",
+      "generation_index": 11,
+      "scenario_parameters_snapshot": {},
+      "source_case_id": "ROUND_001_normal_calibration_1",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_validation_2",
+      "role": "normal_validation",
+      "scenario": "altitude_normal",
+      "seed": 31022,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31022",
+      "status": "planned_not_generated",
+      "split": "validation",
+      "generation_index": 12,
+      "scenario_parameters_snapshot": {
+        "mission": "altitude"
+      },
+      "source_case_id": "ROUND_001_normal_validation_2",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_2",
+      "role": "normal_train",
+      "scenario": "altitude_normal",
+      "seed": 31012,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31012",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 13,
+      "scenario_parameters_snapshot": {
+        "mission": "altitude"
+      },
+      "source_case_id": "ROUND_001_normal_train_2",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_8",
+      "role": "normal_train",
+      "scenario": "cold_normal",
+      "seed": 31018,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31018",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 14,
+      "scenario_parameters_snapshot": {
+        "temperature": 283.15
+      },
+      "source_case_id": "ROUND_001_normal_train_8",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_train_9",
+      "role": "normal_train",
+      "scenario": "payload_normal",
+      "seed": 31019,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31019",
+      "status": "planned_not_generated",
+      "split": "train",
+      "generation_index": 15,
+      "scenario_parameters_snapshot": {
+        "payload": 0.2
+      },
+      "source_case_id": "ROUND_001_normal_train_9",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_normal_validation_5",
+      "role": "normal_validation",
+      "scenario": "waypoint_normal",
+      "seed": 31025,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_fit_31025",
+      "status": "planned_not_generated",
+      "split": "validation",
+      "generation_index": 16,
+      "scenario_parameters_snapshot": {
+        "mission": "waypoint"
+      },
+      "source_case_id": "ROUND_001_normal_validation_5",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_hover_31001",
+      "role": "normal_dev_eval",
+      "scenario": "hover_normal",
+      "seed": 31001,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31001",
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 17,
+      "scenario_parameters_snapshot": {},
+      "source_case_id": "ROUND_001_dev_hover_31001",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_hover_31002",
+      "role": "normal_dev_eval",
+      "scenario": "hover_normal",
+      "seed": 31002,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31002",
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 18,
+      "scenario_parameters_snapshot": {},
+      "source_case_id": "ROUND_001_dev_hover_31002",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_propulsion_loss_existing_31001",
+      "role": "anomaly_dev",
+      "scenario": "propulsion_loss_existing",
+      "seed": 31001,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31001",
+      "fault_at_s": null,
+      "ramp_seconds": null,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 19,
+      "scenario_parameters_snapshot": {
+        "friction": 4e-05
+      },
+      "source_case_id": "ROUND_001_dev_propulsion_loss_existing_31001",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_battery_resistance_existing_31002",
+      "role": "anomaly_dev",
+      "scenario": "battery_resistance_existing",
+      "seed": 31002,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31002",
+      "fault_at_s": null,
+      "ramp_seconds": null,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 20,
+      "scenario_parameters_snapshot": {
+        "r0": 0.056
+      },
+      "source_case_id": "ROUND_001_dev_battery_resistance_existing_31002",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_battery_resistance_step_31001",
+      "role": "anomaly_dev",
+      "scenario": "battery_resistance_step",
+      "seed": 31001,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31001",
+      "fault_at_s": 110,
+      "ramp_seconds": null,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 21,
+      "scenario_parameters_snapshot": {
+        "fault": "r0",
+        "fault_at": 110,
+        "fault_value": 1.4
+      },
+      "source_case_id": "ROUND_001_dev_battery_resistance_step_31001",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_propulsion_loss_existing_31002",
+      "role": "anomaly_dev",
+      "scenario": "propulsion_loss_existing",
+      "seed": 31002,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31002",
+      "fault_at_s": null,
+      "ramp_seconds": null,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 22,
+      "scenario_parameters_snapshot": {
+        "friction": 4e-05
+      },
+      "source_case_id": "ROUND_001_dev_propulsion_loss_existing_31002",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_propulsion_loss_ramp_31002",
+      "role": "anomaly_dev",
+      "scenario": "propulsion_loss_ramp",
+      "seed": 31002,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31002",
+      "fault_at_s": 110,
+      "ramp_seconds": 20,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 23,
+      "scenario_parameters_snapshot": {
+        "fault": "friction",
+        "fault_at": 110,
+        "fault_value": 4e-05,
+        "fault_ramp_s": 20
+      },
+      "source_case_id": "ROUND_001_dev_propulsion_loss_ramp_31002",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_battery_resistance_step_31002",
+      "role": "anomaly_dev",
+      "scenario": "battery_resistance_step",
+      "seed": 31002,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31002",
+      "fault_at_s": 110,
+      "ramp_seconds": null,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 24,
+      "scenario_parameters_snapshot": {
+        "fault": "r0",
+        "fault_at": 110,
+        "fault_value": 1.4
+      },
+      "source_case_id": "ROUND_001_dev_battery_resistance_step_31002",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_battery_resistance_existing_31001",
+      "role": "anomaly_dev",
+      "scenario": "battery_resistance_existing",
+      "seed": 31001,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31001",
+      "fault_at_s": null,
+      "ramp_seconds": null,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 25,
+      "scenario_parameters_snapshot": {
+        "r0": 0.056
+      },
+      "source_case_id": "ROUND_001_dev_battery_resistance_existing_31001",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_propulsion_loss_step_31002",
+      "role": "anomaly_dev",
+      "scenario": "propulsion_loss_step",
+      "seed": 31002,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31002",
+      "fault_at_s": 110,
+      "ramp_seconds": null,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 26,
+      "scenario_parameters_snapshot": {
+        "fault": "friction",
+        "fault_at": 110,
+        "fault_value": 4e-05
+      },
+      "source_case_id": "ROUND_001_dev_propulsion_loss_step_31002",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_propulsion_loss_ramp_31001",
+      "role": "anomaly_dev",
+      "scenario": "propulsion_loss_ramp",
+      "seed": 31001,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31001",
+      "fault_at_s": 110,
+      "ramp_seconds": 20,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 27,
+      "scenario_parameters_snapshot": {
+        "fault": "friction",
+        "fault_at": 110,
+        "fault_value": 4e-05,
+        "fault_ramp_s": 20
+      },
+      "source_case_id": "ROUND_001_dev_propulsion_loss_ramp_31001",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_propulsion_loss_step_31001",
+      "role": "anomaly_dev",
+      "scenario": "propulsion_loss_step",
+      "seed": 31001,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31001",
+      "fault_at_s": 110,
+      "ramp_seconds": null,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 28,
+      "scenario_parameters_snapshot": {
+        "fault": "friction",
+        "fault_at": 110,
+        "fault_value": 4e-05
+      },
+      "source_case_id": "ROUND_001_dev_propulsion_loss_step_31001",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_battery_resistance_ramp_31002",
+      "role": "anomaly_dev",
+      "scenario": "battery_resistance_ramp",
+      "seed": 31002,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31002",
+      "fault_at_s": 110,
+      "ramp_seconds": 20,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 29,
+      "scenario_parameters_snapshot": {
+        "fault": "r0",
+        "fault_at": 110,
+        "fault_value": 1.4,
+        "fault_ramp_s": 20
+      },
+      "source_case_id": "ROUND_001_dev_battery_resistance_ramp_31002",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    },
+    {
+      "case_id": "ROUND_001_R2_1GB_dev_battery_resistance_ramp_31001",
+      "role": "anomaly_dev",
+      "scenario": "battery_resistance_ramp",
+      "seed": 31001,
+      "mission_seconds": 180,
+      "group_id": "ROUND_001_R2_1GB_dev_paired_31001",
+      "fault_at_s": 110,
+      "ramp_seconds": 20,
+      "status": "planned_not_generated",
+      "split": "development",
+      "generation_index": 30,
+      "scenario_parameters_snapshot": {
+        "fault": "r0",
+        "fault_at": 110,
+        "fault_value": 1.4,
+        "fault_ramp_s": 20
+      },
+      "source_case_id": "ROUND_001_dev_battery_resistance_ramp_31001",
+      "attempts_max": 1,
+      "retries": 0,
+      "actual_run_id": null
+    }
+  ],
+  "counts": {
+    "normal_train": 9,
+    "normal_calibration": 3,
+    "normal_validation": 3,
+    "normal_dev_eval": 3,
+    "anomaly_dev": 12
+  },
+  "attempts_max": 30,
+  "normal_runs": 18,
+  "normal_independent_groups": 18,
+  "anomaly_runs": 12,
+  "paired_development_groups": 2,
+  "final_test_runs": 0,
+  "seed_reuse": "Original R1 planned but ungenerated seeds, checked against existing run scenario metadata. No old run reuse.",
+  "existing_seed_collisions": {},
+  "checked_utc": "2026-10-14T12:19:59.777619+00:00"
+}

@@ -1,0 +1,357 @@
+schema: x500.round.plan/1.0
+round_id: ROUND_001
+plan_revision: R2_1GB
+status: APPROVED_PREPARING
+approved_revision: R2_1GB
+evaluation_mode: development
+execution_authorized: true
+hypothesis: 현재 고정 X500 생산자 버전의 다양한 건강한 정상 운용으로 LSTM 한 개를 학습했을 때, 같은 신규 개발 평가 자료에서
+  persistence/ridge 대비 예측오차·오경보·배터리/추진 사건 인지가 어떠한가?
+classification: exploratory_pilot_no_detection_performance_pass_threshold
+source_instructions: X500_EXPERIMENT_COORDINATOR_CODEX_PROMPT.md
+existing_overall_plan: EXPERIMENT_PLAN.md (P1 보존; 본 R1의 회차별 승인/정지 및 단일 LSTM 범위가 과거
+  다중모델 실행 제안보다 우선)
+dataset:
+  dataset_id: x500-round001-dev-r2-1gb
+  dataset_hash: null
+  split_manifest_hash: null
+  status: approved_finite_cases_not_generated
+  selected_version: 현재 producer-independent-v7-v8 producer lock + 현재 profile/firmware
+    binary + 동일 common19_ctx6 preprocessing을 생성 전에 고정
+  proposed_case_manifest: ai/experiments/ROUND_001/data-1gb-01/data/case_manifest.json
+  planned_counts:
+    normal_train: 9
+    normal_validation: 3
+    normal_calibration: 3
+    normal_dev_eval: 3
+    anomaly_dev: 12
+    final_test: 0
+    total: 30
+    independent_groups: 18
+    anomaly_paired_groups: 2
+  actual_used_runs: 0
+  actual_used_bytes: 0
+  actual_valid_windows: null
+  actual_monitoring_seconds: null
+  generation:
+    new_runs_max: 30
+    mission_seconds_per_run: 180
+    total_nominal_mission_seconds: 5400
+    concurrency: 1
+    retries: 0
+    wall_cap_minutes: 120
+    raw_stream_estimate_bytes: 1654933893
+    normal_pool_increment_estimate_bytes: 992960336
+    all_run_files_estimate_bytes: null
+    estimated_wall_minutes: 54
+    estimates_not_guarantees: true
+    estimate_basis: Historical9 normal runs0.496480168GB; current producer yield unmeasured.
+      18 normal/12 anomaly, no topup.
+    order_seed: 20261014
+    per_case_wall_seconds: 360
+  old_candidate:
+    manifest: ai/experiments/ROUND_001/candidate_normal_manifest.json
+    runs: 22
+    raw_bytes: 1212129236
+    window_counts:
+      train: 1248
+      validation: 553
+      calibration: 1244
+    status: preserved_not_in_R1_fit_pool
+    reason: profile/sensor/plugin은 일치하지만 PX4 binary 및 50ms→5ms 수집 revision이 달라 신규
+      평가와 동일 버전으로 자동 혼합하지 않는다. 재사용을 승인하려면 별도 호환 근거와 새 계획 revision을 제출한다.
+  health: 모터/배터리/프로펠러/ESC/센서/제어 설정 healthy; confirmed_healthy + 정상범위 근거 + 완료/무결성.
+    착륙 성공만으로 적격 판정 금지.
+  lineage: window 생성 전 raw/run/parent/retry/paired/continuation 그룹 분리. 정상 대조2run은
+    anomaly_dev와 같은 개발 평가 그룹에만 속하고 fit에 넣지 않는다.
+  forbidden: 과거 test와 그 보호 계보, final_test 관측·truth·test.npz, 실제 참고 BIN은 fit/calibration/development
+    성능 확인에 사용하지 않는다.
+  old_tests_and_final_inventory: 원래 역할·사용 이력·hash 보존; 현재 final_test 완전 분리 manifest는
+    미확인. 읽기 denylist를 실행 전에 확정.
+  freeze_rule: All30 fixed case attempts must pass source/integrity/health/lineage
+    checks. Freeze raw membership and hashes before preprocessing; derived quality/scaler/window
+    audit must pass before main training. No new members or retries.
+  role_mapping:
+    normal_train: train
+    normal_validation: validation
+    normal_calibration: calibration
+    normal_dev_eval: development
+    anomaly_dev: development
+    final_test: final_test
+  proposed_case_manifest_sha256: 19dbc14936db02af38ae3a783b398dbe3447f073298eb9f8405229d3b472cf94
+  storage_root: /media/sa/X31/Data/X500/ROUND_001/R2_1GB
+  storage_protocol: Existing local producer and verification; full tar preserving
+    links without dereference plus all regular files under external raw/<UUID>; inventory/hash
+    readback and same-filesystem publish. Local stages, original164 runs and failures
+    preserved.
+normal_pool:
+  target_bytes: 1000000000
+  target_gib: 0.9313225746154785
+  counting: confirmed_healthy 고유 run의 observations/streams.jsonl 비압축 bytes만; ULog·truth·backup·replay·파생창·모델·실제BIN·이상자료
+    제외
+  observed_inventory:
+    all_run_dirs: 164
+    all_stream_bytes: 6933603227
+    manifest_healthy_runs: 44
+    manifest_healthy_bytes: 2150781327
+    conservative_candidate_runs: 28
+    conservative_candidate_bytes: 1574188017
+    conservative_candidate_fraction_of_target: 0.01574188017
+    source: Data 담당 metadata/stat 점검; raw 본문/hash 새 재검증 아님
+  cumulative_certified_bytes: null
+  staging: This finite18normal pool only. 100GB/300GB expansion, scalable loader and
+    ridge memory changes deferred;1TB excluded. No automatic generation to byte target.
+  pool_splits:
+  - normal_train
+  - normal_validation
+  - normal_calibration
+  - normal_dev_eval
+  anomaly_pool: 12 development anomalies separate, excluded from1GB count
+  long_term_first_pool_target_bytes: 100000000000
+revision_lock:
+  precheck_snapshot: ai/experiments/ROUND_001/artifact_manifest.json
+  producer_lock: artifacts/producer-independent-v7-v8/producer-lock.json
+  preprocessing: ai/configs/preprocessing.json
+  feature_profile: common19_ctx6
+  target_order:
+  - body_rate_p
+  - body_rate_q
+  - body_rate_r
+  - pack_voltage
+  sampling_hz: 10
+  history: 100
+  horizon: 10
+  context_seconds: 60
+  cadence_seconds: 1
+  teacher_forcing: false
+  git_commit: null
+  git_dirty_diff: null
+  git_status: Git metadata unavailable; file SHA256 snapshot used, not a clean-commit
+    claim
+  execution_code_hash: null
+  pre_training_requirement: 기존 수학/물리/특징/계약 불변. 승인된 좁은 진입점·역할 분리 보완 완료 후 source/config/evaluator/환경
+    hash 재고정. 예상 밖 의미 변경은 새 revision 승인 전 중지.
+  px4_binary_sha256: 7c03b25d4185dc3239bf8d8754f4cc1ed193687efcd279030e2a5cb07a390c45
+  physics_plugin_sha256: 700c1a2cf4706ef100c0a5a601aecf64bbc224a935c4a61f1156c84e1081fe71
+  x500_profile_sha256: 3d4e85beebe493238bc62e8d691a3579bf7b68eb3f278a3a6bf369144bf9978a
+model:
+  research_models:
+  - lstm
+  research_seeds:
+  - 17
+  research_training_runs_max: 1
+  initialization: fresh deterministic seed17; no old checkpoint warm start
+  architecture: existing LSTMForecast encoder/decoder 2 layers, hidden32, dropout0.1;
+    19 history features +6 context,10x4 target
+  hidden: 32
+  optimizer: AdamW
+  learning_rate: 0.001
+  weight_decay: 1.0e-05
+  batch_size: 32
+  precision: float32
+  amp: false
+  max_epochs: 20
+  early_stopping_patience: 5
+  gradient_clip_norm: 1
+  loss: 0.5*mean MSE(p/q/r)+0.5*mean MSE(pack_voltage); future targets only
+  checkpoint: normal validation loss minimum; tie picks earliest epoch; best/last+optimizer/RNG/data
+    order/config/source hash saved
+  automatic_resume: false
+  retries: 0
+  seed_variability_verified: false
+  baselines:
+    models:
+    - persistence
+    - ridge_forecast
+    same_input_split_scaler_calibration_evaluator: true
+    reuse_old_weights: false
+    reason: Fresh same-data baselines on approved R2 frozen inputs; existing solver
+      unchanged.
+    ridge_alpha_candidates:
+    - 1
+    - 10
+    - 100
+    selection: normal validation weighted forecast loss only; predeclared existing
+      baseline grid
+    execution: CPU, one fixed baseline comparison; no extra neural candidates
+  deferred:
+  - Transformer
+  - seeds29/43
+  - larger data/model/feature experiments
+  full_spec_comparison_goal: LSTM/Transformer/baselines and repeated seeds retained
+    as not_executed_pending_separate_round_approval
+  backend: aten_cuda
+calibration:
+  runs: 3
+  pass_count: 1
+  normal_only: true
+  reference_error_scale: normal validation per-lead/target squared residual q95 floor1e-8
+  quantiles:
+  - 0.95
+  - 0.975
+  - 0.99
+  - 0.995
+  - 0.999
+  - 0.9995
+  - 0.9999
+  target_union_false_alarm_episodes_per_hour: 1
+  selection: 목표를 만족하는 가장 민감한 유한 q; 없으면 best finite candidate + target_unmet. 평가 후
+    재보정 금지.
+  ewma_alpha: 0.3
+  enter_consecutive: 3
+  exit_consecutive: 10
+  exit_ratio: 0.7
+  certification: short calibration provisional; normal_dev_eval 별도 오경보/시간과 노출, Poisson
+    가정 상한 및 그룹 불확실성을 보고. 보정 pass는 독립 성능 인증 아님.
+evaluation:
+  owner: coordinator
+  inference_owner: AI produces sealed immutable forecasts/decisions
+  evaluator_core:
+  - ai/src/capstone_ai/detection_protocol.py
+  - ai/src/capstone_ai/detection_replay.py
+  fixture: ai/experiments/ROUND_001/readiness/evaluator-fixture.json
+  protocol_mode: offline_logical_replay_development
+  final_test_authorized: false
+  score_after_all_targets_available: true
+  point_adjustment: false
+  stages: 모든 개발 run×3모델 예측/판정 봉인→hash 검증→총괄 evaluator 별도 truth 결합→손계산 fixture/분모/episode/지연
+    검산
+  conditions_in_scope:
+  - Train9 normal conditions; validation altitude/waypoint/wind; calibration hover/lowSOC/cold;
+    normal development hover2paired controls and payload1
+  - F1 battery resistance pre_existing
+  - F3 propulsion loss pre_existing
+  - F4 battery/propulsion step/ramp,2pairedgroups
+  not_executed:
+  - family: F2
+    reason: Q-only capacity reduction and sufficiently long discharge not in first
+      short pilot
+  - family: F5
+    reason: combined physical faults deferred
+  - family: O1
+    reason: severity/overlap sweep deferred; observed misses still reported
+  - family: Q1
+    reason: software fixtures checked; dedicated real-SITL injected quality campaign
+      deferred
+  pre_event_normal_opportunities_required: 30
+  ramp_boundary_fraction: 0.5
+  metrics:
+  - domain+union false alarm episodes/hour and valid normal seconds
+  - all-event and opportunity-conditional recall + missed/unavailable denominators
+  - awareness and new-episode recall
+  - pre_existing observation/first-valid recognition, unknown onset delay null
+  - step applied-time delay; ramp onset and fixed50%boundary delay
+  - coverage/warmup/gap/late/missing-target losses
+  - physical-unit target MAE/RMSE/signed residual and same-origin baseline comparison
+  - raw point TP/FP/FN/TN without adjustment
+  - run/paired-group uncertainty, sparse/degenerate interval caveats
+  - training wall/GPU peak memory/throughput/inference latency; not live-deadline
+    claim
+  performance_pass_threshold: null
+  performance_classification: 탐색 실험. 성능을 봐서 합격 기준 추가/변경하지 않음; 실행 완결성/데이터·평가 유효성/오경보
+    목표 충족을 각각 보고.
+  failures: 미탐·오탐·warmup·사건전 기회 부족을 제외/재생성/재보정 사유로 삼지 않음. 없거나 무효인 지표는 null+reason.
+  scope_limit: Reduced validation/calibration/dev coverage; no per-condition generalization
+    or rare false-alarm certification. All18 normal runs nominal54min; normal dev
+    nominal9min before warmup/gaps.
+gpu:
+  server: coss43@155.230.81.91:10000
+  partition: p02
+  node: DIS01
+  nodes: 1
+  tasks: 1
+  gpus: 1
+  concurrent_project_jobs: 1
+  required_flags:
+  - --partition=p02
+  - --nodelist=DIS01
+  - --nodes=1
+  - --ntasks=1
+  - --gres=gpu:1
+  interpreter: /abr/coss43/miniconda3/envs/mamba/bin/python
+  environment_profile: ai/remote/environment-mamba25.json
+  observed_python: 3.10.18
+  observed_torch: 2.5.1+cu121
+  observed_numpy: 1.26.4
+  observed_safetensors: 0.6.2
+  cuda_build: '12.1'
+  total_allocation_minutes_max: 30
+  jobs_max: 1
+  jobs:
+  - purpose: Single research LSTM fit and fresh CPU baselines
+    max_minutes: 30
+    scope: seed17; max20epochs; patience5; no resume or retry
+  queue_wait_minutes_max_per_job: 15
+  queue_cap_action: owner/jobID/name/partition를 확인한 이번 회차 자체 제출 pending job만 종료하고
+    waiting/STOPPED 보고; 미확인 ID/기존/타사용자 작업 취소 금지.
+  source_lock_path: /abr/coss43/.x500-ai-gpu.lock
+  admission: 직전 own pending/running queue 및 account-wide lock 확인; 동일 할당 안 hostname/job
+    owner/partition/node/TRES/GPU count/CUDA/runtime exact versions 검증
+  cuda_visible_devices_policy: Slurm 값 설정/덮어쓰기/삭제 금지; 물리 GPU 번호 선택 금지
+  installs: none; shared mamba unchanged; dependency mismatch stops with proposed
+    user-only change, no automatic installation
+  current_live_access: SSH session not yet re-established; queue/lock/runtime require
+    fresh checks
+  historical_gpu_evidence: 19034 full/resume exact ATen compatibility;19035 actual
+    hidden32/batch32 train throughput. Reuse only after exact fit/backend/model/training
+    hash and runtime checks; no additional gate job.
+budgets:
+  additional_local_output_bytes_max: 20000000000
+  local_free_bytes_required_before_generation: 50000000000
+  remote_output_bytes_max: 10000000000
+  remote_free_bytes_required: 20000000000
+  cpu_baseline_calibration_evaluation_wall_minutes_max: 30
+  data_loading: Bounded1GB normal raw pool,9train runs; use current in-memory NPZ
+    and ridge after actual windows/RAM audit. No100GB/300GB loader/solver work.
+  automatic_jobs_or_monitors: 0
+  additional_external_output_bytes_max: 20000000000
+  external_free_bytes_required_before_generation: 50000000000
+  preparation_wall_minutes_max: 30
+required_minimal_preparation:
+- DATA bounded30case runner/export/verification with existing producer unchanged
+- AI separate R2 30case admission reusing unmodified fit/pipeline/core; preserve R1
+  and R1P1 guards
+- Coordinator case/plan/source/evaluator lock, quality audit, separate truth evaluation
+  and stop confirmation
+stop_conditions:
+- Missing scoped coordinator START, plan/case/source/freeze/approval hash mismatch
+- unknown/mismatched GPU resource owner/partition/node/GPU count, duplicate project
+  job, lock/queue unavailable
+- source/profile/firmware/contract drift, health/lineage leakage, final-test access,
+  input hash mismatch
+- GPU compatibility gate fail, missing dependencies, OOM, nonfinite loss/gradient,
+  save/load/resume mismatch
+- generation/integrity/required normal data failure, budget/time/storage cap, unexpected
+  process termination; retries0
+- 'evaluator fixture/seal/truth isolation/computation error: preserve INVALID and
+  stop; no in-place fix+re-evaluation'
+- 'after completed single development evaluation and report: REPORT_READY_STOPPED
+  regardless of quality'
+outputs:
+- data_audit/dataset_card + frozen manifest/counts/bytes/exposure/exclusions
+- resolved config + environment/dependency/code hash lock
+- epoch history + best/last/selected epoch/checkpoints/model/scaler bundle
+- normal calibration protocol/threshold/evidence
+- sealed forecasts/decisions + artifact_manifest
+- metrics.json + comparison/error/uncertainty report
+- job-ledger + exit codes + release/own queue proof + agent stopped confirmations
+state_flow:
+- PRECHECK
+- PLAN_DRAFT
+- AWAITING_USER_APPROVAL
+- APPROVED
+- DATA_FROZEN
+- TRAINING
+- CALIBRATING
+- EVALUATING
+- REPORT_READY_STOPPED
+abnormal_end: BLOCKED or INVALID with evidence, then STOPPED; no automatic resubmission
+approval_rule: User requested reduced1GB scope within previously approved ROUND_001;
+  one round only. Coordinator authorizes each concrete stage after prerequisites.
+  Failure or completed report stops; any retry, further round, data expansion or altered
+  model requires fresh user approval.
+current_claim: Preparation only at plan sealing; no new data, training, calibration
+  or development evaluation yet.
+approval_basis: 'Existing ROUND_001 one-round approval/resume, superseded data scale
+  by user: 1GB부터 시작하자; 학습용 데이터 저장은 외부 저장공간을 사용해; clarification 정상 원시풀 전체 약 1GB. Internal
+  revision names this user-requested reduction; no additional round authorized.'
