@@ -1,0 +1,131 @@
+{
+  "protocol": "DRONE_COLLECTION",
+  "phase": "collection",
+  "campaign_id": "ASSIGNED_BY_PRETRAIN_CLI",
+  "data_pool_id": "collection/x500",
+  "root": "",
+  "execution_authorized": false,
+  "execution_dir": "",
+  "external_output": "",
+  "mission_seconds": 900,
+  "concurrency": 8,
+  "attempts_max": 50,
+  "capture_interval_ms": 5,
+  "timing": false,
+  "lanes": [
+    {
+      "instance": 0,
+      "ports": [
+        14540,
+        14580,
+        18570,
+        14280,
+        13030
+      ]
+    },
+    {
+      "instance": 1,
+      "ports": [
+        14541,
+        14581,
+        18571,
+        14281,
+        13031
+      ]
+    },
+    {
+      "instance": 2,
+      "ports": [
+        14542,
+        14582,
+        18572,
+        14282,
+        13032
+      ]
+    },
+    {
+      "instance": 3,
+      "ports": [
+        14543,
+        14583,
+        18573,
+        14283,
+        13033
+      ]
+    },
+    {
+      "instance": 4,
+      "ports": [
+        14544,
+        14584,
+        18574,
+        14284,
+        13034
+      ]
+    },
+    {
+      "instance": 5,
+      "ports": [
+        14545,
+        14585,
+        18575,
+        14285,
+        13035
+      ]
+    },
+    {
+      "instance": 6,
+      "ports": [
+        14546,
+        14586,
+        18576,
+        14286,
+        13036
+      ]
+    },
+    {
+      "instance": 7,
+      "ports": [
+        14547,
+        14587,
+        18577,
+        14287,
+        13037
+      ]
+    }
+  ],
+  "budgets": {
+    "flight_wall_s": 4200,
+    "verify_wall_s": 1800,
+    "archive_wall_s": 3600,
+    "archive_verify_wall_s": 3600,
+    "byte_stall_s": 900,
+    "campaign_wall_s": 172800,
+    "local_bytes_cap": 80000000000,
+    "external_bytes_cap": 80000000000,
+    "min_free_bytes": 50000000000,
+    "min_available_ram_bytes": 4000000000,
+    "memory_soft_cap_bytes": 8000000000
+  },
+  "source_hashes": {},
+  "profile_id": "vtc6_4s4p",
+  "producer_args": [
+    "--configuration",
+    "collection"
+  ],
+  "preparation_assertions": {
+    "status": "IMPLEMENTED_SYNTHETIC_VERIFIED_STOPPED",
+    "configuration": "collection",
+    "profile_id": "vtc6_4s4p"
+  },
+  "assessment_command": [],
+  "assessment_code_paths": [
+    "sim/tools/assess_run.py",
+    "sim/src/capstone_sim/run_assessment.py"
+  ],
+  "quality_thresholds": {
+    "min_effective_fraction": 0.8,
+    "min_effective_rtf": 0.05
+  },
+  "project_root": ""
+}
