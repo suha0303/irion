@@ -1,0 +1,201 @@
+{
+  "round_id": "COLLECTION",
+  "revision": "COLLECTION",
+  "evaluation_mode": "development",
+  "status": "TEMPLATE_NOT_AUTHORIZATION",
+  "execution_ready": false,
+  "hypothesis": "Exploratory detection and prediction on the single new X500 battery configuration with longer normal exposure; not an isolated battery-only improvement experiment.",
+  "storage_root": "",
+  "cases_sha256": "03d1dd516438d987232d00bade4ebad0696f747a3b0baa7bf0049eb77937f116",
+  "case_counts": {
+    "anomaly_dev": 12,
+    "normal_train": 9,
+    "normal_validation": 9,
+    "normal_calibration": 9,
+    "normal_dev_eval": 11
+  },
+  "normal_mission_seconds": 30480,
+  "anomaly_mission_seconds": 5760,
+  "normal_raw_bytes_estimate": 9303488372,
+  "estimate_basis": "Old 180s run density, observations/streams.jsonl only; actual volume recorded separately, no byte-filling extra runs.",
+  "dataset": {
+    "version": "X500_COLLECTION_LOWSOC180_VTC6_4S4P",
+    "frozen_manifest_sha256": null,
+    "old_pool_mixing": false,
+    "split_before_windows": true,
+    "paired_groups_development_only": true,
+    "collection_model_seed_distinct": true
+  },
+  "model": {
+    "kind": "lstm",
+    "seed": 17,
+    "hidden": 32,
+    "batch": 32,
+    "precision": "float32",
+    "backend": "aten_cuda",
+    "max_epochs": 20,
+    "patience": 5,
+    "initialization": "fresh",
+    "baselines": [
+      "persistence",
+      "ridge_forecast"
+    ],
+    "retries": 0,
+    "optimizer": "AdamW",
+    "learning_rate": 0.001,
+    "weight_decay": 1e-05,
+    "gradient_clip_norm": 1,
+    "layers": 2,
+    "dropout": 0.1,
+    "loss": "0.5 mean p/q/r MSE +0.5 mean voltage MSE",
+    "checkpoint": "minimum normal validation loss; earliest tie",
+    "ridge_alpha_candidates": [
+      1,
+      10,
+      100
+    ],
+    "ridge_selection": "normal validation weighted forecast loss only"
+  },
+  "features": {
+    "rate_hz": 10,
+    "history_steps": 100,
+    "context_seconds": 60,
+    "horizon_seconds": 1,
+    "window_stride_seconds": 1,
+    "policy": "existing common19_ctx6 causal contract; no truth/SOC inputs"
+  },
+  "calibration": {
+    "target_union_episodes_per_hour": 1,
+    "quantiles": [
+      0.95,
+      0.975,
+      0.99,
+      0.995,
+      0.999,
+      0.9995,
+      0.9999
+    ],
+    "ewma_alpha": 0.3,
+    "enter_consecutive": 3,
+    "exit_consecutive": 10,
+    "exit_ratio": 0.7,
+    "no_feasible_candidate": "best finite candidate with target_unmet; no retuning"
+  },
+  "evaluation": {
+    "final_test_authorized": false,
+    "point_adjustment": false,
+    "performance_pass_threshold": null,
+    "classification": "exploratory",
+    "pre_event_valid_opportunities": 30,
+    "ramp_boundary_fraction": 0.5,
+    "core": [
+      "ai/src/capstone_ai/detection_protocol.py",
+      "ai/src/capstone_ai/detection_replay.py"
+    ],
+    "metrics": [
+      "domain/union episodes per valid normal hour",
+      "coverage and missing opportunities",
+      "all-event and opportunity-conditional recall",
+      "pre-existing recognition",
+      "step and ramp actual-applied delay",
+      "physical-unit forecast errors on common origins",
+      "paired-group uncertainty and zero-event exposure bounds"
+    ],
+    "deferred": [
+      "Q-only capacity loss",
+      "combined faults",
+      "severity sweep",
+      "dedicated quality injection"
+    ]
+  },
+  "gpu": {
+    "partition": "p02",
+    "node": "DIS01",
+    "nodes": 1,
+    "tasks": 1,
+    "gpus": 1,
+    "jobs_max": 1,
+    "main_wall_seconds": 10800,
+    "queue_wait_seconds": 900,
+    "profile": "ai/remote/environment-mamba25.json",
+    "modify_environment": false
+  },
+  "budgets": {
+    "collection_wall_seconds": 172800,
+    "cpu_preparation_wall_seconds": 7200,
+    "calibration_and_evaluation_shared_seconds": 7200,
+    "local_additional_bytes_max": 80000000000,
+    "external_additional_bytes_max": 80000000000,
+    "min_free_bytes": 50000000000,
+    "min_available_ram_bytes": 4000000000,
+    "owned_rss_soft_cap_bytes": 8000000000,
+    "flight_wall_formula": "mission_seconds * 4 + 600; collection configuration only",
+    "verification_wall_seconds": 1800,
+    "archive_wall_seconds": 3600,
+    "archive_verification_wall_seconds": 3600,
+    "byte_stall_seconds": 900
+  },
+  "gates": {
+    "parallel_lanes": [
+      2,
+      4,
+      8
+    ],
+    "short_seconds": 120,
+    "trials_per_count": 1,
+    "benchmark_seeds_reserved": [
+      98000,
+      98999
+    ],
+    "benchmark_data_in_training": false,
+    "skip_unadmitted_higher_count": true,
+    "execution_failure": "stop entire attempt; no lower-count restart",
+    "endurance": [
+      {
+        "scenario": "hover_normal",
+        "duration": 900
+      },
+      {
+        "scenario": "payload_normal",
+        "duration": 900
+      },
+      {
+        "scenario": "low_soc_normal",
+        "duration": 180
+      }
+    ],
+    "required": [
+      "versioned physical pack and mass ledger",
+      "unit/numerical and isolation checks",
+      "actual parallel resource and contract checks",
+      "endurance and maneuver margins",
+      "source and input freeze",
+      "raw/canonical health audit",
+      "ridge RAM admission",
+      "same-job Slurm GPU/runtime admission"
+    ]
+  },
+  "stop": {
+    "retries": 0,
+    "performance_failure_retraining": false,
+    "automatic_next_round": false,
+    "automatic_llm_resume": false,
+    "first_error": "preserve failure, stop admission, drain owned active producers",
+    "successful_program_end": "COLLECTION_READY_STOPPED_PENDING_USER_REVIEW",
+    "coordinator_end": "REPORT_READY_STOPPED only after actual completion/release and result review",
+    "after_collection": "Wait for explicit user return; no automatic preprocessing/training/evaluation"
+  },
+  "preserved_goals": {
+    "transformer": "future separately approved round",
+    "additional_model_seeds": "future separately approved round",
+    "pools_100gb_300gb": "future separate approval",
+    "pool_1tb": "excluded"
+  },
+  "latest_user_instruction": "\uc800SOC3\ubd84 \uc7ac\uc2dc\ud5d8 \uc2b9\uc778; \uac8c\uc774\ud2b8\uc640 \ubcf8\uc218\uc9d1/CLI \ubd84\ub9ac; \ud1b5\uacfc\ud558\uba74 \ubcf8\uc218\uc9d1 \ud6c4 \uc815\uc9c0",
+  "execution_stages": [
+    "gates",
+    "collect"
+  ],
+  "execution_architecture": "Gate service hands off once to independent collection service; read-only CLI; no LLM",
+  "required_collection_concurrency": 8
+}
