@@ -1,0 +1,8 @@
+{
+  "battery_profile": "VTC6_4S4P",
+  "px4_binary_sha256": "7c03b25d4185dc3239bf8d8754f4cc1ed193687efcd279030e2a5cb07a390c45",
+  "physics_plugin_sha256": "a5ec5828770404f7a68297b4e7440af3f871edc18df7387a9434755ea756febd",
+  "x500_profile_sha256": "ed634305dae2b3d147b82303b096e1d7c558be79940bbd4114c00c7793819958",
+  "producer_lock_sha256": "07363ee31c4f1400e52ac6a9f60ad9bf893daebe96aad0887de29e383597341b",
+  "preprocessing_sha256": "09b7391283432d54f7cfe562d7b7effdc8ce052812b964852b6eff66a8fbf87c"
+}

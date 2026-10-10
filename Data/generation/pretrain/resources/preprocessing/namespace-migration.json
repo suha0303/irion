@@ -1,0 +1,33 @@
+{
+  "schema": "drone.preprocessing.namespace-migration/1",
+  "original_package_sha256": "e4d4db6f7c6ca5c480edfe7f2d0db9c125428269a693ba38bd14fe82e9be5d3b",
+  "original_archive": "docs/archive/maintenance/generic-package-20261018-01/preprocessing-original",
+  "path_mapping": {
+    "ai/round_r1/__init__.py": "ai/preprocessing_core/__init__.py",
+    "ai/round_r1/backend.py": "ai/preprocessing_core/backend.py",
+    "ai/round_r1/control.py": "ai/preprocessing_core/control.py",
+    "ai/round_r1/fit.py": "ai/preprocessing_core/fit.py",
+    "ai/round_r1/pipeline.py": "ai/preprocessing_core/pipeline.py",
+    "ai/round_r1/runtime.py": "ai/preprocessing_core/runtime.py",
+    "wrapper/r3_long/__init__.py": "wrapper/preprocessing_tools/__init__.py",
+    "wrapper/r3_long/archive.py": "wrapper/preprocessing_tools/archive.py",
+    "wrapper/r3_long/audit.py": "wrapper/preprocessing_tools/audit.py",
+    "wrapper/r3_long/build.py": "wrapper/preprocessing_tools/build.py",
+    "wrapper/r3_long/control.py": "wrapper/preprocessing_tools/control.py",
+    "wrapper/r3_long/derived.py": "wrapper/preprocessing_tools/derived.py",
+    "wrapper/r3_long/freeze.py": "wrapper/preprocessing_tools/freeze.py",
+    "wrapper/r3_long/launch.py": "wrapper/preprocessing_tools/launch.py",
+    "wrapper/r3_long/memory.py": "wrapper/preprocessing_tools/memory.py",
+    "wrapper/r3_long/operator.py": "wrapper/preprocessing_tools/operator.py",
+    "wrapper/r3_long/stage.py": "wrapper/preprocessing_tools/stage.py"
+  },
+  "modified_payload_files": [
+    "wrapper/preprocessing_tools/launch.py",
+    "wrapper/preprocessing_tools/control.py",
+    "wrapper/preprocessing_tools/build.py",
+    "wrapper/preprocessing_tools/stage.py",
+    "wrapper/preprocessing_tools/operator.py",
+    "README.md"
+  ],
+  "scope": "Python import/module/path names only; numeric formulas, data contracts and preprocessing configuration unchanged"
+}

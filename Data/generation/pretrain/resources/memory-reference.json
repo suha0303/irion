@@ -1,0 +1,7 @@
+{
+  "collection_per_lane_bytes": 884036096.0,
+  "benchmark_per_lane_bytes": 359020032.0,
+  "source_collection": "historical measurement; see preserved audit evidence",
+  "source_benchmark": "historical measurement; see preserved audit evidence",
+  "basis": "Historical eight-lane measurements; estimate only, not a capacity guarantee."
+}

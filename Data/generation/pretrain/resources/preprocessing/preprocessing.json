@@ -1,0 +1,20 @@
+{
+  "feature_profile": "common19_ctx6",
+  "step_us": 100000,
+  "grid_anchor_us": 0,
+  "history": 100,
+  "future": 10,
+  "emit_every_us": 1000000,
+  "context_us": 60000000,
+  "fast_age_us": 200000,
+  "battery_age_us": 350000,
+  "gap_reset_us": 1000000,
+  "filter_tau_s": 0.08,
+  "filter_policy": "two_pole_exact_previous_hold_at_availability",
+  "nominal_cell_voltage": 3.7,
+  "nominal_voltage_provenance": "explicit engineering nominal reference, not inferred health or measured cell voltage",
+  "comparison_atol": 1e-09,
+  "comparison_rtol": 1e-09,
+  "battery_profile_id": "vtc6_4s4p_r3_long15",
+  "nominal_capacity_ah": 12
+}
