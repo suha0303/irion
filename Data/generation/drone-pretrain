@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DRONE_ROOT="$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")/../.." && pwd)"
+export PYTHONPATH="$DRONE_ROOT/Data/generation:$DRONE_ROOT/ai"
+export PYTHONDONTWRITEBYTECODE=1
+export OPENBLAS_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+PYTHON="$DRONE_ROOT/Data/generation/.venv/bin/python"
+if [ ! -x "$PYTHON" ]; then
+  printf '%s\n' '수집·정제 환경이 없습니다. ./Data/generation/drone-data setup 을 먼저 실행하세요.' >&2
+  exit 3
+fi
+exec "$PYTHON" -B -m pretrain.cli "$@"
