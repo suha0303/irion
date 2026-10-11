@@ -1,0 +1,12 @@
+{
+  "schema": "drone.source.profile/2.0",
+  "id": "sitl_directory_tail",
+  "kind": "drone_raw_directory_tail",
+  "run_directory": "runs/bfa6b58eff354d42a7ea8e50fa87064f",
+  "streams_file": "observations/streams.jsonl",
+  "watermarks_file": "observations/watermarks.jsonl",
+  "diagnostics_file": "observations/diagnostics.jsonl",
+  "metadata_file": "observations/metadata.json",
+  "poll_interval_ms": 20,
+  "mapping_profile": "ai/configs/sources/px4.json"
+}

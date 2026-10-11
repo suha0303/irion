@@ -1,0 +1,92 @@
+{
+  "schema": "drone.ai.mapping/1.0",
+  "id": "px4-v1.16-SIM_GZ_EC-duty-v1",
+  "frames": {
+    "body": "FRD",
+    "navigation": "NED"
+  },
+  "motor_input_order": [
+    "front_right",
+    "rear_left",
+    "front_left",
+    "rear_right"
+  ],
+  "motor_output_order": [
+    "front_right",
+    "front_left",
+    "rear_right",
+    "rear_left"
+  ],
+  "roles": {
+    "motor_request": {
+      "topic": "actuator_outputs",
+      "units": {
+        "output": "output_count"
+      }
+    },
+    "body_rate": {
+      "topic": "vehicle_angular_velocity",
+      "units": {
+        "xyz": "rad/s"
+      }
+    },
+    "body_rate_target": {
+      "topic": "vehicle_rates_setpoint",
+      "units": {
+        "roll": "rad/s",
+        "pitch": "rad/s",
+        "yaw": "rad/s"
+      }
+    },
+    "attitude": {
+      "topic": "vehicle_attitude",
+      "units": {
+        "q": "unitless"
+      }
+    },
+    "specific_force": {
+      "topic": "vehicle_acceleration",
+      "units": {
+        "xyz": "m/s^2"
+      }
+    },
+    "climb_rate": {
+      "topic": "vehicle_local_position",
+      "units": {
+        "vz": "m/s"
+      }
+    },
+    "climb_rate_target": {
+      "topic": "vehicle_local_position_setpoint",
+      "units": {
+        "vz": "m/s"
+      }
+    },
+    "pack_voltage_current": {
+      "topic": "battery_status",
+      "units": {
+        "voltage_v": "V",
+        "current_a": "A"
+      }
+    },
+    "operating_state": {
+      "topic": "vehicle_status",
+      "units": {
+        "arming_state": "enum",
+        "nav_state": "enum"
+      }
+    },
+    "landed_state": {
+      "topic": "vehicle_land_detected",
+      "units": {
+        "landed": "boolean_as_number"
+      }
+    }
+  },
+  "conversions": [
+    "output_count/1000",
+    "climb=-vz",
+    "normalized wxyz quaternion to roll/pitch",
+    "feature pack_voltage/4 and current/6 after canonical"
+  ]
+}
