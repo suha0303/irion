@@ -1,0 +1,175 @@
+{
+  "status": "DRAFT_AWAITING_USER_APPROVAL",
+  "round_id": "ROUND_001/R6_1200_8MODEL_S0_DRAFT",
+  "created_utc": "2026-10-17T11:49:05.388248+00:00",
+  "scope": "Compare four user-selected capacities for each LSTM/Transformer plus two existing baselines. No execution/submission authorized by this draft.",
+  "dataset": {
+    "bundle": "Data/processed/pretrain/merge-1200-20261017-01/prepared-portable",
+    "archive": "dataset.tar.xz",
+    "archive_sha256": "24de09115778e40842bebd3979b87110e8aac9936034530226f3f5f3ac1b356a",
+    "archive_bytes": 5597050336,
+    "receipt_sha256": "4483a8697ebabf6095983058256ff0a9ab26c25cb760ece80be304e6efe79459",
+    "runs": 1200,
+    "split_runs": {
+      "normal_train": 720,
+      "normal_validation": 104,
+      "normal_calibration": 104,
+      "normal_dev_eval": 128,
+      "anomaly_dev": 144
+    },
+    "scaler": "One existing merged normal_train-only common scaler; preserve source splits and data-generation seeds",
+    "restore_bytes": 78989441859,
+    "restore_executed": false,
+    "storage_note": "Repository-relative default; exact original receipt and origin provenance remain preserved in the dataset and archived plan."
+  },
+  "models": [
+    {
+      "id": "lstm_h64_l2_s0",
+      "model": "lstm",
+      "profile": "small",
+      "hidden": 64,
+      "encoder_layers": 2,
+      "decoder_layers": 2,
+      "heads": null,
+      "seed": 0,
+      "parameters": 143428,
+      "initial_weights": "fresh; never resume historical weights"
+    },
+    {
+      "id": "transformer_h64_l2_s0",
+      "model": "transformer",
+      "profile": "small",
+      "hidden": 64,
+      "encoder_layers": 2,
+      "decoder_layers": 2,
+      "heads": 4,
+      "seed": 0,
+      "parameters": 170052,
+      "initial_weights": "fresh; never resume historical weights"
+    },
+    {
+      "id": "lstm_h128_l2_s0",
+      "model": "lstm",
+      "profile": "balanced",
+      "hidden": 128,
+      "encoder_layers": 2,
+      "decoder_layers": 2,
+      "heads": null,
+      "seed": 0,
+      "parameters": 557188,
+      "initial_weights": "fresh; never resume historical weights"
+    },
+    {
+      "id": "transformer_h128_l2_s0",
+      "model": "transformer",
+      "profile": "balanced",
+      "hidden": 128,
+      "encoder_layers": 2,
+      "decoder_layers": 2,
+      "heads": 4,
+      "seed": 0,
+      "parameters": 667780,
+      "initial_weights": "fresh; never resume historical weights"
+    },
+    {
+      "id": "lstm_h128_l4_s0",
+      "model": "lstm",
+      "profile": "deeper",
+      "hidden": 128,
+      "encoder_layers": 4,
+      "decoder_layers": 4,
+      "heads": null,
+      "seed": 0,
+      "parameters": 1085572,
+      "initial_weights": "fresh; never resume historical weights"
+    },
+    {
+      "id": "transformer_h128_l4_s0",
+      "model": "transformer",
+      "profile": "deeper",
+      "hidden": 128,
+      "encoder_layers": 4,
+      "decoder_layers": 4,
+      "heads": 4,
+      "seed": 0,
+      "parameters": 1330308,
+      "initial_weights": "fresh; never resume historical weights"
+    },
+    {
+      "id": "lstm_h256_l4_s0",
+      "model": "lstm",
+      "profile": "wide",
+      "hidden": 256,
+      "encoder_layers": 4,
+      "decoder_layers": 4,
+      "heads": null,
+      "seed": 0,
+      "parameters": 4301060,
+      "initial_weights": "fresh; never resume historical weights"
+    },
+    {
+      "id": "transformer_h256_l4_s0",
+      "model": "transformer",
+      "profile": "wide",
+      "hidden": 256,
+      "encoder_layers": 4,
+      "decoder_layers": 4,
+      "heads": 8,
+      "seed": 0,
+      "parameters": 5282052,
+      "initial_weights": "fresh; never resume historical weights"
+    }
+  ],
+  "baselines": [
+    "persistence",
+    "ridge_forecast"
+  ],
+  "proposed_training": {
+    "seed": 0,
+    "epochs_max": 60,
+    "early_stopping_patience": 10,
+    "learning_rate": 0.001,
+    "dropout": 0.1,
+    "batch_size_candidate": 256,
+    "batch_size_status": "Not yet admitted on actual1200 data/model; no automatic reduction or tuning",
+    "precision": "float32",
+    "amp": false,
+    "transformer_fast_attention": false
+  },
+  "evaluation": {
+    "selection": "normal_validation only; minimum validation loss checkpoint",
+    "thresholds": "normal_calibration only; fixed existing protocol; no performance-driven recalibration",
+    "report": "same normal/anomaly development evaluation for all variants; preserve per-model forecast/anomaly/time/memory results",
+    "final_test_used": false
+  },
+  "resources": {
+    "host_alias": "knu",
+    "partition": "p02",
+    "node": "DIS01",
+    "nodes": 1,
+    "tasks": 1,
+    "gpus": 1,
+    "project_concurrent_gpu_jobs": 1,
+    "execution_order": "Sequential models within one explicitly approved finite comparison; no login-node GPU computation",
+    "host_memory_request": "TBD after NPZ header/peak audit; historical16GiB allocation cannot be assumed sufficient",
+    "gpu_wall_budget": "TBD from actual full-step throughput and validation/calibration/evaluation timing; no parameter-count-only forecast"
+  },
+  "preconditions": [
+    "Restore merged package to a new approved server team4 path and verify all member hashes; preserve compact original",
+    "Extend admission beyond historical104-run hard limit without rewriting previous packages",
+    "Add a versioned finite eight-model lifecycle: current R5 rejects seed0 and other model sizes by design",
+    "Validate actual host/VRAM for each exact config and batch; no forward-only throughput substitution",
+    "Run exact-config continuous-vs-resume/export gates with disposable weights; do not reuse gate weights",
+    "Keep existing bounded-memory primal ridge; verify loading/normalization full-data RAM use",
+    "Freeze split/scaler/code/model/seed/batch/epoch limits and GPU budget before production submission"
+  ],
+  "stop_policy": {
+    "on_error": "Preserve evidence and stop; no retry, alternate batch/model/seed, or retraining without approval",
+    "on_complete": "Release own allocation, evaluate/report once, stop; never start another round",
+    "llm_monitoring": false,
+    "llm_auto_resume": false
+  },
+  "production_training_authorized": false,
+  "gpu_diagnostic_authorized": false,
+  "submitted_jobs": []
+}
