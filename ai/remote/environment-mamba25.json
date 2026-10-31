@@ -1,0 +1,20 @@
+{
+  "profile": "mamba25",
+  "authorization": "User explicitly approved adding AI-side PyTorch2.5.1 compatibility in this task",
+  "python_minor": "3.10",
+  "observed_python_patch": "3.10.18",
+  "observed_python_executable": "/abr/coss43/miniconda3/envs/mamba/bin/python",
+  "packages": {"torch": "2.5.1+cu121", "numpy": "1.26.4", "safetensors": "0.6.2"},
+  "torch_cuda_build": "12.1",
+  "observed_driver": "535.261.03",
+  "partition": "p02",
+  "node": "DIS01",
+  "nodes": 1,
+  "tasks": 1,
+  "gpus": 1,
+  "concurrent_project_gpu_jobs": 1,
+  "scope": "fixed original LSTM checkpoint and actual SITL input, one forward/backward batch, no optimizer step",
+  "frozen_v6": "unchanged, retains original PyTorch2.1.2 environment contract",
+  "whole_training_resume_compatibility": "not yet verified under 2.5.1",
+  "installation": "none; existing mamba environment is read only"
+}

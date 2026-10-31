@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DRONE_PROJECT_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+export PYTHONPATH="$DRONE_PROJECT_ROOT/ai:$DRONE_PROJECT_ROOT/ai/src:$DRONE_PROJECT_ROOT/Data/generation${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONDONTWRITEBYTECODE=1
+exec python3 -B -m console.cli "$@"
