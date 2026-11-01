@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Plug, Radio, X, Activity, Settings2 } from 'lucide-react';
+import { Plug, Radio, X, Activity, Settings2, ArrowUpRight } from 'lucide-react';
 import { api, post } from './api';
-import type { Frame, InputProfile, Manifest, ProviderState } from './types';
+import type { Detection, Frame, InputProfile, Manifest, ProviderState } from './types';
 import { numeric, statusLabel, targetLabel, timeLabel } from './types';
 
-export function ProviderCards({frame,connected,configure}:{frame:Frame|null;connected:boolean;configure:(id:string)=>void}) {
-  const providers=frame?.providers??[{provider_id:'lstm',name:'LSTM'},{provider_id:'transformer',name:'Transformer'}] as ProviderState[];
+export function ProviderCards({frame,connected,configure,providerIds,choose,offline=false}:{frame:Frame|null;connected:boolean;configure:(id:string)=>void;providerIds?:string[];choose?:(event:Detection)=>void;offline?:boolean}) {
+  const all=frame?.providers??[{provider_id:'lstm',name:'LSTM'},{provider_id:'transformer',name:'Transformer'}] as ProviderState[];
+  const providers=providerIds?all.filter(p=>providerIds.includes(p.provider_id)):all;
   return <div className="provider-grid">{providers.map(p=>{
     const active=connected?frame?.active_by_provider?.[p.provider_id]:null;
-    const state=connected?(active?statusLabel[active.status]:statusLabel[p.state]??'미연결'):'서버 연결 중';
-    return <section className="panel provider-card" key={p.provider_id}><div className="card-label"><Activity size={17}/><b>{p.name}</b><button className="icon-button" aria-label={`${p.name} API 설정`} onClick={()=>configure(p.provider_id)}><Settings2 size={16}/></button></div>
-      <div className={`provider-status ${active?.status==='suspect'?'suspect':''}`}>{state}</div>
-      {active?<><small>{targetLabel[active.target]??active.target} · {active.model_version}</small>{active.kind==='explanation'?<p>{active.description}</p>:<p>점수 <b>{numeric(active.score,3)}</b> / 임계값 {numeric(active.threshold,3)}</p>}<small>근거 {timeLabel(active.start_ms,true)}–{timeLabel(active.end_ms,true)}</small>{active.origin==='fixture'&&<span className="pill amber">시험용 응답</span>}</>:<p>{p.message||'입력·모델이 준비되면 결과를 표시합니다.'}</p>}
-      <div className="card-foot">{p.input_compatible===false?'입력 계약 확인 필요':`결과 확인 주기 ${p.poll_interval_ms??500}ms · 추론 주기와 구분`}</div></section>;
+    const state=connected?(active?statusLabel[active.status]:statusLabel[p.state]??'미연결'):(offline?'서버 연결 끊김':'연결 확인 중');
+    return <section className={`panel provider-card provider-${p.provider_id}`} key={p.provider_id} aria-label={`${p.name} 분석 상태`}>
+      <div className="provider-heading"><h3><span className="provider-identity"/>{p.name}</h3><div>{active?.origin==='fixture'&&<span className="pill amber">시험 API</span>}<button className="icon-button" aria-label={`${p.name} API 설정`} onClick={()=>configure(p.provider_id)}><Settings2 size={15}/></button></div></div>
+      <div className={`provider-status ${active?.status==='suspect'?'suspect':!active?'pending':''}`}>{state}</div>
+      {active?.kind==='explanation'?<p className="provider-explanation">{active.description}</p>:<div className="provider-numbers"><div><span>이상 점수</span><strong>{numeric(active?.score,3)}</strong></div><div><span>임계값</span><b>{numeric(active?.threshold,3)}</b></div></div>}
+      {active?<div className="provider-evidence"><span>{targetLabel[active.target]??active.target}</span><span>{timeLabel(active.start_ms,true)}–{timeLabel(active.end_ms,true)}</span>{choose&&<button className="text-button" onClick={()=>choose(active)} aria-label={`${p.name} 판정 근거 보기`}><ArrowUpRight size={14}/></button>}</div>:<p className={`provider-empty ${p.state==='error'?'inline-error':''}`}>{p.message||'유효한 모델 결과가 아직 없습니다.'}</p>}
+      <div className="provider-foot"><span>{active?.model_version??(p.input_compatible===false?'입력 계약 확인 필요':'입력과 AI 판정을 별도로 표시')}</span><span>{p.poll_interval_ms??500}ms 결과 확인</span></div>
+    </section>;
   })}</div>;
 }
 

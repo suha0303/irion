@@ -43,7 +43,7 @@ def create_app(data_dir=None):
         await sources.close()
         await adapter.close()
 
-    app = FastAPI(title="ARION Dashboard", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="ARION Dashboard", version="0.3.0", lifespan=lifespan)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver"])
     app.state.store, app.state.adapter = store, adapter
     app.state.providers, app.state.sources = providers, sources
@@ -84,7 +84,7 @@ def create_app(data_dir=None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.2.0", "application": "arion-dashboard", "instance_id": os.environ.get("ARION_SERVER_INSTANCE", "foreground"), "scope": "local-replay-and-live", "live_available": True}
+        return {"status": "ok", "version": "0.3.0", "application": "arion-dashboard", "instance_id": os.environ.get("ARION_SERVER_INSTANCE", "foreground"), "scope": "local-replay-and-live", "live_available": True}
 
     @app.get("/api/runs")
     def runs():

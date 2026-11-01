@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { Compass, Focus } from 'lucide-react';
+import { Box, Focus, RotateCcw } from 'lucide-react';
 import type { Frame, Point } from './types';
+import { numeric } from './types';
 import { attitudeQuaternion, nedToScene } from './pose';
 
 export function Flight3D({ frame, points, connected }: {frame: Frame|null; points:Point[]; connected:boolean}) {
   const host=useRef<HTMLDivElement>(null);
+  const resetCamera=useRef(()=>{});
   const live=useRef({frame,points,connected,follow:true});
   const [follow,setFollow]=useState(true), [failure,setFailure]=useState('');
   live.current={frame,points,connected,follow};
@@ -16,14 +18,14 @@ export function Flight3D({ frame, points, connected }: {frame: Frame|null; point
     try { renderer=new THREE.WebGLRenderer({antialias:true,alpha:true}); }
     catch { setFailure('이 브라우저에서 3D 표시를 사용할 수 없습니다. 수치와 2D 궤적을 확인하세요.');return; }
     renderer.setPixelRatio(Math.min(devicePixelRatio,2));el.appendChild(renderer.domElement);
-    const scene=new THREE.Scene();scene.background=new THREE.Color('#f5f8fc');
-    const camera=new THREE.PerspectiveCamera(48,1,.05,10000);camera.position.set(7,6,8);
+    const scene=new THREE.Scene();scene.background=new THREE.Color('#f7fafb');
+    const camera=new THREE.PerspectiveCamera(48,1,.05,10000);camera.position.set(6,4.8,6.5);
     const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=1;controls.maxDistance=500;
     scene.add(new THREE.HemisphereLight('#ffffff','#b0c2d9',2.8));
     const light=new THREE.DirectionalLight('#ffffff',2);light.position.set(3,8,4);scene.add(light);
-    const grid=new THREE.GridHelper(40,40,'#9cb7c8','#dce5ed');scene.add(grid);
+    const grid=new THREE.GridHelper(40,40,'#a3bcc6','#e0e9ed');scene.add(grid);
     const model=new THREE.Group();scene.add(model);
-    const material=new THREE.MeshStandardMaterial({color:'#176779',roughness:.6,transparent:true});
+    const material=new THREE.MeshStandardMaterial({color:'#315f72',roughness:.6,transparent:true});
     const body=new THREE.Mesh(new THREE.BoxGeometry(.5,.15,.7),material);model.add(body);
     for (const angle of [-Math.PI/4,Math.PI/4]) {
       const arm=new THREE.Mesh(new THREE.BoxGeometry(1.6,.06,.07),material);arm.rotation.y=angle;model.add(arm);
@@ -38,6 +40,7 @@ export function Flight3D({ frame, points, connected }: {frame: Frame|null; point
     const observer=new ResizeObserver(resize);observer.observe(el);resize();
     let timer=0,lastRender=0,lastStamp='',lastPath='',lastRun='',lastTime=-1;
     const target=new THREE.Vector3();
+    resetCamera.current=()=>{camera.position.copy(model.position).add(new THREE.Vector3(6,4.8,6.5));controls.target.copy(model.position);target.copy(model.position);controls.update();};
     const draw=(time:number)=>{
       timer=requestAnimationFrame(draw);if(time-lastRender<1000/30)return;lastRender=time;
       const {frame:f,points:ps,connected:ok,follow:tracking}=live.current;
@@ -76,11 +79,13 @@ export function Flight3D({ frame, points, connected }: {frame: Frame|null; point
       lastTime=f?.t_ms??-1;controls.update();renderer.render(scene,camera);
     };
     timer=requestAnimationFrame(draw);
-    return()=>{cancelAnimationFrame(timer);observer.disconnect();controls.dispose();scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Line){o.geometry.dispose();}});material.dispose();noseMaterial.dispose();(trail.material as THREE.Material).dispose();renderer.dispose();renderer.domElement.remove();};
+    return()=>{cancelAnimationFrame(timer);observer.disconnect();controls.dispose();const materials=new Set<THREE.Material>();scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Line){o.geometry.dispose();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});materials.forEach(m=>m.dispose());renderer.dispose();renderer.domElement.remove();resetCamera.current=()=>{};};
   },[]);
   const valid=connected&&frame&&['north_m','east_m','height_m','roll_deg','pitch_deg','yaw_deg'].every(k=>frame.values[k]?.status==='valid');
-  return <section className="panel flight-3d"><div className="panel-heading"><div><span className="eyebrow">SPATIAL MONITOR</span><h2><Compass size={17}/>3D 비행 모니터</h2></div><button className={`button small ${follow?'active':''}`} onClick={()=>setFollow(!follow)} aria-pressed={follow}><Focus size={14}/>{follow?'기체 따라가기':'자유 시점'}</button></div>
+  const observed=(key:string,digits=1)=>numeric(connected?frame?.values[key]?.value:null,digits);
+  return <section className="panel flight-3d" aria-label="3D 비행 모니터"><div className="panel-heading"><h2><Box size={17}/>3D 비행 모니터</h2><div className="scene-actions"><button className={`button small ${follow?'active':''}`} onClick={()=>setFollow(!follow)} aria-pressed={follow}><Focus size={14}/>{follow?'기체 따라가기':'자유 시점'}</button><button className="icon-button" aria-label="3D 시점 초기화" onClick={()=>{resetCamera.current();setFollow(true);}}><RotateCcw size={15}/></button></div></div>
     <div className="three-stage" ref={host} role="img" aria-label="수신한 자세와 로컬 위치를 표시하는 3D 드론">{failure&&<p className="three-fallback">{failure}</p>}</div>
-    <div className="three-overlay"><span className={`pill ${valid?'teal':'neutral'}`}>{valid?'관측값 표시':'자세·위치 미수신 또는 만료'}</span><span>로컬 동·북 좌표 · 주황색은 기체 앞쪽</span></div>
-    <div className="panel-footnote">드래그: 회전 · 스크롤: 확대 · 관측 표시 전용 · 물리 시뮬레이션 아님</div></section>;
+    <div className="three-overlay"><span className={`scene-quality ${valid?'valid':'missing'}`}><i/>{valid?'관측값 표시':'자세·위치 미수신 또는 만료'}</span><span className="scene-position">N <b>{observed('north_m')}</b> · E <b>{observed('east_m')}</b> m</span></div>
+    <div className="scene-pose"><span>ROLL <b>{observed('roll_deg')}°</b></span><span>PITCH <b>{observed('pitch_deg')}°</b></span><span>YAW <b>{observed('yaw_deg',0)}°</b></span></div>
+    <div className="panel-footnote"><span>드래그: 회전 · 스크롤: 확대</span><span>주황색: 기체 앞쪽 · 관측 표시 전용</span></div></section>;
 }
