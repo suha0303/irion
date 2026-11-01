@@ -30,3 +30,5 @@ flowchart LR
 완료된 전처리 기록은 NPZ 두 구간 캐시로 재생하고, 차트는 현재 시점 주변 5분을 읽습니다. 전체 NPZ 내보내기는 디스크 memmap과 ZIP 스트리밍을 사용합니다. 기존 MAVLink JSONL 재생은 현재 파서를 유지합니다.
 
 입력 예시·저장 규격·추가 API는 [전처리·NPZ 계약](processed-npz-contract.md), 모델 결과와 기존 입력은 [v2 계약](v2-contracts.md), 사용법은 [README](../README.md), 검증 결과는 [v3 검증 기록](validation-v3.md)을 참고하세요. API 문서는 로컬 `/docs`에서 제공합니다.
+
+이전 발표용 이미지와 생성 프롬프트는 [설계 자산·문서 안내](design-assets.md)에 보관합니다. 해당 이미지는 실시간 전처리·NPZ 보관 경로가 추가되기 전의 설계 이력이며, 현재 구현은 위 구조도를 기준으로 합니다.

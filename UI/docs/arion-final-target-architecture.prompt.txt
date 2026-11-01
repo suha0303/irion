@@ -1,0 +1,73 @@
+Use case: infographic-diagram.
+Create a high-resolution, polished Korean system architecture diagram for the ARION drone anomaly detection project. Landscape 16:9, presentation-ready, crisp legible Korean sans-serif text, white background, navy headings, restrained teal/blue observation flows, amber inference-result flows, purple dashed future-extension flows. Flat vector-like infographic, well-spaced rounded rectangles, minimal civilian quadcopter/desktop/database icons, no photography, no decorative neural-network tangles, no watermark. Labels must be accurately spelled in Korean. Prioritize technical correctness and a small number of large readable labels.
+
+TITLE (verbatim): "아리온 드론 이상탐지 · 최종 목표 구조"
+SUBTITLE: "실시간 수집 · 로그 재생 · 모델 비교 · 판단 근거 확인"
+
+This is the FINAL TARGET architecture, with IMPLEMENTED infrastructure versus EXTERNAL / FUTURE model functions visibly distinguished. Use a small legend: solid teal outline = "구현된 대시보드 기반"; gray = "외부 환경·학습"; purple dashed outline = "모델 인계·후속 확장". The real LSTM and Transformer weights are not yet delivered, so NEVER mark real inference models as implemented. No AI health %, SOH prediction, remaining-life prediction, autonomous maintenance, multi-vehicle control, direct BIN/ULog parsing, or flight-control buttons in the dashboard.
+
+LAYOUT: central left-to-right spine, with external learning/storage row below. About 12 main rectangles, broad horizontal spacing, orthogonal labeled arrows, no crossing arrows through boxes. A small dashboard illustration at right may show a 3D drone scene on left and LSTM/Transformer cards stacked on right.
+
+LEFT column "입력 환경":
+Two separate gray source cards:
+"실제 드론" / "모터·ESC · 배터리 · 센서" / "PX4"
+"시뮬레이션" / "PX4 SITL + Gazebo" / "커스텀 모터·배터리"
+Both feed ONE collector. A small independent gray note below source cards: "QGroundControl·외부 도구" / "비행 조종·고장 주입". This note must not have any control arrow from the dashboard; external control belongs to existing tools.
+
+NEXT main card, solid teal:
+"공용 수집·전달 계층"
+"MAVLink UDP · 시리얼"
+"단일 수신 → 다중 소비"
+Incoming arrows labeled "텔레메트리". Do not show a second competing receiver on the same UDP port.
+An alternate input arrow or small inlet label "10Hz 전처리 스트림" enters the quality-check stage; show it distinctly from raw MAVLink so it is not preprocessed twice.
+
+NEXT solid teal card:
+"관측 해석·품질 검사"
+"필드·단위 · mask·age"
+"출처·시각 · epoch"
+"버전 있는 입력 계약"
+This core supplies observation frames directly to the dashboard backend, independently from AI. Never imply that observable telemetry must first pass through an AI model to be displayed.
+
+UPPER-MIDDLE purple dashed AI group with header "AI 분석 서비스 · 외부":
+Small first rectangle "공통 AI 전처리" / "특징·주기·창" / "정상 TRAIN scaler"
+Then fan out to two equally prominent parallel boxes, not in series:
+"LSTM" / "예측·잔차·판정"
+"Transformer" / "예측·잔차·판정"
+Draw observational-quality core -> preprocessing -> BOTH models. Label input link "관측 기반 모델 입력".
+Below this group a tiny label "실제 모델 연결 후 검증".
+If input is already normalized, its declared preprocessing version and units must be respected, with no second scaler or implicit resampling.
+
+NEXT solid teal central-right backend card:
+"대시보드 서버"
+"Python · FastAPI"
+"제공자별 HTTP API 어댑터"
+"비행·입력 해시·epoch·근거 구간 검증"
+Direct teal input from quality-check core labeled "관측 상태".
+Two amber incoming arrows from LSTM and Transformer labeled "각 모델의 판정 결과".
+Backend integrates observations and results but keeps observation quality and model judgments separate.
+Use one clear outgoing teal/amber combined arrow "WebSocket · 최대 10Hz 화면 갱신" to frontend.
+
+RIGHT solid teal large frontend card:
+"균형형 웹 대시보드"
+"React · TypeScript · Vite"
+"Three.js 3D 자세·위치·궤적"
+"ECharts 동기화 차트"
+"LSTM·Transformer 비교"
+"재생·실시간 · 이벤트·데이터 진단"
+Depict a very small schematic app layout: 3D scene occupying left ~60%, two model cards on right ~40%. No invented numeric detection accuracy, no probability or health meters.
+
+LOWER row, connected by clean orthogonal arrows:
+Solid teal storage card "비행·이벤트 저장" / "JSONL 원문·세션 기록" / "SQLite 메타데이터·결과".
+Collector and backend feed storage; storage feeds quality/core for "로그 재생". Preserve raw timestamps and source evidence. Show storage as an implemented component.
+Gray external learning card "외부 학습·평가" / "정상 로그 → 학습용 NPZ" / "정상 TRAIN / 검증·평가 분리".
+Storage -> external learning. External learning -> AI services with a purple dashed arrow labeled "가중치 · scaler · 임계값 · 입력 계약". Learning is outside the dashboard. No training button or NPZ learning panel in the frontend.
+Purple dashed future card "LLM·추가 분석 도구" / "관측·판정 근거 설명" / "후속 확장".
+It receives selected observations and validated detection evidence from the backend and returns "설명 결과" to the backend. Its explanations must not replace numeric anomaly decisions. Do not name an unconfirmed product called Jev.
+
+FOOTER: four concise principles in small but readable text:
+"관측·품질·판정·설명 구분"
+"진행 중 비행은 세션·입력 구간 해시로 검증"
+"연결 끊김·판정 불가 ≠ 정상"
+"조회 전용 · 물리 시뮬레이션은 외부"
+
+Make the architecture technically precise, spacious, attractive and uncluttered. All mentioned statuses must reflect infrastructure already implemented versus real inference/training/LLM capabilities that are still external or future.

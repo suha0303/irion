@@ -2,7 +2,7 @@
 
 배터리와 모터 1~4의 관측값, 3D 자세·위치·궤적, LSTM·Transformer의 이상 판단을 확인하는 연구·시연용 웹 대시보드입니다. 기본 환경은 단일 기체, 한국어 화면, 데스크톱 브라우저와 로컬 실행입니다.
 
-**현재 공개된 범위는 1~4단계입니다.** 균형형 모니터링에 실시간 전처리 프레임 전달·NPZ 구간 저장과 재생·파일 저장소 전환을 추가했습니다. 실제 공용 전처리기와 AI 모델 서비스는 인계 후 연결하며, 최종 발표 문서 자산 정리는 다음 단계입니다.
+**현재 공개된 범위는 1~5단계입니다.** 균형형 모니터링, 실시간 전처리 프레임 전달·NPZ 구간 저장과 재생·파일 저장소 전환을 구현하고 설계·사용법·검증 문서를 정리했습니다. 실제 공용 전처리기와 AI 모델 서비스 연결·성능 검증은 인계 후 진행합니다.
 
 ## 역할과 범위
 
@@ -45,6 +45,8 @@ flowchart LR
 ```
 
 대시보드의 입력·보관·결과 표시 경로는 구현되어 있으며, 외부 서비스 연결은 제공된 계약으로 진행합니다. 기존 SQLite는 최초 이관 시 읽기 전용으로 열어 백업하고 비행 ID·원본·분석 결과를 보존합니다. 이후 런타임은 파일 저장만 사용합니다.
+
+현재 구조의 상세 설명은 [구조 문서](docs/architecture.md)를 기준으로 합니다. 이전 발표용 이미지와 생성 프롬프트는 [설계 자산·문서 안내](docs/design-assets.md)에 변경 이력과 함께 보관합니다.
 
 ### 목표 데이터 계약
 
@@ -145,7 +147,7 @@ NPZ는 물리값 `X[N,F]`, `mask/status/age_ns[N,F]`, `tick_ns/source_time_ns/se
 | 2 | 백그라운드 서버 유지와 API 연결 오류 처리 | 구현 |
 | 3 | 균형형 워크스페이스·모델 비교·업로드 재시도 | 구현 |
 | 4 | 공통 전처리 프레임·파일 저장 전환·NPZ 보관/재생 | 구현 |
-| 5 | 최종 계약·구조도·사용법·통합 검증 문서 정리 | 후속 |
+| 5 | 계약·구조도·사용법·검증 기록과 설계 자산 정리 | 정리 완료 |
 
 ## 저장소 구성
 
@@ -155,15 +157,16 @@ NPZ는 물리값 `X[N,F]`, `mask/status/age_ns[N,F]`, `tick_ns/source_time_ns/se
 | `backend/arion/` | 입력 해석·세션 기록·결과 API·WebSocket |
 | `backend/tests/` | 입력·시간·수신·분석 연동 테스트 |
 | `docs/` | 데이터 사전·계약·스키마·검증 기록 |
-| `.github/` | 기존 협업용 Issue·PR 템플릿 |
+| `output/` | AI팀 협의·대시보드 개선안과 발표용 스크린샷 |
+| `.github/` | 기존 독립 UI 저장소의 Issue·PR 템플릿 보관 |
 
 ## 실행
 
 Mac에서 Python 3.11 이상과 Node.js 22.12 이상을 준비합니다.
 
 ```bash
-git clone https://github.com/capstone1-irion/ui.git
-cd ui
+# irion 저장소를 클론한 폴더에서 실행합니다.
+cd UI
 ./setup.sh
 ./server.sh start
 ```
@@ -188,7 +191,7 @@ cd ui
 화면에서 이름에 `시험`을 포함한 UDP 세션을 생성하고 별도 터미널에서 실행합니다.
 
 ```bash
-cd ui/backend
+cd UI/backend
 ../.venv/bin/python -m arion.test_sender --seconds 45
 ```
 
@@ -226,6 +229,8 @@ cd ui/backend
 - [균형형 화면·업로드 검증 기록](docs/validation-balanced.md)
 - [실시간 전처리·NPZ 계약](docs/processed-npz-contract.md)
 - [파일 보관·전처리 검증 기록](docs/validation-v3.md)
+- [현재 구조](docs/architecture.md)
+- [설계 자산·문서 안내](docs/design-assets.md)
 - 실행 중 API 문서: `http://127.0.0.1:8765/docs`
 
 `.data`, 원본 JSONL·NPZ, 모델 가중치, 가상환경, 의존성, 빌드 결과와 로컬 비밀정보는 Git에서 제외합니다. 개발은 단일 서버 worker를 기준으로 합니다.

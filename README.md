@@ -7,6 +7,7 @@ PX4·Gazebo에서 X500 비행로그를 수집하고, 정상 train 기준 공통 
 | [simulation/](simulation/README.md) | 시뮬레이션·물리·프로필·계약·네이티브 빌드 |
 | [Data/](Data/README.md) | 수집·정제 프로그램과 사용자가 선택한 데이터 저장소 |
 | [ai/](ai/README.md) | 모델·학습·보정·추론·평가·원격 GPU 실행 |
+| [UI/](UI/README.md) | 비행 모니터링 대시보드·재생·실시간 수신·모델 결과 표시 |
 | [docs/](docs/README.md) | 명세·운영·개발 안내와 과거 보존 자료 |
 
 ## 다른 컴퓨터에서 시작

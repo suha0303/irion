@@ -1,0 +1,18 @@
+Edit the supplied Korean ARION system architecture image. Preserve its overall layout, wide 16:9 framing, title, colors, arrows, Korean labels, source environments, FastAPI backend, dashboard, model responsibilities and future LLM extension. Make this a final-target architecture WITHOUT ANY DATABASE. The user has decided not to use a separate DB.
+
+Required changes:
+1. Replace the lower-left storage block heading "비행·이벤트 저장" with "파일 기반 기록·저장".
+Replace its lines with clearly legible:
+"JSONL 원문·세션 기록"
+"JSON 메타데이터"
+"JSONL 분석·이벤트 결과"
+and small bullet labels:
+"원시 타임스탬프 보존"
+"출처·버전·근거 구간 기록".
+Remove every occurrence of "SQLite", "DB", or database-service terminology. Keep collector/backend arrows into this file storage block and keep the file replay arrow from this block to the observation-quality core. Keep the normal-log arrow from this block to external learning.
+2. Replace every database cylinder icon anywhere in the image with a correct non-DB symbol. Use a folder plus document-stack icon in the file-recording block, simple neural-model or processor-chip icons in the LSTM and Transformer boxes, and a training/laptop/learning icon in "외부 학습·평가". No cylinder-shaped database icons anywhere.
+3. The legend must not falsely claim that file-only storage is already implemented. Change the teal solid legend text to "핵심 시스템 구성" with "(최종 목표)" at right. Keep gray legend as "외부 환경·학습" / "(외부 시스템)" and purple dashed legend as "모델 인계·후속 확장" / "(향후 확장)".
+4. Make "외부 학습·평가" clearly consume normal log FILES and produce model weights, scaler, thresholds and input contract. Keep NPZ only in the external training block, not a dashboard training panel.
+5. Preserve all other technical boundaries: one common receive/fanout layer; raw telemetry and optional 10Hz preprocessed input; separate observed state versus LSTM/Transformer predictions; HTTP provider adapters; WebSocket at maximum 10Hz screen updates; React/TypeScript/Vite, Three.js and ECharts; dashboard read-only; flight control outside; LLM explanation is a dashed future extension, not numerical fault probability.
+6. Eliminate the duplicate unlabeled horizontal observation arrow between quality core and backend. Use ONE clear teal quality-core-to-backend arrow labeled "관측 상태"; keep the separate input link to the AI group and the two model-result links to backend.
+High-resolution publication-quality infographic, all Korean labels sharp and spelled correctly. Do not add any database, cloud-storage account, extra infrastructure, or new product claims.
