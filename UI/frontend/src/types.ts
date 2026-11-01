@@ -23,6 +23,8 @@ export interface Frame {
   streams: { name: string; age_ms: number | null; last_t_ms: number | null; status: string }[];
 }
 export interface Manifest {
+  npz?: NpzState | null;
+  rates?: {raw_receive_hz:number|null;processed_receipt_hz:number|null;processed_output_hz:number|null;display_max_hz:number;model_inference_period_ms:number|null};
   source_kind?: 'live'|'replay'; session?: SessionState; profile?: InputProfile;
   run_id: string; name: string; input_sha256: string | null; source: string; source_system: number; source_component: number;
   duration_ms: number; total_records: number; accepted_records: number; excluded_records: number; epochs: number;
@@ -63,6 +65,11 @@ export interface SessionState {
   buffer_start_ms: number; last_sequence: number; dropped_sequences: number;
 }
 export interface InputProfile {
+  feature_order?: string[];
   profile_id: string; input_format: 'mavlink'|'normalized'; preprocess_version: string;
-  sample_period_ms: number | null; signals: Record<string,{label:string;unit:string;ttl_ms:number;message:string}>;
+  sample_period_ms: number | null; signals: Record<string,{label:string;unit:string;ttl_ms:number;message:string;display_key?:string|null}>;
 }
+
+export interface NpzState { state:string; error:string; received_rows:number; saved_rows:number; pending_rows:number; chunk_count:number; finished:boolean; schema_version:string; chunk_seconds:number }
+export interface NpzChunk { filename:string; rows:number; start_sequence:number; end_sequence:number; start_ms:number; end_ms:number; epoch:number; sha256:string }
+export interface ExportJob { job_id:string; run_id:string; state:'queued'|'running'|'ready'|'error'; error:string; download_url:string|null; rows?:number; sha256?:string }

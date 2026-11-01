@@ -25,6 +25,18 @@
           "maxLength": 100,
           "title": "Message",
           "type": "string"
+        },
+        "display_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Key"
         }
       },
       "required": [
@@ -115,6 +127,14 @@
       },
       "maxItems": 8,
       "title": "Missing Current Raw",
+      "type": "array"
+    },
+    "feature_order": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 256,
+      "title": "Feature Order",
       "type": "array"
     }
   },

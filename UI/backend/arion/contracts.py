@@ -11,6 +11,7 @@ class SignalDefinition(Contract):
     unit: str = Field(max_length=30)
     ttl_ms: FiniteFloat = Field(gt=0, le=60000)
     message: str = Field(default='NORMALIZED', max_length=100)
+    display_key: str | None = None
 
 class InputProfile(Contract):
     schema_version: Literal['arion-profile-v2'] = 'arion-profile-v2'
@@ -23,17 +24,55 @@ class InputProfile(Contract):
     expected_rates_hz: dict[str, FiniteFloat] = Field(default_factory=dict)
     voltage_encoding: Literal['mavlink', 'arion_4s'] = 'mavlink'
     missing_current_raw: list[FiniteFloat] = Field(default_factory=lambda:[-1], max_length=8)
+    feature_order: list[str] = Field(default_factory=list, max_length=256)
 
     @model_validator(mode='after')
     def canonical_units(self):
+        if not self.feature_order: self.feature_order = list(self.signals)
+        if len(set(self.feature_order)) != len(self.signals) or set(self.feature_order) != set(self.signals):
+            raise ValueError('feature_order는 모든 신호를 중복 없이 포함해야 합니다.')
+        display_keys=[s.display_key or k for k,s in self.signals.items()]
+        if len(set(display_keys))!=len(display_keys):raise ValueError('표시 신호 매핑이 중복됩니다.')
         for key,spec in self.signals.items():
             if key in LABELS and spec.unit!=LABELS[key][1]:
                 raise ValueError(f'{key} 표시 단위는 {LABELS[key][1]}여야 합니다. 생산 측에서 명시적으로 변환하세요.')
             if self.input_format=='mavlink' and (key not in LABELS or spec.message!=LABELS[key][2]):
                 raise ValueError('MAVLink 프로필은 지원되는 디코더 신호에만 연결할 수 있습니다.')
+            if spec.display_key is not None and (spec.display_key not in LABELS or spec.unit != LABELS[spec.display_key][1]):
+                raise ValueError('display_key는 같은 단위의 표시 신호여야 합니다.')
         if self.input_format=='mavlink' and any(k not in MAX_AGE for k in self.expected_rates_hz):raise ValueError('지원되지 않는 MAVLink 스트림 이름')
         if any(v<=0 for v in self.expected_rates_hz.values()):raise ValueError('기대 수신률은 양수여야 합니다.')
         return self
+
+class ProcessedSignal(Contract):
+    value: FiniteFloat | None
+    unit: str = Field(max_length=30)
+    mask: bool
+    status: Literal['valid', 'missing', 'stale', 'invalid']
+    age_ns: StrictInt | None = Field(default=None, ge=0, le=2**63-1)
+
+    @model_validator(mode='after')
+    def validity(self):
+        if self.mask and (self.value is None or self.status != 'valid' or self.age_ns is None):
+            raise ValueError('mask=true에는 유효한 값·상태·관측 나이가 필요합니다.')
+        if self.status == 'valid' and not self.mask:
+            raise ValueError('valid 상태에는 mask=true가 필요합니다.')
+        return self
+
+class ProcessedFrame(Contract):
+    schema_version: Literal['arion-processed-v1'] = 'arion-processed-v1'
+    session_id: str
+    profile_id: str
+    sequence: StrictInt = Field(ge=0, le=2**63-1)
+    epoch: StrictInt = Field(ge=0, le=2**63-1)
+    source_time_ns: StrictInt = Field(ge=0, le=2**63-1)
+    relative_time_ns: StrictInt = Field(ge=0, le=2**63-1)
+    preprocess_version: str
+    sample_period_ms: FiniteFloat = Field(gt=0, le=60000)
+    values: dict[str, ProcessedSignal] = Field(max_length=256)
+    armed: bool | None = None
+    mode: str = Field(default='미확인', max_length=80)
+    flight_state: str = Field(default='미확인', max_length=80)
 
 class SourceConfig(Contract):
     name: str = Field(default='실시간 비행', min_length=1, max_length=120)

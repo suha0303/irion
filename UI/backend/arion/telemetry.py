@@ -136,7 +136,7 @@ class TelemetryRun:
             delta_ms = (ns - self.previous_ns) / 1e6
             if delta_ms < 0:
                 reason = "수신 clock 역행"
-                self.duration_ms += 100
+                self.duration_ms += getattr(self, 'reset_step_ms', 100)
             else:
                 self.duration_ms += delta_ms
                 if delta_ms > self.gap_ms:

@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import unicodedata
 
-from .storage import Store
+from .store_v2 import StoreV2 as Store
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
     run = store.import_bytes(args.log.read_bytes(), unicodedata.normalize("NFC", args.log.name))
     report = {"manifest": run.manifest(), "npz": store.inspect_npz(run.run_id, args.npz) if args.npz else None}
     (args.data_dir / "baseline-inspection.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))
-    print(json.dumps({"run_id": run.run_id, "records": len(run.samples), "excluded": len(run.issues),
+    print(json.dumps({"run_id": run.run_id, "records": run.manifest()['accepted_records'], "excluded": len(run.issues),
                       "sha256": run.sha256, "report": str(args.data_dir / "baseline-inspection.json")}, ensure_ascii=False))
 
 

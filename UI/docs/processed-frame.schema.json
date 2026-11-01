@@ -1,0 +1,157 @@
+{
+  "$defs": {
+    "ProcessedSignal": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "maxLength": 30,
+          "title": "Unit",
+          "type": "string"
+        },
+        "mask": {
+          "title": "Mask",
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "valid",
+            "missing",
+            "stale",
+            "invalid"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "age_ns": {
+          "anyOf": [
+            {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Age Ns"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "mask",
+        "status"
+      ],
+      "title": "ProcessedSignal",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "arion-processed-v1",
+      "default": "arion-processed-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "profile_id": {
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "sequence": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "epoch": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Epoch",
+      "type": "integer"
+    },
+    "source_time_ns": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Source Time Ns",
+      "type": "integer"
+    },
+    "relative_time_ns": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Relative Time Ns",
+      "type": "integer"
+    },
+    "preprocess_version": {
+      "title": "Preprocess Version",
+      "type": "string"
+    },
+    "sample_period_ms": {
+      "exclusiveMinimum": 0,
+      "maximum": 60000,
+      "title": "Sample Period Ms",
+      "type": "number"
+    },
+    "values": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ProcessedSignal"
+      },
+      "maxProperties": 256,
+      "title": "Values",
+      "type": "object"
+    },
+    "armed": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Armed"
+    },
+    "mode": {
+      "default": "미확인",
+      "maxLength": 80,
+      "title": "Mode",
+      "type": "string"
+    },
+    "flight_state": {
+      "default": "미확인",
+      "maxLength": 80,
+      "title": "Flight State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "profile_id",
+    "sequence",
+    "epoch",
+    "source_time_ns",
+    "relative_time_ns",
+    "preprocess_version",
+    "sample_period_ms",
+    "values"
+  ],
+  "title": "ProcessedFrame",
+  "type": "object"
+}

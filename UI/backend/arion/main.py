@@ -19,8 +19,9 @@ from .ai import AIAdapter, fixture_events
 from .schemas import AIConnection, DemoRequest
 from .store_v2 import StoreV2 as Store
 from .streaming import LiveSources, SessionRun
+from .npz_replay import NpzReplay
 from .providers import ProviderRegistry, contract_for
-from .contracts import SourceConfig, InputProfile, Provider
+from .contracts import SourceConfig, InputProfile, Provider, ProcessedFrame
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,8 +43,9 @@ def create_app(data_dir=None):
         await providers.close()
         await sources.close()
         await adapter.close()
+        await asyncio.to_thread(store.close)
 
-    app = FastAPI(title="ARION Dashboard", version="0.3.0", lifespan=lifespan)
+    app = FastAPI(title="ARION Dashboard", version="0.4.0", lifespan=lifespan)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver"])
     app.state.store, app.state.adapter = store, adapter
     app.state.providers, app.state.sources = providers, sources
@@ -53,6 +55,11 @@ def create_app(data_dir=None):
         return JSONResponse(status_code=404, content={"detail": "해당 비행을 찾을 수 없습니다."})
 
     def snapshot(run, cursor):
+        if isinstance(run,SessionRun):
+            with run.lock:return build_snapshot(run,cursor)
+        return build_snapshot(run,cursor)
+
+    def build_snapshot(run, cursor):
         frame = run.frame(cursor)
         state = adapter.state(run.run_id)
         is_fixture = run.run_id in demo or state.get("fixture_only", False)
@@ -84,7 +91,7 @@ def create_app(data_dir=None):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "version": "0.3.0", "application": "arion-dashboard", "instance_id": os.environ.get("ARION_SERVER_INSTANCE", "foreground"), "scope": "local-replay-and-live", "live_available": True}
+        return {"status": "ok", "version": "0.4.0", "storage":"files", "application": "arion-dashboard", "instance_id": os.environ.get("ARION_SERVER_INSTANCE", "foreground"), "scope": "local-replay-and-live", "live_available": True}
 
     @app.get("/api/runs")
     def runs():
@@ -98,7 +105,7 @@ def create_app(data_dir=None):
         try:
             run = await asyncio.to_thread(store.import_bytes, data, file.filename or "flight.jsonl")
             return run.manifest()
-        except (ValueError, UnicodeError) as error:
+        except (ValueError, UnicodeError, zipfile.BadZipFile, OSError) as error:
             raise HTTPException(422, str(error)) from error
 
     @app.get("/api/runs/{run_id}")
@@ -106,8 +113,35 @@ def create_app(data_dir=None):
         return store.get(run_id).manifest()
 
     @app.get("/api/runs/{run_id}/series")
-    def series(run_id: str):
-        return store.get(run_id).series()
+    def series(run_id: str, start_ms: float = 0, end_ms: float | None = None):
+        if not math.isfinite(start_ms) or (end_ms is not None and not math.isfinite(end_ms)):
+            raise HTTPException(422, '시각은 유한한 숫자여야 합니다.')
+        run=store.get(run_id)
+        return run.series(start_ms,end_ms) if isinstance(run,NpzReplay) else run.series()
+
+    @app.get('/api/runs/{run_id}/npz/chunks')
+    def npz_chunks(run_id: str): return store.chunks(run_id)
+
+    @app.post('/api/runs/{run_id}/npz/retry')
+    async def npz_retry(run_id: str):
+        archive=store.archive_for(run_id)
+        if not archive: raise HTTPException(422,'NPZ 저장 경로가 없는 비행입니다.')
+        archive.retry()
+        return archive.status()
+
+    @app.post('/api/runs/{run_id}/npz/export')
+    def npz_export(run_id: str):
+        try:return store.request_export(run_id)
+        except ValueError as e:raise HTTPException(422,str(e)) from e
+
+    @app.get('/api/exports/{job_id}')
+    def export_status(job_id: str):return store.export_status(job_id)
+
+    @app.get('/api/exports/{job_id}/download')
+    def export_download(job_id: str):
+        job=store.export_status(job_id)
+        if job['state']!='ready':raise HTTPException(409,'내보내기가 완료되지 않았습니다.')
+        return FileResponse(store.root/'exports'/(job_id+'.npz'),filename=job['run_id']+'.npz',media_type='application/octet-stream')
 
     @app.get("/api/runs/{run_id}/frame")
     def frame(run_id: str, t_ms: float = 0):
@@ -164,6 +198,9 @@ def create_app(data_dir=None):
     @app.get('/api/profiles')
     def profiles_list(): return store.profiles()
 
+    @app.get('/api/contracts/processed-frame')
+    def processed_contract(): return ProcessedFrame.model_json_schema()
+
     @app.post('/api/profiles')
     def profile_register(body: InputProfile):
         try: return store.register_profile(body)
@@ -198,16 +235,19 @@ def create_app(data_dir=None):
     async def session_finish(run_id: str):
         if run_id not in store.active: raise HTTPException(422,'활성 세션이 아닙니다.')
         run=store.get(run_id); await sources.disconnect(run)
-        return store.finish_session(run_id).manifest()
+        return (await asyncio.to_thread(store.finish_session,run_id)).manifest()
 
     @app.post('/api/sessions/{run_id}/frames')
     async def session_frame(run_id: str, body: dict):
         run=store.get(run_id)
         if not isinstance(run,SessionRun): raise HTTPException(422,'전처리 스트림 세션이 아닙니다.')
         try:
-            run.append_normalized(body)
-            return {'accepted':True,'sequence':run.accepted}
+            await asyncio.to_thread(run.append_normalized,body)
+            return run.last_ingest
         except ValueError as e: raise HTTPException(422,str(e)) from e
+        except OSError as e:
+            run.state='error';run.error='저널 기록 실패: '+str(e)
+            raise HTTPException(503,run.error) from e
 
     @app.get('/api/runs/{run_id}/input-segment')
     def input_segment(run_id: str, start_sequence: int, end_sequence: int):
@@ -215,7 +255,9 @@ def create_app(data_dir=None):
         if not isinstance(run,SessionRun): raise HTTPException(422,'세션 입력 참조는 수집 기록에만 사용합니다.')
         try:
             ref,items=run.segment(start_sequence,end_sequence)
-            return {'input_ref':ref,'frames':[x['frame'] for x in items]}
+            return {'input_ref':ref,'frames':[x['frame'] for x in items],
+                    'processed_frames':[x.get('processed') for x in items],
+                    'rows':[{'row_id':x.get('row_id'),'row_sha256':x.get('row_sha256'),'sequence':x['sequence'],'t_ms':x['t_ms'],'epoch':x['epoch']} for x in items]}
         except ValueError as e: raise HTTPException(422,str(e)) from e
 
     @app.get('/api/analysis/providers')
@@ -274,6 +316,7 @@ def create_app(data_dir=None):
             await ws.close(code=1008)
             return
         await ws.accept()
+        opened_at=time.perf_counter()
         state = {"cursor": 0.0, "playing": False, "speed": 1.0, "last": time.perf_counter(), "revision": 0, "following": getattr(run,"live",False)}
         sent = {}
         acknowledged = set()
@@ -338,16 +381,22 @@ def create_app(data_dir=None):
                     receipt_id = (key, receipt)
                     if receipt is not None and receipt_id not in seen_receipts:
                         seen_receipts.add(receipt_id)
-                        if event["decided_at_ms"] <= state["cursor"]:
+                        if receipt>=opened_at and event["decided_at_ms"] <= state["cursor"]:
                             eligible_receipts[key] = receipt
                 measurable = [(adapter.key(e), eligible_receipts[adapter.key(e)]) for e in value["events"] if adapter.key(e) in eligible_receipts]
-                for event in value['events']:
-                    if not event.get('provider_id') or event['provider_id']=='legacy':continue
+                for event in store.analysis(run_id):
+                    if event.get('provider_id')=='legacy':continue
                     key=providers.key(event);entry=providers.received.get(key)
                     if entry and (key,entry[0]) not in seen_receipts:
                         seen_receipts.add((key,entry[0]))
-                        if entry[1]<=state['cursor']:eligible_receipts[key]=entry[0]
+                        if entry[0]>=opened_at and entry[1]<=state['cursor']:eligible_receipts[key]=entry[0]
+                for event in value['events']:
+                    if not event.get('provider_id') or event['provider_id']=='legacy':continue
+                    key=providers.key(event)
                     if key in eligible_receipts:measurable.append((key,eligible_receipts[key]))
+                if sequence%10==0:
+                    if isinstance(run,NpzReplay):value['live_series']=run.series(max(0,state['cursor']-300000),state['cursor'])['points']
+                    if isinstance(run,SessionRun):value['manifest']=run.manifest()
                 if getattr(run,'live',False) and sequence%10==0:
                     value['live_series']=run.series()['points'];value['manifest']=run.manifest()
                 sent[sequence] = (time.perf_counter(), measurable)

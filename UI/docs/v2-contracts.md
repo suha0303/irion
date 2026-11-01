@@ -1,5 +1,7 @@
 # 입력·분석 계약 v2
 
+현재 v0.4의 전처리 v1·NPZ·파일 저장 확장은 [전처리·NPZ 계약](processed-npz-contract.md)을 참조하세요. 기존 normalized-v2와 분석 v2는 호환 경로로 유지됩니다.
+
 구현의 검증 가능한 스키마는 `input-profile.schema.json`, `normalized-input.schema.json`, `analysis-response-v2.schema.json` 및 로컬 `/openapi.json`입니다. 기존 `ai-contract.md`의 v1 경로는 호환용이며 신규 제공자는 v2를 사용합니다.
 
 ## 데이터 흐름
@@ -17,7 +19,7 @@ flowchart LR
   Replay --> UI
   Models[LSTM·Transformer 결과 API] --> Registry[제공자별 검증·상태]
   Registry --> UI
-  Registry --> SQLite[결과 저장]
+  Registry --> Files[분석 결과 JSONL]
 ```
 
 원본 센서 수신률, 전처리 출력 주기, 모델 추론 주기, API 폴링 주기, 브라우저 갱신률을 혼용하지 않습니다. 10Hz 입력은 100ms grid를 생산자가 이미 만든 경우이며 대시보드는 추가 보간·scaler·학습 처리를 하지 않습니다.
@@ -56,7 +58,7 @@ UDP 기본 요청:
 }
 ```
 
-`source_time_ns`는 생산자 내 단조 시각의 정수 ns입니다. 브라우저로 전달하는 재생 좌표는 상대 ms입니다. 동일 producer epoch의 중복·역전 sequence는 거부합니다. 새로운 producer epoch, 시계 역행 또는 프로필의 gap 초과는 로컬 epoch를 구분합니다. 빠진 sequence는 진단에 누적합니다.
+`source_time_ns`는 생산자 내 단조 시각의 정수 ns입니다. 브라우저로 전달하는 재생 좌표는 상대 ms입니다. 동일 producer epoch·sequence의 같은 내용 재전송은 중복 저장 없이 수락하고, 내용이 다른 재전송과 알려지지 않은 이전 sequence는 거부합니다. 새로운 producer epoch, 시계 역행 또는 프로필의 gap 초과는 로컬 epoch를 구분합니다. 빠진 sequence는 진단에 누적합니다.
 
 필드가 없으면 missing, `valid=false`면 invalid, age가 TTL을 초과하면 stale입니다. `0`은 결측이 아닙니다. 오래된 관측을 10Hz로 반복 전달하면 age도 그만큼 증가시켜야 합니다. 선언되지 않은 신호·잘못된 단위·변경된 전처리 버전/주기는 422로 거부하고 저널에 사유를 보존합니다. 알려진 표시 신호 이름의 SI 단위는 고정이며 생산자가 변환합니다. 새로운 이름의 신호는 프로필에 등록하여 진단 화면에서 확인할 수 있습니다.
 
@@ -67,11 +69,11 @@ MAVLink 프로필은 지원된 디코더의 신호와 메시지에 연결합니�
 - `GET/POST /api/analysis/providers`: 제공자 목록·등록.
 - `POST /api/runs/{run}/analysis/{provider}/connect`: `{"url":"http://127.0.0.1:8766/lstm/results"}`.
 - `POST /api/runs/{run}/analysis/{provider}/disconnect`: 제공자 하나만 해제.
-- `POST /api/runs/{run}/analysis-demo`: 기존 로그에서만 명시적 시험 결과 활성화.
+- `POST /api/runs/{run}/analysis-demo`: 완료된 비행 기록에서 명시적 시험 결과 활성화. 진행 중인 세션은 별도 시험 API를 사용합니다.
 
 초기 제공자 ID는 `lstm`, `transformer`입니다. 이름·모델 버전·결과 종류·입력 요구사항을 등록할 수 있습니다. `requirements`에는 필요한 `signals`(이름→단위), `sample_period_ms`, `preprocess_version`을 선언합니다. `model_version=unconfigured`는 버전을 아직 고정하지 않았다는 뜻이며 실제 모델 준비가 완료됐다는 뜻이 아닙니다.
 
-현재 HTTP 어댑터는 로컬 주소만 허용하고 500ms마다 GET합니다. `run_id`, `provider_id`, `input_sha256`, `latest_sequence`를 전달합니다. 원본 파일 자체를 자동 전송하지 않습니다. 한 응답의 모든 결과를 검증한 뒤 원자적으로 저장하며 오류는 해당 제공자에만 적용합니다.
+현재 HTTP 어댑터는 로컬 주소만 허용하고 500ms마다 GET합니다. `run_id`, `provider_id`, `input_sha256`, `latest_sequence`를 전달합니다. 원본 파일 자체를 자동 전송하지 않습니다. 한 응답의 모든 결과를 검증한 뒤 제공자별 파일 저널에 저장합니다. 연결·응답 검증 오류는 해당 제공자에만 적용합니다.
 
 응답 골격:
 
@@ -89,15 +91,15 @@ MAVLink 프로필은 지원된 디코더의 신호와 메시지에 연결합니�
 
 - 파일 입력: `input_ref={"kind":"file","sha256":"최종 원본 해시"}`.
 - 실시간 입력: `kind=stream`, `session_id`, `start_sequence`, `end_sequence`, `segment_sha256`, `preprocess_version`.
-- 구간 해시는 해당 sequence의 정규화된 **표시 프레임 객체**를 정렬 키·UTF-8·공백 없는 JSON으로 인코딩하고, 개행으로 연결한 바이트의 SHA-256입니다. `input-segment` 응답의 참조를 사용하면 인코딩 차이를 피할 수 있습니다. 다른 세션·구간·전처리 결과를 결합하지 않습니다.
+- 구간 해시는 전처리 입력의 **공통 수락 프레임**을 정렬 키·UTF-8·공백 없는 JSON으로 인코딩하고 개행으로 연결한 바이트의 SHA-256입니다. 원본 MAVLink 세션은 기존 표시 프레임 해시를 유지합니다. `input-segment` 응답의 참조를 사용하면 인코딩 차이를 피할 수 있습니다. 다른 세션·구간·전처리 결과를 결합하지 않습니다.
 - detector의 정상/이상 의심에는 모델 고유 score·threshold가 필요합니다. 서로 다른 모델의 점수를 평균하지 않습니다. 제공자가 필수로 선언한 신호의 실제 값이 결측·만료이면 수치 판정을 거부합니다.
 - explanation은 `status=explanation`, score·threshold 없음, 근거 신호 또는 관련 이벤트 참조가 필요합니다. 설명을 정상/이상 판정으로 사용하지 않습니다. 현재 외부 LLM 호출은 없습니다.
 - `origin=fixture`는 모든 화면에서 시험용으로 표시합니다. 실제 모델은 `origin=model`을 명시합니다.
 
 ## 저장·시간·메모리
 
-기존 파일 해시 기반 run ID는 유지됩니다. 새 실시간 run ID는 세션 UUID 기반이며 종료 후에도 유지됩니다. 종료 시 저널 전체 해시를 별도 확정합니다. SQLite v2 테이블은 기존 `detections`를 삭제하지 않고 `legacy` 제공자로 복사합니다.
+기존 파일 해시 기반 run ID는 유지됩니다. 새 실시간 run ID는 세션 UUID 기반이며 종료 후에도 유지됩니다. 종료 시 저널 전체 해시를 별도 확정합니다. v0.4는 기존 SQLite를 읽기 전용으로 이관·백업하고, 이전 결과를 `legacy` 제공자의 파일 기록으로 보존합니다. 런타임 저장은 JSON/JSONL/NPZ입니다.
 
-실시간 저널에는 시작 프로필·설정, 수신 원문, causal 표시 프레임, 오류 행이 저장됩니다. raw ns와 바이너리 보조 필드는 보존합니다. 바이너리는 `$bytes` hex, 비유한 숫자는 `$float`로 표기합니다. 활성 입력 버퍼는 최근 5분/최대 60,000개 관측이고 화면은 100ms 표시 간격을 사용합니다. 이전 기록은 파일에 남으며 종료 후 재생합니다. 현재 저널 재생은 파일을 메모리에 읽으므로 장시간 대용량 비행은 분할 수집을 권장합니다.
+실시간 저널에는 시작 프로필·설정, 수신 원문, causal 표시 프레임, 오류 행이 저장됩니다. raw ns와 바이너리 보조 필드는 보존합니다. 바이너리는 `$bytes` hex, 비유한 숫자는 `$float`로 표기합니다. 활성 입력 버퍼는 최근 5분/최대 60,000개 관측이고 화면은 100ms 표시 간격을 사용합니다. 이전 기록은 파일에 남으며 종료 후 재생합니다. 원본 MAVLink 수집 기록 재생은 기존 메모리 파서를 유지합니다. 완료된 전처리 기록은 NPZ 두 구간 캐시와 현재 시점 주변 5분 차트로 재생합니다.
 
 3D는 NED `(north,east,down)`을 `(east,-down,-north)`로 변환합니다. 자세는 FRD→NED의 yaw/pitch/roll 회전을 장면 좌표계로 변환합니다. 재생에서는 미래 자세를 참조하지 않고, 만료 상태에서 외삽하지 않습니다. 카메라 조작·렌더링만 별도 30fps 루프이며 센서 값의 30Hz 수신을 뜻하지 않습니다.

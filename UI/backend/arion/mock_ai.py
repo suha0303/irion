@@ -2,17 +2,20 @@
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 
-from .storage import Store
+from .telemetry import TelemetryRun
+from .file_io import read_json
 from .ai import fixture_events
 
 app = FastAPI(title="ARION 시험용 AI API — 실제 모델 아님")
-store = Store(Path(__file__).resolve().parents[2] / ".data")
+import os
+data_root = Path(os.environ.get('ARION_DATA_DIR',Path(__file__).resolve().parents[2] / ".data"))
 
 
 @app.get("/results")
 def results(run_id: str, input_sha256: str):
     try:
-        run = store.get(run_id)
+        row = read_json(data_root/'catalog.json',{'runs':{}})['runs'][run_id]
+        run = TelemetryRun(Path(row['path']),row['name'])
     except KeyError as error:
         raise HTTPException(404, "비행 없음") from error
     if input_sha256 != run.sha256:

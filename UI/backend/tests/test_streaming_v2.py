@@ -50,7 +50,8 @@ def test_normalized_contract_changes_are_reported(store,change):
 def test_ordering_gap_epoch_and_replay_journal(store):
     run=make_normalized(store)
     run.append_normalized(normalized(run,1,0))
-    with pytest.raises(ValueError):run.append_normalized(normalized(run,1,0))
+    run.append_normalized(normalized(run,1,0))
+    assert run.accepted==1 and run.last_ingest['duplicate']
     run.append_normalized(normalized(run,3,200));assert run.dropped_sequences==1
     run.append_normalized(normalized(run,4,2500));assert run.frame(2500)['epoch']==1
     assert run.frame(2499)['values']['battery_current_a']['status']=='stale'
@@ -146,7 +147,7 @@ def test_legacy_migration_keeps_original_db_rows_and_files(tmp_path):
     new=StoreV2(tmp_path)
     assert all(e['provider_id']=='legacy' for e in new.analysis(run.run_id))
     assert len(new.events(run.run_id,'fixture'))==3 and run.path.read_bytes()==raw
-    assert (tmp_path/'backups'/'before-v2.sqlite3').exists()
+    assert not (tmp_path/'arion.sqlite3').exists()
 
 
 def test_independent_providers_error_isolation_and_fixture_filter(store,monkeypatch):

@@ -5,13 +5,16 @@ from collections import deque, defaultdict
 from copy import deepcopy
 import hashlib
 import json
+import os
 from pathlib import Path
 import socket
 import time
 from statistics import median
 import uuid
+from threading import RLock
 
-from .contracts import InputProfile, SourceConfig, NormalizedInput
+from .contracts import InputProfile, SourceConfig, NormalizedInput, ProcessedFrame
+from .npz_archive import NpzArchive
 from .telemetry import TelemetryRun, MAX_AGE
 
 BUFFER_MS = 300_000
@@ -43,6 +46,7 @@ class SessionRun:
         self.dropped_sequences = 0
         self.stream_stats = defaultdict(lambda: {'count':0, 'last':None, 'intervals':deque(maxlen=2048)})
         self.last_receipt = time.perf_counter()
+        self.receipt_intervals = deque(maxlen=2048)
         self.duration_ms = 0.0
         self.last_external_sequence = None
         self.external_epoch = None
@@ -52,6 +56,10 @@ class SessionRun:
         self.core = TelemetryRun.__new__(TelemetryRun)
         self.core.initialize()
         self.sha256 = None
+        self.lock = RLock()
+        self.archive = None
+        self.recent_inputs = {}
+        self.last_ingest = {}
         if self.live:
             self.run_id = session_id or 'live-' + uuid.uuid4().hex[:16]
             self.config, self.profile = config, profile
@@ -61,6 +69,10 @@ class SessionRun:
             self.writer.write(encode({'schema_version':'arion-journal-v2', 'session_id':self.run_id,
                                      'config':config.model_dump(), 'profile':profile.model_dump()})+b'\n')
             self.writer.flush()
+            os.fsync(self.writer.fileno())
+            if config.kind == 'normalized':
+                self.archive = NpzArchive(self.path.parent/self.run_id/'npz', self.path, profile, self.run_id)
+                self.archive.data['metadata']['source']=config.model_dump()
         else:
             with self.path.open('rb') as f:
                 header=json.loads(f.readline())
@@ -81,6 +93,7 @@ class SessionRun:
             if spec.message in self.core.max_age: self.core.max_age[spec.message]=spec.ttl_ms
         self.core.rates = dict(self.profile.expected_rates_hz)
         self.core.gap_ms = self.profile.gap_ms
+        self.core.reset_step_ms = self.profile.sample_period_ms or 100
         self.core.voltage_encoding = self.profile.voltage_encoding
         self.core.missing_current_raw = self.profile.missing_current_raw
         self.core.run_id = self.run_id
@@ -122,7 +135,7 @@ class SessionRun:
         self._write({'type':'issue','issue':issue,'raw':safe(raw)})
 
     def _write(self, item):
-        self.writer.write(encode(item)+b'\n');self.writer.flush()
+        self.writer.write(encode(item)+b'\n');self.writer.flush();os.fsync(self.writer.fileno())
 
     def append_raw(self, record):
         if not self.live: raise ValueError('종료된 세션입니다.')
@@ -142,12 +155,28 @@ class SessionRun:
         return self._append(frame,record['message_name'],safe(record))
 
     def append_normalized(self, payload):
+        with self.lock: return self._append_processed(payload)
+
+    def _append_processed(self, payload):
         if not self.live or self.config.kind!='normalized' or self.state in ('disconnected','error'): raise ValueError('활성 전처리 세션이 아닙니다.')
         try:
-            p=NormalizedInput.model_validate(payload)
+            is_v1=payload.get('schema_version')=='arion-processed-v1'
+            p=ProcessedFrame.model_validate(payload) if is_v1 else NormalizedInput.model_validate(payload)
             if p.session_id!=self.run_id: raise ValueError('session_id 불일치')
+            if is_v1 and p.profile_id!=self.profile.profile_id: raise ValueError('프로필 버전 불일치')
             if p.preprocess_version!=self.profile.preprocess_version: raise ValueError('전처리 버전 불일치')
             if p.sample_period_ms!=self.profile.sample_period_ms: raise ValueError('전처리 주기 변경: 새 프로필·세션이 필요합니다.')
+            identity=f'{p.epoch}:{p.sequence}'
+            digest=hashlib.sha256(encode(p.model_dump())).hexdigest()
+            known=self.recent_inputs.get(identity)
+            if known is None and self.last_external_sequence is not None and p.sequence<=self.last_external_sequence:
+                from .npz_archive import journal_items
+                for _,_,item in journal_items(self.path):
+                    if item.get('input_identity')==identity:known=(item['input_sha256'],item['sequence'],item.get('row_id'));break
+            if known:
+                if known[0]!=digest:raise ValueError('같은 프레임 식별자의 값이 다릅니다.')
+                self.last_ingest={'accepted':True,'duplicate':True,'sequence':known[1],'row_id':known[2]}
+                return True
             if self.external_epoch is not None and p.epoch < self.external_epoch: raise ValueError('오래된 producer epoch')
             if self.external_epoch==p.epoch and self.last_external_sequence is not None and p.sequence<=self.last_external_sequence:
                 raise ValueError('중복 또는 순서가 역전된 sequence')
@@ -155,30 +184,56 @@ class SessionRun:
                 if key not in self.profile.signals: raise ValueError(f'미등록 신호: {key}')
                 if value.unit!=self.profile.signals[key].unit: raise ValueError(f'단위 불일치: {key}')
             boundary=self.force_boundary or (self.external_epoch is not None and self.external_epoch!=p.epoch)
+            if p.source_time_ns < getattr(self,'previous_processed_source_ns',p.source_time_ns):boundary=True
             if self.external_epoch==p.epoch and self.last_external_sequence is not None:
                 self.dropped_sequences+=max(0,p.sequence-self.last_external_sequence-1)
-            self.core.ingest({'receive_monotonic_ns':p.source_time_ns,'source_system':1,'source_component':1,
+            clock=p.relative_time_ns if is_v1 else p.source_time_ns
+            self.core.ingest({'receive_monotonic_ns':clock,'source_system':self.config.source_system or 1,'source_component':self.config.source_component or 1,
                               'message_name':'HEARTBEAT','fields':{}},force_boundary=boundary)
-            t=self.core.duration_ms; values={}
+            t=self.core.duration_ms; values={};processed_values={}
             for key, spec in self.profile.signals.items():
                 v=p.values.get(key)
-                status='missing' if v is None else 'invalid' if not v.valid or v.value is None else 'stale' if v.age_ms>spec.ttl_ms else 'valid'
+                age_ns=(v.age_ns if is_v1 else round(v.age_ms*1e6)) if v else None
+                valid=(v.mask if is_v1 else v.valid) if v else False
+                status='missing' if v is None else v.status if is_v1 else 'invalid' if not valid or v.value is None else 'valid'
+                if status=='valid' and age_ns>spec.ttl_ms*1e6:status='stale'
+                processed_values[key]={'value':v.value if v else None,'unit':spec.unit,'mask':status=='valid','status':status,'age_ns':age_ns}
                 values[key]={'value':v.value if status=='valid' else None,'status':status,'unit':spec.unit,'label':spec.label,
-                             'message':spec.message,'age_ms':v.age_ms if v else None,'reason':'mask=false' if v and not v.valid else ''}
+                             'message':spec.message,'age_ms':age_ns/1e6 if age_ns is not None else None,'reason':'mask=false' if v and not valid and status!='missing' else ''}
+                if spec.display_key:values[spec.display_key]=dict(values[key])
             frame={'epoch':self.core._epoch,'t_ms':t,'values':values,'streams':[], 'armed':p.armed,'mode':p.mode,'flight_state':p.flight_state}
+            processed={'schema_version':'arion-processed-v1','session_id':self.run_id,'profile_id':self.profile.profile_id,
+                       'sequence':p.sequence,'epoch':self.core._epoch,'source_time_ns':p.source_time_ns,
+                       'relative_time_ns':round(t*1e6),
+                       'preprocess_version':p.preprocess_version,'sample_period_ms':p.sample_period_ms,
+                       'values':processed_values,'armed':p.armed,'mode':p.mode,'flight_state':p.flight_state}
+            row_id=hashlib.sha256(encode([self.run_id,p.epoch,p.sequence])).hexdigest()
+            frame.update(row_id=row_id,producer_sequence=p.sequence,producer_epoch=p.epoch)
+            row={'processed':processed,'row_id':row_id,'input_identity':identity,'input_sha256':digest,'tick_ns':round(t*1e6)}
+            row['row_sha256']=hashlib.sha256(encode(processed)).hexdigest()
+            frame['row_sha256']=row['row_sha256']
+            result=self._append(frame,'NORMALIZED',p.model_dump(),row)
             self.external_epoch=p.epoch;self.last_external_sequence=p.sequence;self.force_boundary=False
-            return self._append(frame,'NORMALIZED',p.model_dump())
+            self.previous_processed_source_ns=p.source_time_ns
+            self.recent_inputs[identity]=(digest,self.accepted,row_id)
+            while len(self.recent_inputs)>len(self.entries):self.recent_inputs.pop(next(iter(self.recent_inputs)))
+            self.last_ingest={'accepted':True,'duplicate':False,'sequence':self.accepted,'row_id':row_id}
+            return result
         except (ValueError,TypeError) as error:
             self.issue(str(error),payload);raise ValueError(str(error)) from error
 
-    def _append(self, frame, message, raw):
+    def _append(self, frame, message, raw, extra=None):
         self.total_lines+=1
         frame.update(schema_version='arion-telemetry-v2',run_id=self.run_id,sequence=self.accepted+1,
                      profile_id=self.profile.profile_id,preprocess_version=self.profile.preprocess_version,
                      sample_period_ms=self.profile.sample_period_ms)
         item={'type':'sample','sequence':self.accepted+1,'t_ms':frame['t_ms'],'epoch':frame['epoch'],
               'message':message,'raw':raw,'frame':frame}
+        if extra:item.update(extra)
+        offset=self.writer.tell()
         self._write(item);self._remember(item)
+        if self.archive:self.archive.observe(item,offset,self.writer.tell())
+        if self.accepted>1:self.receipt_intervals.append((time.perf_counter()-self.last_receipt)*1000)
         self.last_receipt=time.perf_counter();self.state='connected';self.error=''
         return True
 
@@ -193,7 +248,8 @@ class SessionRun:
         f=deepcopy(self.entries[i]['frame']);delta=cursor-f['t_ms'];f['t_ms']=cursor
         for key,v in f['values'].items():
             if v['age_ms'] is not None: v['age_ms']=round(v['age_ms']+delta,3)
-            if v['status']=='valid' and v['age_ms']>self.profile.signals[key].ttl_ms:
+            spec=self.profile.signals.get(key) or next((s for s in self.profile.signals.values() if s.display_key==key),None)
+            if v['status']=='valid' and v['age_ms'] is not None and v['age_ms']>spec.ttl_ms:
                 v.update(value=None,status='stale')
         if delta>self.profile.gap_ms: f.update(armed=None,mode='미확인',flight_state='미확인')
         if self.config.kind=='normalized':
@@ -212,13 +268,20 @@ class SessionRun:
             xs=list(s['intervals'])
             streams.append({'name':name,'count':s['count'],'median_hz':1000/median(xs) if xs else None,
                             'target_hz':self.profile.expected_rates_hz.get(name),'max_interval_ms':max(xs) if xs else None})
+        intervals=list(self.receipt_intervals)
+        received_hz=1000/median(intervals) if intervals and median(intervals)>0 else None
+        output_hz=next((s['median_hz'] for s in streams if s['name']=='NORMALIZED'),None)
         return {'schema_version':'arion-run-v2','run_id':self.run_id,'name':self.name,'input_sha256':self.sha256,
                 'source':f'{self.config.kind.upper()} '+('실시간' if self.live else '수집 기록'),
                 'source_kind':'live' if self.live else 'replay','source_system':self.source[0], 'source_component':self.source[1],
                 'duration_ms':self.now_ms,'total_records':self.total_lines,'accepted_records':self.accepted,
                 'excluded_records':self.excluded,'issues':list(self.issues),'boundaries':self.boundaries[-200:],
                 'epochs':len(self.epoch_starts),'streams':streams,'supported_signals':list(self.profile.signals),
-                'profile':self.profile.model_dump(),'session':self.session_status()}
+                'profile':self.profile.model_dump(),'session':self.session_status(),
+                'npz':self.archive.status() if self.archive else None,
+                'rates':{'raw_receive_hz':received_hz if self.config.kind!='normalized' else None,
+                         'processed_receipt_hz':received_hz if self.config.kind=='normalized' else None,
+                         'processed_output_hz':output_hz,'display_max_hz':10,'model_inference_period_ms':None}}
 
     def session_status(self):
         state=self.state
@@ -244,12 +307,13 @@ class SessionRun:
         if not items or items[0]['sequence']!=start or items[-1]['sequence']!=end or len(items)!=end-start+1:
             raise ValueError('입력 구간이 표시 버퍼에 없거나 sequence가 누락됐습니다.')
         if len({x['epoch'] for x in items})!=1: raise ValueError('입력 구간이 epoch 경계를 넘습니다.')
-        digest=hashlib.sha256(b'\n'.join(encode(x['frame']) for x in items)).hexdigest()
+        digest=hashlib.sha256(b'\n'.join(encode(x.get('processed',x['frame'])) for x in items)).hexdigest()
         return {'kind':'stream','session_id':self.run_id,'start_sequence':start,'end_sequence':end,
                 'segment_sha256':digest,'preprocess_version':self.profile.preprocess_version},items
 
     def finish(self):
         if self.live:
+            if self.archive:self.archive.close()
             self.writer.close();self.live=False;self.state='finished'
             with self.path.open('rb') as f: self.sha256=hashlib.file_digest(f,'sha256').hexdigest()
         return self.sha256

@@ -1,0 +1,25 @@
+.archive-panel{margin:0 0 16px;overflow:hidden}.archive-bar{display:flex;align-items:center;gap:20px;padding:10px 16px;min-height:58px}.archive-title{display:flex;align-items:center;gap:10px;border:0;background:none;color:#20394d;text-align:left;cursor:pointer;padding:0;flex-shrink:0}.archive-title>svg:first-child{color:#0a9b8f}.archive-title span,.archive-state{display:flex;flex-direction:column;gap:3px}.archive-title strong{font-size:12px}.archive-title small,.archive-state small{font-size:10px;color:#8190a1}.archive-state{position:relative;font-size:11px;color:#168678;padding-left:13px}.archive-state i{position:absolute;top:5px;left:0;width:6px;height:6px;background:currentColor;border-radius:50%}.archive-state.error{color:#c05040}.archive-actions{margin-left:auto;display:flex;gap:8px}.archive-details{padding:0 16px 14px;border-top:1px solid #edf1f5}.archive-details>p{font-size:12px;line-height:1.7;color:#6b7d8c}.archive-details code{font-size:11px;overflow-wrap:anywhere}.archive-error{padding:7px 16px;color:#bc493e;font-size:12px;background:#fff4f1}.archive-raw{display:flex;gap:12px;padding:18px;margin-bottom:18px}.archive-raw svg{color:#7592a0;flex-shrink:0}.archive-raw strong{font-size:13px}.archive-raw p{font-size:12px;color:#7b8998;margin:7px 0 0}.spin{animation:archive-spin 1s linear infinite}@keyframes archive-spin{to{transform:rotate(360deg)}}.profile-summary{padding:10px 12px;background:#f4f8fa;border-radius:9px;margin:10px 0;color:#547081;font-size:12px;line-height:1.7}@media(max-width:720px){.archive-bar{flex-wrap:wrap;gap:12px}.archive-actions{margin-left:0;width:100%}.archive-title{flex:1}.archive-state{min-width:130px}}@media(min-width:721px) and (max-height:850px){.archive-panel{margin-bottom:10px}.archive-bar{min-height:48px;padding:7px 13px}.balanced-workspace:has(.archive-panel) .monitor-hero{grid-template-columns:minmax(0,1fr) 310px}.balanced-workspace:has(.archive-panel) .flight-3d{min-height:270px;height:270px}.balanced-workspace:has(.archive-panel) .provider-card{padding-top:10px;padding-bottom:10px}.balanced-workspace:has(.archive-panel) .provider-empty{min-height:20px;margin:6px 0}.balanced-workspace:has(.archive-panel) .provider-numbers{margin:8px 0}.balanced-workspace:has(.archive-panel) .provider-foot{padding-top:5px}}
+@media(min-width:761px) and (max-height:850px){
+.balanced-workspace:has(.archive-panel) .session-toolbar{padding:8px 14px;margin-bottom:9px;gap:10px}
+.balanced-workspace:has(.archive-panel) .fixture-banner{padding:7px 12px;margin-bottom:9px;font-size:11px}
+.balanced-workspace:has(.archive-panel) .fixture-banner>div{display:flex;flex-wrap:wrap;gap:5px 9px;align-items:center}
+.balanced-workspace:has(.archive-panel) .fixture-banner strong{font-size:11px}
+.balanced-workspace:has(.archive-panel) .fixture-banner span{font-size:10px}
+.balanced-workspace:has(.archive-panel) .monitor-hero .flight-3d{min-height:330px;height:auto}
+.balanced-workspace:has(.archive-panel) .monitor-hero .three-stage{min-height:215px}
+.balanced-workspace:has(.archive-panel) .monitor-hero .provider-card{padding:8px 12px}
+.balanced-workspace:has(.archive-panel) .monitor-hero .provider-status{font-size:18px;margin:4px 0}
+.balanced-workspace:has(.archive-panel) .monitor-hero .provider-numbers{margin:0}
+.balanced-workspace:has(.archive-panel) .monitor-hero .provider-numbers strong{font-size:16px}
+.balanced-workspace:has(.archive-panel) .monitor-hero .provider-evidence{margin:4px 0}
+.balanced-workspace:has(.archive-panel) .monitor-hero .provider-foot{font-size:9px;padding-top:4px}
+}
+@media(min-width:761px) and (max-height:850px){
+.balanced-workspace:has(.session-toolbar):has(.archive-panel) .page-heading .eyebrow{display:none}
+.balanced-workspace:has(.session-toolbar):has(.archive-panel) .page-heading{margin-bottom:5px}
+.balanced-workspace:has(.session-toolbar):has(.archive-panel) .page-heading p{font-size:11px;margin-top:2px;line-height:1.4}
+}
+@media(min-width:761px) and (max-height:850px){
+.balanced-workspace:has(.session-toolbar):has(.archive-panel) .session-toolbar,
+.balanced-workspace:has(.session-toolbar):has(.archive-panel) .fixture-banner{margin-bottom:4px}
+}

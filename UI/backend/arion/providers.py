@@ -12,7 +12,9 @@ from .telemetry import LABELS
 def contract_for(run):
     if isinstance(run,SessionRun):
         return {'signals':{k:v.unit for k,v in run.profile.signals.items()},'sample_period_ms':run.profile.sample_period_ms,
-                'preprocess_version':run.profile.preprocess_version}
+                'preprocess_version':run.profile.preprocess_version,'profile_id':run.profile.profile_id,
+                'schema_version':'arion-processed-v1' if run.config.kind=='normalized' else 'arion-telemetry-v2',
+                'feature_order':run.profile.feature_order}
     return {'signals':{k:v[1] for k,v in LABELS.items()},'sample_period_ms':None,'preprocess_version':'raw-v1'}
 
 
@@ -118,7 +120,7 @@ class ProviderRegistry:
                     self.api_keys.setdefault(key,set()).update(self.key(e) for e in events)
                     for e in events:
                         if known.get(self.key(e))!=e:self.received[self.key(e)]=(time.perf_counter(),e['decided_at_ms'])
-                    # Bounds diagnostics bookkeeping; SQLite retains complete event history.
+                    # Bound diagnostics bookkeeping; file journals retain complete event history.
                     if len(self.received)>5000:self.received=dict(list(self.received.items())[-4000:])
                     self.states[key]={'state':payload.state,'message':'','url':url,'last_sync_utc_ms':time.time()*1000,
                                       'fixture_only':bool(events) and all(e['origin']=='fixture' for e in events)}
@@ -151,7 +153,7 @@ class ProviderRegistry:
         return states,events,active
 
     def fixtures(self,run):
-        if isinstance(run,SessionRun):raise ValueError('실시간 시험은 별도 시험 API를 사용하세요.')
+        if isinstance(run,SessionRun) and run.live:raise ValueError('실시간 시험은 별도 시험 API를 사용하세요.')
         from .ai import fixture_events
         rows=[]
         for pid in ('lstm','transformer'):
