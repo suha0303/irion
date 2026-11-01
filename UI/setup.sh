@@ -6,4 +6,4 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.lock.txt
 npm --prefix frontend ci
 npm --prefix frontend run build
-echo "설치 완료. ./start.sh 실행 후 http://127.0.0.1:8765 에 접속하세요."
+echo "설치 완료. ./server.sh start 실행 후 http://127.0.0.1:8765 에 접속하세요."
