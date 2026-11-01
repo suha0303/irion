@@ -1,0 +1,7 @@
+.compact-nav { display:none; }
+.signal-details summary { cursor:pointer; padding:20px 22px; font-size:12px; color:#688096; }
+@media(max-width:620px) {
+  .compact-nav { display:flex; gap:5px; padding:10px 14px; background:#fff; border-bottom:1px solid #e7ecf1; }
+  .compact-nav button { flex:1; padding:9px 5px; font-size:11px; border-radius:5px; color:#8a9aab; }
+  .compact-nav button.active { color:#118e7d; background:#eaf6f2; font-weight:600; }
+}

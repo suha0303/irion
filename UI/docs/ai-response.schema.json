@@ -1,0 +1,251 @@
+{
+  "$defs": {
+    "DetectionResult": {
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Event Id",
+          "type": "string"
+        },
+        "run_id": {
+          "title": "Run Id",
+          "type": "string"
+        },
+        "input_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Input Sha256",
+          "type": "string"
+        },
+        "epoch": {
+          "minimum": 0,
+          "title": "Epoch",
+          "type": "integer"
+        },
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "number"
+        },
+        "end_ms": {
+          "minimum": 0,
+          "title": "End Ms",
+          "type": "number"
+        },
+        "decided_at_ms": {
+          "minimum": 0,
+          "title": "Decided At Ms",
+          "type": "number"
+        },
+        "valid_until_ms": {
+          "minimum": 0,
+          "title": "Valid Until Ms",
+          "type": "number"
+        },
+        "model_version": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Model Version",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "normal",
+            "suspect",
+            "unavailable",
+            "warming_up"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "target": {
+          "enum": [
+            "battery",
+            "powertrain",
+            "motor_1",
+            "motor_2",
+            "motor_3",
+            "motor_4"
+          ],
+          "title": "Target",
+          "type": "string"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 2000,
+          "title": "Description",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "maxItems": 30,
+          "title": "Evidence",
+          "type": "array"
+        },
+        "origin": {
+          "default": "model",
+          "enum": [
+            "model",
+            "fixture"
+          ],
+          "title": "Origin",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "run_id",
+        "input_sha256",
+        "epoch",
+        "start_ms",
+        "end_ms",
+        "decided_at_ms",
+        "valid_until_ms",
+        "model_version",
+        "status",
+        "target",
+        "title"
+      ],
+      "title": "DetectionResult",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "signal": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Signal",
+          "type": "string"
+        },
+        "unit": {
+          "maxLength": 30,
+          "title": "Unit",
+          "type": "string"
+        },
+        "observed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed"
+        },
+        "predicted": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicted"
+        },
+        "residual": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Residual"
+        },
+        "note": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "signal",
+        "unit"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "arion-ai-results-v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "input_sha256": {
+      "title": "Input Sha256",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "ready",
+        "warming_up",
+        "unavailable"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "results": {
+      "items": {
+        "$ref": "#/$defs/DetectionResult"
+      },
+      "maxItems": 10000,
+      "title": "Results",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "input_sha256",
+    "state"
+  ],
+  "title": "AIResponse",
+  "type": "object"
+}

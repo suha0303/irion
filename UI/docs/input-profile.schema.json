@@ -1,0 +1,129 @@
+{
+  "$defs": {
+    "SignalDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "unit": {
+          "maxLength": 30,
+          "title": "Unit",
+          "type": "string"
+        },
+        "ttl_ms": {
+          "exclusiveMinimum": 0,
+          "maximum": 60000,
+          "title": "Ttl Ms",
+          "type": "number"
+        },
+        "message": {
+          "default": "NORMALIZED",
+          "maxLength": 100,
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "unit",
+        "ttl_ms"
+      ],
+      "title": "SignalDefinition",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "arion-profile-v2",
+      "default": "arion-profile-v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "profile_id": {
+      "pattern": "^[a-zA-Z0-9_-]{1,80}$",
+      "title": "Profile Id",
+      "type": "string"
+    },
+    "input_format": {
+      "enum": [
+        "mavlink",
+        "normalized"
+      ],
+      "title": "Input Format",
+      "type": "string"
+    },
+    "preprocess_version": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Preprocess Version",
+      "type": "string"
+    },
+    "sample_period_ms": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 60000,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sample Period Ms"
+    },
+    "gap_ms": {
+      "default": 1000,
+      "exclusiveMinimum": 0,
+      "maximum": 60000,
+      "title": "Gap Ms",
+      "type": "number"
+    },
+    "signals": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SignalDefinition"
+      },
+      "maxProperties": 256,
+      "minProperties": 1,
+      "title": "Signals",
+      "type": "object"
+    },
+    "expected_rates_hz": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Expected Rates Hz",
+      "type": "object"
+    },
+    "voltage_encoding": {
+      "default": "mavlink",
+      "enum": [
+        "mavlink",
+        "arion_4s"
+      ],
+      "title": "Voltage Encoding",
+      "type": "string"
+    },
+    "missing_current_raw": {
+      "items": {
+        "type": "number"
+      },
+      "maxItems": 8,
+      "title": "Missing Current Raw",
+      "type": "array"
+    }
+  },
+  "required": [
+    "profile_id",
+    "input_format",
+    "preprocess_version",
+    "signals"
+  ],
+  "title": "InputProfile",
+  "type": "object"
+}

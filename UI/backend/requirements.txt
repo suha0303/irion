@@ -1,0 +1,8 @@
+fastapi==0.135.1
+uvicorn[standard]==0.41.0
+httpx==0.28.1
+numpy==2.4.2
+python-multipart==0.0.22
+pytest==9.0.2
+pymavlink==2.4.50
+pyserial==3.5

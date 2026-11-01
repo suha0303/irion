@@ -1,0 +1,62 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Large/private experiment artifacts: keep outside Git
+data/
+datasets/
+logs/
+outputs/
+artifacts/
+checkpoints/
+*.ulg
+*.tlog
+*.bag
+*.mcap
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.h5
+*.hdf5
+
+# Optional UI runtimes and build outputs
+node_modules/
+dist/
+.next/
+.nuxt/
+coverage/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+*.egg-info/
+
+# ARION local runtime, generated state and macOS metadata
+.data/
+frontend/node_modules/
+frontend/dist/
+*.tsbuildinfo
+test-results/
+._*
+*.npz
+*.jsonl
+*.sqlite3
+*.sqlite3-*

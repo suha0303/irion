@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "IncomingSignal": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        },
+        "unit": {
+          "maxLength": 30,
+          "title": "Unit",
+          "type": "string"
+        },
+        "valid": {
+          "title": "Valid",
+          "type": "boolean"
+        },
+        "age_ms": {
+          "minimum": 0,
+          "title": "Age Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit",
+        "valid",
+        "age_ms"
+      ],
+      "title": "IncomingSignal",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "arion-normalized-v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "sequence": {
+      "minimum": 0,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "epoch": {
+      "minimum": 0,
+      "title": "Epoch",
+      "type": "integer"
+    },
+    "source_time_ns": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "title": "Source Time Ns",
+      "type": "integer"
+    },
+    "preprocess_version": {
+      "title": "Preprocess Version",
+      "type": "string"
+    },
+    "sample_period_ms": {
+      "exclusiveMinimum": 0,
+      "title": "Sample Period Ms",
+      "type": "number"
+    },
+    "values": {
+      "additionalProperties": {
+        "$ref": "#/$defs/IncomingSignal"
+      },
+      "maxProperties": 256,
+      "title": "Values",
+      "type": "object"
+    },
+    "armed": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Armed"
+    },
+    "mode": {
+      "default": "미확인",
+      "maxLength": 80,
+      "title": "Mode",
+      "type": "string"
+    },
+    "flight_state": {
+      "default": "미확인",
+      "maxLength": 80,
+      "title": "Flight State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "sequence",
+    "epoch",
+    "source_time_ns",
+    "preprocess_version",
+    "sample_period_ms",
+    "values"
+  ],
+  "title": "NormalizedInput",
+  "type": "object"
+}
