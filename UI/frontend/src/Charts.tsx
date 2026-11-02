@@ -53,8 +53,8 @@ export function PathChart({ points, cursor }: { points: Point[]; cursor: number 
     const min = (extent: { min: number }) => Math.min(-1, extent.min - 1);
     const max = (extent: { max: number }) => Math.max(1, extent.max + 1);
     return { animation: false, grid: { top: 18, left: 45, right: 26, bottom: 37 }, tooltip: { trigger: 'item' },
-      xAxis: { type: 'value', name: '동 (m)', nameLocation: 'middle', nameGap: 24, min, max, axisLabel: { color: '#93a0b1' }, splitLine: { lineStyle: { color: '#eaf0f5', type: 'dashed' } } },
-      yAxis: { type: 'value', name: '북 (m)', min, max, axisLabel: { color: '#93a0b1' }, splitLine: { lineStyle: { color: '#eaf0f5', type: 'dashed' } } },
+      xAxis: { type: 'value', name: '동 (m)', nameLocation: 'middle', nameGap: 24, min, max, axisLabel: { color: '#93a0b1', formatter: (v: number) => Number(v.toFixed(1)), hideOverlap: true }, splitLine: { lineStyle: { color: '#eaf0f5', type: 'dashed' } } },
+      yAxis: { type: 'value', name: '북 (m)', min, max, axisLabel: { color: '#93a0b1', formatter: (v: number) => Number(v.toFixed(1)), hideOverlap: true }, splitLine: { lineStyle: { color: '#eaf0f5', type: 'dashed' } } },
       series: [{ type: 'line', data, showSymbol: false, connectNulls: false, lineStyle: { color: '#18a998', width: 2 }, itemStyle: { color: '#18a998' } },
         { type: 'scatter', data: last ? [last] : [], symbolSize: 11, itemStyle: { color: '#079d8e', borderColor: '#fff', borderWidth: 3 } }],
     };
