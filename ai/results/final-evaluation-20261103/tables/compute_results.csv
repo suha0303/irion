@@ -1,0 +1,19 @@
+model,runs,requested_batch_size,median_of_run_median_amortized_ms,min_run_median_ms,max_run_median_ms,scope
+lstm_h64_l2_sgd_s0,324,256,0.8313014313898748,0.01226870335813146,4.955015716404887,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+lstm_h64_l2_adam_s0,324,256,0.8510998477504472,0.012525508282124065,2.703028418436334,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+transformer_h64_l2_sgd_s0,324,256,2.0100116189496475,0.03227243360015564,5.993505678305479,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+transformer_h64_l2_adam_s0,324,256,1.5432949298048364,0.031940076951286756,4.852547109356686,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+lstm_h128_l2_sgd_s0,324,256,0.8468973146591452,0.017675358321866952,2.6980979872025443,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+lstm_h128_l2_adam_s0,324,256,0.8729958617550437,0.017741160263540223,3.1017486595859127,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+transformer_h128_l2_sgd_s0,324,256,2.325062499930189,0.032084237318485975,5.713863738266559,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+transformer_h128_l2_adam_s0,324,256,2.099169890243502,0.032328902307199314,5.8702755446995605,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+lstm_h128_l4_sgd_s0,324,256,0.8659036857352476,0.030021672500879504,2.8646881949028065,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+lstm_h128_l4_adam_s0,324,256,0.8782655286267982,0.029732593247899786,2.883442953152924,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+transformer_h128_l4_sgd_s0,324,256,2.5322587416667375,0.05426211282610893,5.862772193821994,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+transformer_h128_l4_adam_s0,324,256,2.552633945924754,0.05440288987301756,5.970935249147383,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+lstm_h256_l4_sgd_s0,324,256,0.8942030954131042,0.0599522336415248,3.2774385038789333,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+lstm_h256_l4_adam_s0,324,256,0.9048845367942704,0.06009628850733861,3.097144272305122,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+transformer_h256_l4_sgd_s0,324,256,2.526453155951458,0.08566407450416591,6.562854567568542,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+transformer_h256_l4_adam_s0,324,256,2.5535582817610702,0.08570535464968998,6.957690923615066,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+persistence,324,256,0.10262872092425823,0.0004493122105486691,0.9201934299198911,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
+ridge_forecast,324,256,0.154980635670654,0.006270687663345598,0.931150629966451,batch predict_scaled plus physical conversion; excludes preprocessing; not online latency
