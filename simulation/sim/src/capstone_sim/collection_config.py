@@ -35,13 +35,38 @@ ANOMALY = {
 }
 
 
-def validate_request(scenario, duration, fault_at_s):
+def validate_request(
+    scenario, duration, fault_at_s, *, operation_variation=None, fault_after_mission_s=None
+):
     if scenario not in NORMAL | ANOMALY:
         raise ValueError("scenario outside collection scope")
     maximum = 300 if scenario == "low_soc_normal" else 900 if scenario in NORMAL else 480
     if not math.isfinite(duration) or not 0 < duration <= maximum:
         raise ValueError(f"Collection {scenario} duration must be within (0,{maximum}] seconds")
-    if scenario.endswith(("step", "ramp")):
+    if operation_variation is not None:
+        from .normal_variation import validate
+
+        # Only operating conditions and the path are accepted, never health overrides.
+        validate(operation_variation)
+        if operation_variation["soc"] < 0.6 and duration > 180:
+            raise ValueError("Low-SOC operation variation requires <=180s duration")
+        path_duration = operation_variation["path"].get("duration_s", duration)
+        if path_duration != duration:
+            raise ValueError("Operation path duration must match requested flight duration")
+    if fault_after_mission_s is not None:
+        if operation_variation is None or not scenario.endswith(("step", "ramp")):
+            raise ValueError("Mission-relative onset requires a dynamic collection operation")
+        if fault_at_s is not None:
+            raise ValueError("Boot and mission-relative fault schedules are mutually exclusive")
+        ramp = 20 if scenario.endswith("ramp") else 0
+        if (
+            type(fault_after_mission_s) not in (int, float)
+            or not math.isfinite(fault_after_mission_s)
+            or not 0 < fault_after_mission_s < duration - ramp
+            or abs(fault_after_mission_s * 1e6 - round(fault_after_mission_s * 1e6)) > 1e-6
+        ):
+            raise ValueError("Mission-relative fault and ramp must finish before mission end")
+    elif scenario.endswith(("step", "ramp")):
         if fault_at_s != 180:
             raise ValueError("Collection dynamic anomaly requires --fault-at-s 180 PX4 boot seconds")
     elif fault_at_s is not None:
