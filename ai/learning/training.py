@@ -4,6 +4,7 @@ No launcher, submission, automatic tuning, retries, or production input selectio
 """
 
 import fcntl
+import hashlib
 import os
 import random
 import time
@@ -18,7 +19,7 @@ from safetensors.torch import save_file
 from capstone_ai.training import loss, seed_all
 from execution.common import write
 
-from .models import make_model
+from .models import STUDY_REVISION, make_model
 
 
 @contextmanager
@@ -104,21 +105,24 @@ class Batches:
         return result
 
 
+def clip_gradients(model):
+    parameters = [p for p in model.parameters() if p.grad is not None]
+    if not parameters:
+        raise ValueError("Missing gradients")
+    # The pre-clip L2 norm includes every gradient: NaN, Inf and overflow propagate.
+    # Reuse this existing reduction instead of launching isfinite/all per parameter.
+    norm = torch.nn.utils.clip_grad_norm_(parameters, 1.0, foreach=True)
+    if not bool(torch.isfinite(norm)):
+        raise ValueError("Nonfinite gradients/norm; optimizer not executed")
+
+
 def safe_step(model, optimizer, x, c, y):
     optimizer.zero_grad(set_to_none=True)
     value = loss(model(x, c), y)
     if not bool(torch.isfinite(value)):
         raise ValueError("Nonfinite loss; optimizer not executed")
     value.backward()
-    gradients = [p.grad for p in model.parameters() if p.grad is not None]
-    if not gradients:
-        raise ValueError("Missing gradients")
-    flags = [torch.isfinite(g).all() for g in gradients]
-    norm = torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0, foreach=True)
-    flags.append(torch.isfinite(norm))
-    # One host decision for all gradients + clipping overflow; preserve per-step safety.
-    if not bool(torch.stack(flags).all()):
-        raise ValueError("Nonfinite gradients/norm; optimizer not executed")
+    clip_gradients(model)
     optimizer.step()
     return value.detach()
 
@@ -161,12 +165,20 @@ def _run_fit(
     gpu_authorized=False,
     runtime_stage="fit",
     model_id=None,
+    optimization=None,
 ):
     """Epoch-boundary resume only. Caller supplies sealed data/config/source binding.
 
     CPU mode is for small synthetic tests. Main-round approval/packaging remains separate.
     """
     spec.validate()
+    study = spec.revision == STUDY_REVISION
+    if study != (optimization is not None):
+        raise ValueError("The normalization study requires its explicit optimization policy")
+    if study:
+        from .optimization import WarmupCosine, make_optimizer, validate
+
+        validate(optimization)
     if device not in {"cpu", "cuda"} or min(batch_size, epochs, patience) < 1:
         raise ValueError("Invalid training settings")
     if not isinstance(binding, dict) or not all(
@@ -205,11 +217,33 @@ def _run_fit(
         amp=False,
         epoch_boundary_only=True,
     )
+    if study:
+        cfg["optimization"] = optimization
     seed_all(seed)
     tb, vb = Batches(train, batch_size, device), Batches(validation, batch_size, device)
+    steps = (tb.count + batch_size - 1) // batch_size
+    total_steps = epochs * steps
+    schedule = WarmupCosine(total_steps, learning_rate, optimization) if study else None
+    warmup = schedule.warmup if study else 0
     with backend(device):
-        model = make_model(spec).to(device)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+        model = make_model(spec)
+        if study:
+            digest = hashlib.sha256()
+            for name, parameter in model.state_dict().items():
+                digest.update(name.encode())
+                digest.update(str((tuple(parameter.shape), parameter.dtype)).encode())
+                digest.update(memoryview(parameter.detach().contiguous().numpy()).cast("B"))
+            initial_hash = digest.hexdigest()
+            write(folder / "initialization.json", dict(
+                seed=seed, state_sha256=initial_hash, model_spec=asdict(spec),
+                weights_from_previous_training=False,
+            ))
+        model = model.to(device)
+        optimizer = (
+            make_optimizer(model.parameters(), learning_rate, optimization)
+            if study else torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+        )
+        completed_steps, stale_epochs = 0, 0
         history = []
         best = float("inf")
         best_epoch = -1
@@ -234,11 +268,16 @@ def _run_fit(
                 ck["best_state"],
             )
             start = ck["next_epoch"]
-            if start >= epochs or start - 1 - best_epoch >= patience:
+            if study:
+                completed_steps = ck["completed_optimizer_steps"]
+                stale_epochs = ck["early_stop_bad_epochs"]
+                if ck["initial_state_sha256"] != initial_hash or completed_steps != start * steps:
+                    raise ValueError("Initial weights or optimizer-step position changed")
+            finished_patience = stale_epochs >= patience if study else start - 1 - best_epoch >= patience
+            if start >= epochs or finished_patience:
                 raise ValueError("Checkpoint already finished its approved epochs/early stopping")
             restore_rng(ck["rng"], device)
         for epoch in range(start, epochs):
-            steps = (tb.count + batch_size - 1) // batch_size
             if progress is not None:
                 progress.update(
                     stage="training",
@@ -259,7 +298,12 @@ def _run_fit(
                 if progress is not None:
                     progress.check()
                 x, c, y = tb.get(indices)
+                if study:
+                    current_rate = schedule(completed_steps)
+                    for group in optimizer.param_groups:
+                        group["lr"] = current_rate
                 value = safe_step(model, optimizer, x, c, y)
+                completed_steps += 1
                 total.add_(value.to(torch.float64) * len(indices))
                 if progress is not None and time.monotonic() - last_report >= 2:
                     # Scalar read only at display cadence, not on every batch.
@@ -301,6 +345,8 @@ def _run_fit(
             if improved:
                 best, best_epoch = score, epoch
                 best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+            if study:
+                stale_epochs = 0 if improved or epoch * steps < warmup else stale_epochs + 1
             history.append(
                 dict(
                     epoch=epoch + 1,
@@ -310,6 +356,13 @@ def _run_fit(
                     validation_seconds=time.monotonic() - vt,
                 )
             )
+            if study:
+                history[-1].update(
+                    learning_rate_last=current_rate,
+                    optimizer_steps=completed_steps,
+                    early_stop_bad_epochs=stale_epochs,
+                    warmup_complete=completed_steps >= warmup,
+                )
             ck = dict(
                 schema="x500-next-fit-v1",
                 config=cfg,
@@ -324,6 +377,9 @@ def _run_fit(
                 best_state=best_state,
                 rng=state_rng(),
             )
+            if study:
+                ck.update(completed_optimizer_steps=completed_steps,
+                          early_stop_bad_epochs=stale_epochs, initial_state_sha256=initial_hash)
             temp = folder / "last.tmp"
             torch.save(ck, temp)
             temp.replace(folder / "last.pt")
@@ -339,10 +395,13 @@ def _run_fit(
                     done=epoch + 1,
                     total=epochs,
                     phase_eta_s=None,
+                    **(dict(learning_rate=current_rate, optimizer=optimization["optimizer"],
+                            optimizer_steps=completed_steps, schedule_steps=total_steps)
+                       if study else {}),
                 )
             if stop_after_epoch is not None and epoch + 1 >= stop_after_epoch:
                 break
-            if epoch - best_epoch >= patience:
+            if (stale_epochs >= patience if study else epoch - best_epoch >= patience):
                 break
         if best_state is None:
             raise ValueError("No trained model")

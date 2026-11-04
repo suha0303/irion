@@ -1,14 +1,14 @@
 {
-  "status": "DRAFT_AWAITING_USER_APPROVAL",
-  "round_id": "ROUND_001/R6_1200_8MODEL_S0_DRAFT",
+  "status": "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL",
+  "round_id": "ROUND_001/R6_1200_8MODEL_S0",
   "created_utc": "2026-10-17T11:49:05.388248+00:00",
-  "scope": "Compare four user-selected capacities for each LSTM/Transformer plus two existing baselines. No execution/submission authorized by this draft.",
+  "scope": "User-approved steps1-3: latest1200 server restoration/admission, actual resource/memory/resume/throughput validation, then one fresh sequential fit of eight neural variants plus two existing baselines. Calibration, development inference/evaluation and next rounds require separate approval.",
   "dataset": {
-    "bundle": "Data/processed/pretrain/merge-1200-20261017-01/prepared-portable",
+    "bundle": "Data/processed/2026-10-31/prepared-portable",
     "archive": "dataset.tar.xz",
-    "archive_sha256": "24de09115778e40842bebd3979b87110e8aac9936034530226f3f5f3ac1b356a",
-    "archive_bytes": 5597050336,
-    "receipt_sha256": "4483a8697ebabf6095983058256ff0a9ab26c25cb760ece80be304e6efe79459",
+    "archive_sha256": "9d06f2b0d5491ee3decb4b1ac27d9d54aad14d0d92ab0b04c6a63b3993e41bae",
+    "archive_bytes": 5693868960,
+    "receipt_sha256": "d35ba6bf8e5636710a3d488b380221066fd3286bed192251f311e966687cc0cf",
     "runs": 1200,
     "split_runs": {
       "normal_train": 720,
@@ -18,9 +18,10 @@
       "anomaly_dev": 144
     },
     "scaler": "One existing merged normal_train-only common scaler; preserve source splits and data-generation seeds",
-    "restore_bytes": 78989441859,
-    "restore_executed": false,
-    "storage_note": "Repository-relative default; exact original receipt and origin provenance remain preserved in the dataset and archived plan."
+    "restore_bytes": 79996912784,
+    "restore_executed": true,
+    "storage_note": "Latest1200 dataset completed2026-10-31 at the dated repository-relative location. Immutable dataset/scaler/split pins are preserved. Latest user approval permits server preparation, diagnostics and one training-only comparison after gates; it does not authorize calibration or development evaluation.",
+    "server_restored_path": "/abr/coss43/team4/training-20261031/comparison-01/upstream"
   },
   "models": [
     {
@@ -140,7 +141,9 @@
     "selection": "normal_validation only; minimum validation loss checkpoint",
     "thresholds": "normal_calibration only; fixed existing protocol; no performance-driven recalibration",
     "report": "same normal/anomaly development evaluation for all variants; preserve per-model forecast/anomaly/time/memory results",
-    "final_test_used": false
+    "final_test_used": false,
+    "authorized": false,
+    "status": "DEFERRED_PENDING_USER_APPROVAL"
   },
   "resources": {
     "host_alias": "knu",
@@ -151,25 +154,131 @@
     "gpus": 1,
     "project_concurrent_gpu_jobs": 1,
     "execution_order": "Sequential models within one explicitly approved finite comparison; no login-node GPU computation",
-    "host_memory_request": "TBD after NPZ header/peak audit; historical16GiB allocation cannot be assumed sufficient",
-    "gpu_wall_budget": "TBD from actual full-step throughput and validation/calibration/evaluation timing; no parameter-count-only forecast"
+    "host_memory_request": "64GiB request implemented; latest1200 NPZ/memory admission and current Slurm availability still require actual verification",
+    "gpu_wall_budget": {
+      "hard_max_hours": 48,
+      "evaluation_hours": 0,
+      "basis": "Finite ceiling, not predicted duration; exact-config50warmup+500fullsteps and full validation must admit max60epochs with25%margin and3600sbaseline/checkpoint/IO reserve before fitting",
+      "automatic_extension": false
+    },
+    "host_memory_gib": 64,
+    "cpus": 4
   },
   "preconditions": [
-    "Restore merged package to a new approved server team4 path and verify all member hashes; preserve compact original",
-    "Extend admission beyond historical104-run hard limit without rewriting previous packages",
-    "Add a versioned finite eight-model lifecycle: current R5 rejects seed0 and other model sizes by design",
-    "Validate actual host/VRAM for each exact config and batch; no forward-only throughput substitution",
-    "Run exact-config continuous-vs-resume/export gates with disposable weights; do not reuse gate weights",
-    "Keep existing bounded-memory primal ridge; verify loading/normalization full-data RAM use",
-    "Freeze split/scaler/code/model/seed/batch/epoch limits and GPU budget before production submission"
+    "Transfer latest pinned bundle to a new server team4 path, restore and verify all member hashes; preserve compact original",
+    "Verify latest1200 membership/split/scaler/NPZ admission using the already implemented1200 contract",
+    "Verify current SSH/environment/Slurm owner queue and project lock; admit p02/DIS01/node1/GPU1 only",
+    "Validate actual host RAM/VRAM for every exact model at batch256; no forward-only throughput substitution",
+    "Run exact-config continuous-vs-resume/export gates with disposable weights; never reuse gate weights for main fit",
+    "Measure full training steps using the actual loader/model and separately account for validation; freeze finite fit/queue budgets",
+    "Verify full-data mmap normalization and existing bounded-memory primal ridge memory admission",
+    "Freeze split/scaler/code/model/seed/batch/epoch limits and enforce training-only stop before main submission"
   ],
   "stop_policy": {
     "on_error": "Preserve evidence and stop; no retry, alternate batch/model/seed, or retraining without approval",
-    "on_complete": "Release own allocation, evaluate/report once, stop; never start another round",
+    "on_complete": "Release own fit allocation, preserve model/checkpoint/config/training evidence, report TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL and stop. No calibration, development inference/evaluation, automatic next stage or round.",
     "llm_monitoring": false,
     "llm_auto_resume": false
   },
   "production_training_authorized": false,
   "gpu_diagnostic_authorized": false,
-  "submitted_jobs": []
+  "submitted_jobs": [
+    "33460"
+  ],
+  "dataset_updated_utc": "2026-10-31T05:04:04.958532+00:00",
+  "implementation_completed": [
+    {
+      "item": "1200run_admission",
+      "status": "IMPLEMENTED",
+      "evidence": "ai/learning/comparison.py: admission checks membership, splits, lineage, common train-only scaler, seals and array shapes",
+      "latest_dataset_server_execution": "PENDING"
+    },
+    {
+      "item": "seed0_eight_neural_two_baseline_lifecycle",
+      "status": "IMPLEMENTED",
+      "evidence": "ai/learning/comparison.py and ai/learning/lifecycle.py: four capacities for each LSTM/Transformer plus persistence/ridge",
+      "latest_dataset_server_execution": "PENDING"
+    },
+    {
+      "item": "bounded_host_memory_loader_and_ridge",
+      "status": "IMPLEMENTED",
+      "evidence": "ai/learning/comparison.py normalized_mmap and existing primal ridge; no N-by-N ridge matrix",
+      "latest_dataset_server_execution": "PENDING"
+    },
+    {
+      "item": "exact_config_memory_resume_export_gates",
+      "status": "IMPLEMENTED",
+      "evidence": "ai/learning/lifecycle.py gates; batch256, disposable gate weights, separate-process resume/export checks",
+      "latest_dataset_server_execution": "PENDING"
+    },
+    {
+      "item": "independent_server_execution_and_progress_cli",
+      "status": "IMPLEMENTED",
+      "evidence": "ai/console and ai/learning/operator.py: tmux/Slurm execution, progress and GPU display, no LLM monitoring",
+      "latest_dataset_server_execution": "PENDING"
+    }
+  ],
+  "calibration_authorized": false,
+  "development_evaluation_authorized": false,
+  "approval": {
+    "recorded_utc": "2026-10-31T06:45:39.545130+00:00",
+    "user_text": "완료된거 완료했다고 표시하고 순서대로 3번까지 진행해",
+    "approved_steps": [
+      1,
+      2,
+      3
+    ],
+    "main_training_condition": "Only after successful newest-dataset admission, exact-config resource/resume gates and frozen finite budget",
+    "training_scope": "one finite fresh ten-model fit comparison",
+    "calibration_and_evaluation_step4_authorized": false,
+    "next_round_authorized": false
+  },
+  "execution_scope": "training_only",
+  "server_preflight": {
+    "checked_utc": "2026-10-31T06:51:14.999865+00:00",
+    "host": "ABRM02",
+    "partition_max_hours": 168,
+    "node": "DIS01",
+    "own_queue_empty_at_check": true,
+    "shared_storage_free_approx_tb": 3.3,
+    "python": "3.10.18",
+    "torch": "2.5.1+cu121",
+    "numpy": "1.26.4",
+    "safetensors": "0.6.2",
+    "allocation_acquired": false,
+    "actual_resource_check_required_inside_allocation": true
+  },
+  "execution_record": {
+    "server_root": "/abr/coss43/team4/training-20261031/comparison-02",
+    "checked_utc": "2026-10-31T18:05:00.888487+00:00",
+    "stage": "stopped",
+    "data_reuse": "COMPLETE_VERIFIED",
+    "upstream": "/abr/coss43/team4/training-20261031/comparison-01/upstream",
+    "gpu_submitted_at_check": false,
+    "training_started_at_check": false,
+    "handoff": "ai/reports/training-20261031/retry-02/handoff.json",
+    "status": "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL",
+    "job_id": "33460",
+    "allocation_released": true,
+    "training_started": true,
+    "training_completed": true,
+    "completion_record": "ai/reports/training-20261031/retry-02/completion-20261101/verification.json"
+  },
+  "new_attempt_requires_user_approval": false,
+  "retry_authorization": {
+    "approved_utc": "2026-10-31T09:41:12.032747+00:00",
+    "user_instruction": "다시 시도해",
+    "previous_job": "33343",
+    "new_attempt": "comparison-02",
+    "single_attempt": true,
+    "reuse_verified_upstream": true,
+    "automatic_retry": false,
+    "calibration_authorized": false,
+    "evaluation_authorized": false
+  },
+  "previous_failed_jobs": [
+    "33343"
+  ],
+  "updated_at_utc": "2026-10-31T18:05:00.888487+00:00",
+  "evaluation_authorized": false
 }
