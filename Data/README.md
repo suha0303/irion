@@ -3,11 +3,12 @@
 | 경로 | 목적 |
 |---|---|
 | [generation/](generation/) | 수집·전처리·검산 콘솔과 실행 코드 |
-| `processed/pretrain/<task>/prepared-portable/` | 검증된 최종 무손실 압축 데이터셋 |
+| `processed/2026-10-31/prepared-portable/` | 현재 보관하는 1,200run 최종 무손실 압축 데이터셋 |
+| `processed/pretrain/<task>/prepared-portable/` | 새 작업이 생성하는 압축 데이터셋 위치 |
 | `archives/`, `consumer/`, `streamed/` | 선택한 작업의 압축 원시·추출·묶음 처리 공간 |
 | `gpu1200/`, `speed-tests/` | 사용자가 실행한 학습 준비 복원 공간·배속 시험 결과 |
 
-최종 데이터셋은 `dataset.tar.xz`, 평가자 전용 정답 압축본, receipt와 보존 기록으로 구성된다. 데이터셋은 개인 산출물이며 소스 클론에 포함하지 않는다. 이 컴퓨터의 기존 1,200run 통합 자료와 split·scaler·hash는 보존한다. 압축본과 실제 복원 용량은 다르므로 복원 전에 receipt의 크기와 저장 공간을 확인한다.
+최종 데이터셋은 `dataset.tar.xz`, 평가자 전용 정답 압축본, receipt와 보존 기록으로 구성된다. 데이터셋은 개인 산출물이며 소스 클론에 포함하지 않는다. 현재 보관본은 2026-10-31 완료한 1,200run 통합 자료이며 split·scaler·hash를 그대로 보존한다. 이전 데이터는 사용자 요청에 따라 정리하고 코드·모델·실패 및 검증 증거는 유지한다. 압축본과 실제 복원 용량은 다르므로 복원 전에 receipt의 크기와 저장 공간을 확인한다.
 
 ```bash
 ./Data/generation/drone-data setup --simulation
