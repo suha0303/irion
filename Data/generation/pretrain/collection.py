@@ -35,6 +35,19 @@ def lanes(count):
 
 
 def cases(seed_base, profile="legacy50"):
+    if profile == "final324":
+        from .final_dataset import DESIGN_REVISION
+        from .final_dataset import cases as final_cases
+
+        return dict(
+            schema="x500.finite-cases/2",
+            revision="COLLECTION",
+            cases=final_cases(seed_base),
+            design_revision=DESIGN_REVISION,
+            collection_profile=profile,
+            data_pool_id="collection/x500",
+            dataset_purpose="locked_final_test",
+        )
     if profile == "balanced300":
         from .balanced import cases as design
         from .composition import validate_cases
@@ -173,6 +186,14 @@ def plan(task, phase, count, case_list, label, export_workers=1):
         ],
     )
     result.pop("gate_receipt", None)
+    if config.get("collection_profile") == "final324":
+        result.update(
+            collection_profile="final324",
+            design_revision=config["design_revision"],
+            dataset_purpose="locked_final_test",
+            final_test_scoring_authorized=False,
+            mission_seconds=480,
+        )
     config = read(task / "config.json")
     if phase == "collection" and config.get("pipeline_overlap"):
         result["processing_stop_signal"] = str(task / "operator/processing-stop.json")
@@ -362,7 +383,9 @@ def source_revision():
 
     library = collection_config.transport_library()
     if library is not None:
-        source["runtime_binary_sha256"][str(library.relative_to(collection_config.ROOT))] = sha(library)
+        source["runtime_binary_sha256"][str(library.relative_to(collection_config.ROOT))] = sha(
+            library
+        )
     # Path.rglob traversal differs across Python versions. Compare source content,
     # while each run's original file hash remains in its archive/member inventory.
     digest = hashlib.sha256(
@@ -374,7 +397,9 @@ def source_revision():
         px4_binary_sha256=source["runtime_binary_sha256"][
             "vendor/PX4-Autopilot/build/px4_sitl_default/bin/px4"
         ],
-        physics_plugin_sha256=source["runtime_binary_sha256"]["build/current/libDronePowertrain.so"],
+        physics_plugin_sha256=source["runtime_binary_sha256"][
+            "build/current/libDronePowertrain.so"
+        ],
         x500_profile_sha256=sha(SIMULATION / "profiles/collection/vehicle.yaml"),
         producer_lock_sha256=digest,
         producer_lock_hash_format="sorted-json-v1",

@@ -48,13 +48,13 @@ if sys.argv[1]=='verify':
  print(json.dumps({'status':'passed'}));sys.exit(0)
 def arg(k):return sys.argv[sys.argv.index(k)+1]
 seed=int(arg('--seed'));instance=int(arg('--instance'));scenario=arg('--scenario');duration=int(arg('--duration'))
-event({'event':'start','seed':seed,'instance':instance,'time':time.monotonic()})
+event({'event':'start','seed':seed,'instance':instance,'time':time.monotonic(),'args':sys.argv[1:]})
 run=root/'runs'/uuid.uuid4().hex;run.mkdir()
 if scenario=='fail':
  (run/'partial').write_text('preserve');time.sleep(.2);sys.exit(1)
 time.sleep(.4)
 put(run/'run.json',dict(run_id=run.name,status='completed',parent_attempt_id=None,wall_duration_s=.4,process_exit_codes=[0,0]))
-put(run/'evaluation/scenario.json',dict(name=scenario,seed=seed,requested_duration_s=duration,continuity='independent_reset',health_eligibility='confirmed_healthy'))
+put(run/'evaluation/scenario.json',dict(name=scenario,seed=seed,requested_duration_s=duration,continuity='independent_reset',health_eligibility='confirmed_healthy',operation_variation=json.loads(arg('--operation-variation')) if '--operation-variation' in sys.argv else None,fault_after_mission_s=float(arg('--fault-after-mission-s')) if '--fault-after-mission-s' in sys.argv else None))
 runtime=json.loads((root/'synthetic-runtime.json').read_text()) if (root/'synthetic-runtime.json').exists() else {}
 put(run/'reference/source_lock.json',dict(local_sources={},runtime_binary_sha256=runtime))
 put(run/'observations/streams.jsonl',{'signal':[1,2,3],'seed':seed})
@@ -578,6 +578,139 @@ def test_collection_mixed_duration_and_measured_rtf(collection_setup):
             row["assessment"]["effective_rtf"] == actual * 0.9 / row["timings_s"]["flight_command"]
         )
     assert result["resources"]["samples"] >= 1
+
+
+def final_operating_cases(plan, cases):
+    plan.update(
+        collection_profile="final324", dataset_purpose="locked_final_test", mission_seconds=480
+    )
+    for index, case in enumerate(cases):
+        case.update(
+            scenario="battery_resistance_ramp" if index == 0 else "hover_normal",
+            role="anomaly_test" if index == 0 else "normal_test",
+            mission_seconds=180 if index == 0 else 480,
+            operation_variation=dict(
+                soc=0.45 if index == 0 else 0.9,
+                temperature=298.15,
+                payload=0,
+                wind_e=0,
+                wind_n=0,
+                gust_sigma=0,
+                path=dict(
+                    kind="altitude",
+                    height=3.5,
+                    radius=1,
+                    omega=0.06,
+                    vertical_amplitude=0.4,
+                    yaw_amplitude=0.3,
+                    phase=1,
+                    heading=0,
+                ),
+            ),
+        )
+        if index == 0:
+            case["fault_after_mission_s"] = 100
+
+
+def test_final_low_soc_anomaly_binds_and_producer_receives_operating_request(collection_setup):
+    plan, cases, helper, tmp = collection_setup
+    final_operating_cases(plan, cases)
+    plan, cases = c.bound(*binding_files(plan, cases, tmp))
+    result = c.execute(plan, cases, helper)
+    assert result["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
+    starts = [
+        json.loads(line) for line in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()
+    ]
+    starts = {row["seed"]: row["args"] for row in starts if row["event"] == "start"}
+    for case in cases:
+        args = starts[case["seed"]]
+        assert (
+            json.loads(args[args.index("--operation-variation") + 1]) == case["operation_variation"]
+        )
+        assert "--normal-variation-json" not in args and "--fault-at-s" not in args
+        if case["role"] == "anomaly_test":
+            assert args[args.index("--fault-after-mission-s") + 1] == "100"
+        else:
+            assert "--fault-after-mission-s" not in args
+
+
+@pytest.mark.parametrize(
+    "issue",
+    [
+        "wrong_profile",
+        "wrong_purpose",
+        "wrong_role",
+        "missing_variation",
+        "health_override",
+        "conflicting_variation",
+        "conflicting_clocks",
+        "low_soc_long",
+        "high_soc_short",
+        "nonfinite_soc",
+        "missing_onset",
+        "late_onset",
+        "boolean_onset",
+        "normal_onset",
+    ],
+)
+def test_final_operating_request_rejects_unsafe_or_ambiguous_conditions(collection_setup, issue):
+    plan, cases, _, tmp = collection_setup
+    final_operating_cases(plan, cases)
+    case = cases[0]
+    if issue == "wrong_profile":
+        plan["collection_profile"] = "balanced300"
+    elif issue == "wrong_purpose":
+        plan["dataset_purpose"] = "development"
+    elif issue == "wrong_role":
+        case["role"] = "anomaly_dev"
+    elif issue == "missing_variation":
+        case.pop("operation_variation")
+    elif issue == "health_override":
+        case["operation_variation"]["r0"] = 0.01
+    elif issue == "conflicting_variation":
+        case["normal_variation"] = case["operation_variation"]
+    elif issue == "conflicting_clocks":
+        case["fault_at_s"] = 180
+    elif issue == "low_soc_long":
+        case["mission_seconds"] = 480
+    elif issue == "high_soc_short":
+        case["operation_variation"]["soc"] = 0.9
+    elif issue == "nonfinite_soc":
+        case["operation_variation"]["soc"] = float("nan")
+    elif issue == "missing_onset":
+        case.pop("fault_after_mission_s")
+    elif issue == "late_onset":
+        case["fault_after_mission_s"] = 180
+    elif issue == "boolean_onset":
+        case["fault_after_mission_s"] = True
+    else:
+        case["scenario"] = "hover_normal"
+    with pytest.raises(c.Stop):
+        c.bound(*binding_files(plan, cases, tmp))
+
+
+@pytest.mark.parametrize("field", ["operation_variation", "fault_after_mission_s"])
+def test_final_producer_cannot_silently_ignore_requested_conditions(collection_setup, field):
+    plan, cases, helper, tmp = collection_setup
+    final_operating_cases(plan, cases)
+    cases = cases[:1]
+    plan["attempts_max"] = 1
+    plan, cases = c.bound(*binding_files(plan, cases, tmp))
+    original = helper.command
+
+    def changed_metadata(args, cwd, log, check, seconds):
+        original(args, cwd, log, check, seconds)
+        if args[0].endswith("capstone-sim") and args[1] == "run":
+            run = Path(c.read(log)["run"])
+            path = run / "evaluation/scenario.json"
+            value = c.read(path)
+            value.pop(field)
+            dump(path, value)
+
+    helper.command = changed_metadata
+    result = c.execute(plan, cases, helper)
+    assert result["status"] == "FAILED_DRAINED_STOPPED"
+    assert "conditions/fault schedule mismatch" in str(result["stop_reason"])
 
 
 @pytest.mark.parametrize("lanes", [4, 8])
