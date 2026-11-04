@@ -35,3 +35,7 @@ add_test(NAME profile_physics COMMAND profile_physics_test)
 
 add_executable(capture_timing_fixture tools/capture_timing_fixture.cpp)
 target_compile_options(capture_timing_fixture PRIVATE -Wall -Wextra -Werror)
+
+add_executable(fault_schedule_test physics/test_fault_schedule.cpp)
+target_compile_options(fault_schedule_test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+add_test(NAME fault_schedule COMMAND fault_schedule_test)
