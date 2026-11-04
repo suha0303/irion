@@ -1,10 +1,13 @@
 """Reuse existing forecast models/loss; bounded batches and equivalent primal ridge."""
 
 import gc
+import hashlib
+import json
 import random
 import shutil
 import time
 from contextlib import contextmanager
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -18,7 +21,7 @@ from pipeline.backend import backend_scope, check_model, trace_batch
 from pipeline.fit import batch
 from pipeline.pipeline import normalized_role, seal_development
 
-from .common import MODELS, read, sha, write
+from .common import MODELS, read, sha, verify, write
 
 
 @contextmanager
@@ -345,6 +348,154 @@ def bundles(root, out, cfg, progress, *, device="cuda"):
     progress.update(models_completed=list(MODELS), stage="models_complete", done=4, total=4)
 
 
+def preflight_models(
+    root,
+    out,
+    progress,
+    *,
+    predict_device="cpu",
+    backend_factory=deterministic_backend,
+    model_names=MODELS,
+    prediction_batch_size=256,
+    diagnostic_only=False,
+    numerical_policy=None,
+):
+    """Check every model on the same normal validation sample before any full replay.
+
+    Diagnostic mode records observations only. A supplied policy is frozen once and
+    applied unchanged to every model. Without a policy the legacy strict numerical
+    check is retained. No calibration fit or development input is accessed here.
+    """
+    from learning import replay_validation
+
+    names = tuple(model_names)
+    if (not names or len(set(names)) != len(names)
+            or any(not isinstance(name, str) or not name or Path(name).name != name
+                   or name in {".", ".."} for name in names)):
+        raise ValueError("A unique, nonempty model list is required")
+    if type(prediction_batch_size) is not int or prediction_batch_size < 2:
+        raise ValueError("Preflight requires a full inference batch plus tail")
+    if diagnostic_only and numerical_policy is not None:
+        raise ValueError("Diagnostic mode cannot choose or apply acceptance criteria")
+    # Detach the policy from the caller and bind its exact common value in evidence.
+    policy_json = json.dumps(numerical_policy, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    policy = json.loads(policy_json)
+    policy_sha = hashlib.sha256(policy_json.encode()).hexdigest() if policy is not None else None
+    if policy is not None and policy.get("batch_size") != prediction_batch_size:
+        raise ValueError("Common numerical policy batch differs from the requested batch")
+    dataset = root / "dataset"
+    scaler_sha = sha(dataset / "scaler.npz")
+    for name in names:
+        if sha(out / "models" / name / "scaler.npz") != scaler_sha:
+            raise ValueError("All-model preflight requires the same frozen train scaler: " + name)
+    folder = out / "batch-checks"
+    summary_path = folder / "preflight.json"
+    if (summary_path.exists()
+            or any((folder / (name + suffix)).exists()
+                   for name in names for suffix in (".json", ".decision.json", ".npz"))):
+        raise ValueError("Preflight evidence exists; use a new attempt without overwriting it")
+    records, failures = [], []
+    common_input_sha, common_sample_sha = None, None
+    summary = dict(
+        schema="drone-ai.all-model-preflight/1", status="RUNNING",
+        mode=("diagnostic_only" if diagnostic_only else
+              "common_numerical_policy" if policy is not None else "legacy_strict"),
+        model_names=list(names), models=records, failures=failures,
+        requested_batch_size=prediction_batch_size, role="normal_validation",
+        dataset_manifest_sha256=sha(dataset / "manifest.json"),
+        common_scaler_sha256=scaler_sha, numerical_policy=policy,
+        numerical_policy_sha256=policy_sha,
+        legacy_criteria={"rtol": 1e-5, "atol": 1e-6} if policy is None and not diagnostic_only else None,
+        device=predict_device, backend_factory=backend_factory.__name__
+        if hasattr(backend_factory, "__name__") else type(backend_factory).__name__,
+        weights_changed=False, calibration_changed=False, event_truth_used=False,
+        full_calibration_started=False, development_inference_started=False,
+    )
+    write(summary_path, summary)
+    try:
+        for index, name in enumerate(names):
+            progress.check()
+            progress.update(stage="all_model_preflight", model=name, done=index,
+                            total=len(names), phase_eta_s=None)
+            report_path = folder / (name + ".json")
+            decision_path = folder / (name + ".decision.json")
+            predictor = Predictor(out / "models" / name, device=predict_device)
+            normal = normalized_role(dataset, "normal_validation", predictor.scaler)
+            failed = None
+            expected_failure_path = report_path
+            try:
+                metadata = getattr(predictor, "metadata", {})
+                if (metadata.get("name") in {"lstm", "transformer"}
+                        and metadata.get("config", {}).get("batch_size") != prediction_batch_size):
+                    raise ValueError("Neural predictor batch differs from common preflight batch: " + name)
+                with backend_factory(predict_device):
+                    if diagnostic_only or policy is not None:
+                        report = replay_validation.diagnose_prediction_batch(
+                            predictor, normal, report_path,
+                            batch_size=prediction_batch_size, check=progress.check,
+                        )
+                    else:
+                        report = replay_validation.check_prediction_batch(
+                            predictor, normal, report_path,
+                            batch_size=prediction_batch_size, check=progress.check,
+                        )
+                if policy is not None:
+                    expected_failure_path = decision_path
+                    replay_validation.assess_diagnostic(report_path, policy, output=decision_path)
+            except ValueError as exc:
+                # A completed numerical failure is evidence for the comparison; keep
+                # checking the other models. Unexpected/data errors stop immediately.
+                if (not expected_failure_path.is_file()
+                        or read(expected_failure_path).get("status") != "FAILED_STOPPED"):
+                    raise
+                report = read(report_path)
+                failed = str(exc)
+            finally:
+                del normal, predictor
+                gc.collect()
+                if predict_device == "cuda":
+                    torch.cuda.empty_cache()
+            sample_sha = report.get("input_sha256")
+            if not isinstance(sample_sha, str) or not sample_sha:
+                raise ValueError("Preflight report lacks the shared sample binding: " + name)
+            if common_input_sha is None:
+                common_input_sha = sample_sha
+            elif sample_sha != common_input_sha:
+                raise ValueError("All-model preflight inputs differ: " + name)
+            if diagnostic_only or policy is not None:
+                full_sample_sha = report.get("sample_sha256")
+                if not isinstance(full_sample_sha, str) or not full_sample_sha:
+                    raise ValueError("Preflight report lacks normal target/identity binding: " + name)
+                if common_sample_sha is None:
+                    common_sample_sha = full_sample_sha
+                elif full_sample_sha != common_sample_sha:
+                    raise ValueError("All-model preflight targets or run identities differ: " + name)
+            record = dict(model=name, report=report_path.name, report_sha256=sha(report_path),
+                          bundle_integrity_sha256=sha(out / "models" / name / "integrity.json"),
+                          status="FAILED_STOPPED" if failed else report["status"])
+            if decision_path.is_file():
+                record.update(decision=decision_path.name, decision_sha256=sha(decision_path),
+                              status=read(decision_path)["status"], diagnostic_status=report["status"])
+            if failed:
+                record["reason"] = failed
+                failures.append(name)
+            records.append(record)
+            summary.update(models_completed=len(records), common_input_sha256=common_input_sha,
+                           common_sample_sha256=common_sample_sha)
+            write(summary_path, summary)
+        summary["status"] = ("FAILED_STOPPED" if failures else
+                             "DIAGNOSTIC_COMPLETE" if diagnostic_only else "PASSED")
+        write(summary_path, summary)
+        progress.update(stage="all_model_preflight", done=len(names), total=len(names))
+    except Exception as exc:
+        summary.update(status="FAILED_STOPPED", error=f"{type(exc).__name__}: {exc}")
+        write(summary_path, summary)
+        raise
+    if failures:
+        raise ValueError("All-model numerical preflight failed before calibration: " + ", ".join(failures))
+    return summary
+
+
 def calibrate(
     root,
     out,
@@ -353,35 +504,130 @@ def calibrate(
     predict_device="cpu",
     backend_factory=deterministic_backend,
     model_names=MODELS,
+    preserve_normal_residuals=False,
+    reuse_calibration=None,
+    prediction_batch_size=1,
+    verify_prediction_batch=False,
+    numerical_policy=None,
+    sensitivity_plan=None,
+    sensitivity_policy=None,
+    development_executor=None,
 ):
+    model_names = tuple(model_names)
+    if development_executor is not None and (prediction_batch_size != 256 or reuse_calibration):
+        raise ValueError("Parallel development requires batch256 and fresh calibration")
+    sensitivity = sensitivity_plan is not None or sensitivity_policy is not None
+    if sensitivity:
+        if (sensitivity_plan is None or sensitivity_policy is None or numerical_policy is not None
+                or not verify_prediction_batch or prediction_batch_size != 256 or reuse_calibration):
+            raise ValueError("Sensitivity requires one shared gate and fresh full calibration")
+        from learning.sensitivity import run_sensitivity_gate
+
+        run_sensitivity_gate(root, out, progress, plan=sensitivity_plan, policy=sensitivity_policy,
+                             model_names=model_names, predict_device=predict_device,
+                             backend_factory=backend_factory)
+    if numerical_policy is not None and not verify_prediction_batch:
+        raise ValueError("A numerical policy requires all-model preflight")
+    if verify_prediction_batch and not sensitivity:
+        preflight_models(
+            root, out, progress, predict_device=predict_device,
+            backend_factory=backend_factory, model_names=model_names,
+            prediction_batch_size=prediction_batch_size, numerical_policy=numerical_policy,
+        )
     dataset = root / "dataset"
     rows = read(dataset / "manifest.json")["runs"]
     groups = {r["run_id"]: r["paired_case_id"] for r in rows}
     dev = [r for r in rows if r["role"] in ("normal_dev_eval", "anomaly_dev")]
+    normal_cache = {}
+    common_scaler = sha(dataset / "scaler.npz") if development_executor is not None else None
     for name in model_names:
         progress.check()
         progress.update(stage="calibration", model=name, done=0, total=1, phase_eta_s=None)
         predictor = Predictor(out / "models" / name, device=predict_device)
-        val, cal = [
-            normalized_role(dataset, r, predictor.scaler)
-            for r in ("normal_validation", "normal_calibration")
-        ]
-        # Fixed normal-only calibration. No event truth is present in the remote input package.
-        with backend_factory(predict_device):
-            vr = val["Y"] - predictor.predict_scaled(val["X"], val["C"])
-            cr = cal["Y"] - predictor.predict_scaled(cal["X"], cal["C"])
-        physical = predictor.scaler["y_scale"].copy()
-        physical[-1] *= 4
-        fitted = fit_calibration(
-            vr, cr, cal["run_id"], cal["segment"], cal["origin_us"], physical, groups
-        )
-        fitted["bundle_integrity_sha256"] = sha(out / "models" / name / "integrity.json")
+        if development_executor is not None and sha(out / "models" / name / "scaler.npz") != common_scaler:
+            raise ValueError("Shared normal cache requires the same train-only scaler for every model")
         folder = out / "calibration" / name
-        folder.mkdir(parents=True)
-        write(folder / "calibration.json", fitted)
-        del val, cal, vr, cr
+        if development_executor is not None:
+            if "normal_validation" not in normal_cache:
+                normal_cache["normal_validation"] = normalized_role(dataset, "normal_validation", predictor.scaler)
+            val = normal_cache["normal_validation"]
+        else:
+            val = normalized_role(dataset, "normal_validation", predictor.scaler)
+        reused = (reuse_calibration or {}).get(name)
+        if reused:
+            if set(reused["files"]) != {"calibration.json", "normal-residuals.npz", "normal-residuals.json"}:
+                raise ValueError("Complete normal calibration evidence required")
+            verify(folder, reused["files"])
+            fitted = read(folder / "calibration.json")
+            evidence = read(folder / "normal-residuals.json")
+            if (fitted["bundle_integrity_sha256"] != sha(out / "models" / name / "integrity.json")
+                    or evidence["dataset_manifest_sha256"] != sha(dataset / "manifest.json")
+                    or evidence["truth_used"] is not False
+                    or evidence["sha256"] != sha(folder / "normal-residuals.npz")
+                    or evidence["calibration_sha256"] != sha(folder / "calibration.json")):
+                raise ValueError("Reused normal calibration binding changed")
+            progress.update(stage="calibration_reused", model=name, calibration_refitted=False)
+        else:
+            progress.update(stage="calibration", model=name, done=0, total=1)
+            if development_executor is not None:
+                if "normal_calibration" not in normal_cache:
+                    normal_cache["normal_calibration"] = normalized_role(dataset, "normal_calibration", predictor.scaler)
+                cal = normal_cache["normal_calibration"]
+            else:
+                cal = normalized_role(dataset, "normal_calibration", predictor.scaler)
+            # Fixed normal-only calibration. No event truth is present in the remote input package.
+            with backend_factory(predict_device):
+                vr = val["Y"] - predictor.predict_scaled(val["X"], val["C"])
+                cr = cal["Y"] - predictor.predict_scaled(cal["X"], cal["C"])
+            physical = predictor.scaler["y_scale"].copy()
+            physical[-1] *= 4
+            fitted = fit_calibration(
+                vr, cr, cal["run_id"], cal["segment"], cal["origin_us"], physical, groups
+            )
+            fitted["bundle_integrity_sha256"] = sha(out / "models" / name / "integrity.json")
+            folder.mkdir(parents=True)
+            write(folder / "calibration.json", fitted)
+            if preserve_normal_residuals:
+                # Exact normal-only inputs permit a later, separately authorized calibration
+                # policy without another model forward pass or access to development truth.
+                evidence = folder / "normal-residuals.npz"
+                np.savez_compressed(
+                    evidence,
+                    validation_residual_scaled=vr,
+                    validation_run_id=val["run_id"],
+                    validation_segment=val["segment"],
+                    validation_origin_us=val["origin_us"],
+                    calibration_residual_scaled=cr,
+                    calibration_run_id=cal["run_id"],
+                    calibration_segment=cal["segment"],
+                    calibration_origin_us=cal["origin_us"],
+                    physical_target_scale=physical,
+                )
+                write(folder / "normal-residuals.json", dict(
+                    schema="drone-ai.normal-residual-evidence/1",
+                    model=name,
+                    file=evidence.name,
+                    sha256=sha(evidence),
+                    dataset_manifest_sha256=sha(dataset / "manifest.json"),
+                    bundle_integrity_sha256=fitted["bundle_integrity_sha256"],
+                    roles=["normal_validation", "normal_calibration"],
+                    target_order=TARGETS,
+                    residual_convention="observed_minus_predicted_in_train_scaler_space",
+                    truth_used=False,
+                    paired_case_ids={
+                        run_id: groups[run_id]
+                        for run_id in sorted(set(map(str, val["run_id"])) | set(map(str, cal["run_id"])))
+                    },
+                    calibration_sha256=sha(folder / "calibration.json"),
+                ))
+            del cal, vr, cr
+        del val
         gc.collect()
-        for index, row in enumerate(dev):
+        if development_executor is not None:
+            with backend_factory(predict_device):
+                development_executor.run(dataset, out / "models" / name, fitted, folder,
+                                         predictor, dev, prediction_batch_size, name)
+        for index, row in enumerate(dev if development_executor is None else ()):
             progress.check()
             progress.update(
                 stage="development_inference",
@@ -397,6 +643,7 @@ def calibrate(
                     fitted,
                     folder / row["run_id"],
                     predictor=predictor,
+                    prediction_batch_size=prediction_batch_size,
                 )
         progress.update(done=len(dev), total=len(dev))
         del predictor

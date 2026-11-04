@@ -87,6 +87,8 @@ def snapshot(record):
 def submit(root, phase, cfg):
     if phase not in {"fit", "evaluate"}:
         raise ValueError("Unknown approved phase")
+    if phase == "evaluate" and comparison.execution_scope(cfg) == "training_only":
+        raise ValueError("Evaluation submission is not authorized for this training-only attempt")
     if comparison.is_comparison(cfg):
         comparison.config_check(cfg)
     profile = runtime_profile(root, required=True)
@@ -204,12 +206,21 @@ def phase_files_visible(root, phase, cfg):
     """Read metadata and open expected files; leave hash checks to existing verification."""
     if phase == "fit":
         seal = read(root / "compute/result-seal.json")
-        if seal["status"] != "TRAIN_CALIBRATION_INFERENCE_COMPLETE":
-            raise ValueError("Complete sealed compute required before evaluation")
+        training_only = comparison.execution_scope(cfg) == "training_only"
+        expected = "TRAINING_COMPLETE" if training_only else "TRAIN_CALIBRATION_INFERENCE_COMPLETE"
+        if seal["status"] != expected:
+            raise ValueError("Complete sealed compute required for the approved scope")
+        if training_only and any(
+            seal.get(key) is not False
+            for key in ("calibration_started", "inference_started", "evaluation_started")
+        ):
+            raise ValueError("Training-only result contains unauthorized post-training phases")
         for name in seal["files"]:
             with child(root / "compute", name).open("rb"):
                 pass
     elif phase == "evaluate":
+        if comparison.execution_scope(cfg) == "training_only":
+            raise ValueError("Evaluation result is outside this attempt's approved scope")
         evaluation = read(root / "evaluation/report.json")
         if evaluation["status"] != "REPORT_READY_STOPPED":
             raise ValueError("Final report status verification failed")
@@ -294,6 +305,26 @@ def report(root, cfg):
     (root / "report.txt").write_text("\n".join(lines) + "\n")
 
 
+def training_report(root, cfg):
+    lines = [
+        "X500 " + cfg["revision"],
+        "Training and model export only; calibration, inference and development evaluation not run.",
+        "Model | selected epoch | training seconds",
+    ]
+    for name in cfg["models"]:
+        trained = read(root / "compute/models" / name / "training.json")
+        lines.append(
+            f"{name} | {trained.get('selected_epoch', 'n/a')} | {trained.get('seconds', 'n/a')}"
+        )
+    lines.extend(
+        [
+            "Models: compute/models/<model>; best and last checkpoints are preserved separately.",
+            "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL: own allocation released; no next work scheduled.",
+        ]
+    )
+    (root / "training-report.txt").write_text("\n".join(lines) + "\n")
+
+
 def control(root):
     root = Path(root).resolve()
     if os.environ.get("SLURM_JOB_ID"):
@@ -321,7 +352,8 @@ def control(root):
     )
     record = None
     try:
-        for phase in ("fit", "evaluate"):
+        training_only = comparison.execution_scope(cfg) == "training_only"
+        for phase in ("fit",) if training_only else ("fit", "evaluate"):
             record = submit(root, phase, cfg)
             state.update(stage=phase, job_id=record["job_id"], allocation_released=False)
             write(root / "controller.json", state)
@@ -330,6 +362,41 @@ def control(root):
             require_success(release)
             wait_phase_files(root, phase, state, cfg)
         verify(root / "compute", read(root / "compute/result-seal.json")["files"])
+        if training_only:
+            seal = read(root / "compute/result-seal.json")
+            if (
+                seal.get("config_sha256") != sha(root / "input/config.json")
+                or seal.get("models") != cfg["models"]
+            ):
+                raise ValueError("Training-only output binding mismatch")
+            if own_queue():
+                raise ValueError("Own job still pending/running at training completion check")
+            training_report(root, cfg)
+            status = "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
+            write(
+                root / "completion.json",
+                dict(
+                    status=status,
+                    finished=time.time(),
+                    fit_release=read(root / "release.json"),
+                    compute_seal_sha256=sha(root / "compute/result-seal.json"),
+                    report_sha256=sha(root / "training-report.txt"),
+                    execution_scope="training_only",
+                    calibration_started=False,
+                    evaluation_started=False,
+                    next_round_authorized=False,
+                    automatic_retry=False,
+                    llm_calls=0,
+                ),
+            )
+            state.update(
+                status=status,
+                stage="stopped",
+                finished=time.time(),
+                report=str(root / "training-report.txt"),
+            )
+            write(root / "controller.json", state)
+            return
         evaluation = read(root / "evaluation/report.json")
         if (
             evaluation["status"] != "REPORT_READY_STOPPED"
@@ -407,23 +474,40 @@ def render(root):
     gpu = optional(root / "compute/gpu-live.json")
     age = time.time() - gpu.get("timestamp", 0)
     cfg = optional(root / "input/config.json")
+    final = cfg.get("execution_scope") == "final_test_evaluation"
     is_comparison = comparison.is_comparison(cfg) or state.get("round") == comparison.REVISION
+    neural_count = (len(cfg.get("variants", [])) or
+                    sum(n.startswith(("lstm_", "transformer_")) for n in cfg.get("models", [])) or 8)
+    model_count = len(cfg.get("models", [])) or 10
     lines = [
         (
-            "Drone AI / 1200run · 신경망8 + baseline2 · batch256 · seed0"
+            "Drone AI / 최종 시험324run · 학습 완료 신경망16 + baseline2 · batch256 · seed0"
+            if final else f"Drone AI / 1200run · 신경망{neural_count} · 전체{model_count} · batch256 · seed0"
             if is_comparison
             else "Drone AI / 신경망2 + baseline2 · hidden128 · 2층 · batch256 · seed17"
         ),
         f"{state.get('status', 'NOT_STARTED')} | 단계 {phase} / {progress.get('stage', 'allocation')} | job {state.get('job_id', '미확인')}",
         "─" * 90,
         (
-            "흐름: 8구성 메모리·복원 → 10종 비교 → 정상 보정·개발 추론 → 별도 평가 → 정지"
+            "흐름: 고정 모델·scaler·임계값 확인 → 최종 추론 → 별도 최종 평가·기록 → 반납·정지 (학습·보정·분석 없음)"
+            if final else f"흐름: {neural_count}구성 메모리·복원·처리율 → {model_count}종 학습·저장 → 반납·정지 (보정·평가 승인 대기)"
+            if cfg.get("execution_scope") == "training_only"
+            else f"흐름: {model_count}종 공통 수치 검사 → 새 정상 보정·개발 추론 → 별도 평가 → 반납·정지 (학습 없음)"
+            if cfg.get("execution_scope") == "post_training_evaluation"
+            else "흐름: 8구성 메모리·복원 → 10종 비교 → 정상 보정·개발 추론 → 별도 평가 → 정지"
             if is_comparison
             else "흐름: batch256 메모리·복원 → 4종 학습 → 정상 보정·개발 추론 → 별도 평가 → 정지"
         ),
     ]
     if progress.get("model"):
         lines.append("모델: " + progress["model"])
+    if final:
+        final_completed = optional(root / "compute/progress.json").get("models_completed", 0)
+        lines.append(f"최종 추론 완료 모델: {final_completed}/18 · CPU8병렬 · 결과 비교/해석 자동 실행 없음")
+    if progress.get("parallel_benchmark_active"):
+        lines.append("2·4·8 CPU 병렬 사전시험 · 정상 검증 비행1개 반복 · 본 개발 추론 진행률 아님")
+    elif progress.get("selected_cpu_workers"):
+        lines.append(f"실측 선택 CPU 작업자: {progress['selected_cpu_workers']}개 · 전 모델 동일 적용")
     if state.get("file_visibility"):
         lines.append(
             f"파일 가시성: {state['file_visibility_phase']} / {state['file_visibility']} "
@@ -431,7 +515,7 @@ def render(root):
             f"| 현재 할당 반납 {'확인' if state.get('allocation_released') else '대기'}"
         )
     if is_comparison and "models_completed" in progress:
-        lines.append(f"모델 산출물: {len(progress['models_completed'])}/10 (보정·평가는 별도)")
+        lines.append(f"모델 산출물: {len(progress['models_completed'])}/{model_count} (보정·평가는 별도)")
     if progress.get("gate_phase"):
         lines.append("복원 검사: " + progress["gate_phase"])
     if progress.get("epoch"):
@@ -445,11 +529,16 @@ def render(root):
         lines.append(
             f"현재 단계 [{'█' * int(percent / 5):·<20}] {percent:5.1f}%  {done}/{total} (전체 시간 진행률 아님)"
         )
+    if progress.get("cpu_workers") and str(progress.get("stage", "")).startswith("development_"):
+        lines.append(
+            f"병렬 처리: GPU 추론1 · CPU 경보/저장{progress['cpu_workers']} · 입력 미리 읽기1 "
+            f"| CPU 미완료 {progress.get('cpu_pending', 0)}건 · 완료 건수는 seal 작성 기준"
+        )
     for key in ("train_loss", "validation_loss", "best_epoch"):
         if progress.get(key) is not None:
             lines.append(f"{key}: {progress[key]}")
     if gpu.get("status") == "SAMPLED":
-        label = "실시간" if age < 10 and phase == "fit" else f"마지막 기록 ({age:.0f}초 전)"
+        label = "실시간" if age < 10 and phase in {"fit", "calibrate", "diagnose", "infer"} else f"마지막 기록 ({age:.0f}초 전)"
         used = gpu.get("used_mib")
         capacity = gpu.get("total_mib")
         memory = (
@@ -467,11 +556,30 @@ def render(root):
     lines += [
         "─" * 90,
         "모델: " + str(root / "compute/models"),
-        "결과: " + str(root / "evaluation/metrics.json"),
+        "결과: "
+        + str(
+            root
+            / (
+                "training-report.txt"
+                if cfg.get("execution_scope") == "training_only"
+                else "evaluation/metrics.json"
+            )
+        ),
         "q+Enter / Ctrl+C: 화면만 닫기 · 서버 작업 유지 · 자동 재학습·LLM 호출 없음",
     ]
     if (root / "completion.json").exists():
-        lines.append("실제 할당 반납·평가 완료 확인됨. 다음 회차 실행 없음.")
+        completion = optional(root / "completion.json")
+        if (
+            completion.get("status") == "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
+            and completion.get("fit_release", {}).get("released") is True
+        ):
+            lines.append("학습 산출물·실제 할당 반납 확인됨. 보정·평가는 미실행·별도 승인 대기.")
+        elif (
+            completion.get("status") == "REPORT_READY_STOPPED"
+            and completion.get("fit_release", completion.get("calibration_release", completion.get("inference_release", {}))).get("released") is True
+            and completion.get("evaluation_release", {}).get("released") is True
+        ):
+            lines.append("실제 할당 반납·평가 완료 확인됨. 다음 회차 실행 없음.")
     return "\n".join(lines)
 
 

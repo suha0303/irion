@@ -138,7 +138,7 @@ def display(value):
         progress = records["prepare-progress.json"]
         control = records.get("prepared.json", {})
     status = control.get("status", progress.get("status", "UNKNOWN"))
-    print("DRONE AI  /  학습·복원 시험 및 모델 비교")
+    print("DRONE AI  /  학습·복원 시험 및 모델 비교·평가")
     print("상태: " + status + "  |  " + time.strftime("%Y-%m-%d %H:%M:%S %Z"))
     if reconciled:
         print("기존 종료 작업의 검산 결과 · 원래 control.json 실패 기록 보존")
@@ -147,9 +147,28 @@ def display(value):
           + "  |  Slurm: " + str(control.get("slurm_state", "미확인")))
     if main_comparison:
         cfg = records.get("input/config.json", {})
-        print("비교: " + str(len(cfg.get("models", []))) + "종  |  seed "
-              + str(cfg.get("seed", "미확인")) + "  |  batch "
-              + str(cfg.get("batch_size", "미확인")))
+        description = ("비교: " + str(len(cfg.get("models", []))) + "종  |  seed "
+                       + str(cfg.get("seed", "미확인")))
+        if cfg.get("execution_scope") != "post_training_evaluation":
+            description += "  |  batch " + str(cfg.get("batch_size", "미확인"))
+        print(description)
+        if cfg.get("execution_scope") == "training_only":
+            print("승인 범위: 구성별 검사 → 학습·모델 저장 → 반납·정지 (보정·평가 별도 승인)")
+        elif cfg.get("execution_scope") == "post_training_evaluation":
+            print("승인 범위: 전 모델 정상 수치 진단 → 반납·정지 (보정·개발 추론 없음)"
+                  if cfg.get("numerical_diagnostic_only") else
+                  "승인 범위: 전 모델 수치 검사 → 정상 보정·개발 추론 → 독립 평가 → 반납·정지")
+            print("재학습·최종 시험·자동 재시도 없음")
+            if cfg.get("numerical_diagnostic_only"):
+                print("공통 입력 257창 · batch 1 대비 256 · batch 256 반복 재현성")
+            elif cfg.get("all_model_replay_fresh"):
+                print("개발 추론: 전 모델 새로 실행 · batch " + str(cfg["prediction_batch_size"])
+                      + (" · 정상 보정도 전 모델 새로 계산"
+                         if cfg.get("all_model_calibration_fresh") else
+                         " · 완료된 정상 보정 재사용 " + str(len(cfg.get("reuse_calibration", {}))) + "종"))
+            if cfg.get("sensitivity_policy"):
+                print("선행 검사: 전 모델 연속 정상 구간 점수·경보 민감도 · 모두 통과해야 본 보정 시작")
+                print("진단용 보정은 본 평가에 재사용하지 않음 · 기준 변경/자동 재시도 없음")
     if progress.get("model"):
         print("모델: " + str(progress["model"]))
     if progress.get("models_completed") is not None:
@@ -166,14 +185,14 @@ def display(value):
         if isinstance(done, (int, float)) and isinstance(total, (int, float)) and total > 0:
             count = f"{done}/{total} ({100 * done / total:.1f}%, 시간 진행률 아님)"
         print("단계: " + str(progress.get("stage", "미확인")) + "  |  처리: " + count)
-    for key in ("train_loss", "validation_loss", "best_epoch"):
+    for key in ("train_loss", "validation_loss", "best_epoch", "optimizer", "learning_rate"):
         if progress.get(key) is not None:
             print(key + ": " + str(progress[key]))
     gpu = records.get("gpu", {})
     if gpu:
         age = time.time() - gpu.get("timestamp", 0)
         freshness = "현재 기록" if age < 10 and (
-            not main_comparison or phase == "fit"
+            not main_comparison or phase in {"fit", "calibrate", "diagnose", "benchmark"}
         ) else "마지막 기록 (실시간 아님)"
         print(f"GPU: {gpu.get('utilization_pct', '미확인')}%  |  VRAM: "
               f"{gpu.get('used_mib', '미확인')}/{gpu.get('total_mib', '미확인')} MiB  |  {freshness}")
@@ -183,15 +202,28 @@ def display(value):
     released = control.get("allocation_released", "미확인")
     if main_comparison:
         completion = records.get("completion.json", {})
-        released = bool(
-            completion.get("status") == "REPORT_READY_STOPPED"
-            and completion.get("fit_release", {}).get("released") is True
-            and completion.get("evaluation_release", {}).get("released") is True
-        )
-        print("결과: " + str(Path(value["root"]) / "evaluation/metrics.json"))
+        if cfg.get("execution_scope") == "training_only":
+            released = bool(
+                completion.get("status") == "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
+                and completion.get("fit_release", {}).get("released") is True
+            )
+            print("학습 기록: " + str(Path(value["root"]) / "training-report.txt"))
+            print("보정·개발 평가: 미실행 · 별도 승인 필요")
+        elif cfg.get("numerical_diagnostic_only"):
+            released = bool(completion.get("status") == "DIAGNOSTIC_READY_STOPPED"
+                            and completion.get("diagnostic_release", {}).get("released") is True)
+            print("진단: " + str(Path(value["root"]) / "compute/batch-checks/preflight.json"))
+        else:
+            release_key = "calibration_release" if cfg.get("execution_scope") == "post_training_evaluation" else "fit_release"
+            released = bool(
+                completion.get("status") == "REPORT_READY_STOPPED"
+                and completion.get(release_key, {}).get("released") is True
+                and completion.get("evaluation_release", {}).get("released") is True
+            )
+            print("결과: " + str(Path(value["root"]) / "evaluation/metrics.json"))
         print("모델: " + str(Path(value["root"]) / "compute/models"))
     print("할당 반납 확인: " + str(released))
-    if control.get("scope"):
+    if control.get("scope") and not main_comparison:
         print("범위: 짧은 학습·저장·복원 기능시험 / 본학습 아님")
     print("화면만 갱신 · q/Ctrl+C: 화면 종료 · 작업은 tmux/Slurm에서 유지 · LLM 호출 없음")
 
@@ -262,9 +294,14 @@ def parser():
             command.add_argument("--json", action="store_true")
     reconcile = sub.add_parser("reconcile", help="기존 종료 smoke 검산; 제출·재시작 없음")
     reconcile.add_argument("--root", type=Path, required=True)
-    train = sub.add_parser("train", help="기존 비교 준비·승인·시작 CLI; 자동 본학습 없음")
-    train.add_argument("--profile", default="default")
-    train.add_argument("arguments", nargs=argparse.REMAINDER)
+    for name, help_text in (
+        ("train", "비교 준비·승인·시작 CLI; 자동 본학습 없음"),
+        ("evaluate", "완료 모델의 정상 보정·개발 평가; 재학습 없음"),
+        ("reassess", "봉인된 예측의 다른 기준 재집계; 새 출력 필요"),
+    ):
+        command = sub.add_parser(name, help=help_text)
+        command.add_argument("--profile", default="default")
+        command.add_argument("arguments", nargs=argparse.REMAINDER)
     sub.add_parser("menu")
     return result
 
@@ -307,13 +344,17 @@ def main(argv=None):
                 return code
             print(json.dumps(start(profile_file, args.root), indent=2, ensure_ascii=False))
             return 0
-        if args.action == "train":
+        if args.action in {"train", "evaluate", "reassess"}:
             arguments = list(args.arguments)
+            if arguments[:1] == ["--"]:
+                arguments = arguments[1:]
             if not arguments:
                 arguments = ["--help"]
-            if arguments[0] == "prepare":
+            if args.action != "reassess" and arguments[0] == "prepare":
                 arguments += ["--profile", str(profile_file)]
-            return selected_python(settings, "learning.prepare_compare", arguments,
+            module = {"train": "learning.prepare_compare", "evaluate": "learning.post_training",
+                      "reassess": "learning.reassess"}[args.action]
+            return selected_python(settings, module, arguments,
                                    profile_file=profile_file)
         raise ValueError("Unsupported action")
     except (ValueError, OSError, subprocess.CalledProcessError) as exc:

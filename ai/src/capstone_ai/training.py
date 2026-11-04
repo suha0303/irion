@@ -265,11 +265,12 @@ class Predictor:
         self.scaler = dict(np.load(self.folder / "scaler.npz"))
         if self.name in {"lstm", "transformer"}:
             revision = self.metadata.get("model_revision")
-            if revision == "explicit_dropout_v1":
-                from learning.models import ModelSpec
+            if revision in {"explicit_dropout_v1", "interlayer_norm_no_dropout"}:
+                from learning.models import ModelSpec, StudySpec
                 from learning.models import make_model as make_next_model
 
-                spec = ModelSpec(**read_json(self.folder / "model-spec.json")).validate()
+                spec_class = ModelSpec if revision == "explicit_dropout_v1" else StudySpec
+                spec = spec_class(**read_json(self.folder / "model-spec.json")).validate()
                 if spec.name != self.name or spec.hidden != self.metadata["hidden"]:
                     raise ValueError("Versioned model metadata mismatch")
                 self.model = make_next_model(spec).to(self.device)

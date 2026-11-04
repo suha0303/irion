@@ -1,7 +1,10 @@
 """Synthetic CPU/data and mocked scheduler checks; never submits a real GPU job."""
 
 import copy
+import os
 import sys
+import time
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -183,12 +186,17 @@ def test_batch_finite_check_includes_later_chunks():
         Batches(arrays, 256, "cpu")
 
 
-def test_exact_eight_gates_no_extra_model_or_seed(tmp_path, monkeypatch):
-    cfg = config()
+@pytest.mark.parametrize("budget_passed", [None, True, False])
+def test_exact_eight_gates_no_extra_model_or_seed(tmp_path, monkeypatch, budget_passed):
+    cfg = config() if budget_passed is None else training_only_config()
+    write(tmp_path / "input/config.json", cfg)
     measured, children = [], []
 
     def measure(spec, arrays, batches, folder, **kw):
         measured.append((spec, kw["seed"], batches))
+        if budget_passed is not None:
+            assert kw["warmup"] == 50 and kw["steps"] == 500
+            assert kw["validation"] is arrays
         return [dict(passed=True)]
 
     def child(argv, **kw):
@@ -213,15 +221,38 @@ def test_exact_eight_gates_no_extra_model_or_seed(tmp_path, monkeypatch):
 
     monkeypatch.setattr(lifecycle, "measure", measure)
     monkeypatch.setattr(lifecycle.subprocess, "run", child)
+    budgets = []
+
+    def budget(rows, **kwargs):
+        budgets.append(kwargs)
+        assert len(rows) == 8
+        assert kwargs["train_windows"] == kwargs["validation_windows"] == 512
+        assert kwargs["epochs"] == 60
+        return {"passed": budget_passed}
+
+    monkeypatch.setattr(lifecycle, "estimate_fit_budget", budget)
     arrays = dict(X=np.zeros((512, 100, 19)), C=np.zeros((512, 6)), Y=np.zeros((512, 10, 4)))
-    lifecycle.gates(tmp_path, cfg, tmp_path, arrays, arrays, Progress())
+    progress = Progress()
+    progress.started = time.time()
+    if budget_passed is False:
+        with pytest.raises(TimeoutError, match="no production fit or retry"):
+            lifecycle.gates(tmp_path, cfg, tmp_path, arrays, arrays, progress)
+        assert not (tmp_path / "gates/passed.json").exists()
+    else:
+        lifecycle.gates(tmp_path, cfg, tmp_path, arrays, arrays, progress)
     assert len(measured) == 8 and all(
         seed == 0 and batches == [256] for _, seed, batches in measured
     )
     assert children == [
         (v["id"], p) for v in comparison.VARIANTS for p in ("full", "partial", "resume")
     ]
-    assert set(read(tmp_path / "gates/passed.json")["proofs"]) == set(lifecycle.neural_ids(cfg))
+    if budget_passed is not False:
+        assert set(read(tmp_path / "gates/passed.json")["proofs"]) == set(lifecycle.neural_ids(cfg))
+    assert len(budgets) == (0 if budget_passed is None else 1)
+    if budget_passed is not None:
+        context = read(tmp_path / "training-budget.json")["measurement_context"]
+        assert context["config_sha256"] == sha(tmp_path / "input/config.json")
+        assert context["training_stride_us"] == 1000000 and context["seed"] == 0
 
 
 def test_r6_submission_budget_and_no_submission_before_approval(tmp_path, monkeypatch):
@@ -254,7 +285,7 @@ def test_r6_submission_budget_and_no_submission_before_approval(tmp_path, monkey
 
 
 def test_authorization_is_explicit_one_time_no_execution(tmp_path, monkeypatch):
-    monkeypatch.setattr(prepare_compare, "external_root", lambda p: p.resolve())
+    monkeypatch.setattr(prepare_compare, "external_root", lambda p: Path(p).resolve())
     write(tmp_path / "input/config.json", config(False))
     write(tmp_path / "input/inventory.json", {"config.json": sha(tmp_path / "input/config.json")})
     write(tmp_path / "prepared.json", {})
@@ -440,8 +471,9 @@ def test_seed0_continuous_and_resume_match_with_variant_progress(tmp_path):
     assert any(row.get("model") == "lstm_h64_l2_s0" for row in seen)
 
 
+@pytest.mark.parametrize("training_only,normalization_study", [(False, False), (True, False), (True, True)])
 def test_complete_local_prepare_restores_only_fixture_and_never_submits(
-    admitted, tmp_path, monkeypatch
+    admitted, tmp_path, monkeypatch, training_only, normalization_study
 ):
     from execution.common import ROOT
     from pretrain.storage import pack_files
@@ -516,7 +548,7 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
         ),
     )
     monkeypatch.setattr(prepare_compare, "HOME", fake_home)
-    monkeypatch.setattr(prepare_compare, "external_root", lambda p: p.resolve())
+    monkeypatch.setattr(prepare_compare, "external_root", lambda p: Path(p).resolve())
     monkeypatch.setattr(
         prepare_compare.shutil, "disk_usage", lambda p: SimpleNamespace(free=1024**4)
     )
@@ -533,20 +565,244 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
         bundle=bundle,
         remote_root="/srv/drone-ai/comparison-fixture",
         wall_hours=48,
-        evaluation_hours=12,
+        evaluation_hours=0 if training_only else 12,
+        training_only=training_only,
+        normalization_study=normalization_study,
     )
     prepare_compare.prepare(args)
     cfg = read(root / "input/config.json")
     comparison.config_check(cfg, require_approval=False)
-    assert cfg["seed"] == 0 and len(cfg["models"]) == 10
+    assert cfg["seed"] == 0 and len(cfg["models"]) == (16 if normalization_study else 10)
+    if normalization_study:
+        assert "dropout" not in cfg
+        assert cfg["learning_rate"] is None
+        assert (root / "input/ai/learning/legacy_models.py").is_file()
     assert not cfg["production_training_authorized"]
     assert (
         sha(root / "server-profile.json") == read(root / "prepared.json")["server_profile_sha256"]
     )
     assert (root / "input/ai/console/profile.py").is_file()
-    assert len(read(root / "truth/index.json")) == 272
+    if training_only:
+        assert not (root / "truth").exists()
+        assert cfg["truth_index_sha256"] is None
+        assert cfg["evaluation_authorized"] is False and cfg["calibration_authorized"] is False
+        assert cfg["evaluation_hours"] == 0
+    else:
+        assert len(read(root / "truth/index.json")) == 272
     assert read(root / "prepared.json")["submitted_jobs"] == []
     assert not (root / "controller.claim").exists()
     assert sha(root / "upstream/dataset/manifest.json") == seal["manifest.json"]
     with pytest.raises(FileExistsError):
         prepare_compare.prepare(args)
+
+    if training_only:
+        # A new explicitly prepared attempt reads the old data without a second
+        # archive restore, source edits, symlinks, or GPU submission.
+        cfg["upstream"] = str(root / "upstream")
+        write(root / "input/config.json", cfg)
+        write(root / "input/inventory.json", prepare_compare.inventory(root / "input"))
+        prepared = read(root / "prepared.json")
+        prepared["input_inventory_sha256"] = sha(root / "input/inventory.json")
+        write(root / "prepared.json", prepared)
+        prepare_compare.authorize(root, True)
+        write(root / "controller.json", dict(status="FAILED_STOPPED", job_id="33343"))
+        write(
+            root / "release.json",
+            dict(
+                job_id="33343",
+                released=True,
+                queue=[],
+                remaining_own_queue="",
+                slurm_state="FAILED",
+                exit_code="1:0",
+            ),
+        )
+        write(root / "fit-submission.json", dict(job_id="33343", uid=os.getuid(), phase="fit"))
+        new_profile = tmp_path / "reuse-profile.json"
+        settings = read(profile)
+        settings["dataset_root"] = str(root / "upstream")
+        write(new_profile, settings)
+        retry = tmp_path / "new-explicit-attempt"
+        retry_args = SimpleNamespace(
+            **{
+                **vars(args),
+                "profile": new_profile,
+                "root": retry,
+                "remote_root": retry,
+                "reuse_from": root,
+            }
+        )
+        original = {str(p.relative_to(root)): sha(p) for p in root.rglob("*") if p.is_file()}
+        monkeypatch.setattr(
+            prepare_compare, "restore_ref", lambda *a, **k: pytest.fail("No restore")
+        )
+        admitted_paths = []
+        original_admission = comparison.admission
+
+        def admit(path):
+            admitted_paths.append(path)
+            return original_admission(path)
+
+        monkeypatch.setattr(comparison, "admission", admit)
+        prepare_compare.prepare(retry_args)
+        new_cfg = read(retry / "input/config.json")
+        assert new_cfg["upstream"] == str(root / "upstream")
+        assert new_cfg["reuse_provenance"]["source_job_id"] == "33343"
+        assert new_cfg["reuse_provenance"]["copied_upstream_bytes"] == 0
+        assert new_cfg["production_training_authorized"] is False
+        assert new_cfg["seed"] == 0 and new_cfg["batch_size"] == 256
+        assert not (retry / "upstream").exists() and not (retry / "truth").exists()
+        assert admitted_paths == [root / "upstream"]
+        assert original == {
+            str(p.relative_to(root)): sha(p) for p in root.rglob("*") if p.is_file()
+        }
+        receipt = read(bundle / "receipt.json")
+        source_args = (root, bundle, receipt, tmp_path / "rejected", tmp_path / "rejected")
+        for change in (
+            {"released": False},
+            {"job_id": "99999"},
+            {"slurm_state": ""},
+            {"remaining_own_queue": "44444|RUNNING"},
+        ):
+            previous = read(root / "release.json")
+            write(root / "release.json", {**previous, **change})
+            with pytest.raises(ValueError, match="failed, released"):
+                prepare_compare.reuse_failed_upstream(*source_args)
+            write(root / "release.json", previous)
+        with pytest.raises(ValueError, match="same server"):
+            prepare_compare.reuse_failed_upstream(*source_args[:-1], tmp_path / "elsewhere")
+        with pytest.raises(ValueError, match="separate new attempt"):
+            prepare_compare.reuse_failed_upstream(
+                root, bundle, receipt, root / "nested", root / "nested"
+            )
+        (root / "upstream/evidence/quality.json").write_text("{}")
+        with pytest.raises(ValueError, match="upstream evidence changed"):
+            prepare_compare.reuse_failed_upstream(*source_args)
+
+
+def training_only_config():
+    return {
+        **config(),
+        "execution_scope": "training_only",
+        "calibration_authorized": False,
+        "evaluation_authorized": False,
+        "evaluation_hours": 0,
+    }
+
+
+def test_training_only_scope_rejects_post_training_approval_and_budget():
+    cfg = training_only_config()
+    comparison.config_check(cfg)
+    for key, value in (
+        ("evaluation_authorized", True),
+        ("calibration_authorized", True),
+        ("evaluation_hours", 1),
+        ("execution_scope", "typo"),
+    ):
+        with pytest.raises(ValueError):
+            comparison.config_check({**cfg, key: value})
+
+
+def test_training_only_refuses_evaluator_before_submission_or_gpu(tmp_path, monkeypatch):
+    cfg = training_only_config()
+    monkeypatch.setattr(
+        operator, "runtime_profile", lambda *a, **k: pytest.fail("No submission setup")
+    )
+    with pytest.raises(ValueError, match="not authorized"):
+        operator.submit(tmp_path, "evaluate", cfg)
+    monkeypatch.setattr(
+        lifecycle, "paths", lambda root: (root, cfg, root / "upstream", root / "compute")
+    )
+    monkeypatch.setattr(lifecycle, "check", lambda *a, **k: pytest.fail("No GPU evaluation"))
+    with pytest.raises(ValueError, match="not authorized"):
+        lifecycle.evaluate_worker(tmp_path)
+
+
+def test_training_only_controller_releases_one_job_and_does_not_evaluate(tmp_path, monkeypatch):
+    monkeypatch.delenv("SLURM_JOB_ID", raising=False)
+    monkeypatch.setenv("TMUX", "fixture")
+    server_profile(tmp_path, monkeypatch)
+    cfg = training_only_config()
+    write(tmp_path / "input/config.json", cfg)
+    write(tmp_path / "input/inventory.json", {})
+    files = {}
+    for name in cfg["models"]:
+        p = tmp_path / "compute/models" / name / "training.json"
+        write(p, {"selected_epoch": 1, "seconds": 2})
+        files[str(p.relative_to(tmp_path / "compute"))] = sha(p)
+    write(
+        tmp_path / "compute/result-seal.json",
+        {
+            "status": "TRAINING_COMPLETE",
+            "files": files,
+            "models": cfg["models"],
+            "config_sha256": sha(tmp_path / "input/config.json"),
+            "calibration_started": False,
+            "inference_started": False,
+            "evaluation_started": False,
+        },
+    )
+    phases = []
+
+    def submit(root, phase, cfg):
+        phases.append(phase)
+        return {"job_id": "123", "phase": phase}
+
+    success = {
+        "released": True,
+        "slurm_state": "COMPLETED",
+        "exit_code": "0:0",
+        "remaining_own_queue": "",
+    }
+    monkeypatch.setattr(operator, "submit", submit)
+    monkeypatch.setattr(operator, "wait_release", lambda *a: success)
+    monkeypatch.setattr(operator, "own_queue", lambda: "")
+    monkeypatch.setattr(operator, "report", lambda *a: pytest.fail("No evaluation report"))
+    operator.control(tmp_path)
+    assert phases == ["fit"]
+    completed = read(tmp_path / "completion.json")
+    assert completed["status"] == "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
+    assert completed["fit_release"]["released"] and not completed["evaluation_started"]
+    assert not (tmp_path / "evaluation-release.json").exists()
+    assert not (tmp_path / "evaluation").exists()
+    assert "보정·평가는 미실행" in operator.render(tmp_path)
+
+
+def test_training_only_worker_never_calibrates_or_infers(tmp_path, monkeypatch):
+    cfg = training_only_config()
+    cfg["upstream_files"] = {}
+    upstream = tmp_path / "upstream"
+    (upstream / "dataset").mkdir(parents=True)
+    np.savez(upstream / "dataset/scaler.npz", x_mean=np.zeros(19))
+    write(tmp_path / "input/config.json", cfg)
+    write(tmp_path / "input/inventory.json", {})
+    monkeypatch.setattr(lifecycle, "paths", lambda root: (root, cfg, upstream, root / "compute"))
+    monkeypatch.setattr(lifecycle, "verify", lambda *a: None)
+    monkeypatch.setattr(lifecycle, "check", lambda *a, **k: {"fixture": True})
+    monkeypatch.setattr(lifecycle, "memory_snapshot", lambda: {"available_bytes": 1024**4})
+    monkeypatch.setattr(
+        lifecycle, "Telemetry", lambda *a: SimpleNamespace(start=lambda: None, stop=lambda: None)
+    )
+    monkeypatch.setattr(lifecycle.signal, "signal", lambda *a: None)
+    monkeypatch.setattr(lifecycle.torch.cuda, "empty_cache", lambda: None)
+    monkeypatch.setattr(lifecycle, "gates", lambda *a: None)
+    monkeypatch.setattr(
+        lifecycle,
+        "make_bundles",
+        lambda *a: (tmp_path / "compute/model.bin").write_bytes(b"fixture"),
+    )
+    monkeypatch.setattr(
+        lifecycle, "calibrate", lambda *a, **k: pytest.fail("No calibration or inference")
+    )
+
+    def normalized(dataset, role, scaler, cache, progress):
+        cache.mkdir(parents=True)
+        return {"X": np.zeros((1, 100, 19))}
+
+    monkeypatch.setattr(comparison, "normalized_mmap", normalized)
+    lifecycle.fit_worker(tmp_path)
+    seal = read(tmp_path / "compute/result-seal.json")
+    assert seal["status"] == "TRAINING_COMPLETE"
+    assert seal["calibration_started"] is False and seal["inference_started"] is False
+    assert seal["evaluation_started"] is False
+    assert not (tmp_path / "compute/normalized").exists()

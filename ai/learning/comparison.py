@@ -27,10 +27,33 @@ MODELS = ["persistence", "ridge_forecast", *[v["id"] for v in VARIANTS]]
 
 
 def is_comparison(cfg):
-    return cfg.get("revision") == REVISION
+    from .study import REVISION as STUDY
+
+    return cfg.get("revision") in {REVISION, STUDY}
+
+
+def execution_scope(cfg):
+    """Absent scope preserves sealed legacy comparisons; new scopes are explicit."""
+    scope = cfg.get("execution_scope", "full_comparison")
+    if scope not in {"full_comparison", "training_only"}:
+        raise ValueError("Unknown comparison execution scope")
+    if scope == "training_only":
+        if not is_comparison(cfg):
+            raise ValueError("Training-only scope requires the 1200-run comparison")
+        if (
+            cfg.get("calibration_authorized") is not False
+            or cfg.get("evaluation_authorized") is not False
+        ):
+            raise ValueError(
+                "Training-only scope must explicitly prohibit calibration and evaluation"
+            )
+    elif any(cfg.get(key) is False for key in ("calibration_authorized", "evaluation_authorized")):
+        raise ValueError("Full comparison requires its post-training phases to be authorized")
+    return scope
 
 
 def config_check(cfg, *, require_approval=True):
+    scope = execution_scope(cfg)
     fixed = dict(
         revision=REVISION,
         variants=VARIANTS,
@@ -60,15 +83,26 @@ def config_check(cfg, *, require_approval=True):
         gpu_jobs_max=1,
         development_counts=dict(normal_dev_eval=128, anomaly_dev=144),
     )
+    from . import study
+
+    if cfg.get("revision") == study.REVISION:
+        fixed = study.configure(fixed)
+        if scope != "training_only" or "dropout" in cfg:
+            raise ValueError("The new study is training-only and has no Dropout setting")
     if any(type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()):
         raise ValueError("R6 comparison configuration mismatch")
     if type(cfg.get("production_training_authorized")) is not bool:
         raise ValueError("Explicit training authorization required")
     if require_approval and not cfg["production_training_authorized"]:
         raise ValueError("R6 production training has not been approved")
-    for key in ("wall_hours", "evaluation_hours", "queue_hours"):
+    for key in ("wall_hours", "queue_hours"):
         if type(cfg.get(key)) is not int or not 1 <= cfg[key] <= 168:
             raise ValueError("Explicit finite hours budget required: " + key)
+    evaluation_hours = cfg.get("evaluation_hours")
+    if type(evaluation_hours) is not int or (
+        evaluation_hours != 0 if scope == "training_only" else not 1 <= evaluation_hours <= 168
+    ):
+        raise ValueError("Evaluation budget must be zero for training-only, otherwise within1..168")
     if cfg.get("memory", {}).get("estimated_host_peak_bytes", 2**63) + 1024**3 > 64 * 1024**3:
         raise MemoryError("Estimated peak plus reserve exceeds fixed64GiB request")
 
@@ -206,6 +240,7 @@ def normalized_mmap(dataset, role, scaler, cache, progress, chunk=512):
                         raise ValueError("Nonfinite normalized fit input")
                     out[offset : offset + count] = normalized
                     progress.update(
+                        force=offset == 0,
                         stage="normalize_mmap",
                         model=role,
                         array=key,
@@ -215,6 +250,8 @@ def normalized_mmap(dataset, role, scaler, cache, progress, chunk=512):
                 if stream.read(1):
                     raise ValueError("Trailing fit member bytes")
             out.flush()
+            # Keep array completion visible even if the last chunk was throttled.
+            progress.update(done=shape[0], total=shape[0])
             result[key] = out
     write(cache / "ready.json", dict(source_sha256=expected, dtype="float32", chunk=chunk))
     return result

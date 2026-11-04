@@ -1,0 +1,74 @@
+{
+  "schema": "drone-ai.development-evaluation/1",
+  "id": "normal-calibration-development-fixed",
+  "purpose": "Compare frozen seed0 exports under one common protocol; simulation development evidence only",
+  "roles": {
+    "normal_validation": 104,
+    "normal_calibration": 104,
+    "normal_dev_eval": 128,
+    "anomaly_dev": 144
+  },
+  "final_test_used": false,
+  "retraining": false,
+  "automatic_retry": false,
+  "calibration": {
+    "scale_role": "normal_validation",
+    "threshold_role": "normal_calibration",
+    "reference_error_scale": "q95 squared scaled residual per lead/target; floor1e-8",
+    "domain_scores": "mean normalized squared residual; propulsion p/q/r, battery pack voltage",
+    "quantiles": [
+      0.95,
+      0.975,
+      0.99,
+      0.995,
+      0.999,
+      0.9995,
+      0.9999
+    ],
+    "target_union_episodes_per_valid_hour": 1.0,
+    "selection": "lowest quantile meeting target, else least-rate target_unmet",
+    "ewma_alpha": 0.3,
+    "enter_consecutive": 3,
+    "exit_consecutive": 10,
+    "exit_threshold_ratio": 0.7,
+    "decision_cadence_us": 1000000,
+    "independent_certification": false
+  },
+  "primary_metrics": [
+    "normal union/domain alarm episodes per valid hour with exposure",
+    "all-event, conditional, unavailable and new-episode recall",
+    "step/ramp onset delays and preexisting observation-based recognition",
+    "operational coverage and missing-data reasons",
+    "forecast MAE/RMSE/signed bias on common valid origins"
+  ],
+  "secondary_metrics": [
+    "unaltered point precision/recall/F1 where available"
+  ],
+  "uncertainty": {
+    "normal_rate_bootstrap": {
+      "unit": "paired_case_id",
+      "draws": 1000,
+      "seed": 17,
+      "coverage": 0.95
+    },
+    "anomaly_grouping": "144 scenarios across 24 paired groups; not 144 independent groups",
+    "zero_event_poisson": "reference only under constant independent rate assumption"
+  },
+  "interpretation": {
+    "no_new_performance_pass_fail_cutoff": true,
+    "no_dev_truth_threshold_tuning": true,
+    "no_automatic_model_selection": true,
+    "physical_onset_unknown_for_preexisting": true,
+    "airframe": "x500-reference-001 only; no real-flight generalization claim"
+  },
+  "preserve": [
+    "exported model bundle",
+    "normal validation/calibration exact residuals and identities",
+    "calibration threshold and normal-only fit provenance",
+    "per-run forecasts and decisions",
+    "physical residuals and raw domain scores",
+    "sealed evaluator-only event truth",
+    "protocol and source hashes"
+  ],
+  "later_reassessment": "New explicit criteria in a separate output; keep original results. No automatic follow-up."
+}

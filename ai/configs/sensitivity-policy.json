@@ -1,0 +1,10 @@
+{
+  "schema": "drone-ai.sensitivity-policy/1",
+  "batch_size": 256,
+  "require_same_batch_exact": true,
+  "max_scaled_abs": 0.0001,
+  "physical_max": [0.00001, 0.00001, 0.00001, 0.0001],
+  "max_score_delta_over_high": 0.01,
+  "max_ewma_delta_over_high": 0.01,
+  "max_changed_alarm_states": 0
+}

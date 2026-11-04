@@ -14,13 +14,13 @@ import torch
 
 from capstone_ai.mapping import FEATURES, TARGETS
 from capstone_ai.training import Predictor
-from execution.common import MODELS, Progress, memory_available, read, sha, verify, write
+from execution.common import MODELS, Progress, memory_snapshot, read, sha, verify, write
 from execution.engine import calibrate, ridge_fit
 from pipeline.pipeline import normalized_role
 from pipeline.runtime import check
 
 from . import comparison
-from .benchmark import measure
+from .benchmark import estimate_fit_budget, measure
 from .diagnostic import same, stop_signal
 from .models import ModelSpec, make_model
 from .telemetry import Telemetry
@@ -76,8 +76,20 @@ def model_ids(cfg):
 def spec_for(cfg, name):
     if comparison.is_comparison(cfg):
         entry = next(v for v in cfg["variants"] if v["id"] == name)
+        if cfg["model_revision"] != "explicit_dropout_v1":
+            from .study import spec_for as study_spec
+
+            return study_spec(entry)
         return ModelSpec(entry["name"], entry["hidden"], entry["layers"], entry["heads"])
     return ModelSpec(name, cfg["hidden"], cfg["layers"], cfg["heads"])
+
+
+def fit_settings(root, cfg, name):
+    if cfg.get("model_revision", "explicit_dropout_v1") == "explicit_dropout_v1":
+        return dict(learning_rate=cfg["learning_rate"])
+    from .study import selected_settings
+
+    return selected_settings(cfg, name, root / "compute")
 
 
 def gate_child(root, name, phase):
@@ -99,7 +111,7 @@ def gate_child(root, name, phase):
         batch_size=256,
         epochs=4,
         patience=10,
-        learning_rate=0.001,
+        **fit_settings(root, cfg, name),
         stop_after_epoch=2 if phase == "partial" else None,
         resume=out / "gates" / f"{name}-partial/last.pt" if phase == "resume" else None,
         progress=Progress(out / "gates" / f"{name}-{phase}-progress.json", hours=0.5),
@@ -107,8 +119,13 @@ def gate_child(root, name, phase):
 
 
 def gates(root, cfg, out, train, val, progress):
+    training_only = comparison.execution_scope(cfg) == "training_only"
     folder = out / "gates"
     folder.mkdir()
+    if cfg.get("model_revision") == "interlayer_norm_no_dropout":
+        from .study import select_rates
+
+        select_rates(cfg, out, train, val, progress)
     n = cfg["gate_windows"]
     np.savez(
         folder / "inputs.npz",
@@ -127,12 +144,15 @@ def gates(root, cfg, out, train, val, progress):
                 [256],
                 folder / (name + "-memory"),
                 device="cuda",
-                warmup=10,
-                steps=20,
+                warmup=50 if training_only else 10,
+                steps=500 if training_only else 20,
                 seed=cfg.get("seed", 17),
                 gpu_authorized=True,
                 runtime_stage="fit",
                 progress=progress,
+                **({"validation": val} if training_only else {}),
+                **(fit_settings(root, cfg, name)
+                   if cfg.get("model_revision") == "interlayer_norm_no_dropout" else {}),
             )[0]
         )
         for phase in ("full", "partial", "resume"):
@@ -177,6 +197,38 @@ def gates(root, cfg, out, train, val, progress):
         write(folder / "gate-results.json", proofs)
         if not all(checks.values()):
             raise ValueError(name + " exact-config resume gate failed; no fit or retry")
+    if training_only:
+        budget = estimate_fit_budget(
+            [proofs[name]["memory"] for name in neural_ids(cfg)],
+            train_windows=len(train["X"]),
+            validation_windows=len(val["X"]),
+            epochs=cfg["epochs"],
+            elapsed_seconds=time.time() - progress.started,
+            wall_hours=cfg["wall_hours"] - 0.1,
+        )
+        budget["measurement_context"] = dict(
+            config_sha256=sha(root / "input/config.json"),
+            source_dataset_sha256=cfg.get("source_dataset_sha256"),
+            preprocessing_sha256=cfg.get("upstream_files", {}).get("preprocessing.json"),
+            model_code_sha256=cfg.get("binding", {}).get("sources"),
+            scaler_sha256=cfg.get("binding", {}).get("scaler"),
+            training_stride_us=cfg["training_stride_us"],
+            history=cfg["history"],
+            horizon=cfg["future"],
+            sample_step_us=cfg["step_us"],
+            seed=cfg["seed"],
+            batch_size=cfg["batch_size"],
+            precision=cfg["precision"],
+            amp=cfg["amp"],
+            model_revision=cfg["model_revision"],
+            models=cfg["variants"],
+        )
+        write(out / "training-budget.json", budget)
+        progress.update(stage="training_budget_admission", budget_passed=budget["passed"])
+        if not budget["passed"]:
+            raise TimeoutError(
+                "Measured maximum-epoch fit estimate exceeds finite wall budget; no production fit or retry"
+            )
     write(
         folder / "passed.json",
         dict(
@@ -190,7 +242,12 @@ def gates(root, cfg, out, train, val, progress):
                 batch=256,
                 seed=cfg.get("seed", 17),
             ),
-            scope="512 actual normal train and validation windows; four gate epochs",
+            scope=(
+                "50 warmup and500 full optimizer steps on actual training loader, full validation timing; "
+                "512 normal train/validation windows and four resume-gate epochs"
+                if training_only
+                else "512 actual normal train and validation windows; four gate epochs"
+            ),
         ),
     )
 
@@ -210,6 +267,14 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
             gate_phase=None,
         )
         if name in neural_ids(cfg):
+            selection = None
+            if cfg.get("model_revision") == "interlayer_norm_no_dropout":
+                from .study import validated_selection
+
+                selection = validated_selection(cfg, name, out)
+                settings = {key: selection[key] for key in ("learning_rate", "optimization")}
+            else:
+                settings = fit_settings(out.parent, cfg, name)
             history = run_fit(
                 spec_for(cfg, name),
                 train,
@@ -222,7 +287,7 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
                 batch_size=cfg["batch_size"],
                 epochs=cfg["epochs"],
                 patience=cfg["early_stopping_patience"],
-                learning_rate=cfg["learning_rate"],
+                **settings,
                 progress=progress,
                 model_id=name,
             )
@@ -235,6 +300,11 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
                 initial_weights=f"fresh seed{cfg['seed']}; no gate or previous-round weights",
                 automatic_resume=False,
             )
+            if selection is not None:
+                initial = read(folder / "initialization.json")["state_sha256"]
+                if initial != selection["initial_state_sha256"]:
+                    raise ValueError("Main fit did not start from the same frozen initial weights")
+                result.update(**settings, initial_state_sha256=initial)
         else:
             folder.mkdir()
             result = (
@@ -257,7 +327,7 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
             config=cfg,
         )
         if name in neural_ids(cfg):
-            metadata["model_revision"] = "explicit_dropout_v1"
+            metadata["model_revision"] = spec_for(cfg, name).revision
         write(folder / "model.json", metadata)
         shutil.copyfile(upstream / "preprocessing.json", folder / "preprocessing.json")
         write(
@@ -323,14 +393,23 @@ def fit_worker(root):
             if comparison.is_comparison(cfg)
             else 9 * 1024**3
         )
-        if memory_available() < required:
-            raise MemoryError(
-                f"Host memory admission failed: need{required} bytes including reserve"
-            )
+        snapshot = memory_snapshot()
+        admitted = snapshot["available_bytes"] >= required
         write(
             out / "host-memory-admission.json",
-            dict(available_bytes=memory_available(), environment=environment),
+            dict(
+                available_bytes=snapshot["available_bytes"],
+                required_bytes=required,
+                passed=admitted,
+                snapshot=snapshot,
+                environment=environment,
+            ),
         )
+        if not admitted:
+            raise MemoryError(
+                f"Host memory admission failed: need{required} bytes including reserve; "
+                f"available{snapshot['available_bytes']} bytes; see host-memory-admission.json"
+            )
         telemetry = Telemetry(out)
         telemetry.start()
         scaler = dict(np.load(upstream / "dataset/scaler.npz", allow_pickle=False))
@@ -358,15 +437,17 @@ def fit_worker(root):
                 out / "normalized-cache-cleanup.json", dict(removed=entries, models_exported=True)
             )
         torch.cuda.empty_cache()
-        with project_lock("cuda"):
-            calibrate(
-                upstream,
-                out,
-                progress,
-                predict_device="cuda",
-                backend_factory=backend,
-                model_names=model_ids(cfg),
-            )
+        training_only = comparison.execution_scope(cfg) == "training_only"
+        if not training_only:
+            with project_lock("cuda"):
+                calibrate(
+                    upstream,
+                    out,
+                    progress,
+                    predict_device="cuda",
+                    backend_factory=backend,
+                    model_names=model_ids(cfg),
+                )
         telemetry.stop()
         telemetry = None
         progress.update(stage="seal_outputs")
@@ -385,7 +466,13 @@ def fit_worker(root):
                 models=model_ids(cfg),
                 seed=cfg.get("seed", 17),
                 final_test_used=False,
-                status="TRAIN_CALIBRATION_INFERENCE_COMPLETE",
+                status="TRAINING_COMPLETE"
+                if training_only
+                else "TRAIN_CALIBRATION_INFERENCE_COMPLETE",
+                execution_scope=comparison.execution_scope(cfg),
+                calibration_started=not training_only,
+                inference_started=not training_only,
+                evaluation_started=False,
                 truth_join=False,
                 next_round_authorized=False,
             ),
@@ -409,6 +496,8 @@ def fit_worker(root):
 
 def evaluate_worker(root):
     root, cfg, upstream, out = paths(root)
+    if comparison.execution_scope(cfg) == "training_only":
+        raise ValueError("Evaluation is not authorized by this training-only attempt")
     progress = Progress(
         root / "evaluation-progress.json", hours=cfg.get("evaluation_hours", 2) - 0.1
     )

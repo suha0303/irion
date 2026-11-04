@@ -1,5 +1,7 @@
 """Revisioned scoring for offline validation; frozen live bundles remain unchanged."""
 
+from collections import deque
+
 import numpy as np
 
 from .inference import Alarm, PendingForecasts
@@ -54,6 +56,7 @@ class DetectionLedger(PendingForecasts):
         self.scope = None
         self.last_origin = None
         self.target_reasons = {}
+        self.pending = deque()
 
     def issue(self, run_id, clock, segment, origin, issued, prediction, timing_status=None):
         values = np.asarray(prediction, dtype=float)
@@ -71,7 +74,11 @@ class DetectionLedger(PendingForecasts):
             self.scope, self.last_origin = scope, None
         if self.last_origin is not None and origin < self.last_origin:
             raise ValueError("forecast origin regressed")
+        expected_key = f"{run_id}:{clock}:{segment}:{origin}"
+        existed = expected_key in self.forecasts
         key = super().issue(run_id, clock, segment, origin, issued, values, timing_status)
+        if not existed:
+            self.pending.append(key)
         self.last_origin = origin
         return key
 
@@ -91,9 +98,10 @@ class DetectionLedger(PendingForecasts):
         self.target_reasons[(run_id, clock, segment, time_us)] = reason
 
     def advance(self, decision_time_us, closed=False):
-        for key, forecast in self.forecasts.items():
-            if key in self.decisions:
-                continue
+        completed = []
+        while self.pending:
+            key = self.pending[0]
+            forecast = self.forecasts[key]
             if decision_time_us < max(forecast["origin_time_us"], forecast["issued_time_us"] or 0):
                 raise ValueError("decision precedes forecast issuance")
             times = forecast["target_times_us"]
@@ -130,3 +138,6 @@ class DetectionLedger(PendingForecasts):
                 "unscored_reasons": reasons, "diagnosis_status": "not_established",
                 "health_estimate": {"soh": None, "rul": None}, **evidence, **alarm,
             }
+            self.pending.popleft()
+            completed.append(self.decisions[key])
+        return completed
