@@ -11,7 +11,73 @@ import sys
 from pathlib import Path
 
 import pytest
+
 from console import cli, control, environment, profile
+
+
+@pytest.mark.parametrize("action,module,arguments", [
+    ("evaluate", "learning.post_training", ["prepare", "--root", "/new"]),
+    ("reassess", "learning.reassess", ["--", "--evaluation", "/completed", "--output", "/new"]),
+])
+def test_evaluation_commands_use_selected_python_and_no_training(monkeypatch, action, module, arguments):
+    monkeypatch.setattr(profile, "load", lambda value: {})
+    monkeypatch.setattr(profile, "profile_path", lambda value: "/profile.json")
+    calls = []
+    monkeypatch.setattr(cli, "selected_python", lambda settings, selected, args, **kw: calls.append(
+        (selected, args)) or 0)
+    assert cli.main([action, "--profile", "default", *arguments]) == 0
+    selected, args = calls[0]
+    assert selected == module
+    assert args[0] != "--"
+    assert ("--profile" in args) is (action == "evaluate")
+
+
+def test_post_training_display_is_not_training(tmp_path, capsys):
+    (tmp_path / "input").mkdir()
+    control.write(tmp_path / "input/config.json", {
+        "execution_scope": "post_training_evaluation", "models": ["lstm"], "seed": 0,
+    })
+    control.write(tmp_path / "controller.json", {"status": "RUNNING", "stage": "calibrate"})
+    cli.display(cli.snapshot(tmp_path))
+    output = capsys.readouterr().out
+    assert "재학습·최종 시험·자동 재시도 없음" in output
+    assert "할당 반납 확인: False" in output
+    assert "별도 승인 필요" not in output
+
+
+def test_fresh_calibration_display_has_no_reuse_claim(tmp_path, capsys):
+    (tmp_path / "input").mkdir()
+    control.write(tmp_path / "input/config.json", {
+        "execution_scope": "post_training_evaluation", "models": ["lstm"], "seed": 0,
+        "all_model_calibration_fresh": True, "all_model_replay_fresh": True,
+        "prediction_batch_size": 256, "reuse_calibration": {},
+    })
+    control.write(tmp_path / "controller.json", {"status": "RUNNING", "stage": "calibrate"})
+    cli.display(cli.snapshot(tmp_path))
+    output = capsys.readouterr().out
+    assert "정상 보정도 전 모델 새로 계산" in output
+    assert "보정 재사용" not in output
+
+
+@pytest.mark.parametrize("released", [False, True])
+def test_training_only_display_requires_fit_release_and_never_claims_evaluation(tmp_path, capsys, released):
+    (tmp_path / "input").mkdir()
+    control.write(tmp_path / "input/config.json", {
+        "execution_scope": "training_only", "models": ["lstm"], "seed": 0, "batch_size": 256,
+    })
+    control.write(tmp_path / "controller.json", {
+        "status": "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL", "stage": "fit",
+    })
+    control.write(tmp_path / "completion.json", {
+        "status": "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL",
+        "fit_release": {"released": released},
+    })
+    cli.display(cli.snapshot(tmp_path))
+    output = capsys.readouterr().out
+    assert "할당 반납 확인: " + str(released) in output
+    assert "보정·개발 평가: 미실행" in output
+    assert "training-report.txt" in output
+    assert "evaluation/metrics.json" not in output
 
 
 @pytest.fixture

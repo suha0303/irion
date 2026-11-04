@@ -12,8 +12,8 @@ def test_four_real_categories_and_no_category_aliases():
         p.name
         for p in ROOT.iterdir()
         if p.is_dir() and not p.is_symlink() and not p.name.startswith(".")
-        # User-created commit export copies are not a fifth runtime category.
-        and p.name != "commit-bundles"
+        # Published UI/student records and export copies are separate from runtime categories.
+        and p.name not in {"commit-bundles", "UI", "학적"}
     }
     assert actual == {"simulation", "Data", "ai", "docs"}
     assert all(not (ROOT / name).is_symlink() for name in ("sim", "profiles", "contracts", "vendor"))
