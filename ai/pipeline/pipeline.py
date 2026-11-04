@@ -234,14 +234,15 @@ def calibrate_and_seal(dataset, models, out, budget):
     budget.check()
 
 
-def seal_development(canonical, bundle, calibration, target, *, predictor=None):
+def seal_development(canonical, bundle, calibration, target, *, predictor=None, prediction_batch_size=1):
     """Zero airborne exposure is an unavailable case, never a dropped case or healthy zero."""
     frames = [json.loads(s) for s in (canonical / "frames.jsonl").read_text().splitlines()]
     if any(f["operating_state"] == "airborne" for f in frames):
         # Existing replay handles zero windows with positive airborne exposure.
         if predictor is None:
-            return replay(canonical, bundle, calibration, target)
-        return replay(canonical, bundle, calibration, target, predictor=predictor)
+            return replay(canonical, bundle, calibration, target, prediction_batch_size=prediction_batch_size)
+        return replay(canonical, bundle, calibration, target, predictor=predictor,
+                      prediction_batch_size=prediction_batch_size)
     summary = read(canonical / "summary.json")
     target.mkdir(parents=True, exist_ok=False)
     for name in ("forecasts.jsonl", "decisions.jsonl"):
