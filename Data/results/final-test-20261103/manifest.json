@@ -1,0 +1,25 @@
+{
+  "schema": "irion.result-distribution/1",
+  "packaged_date_kst": "2026-11-04",
+  "files": {
+    "completion-report.json": {
+      "source": "Data/operations/pretrain/monitoring/final-20261103-185815/completion-report.json",
+      "source_sha256": "d3f6666b895b428e5611c4388d7749df6cb822a408031a64058477cb916bca2f",
+      "sha256": "d3f6666b895b428e5611c4388d7749df6cb822a408031a64058477cb916bca2f",
+      "bytes": 8280
+    },
+    "seal.json": {
+      "source": "Data/processed/final-test/final-20261103-185815/seal.json",
+      "source_sha256": "dc55c16c9f4089475febe72dca08da15b5abc84a2b4ff0d1355e71af07636835",
+      "sha256": "dc55c16c9f4089475febe72dca08da15b5abc84a2b4ff0d1355e71af07636835",
+      "bytes": 136
+    },
+    "sealed-manifest.json.gz": {
+      "source": "Data/processed/final-test/final-20261103-185815/sealed-manifest.json",
+      "source_sha256": "6cb1163f0527a572d0414ccfaec6dbae0f154a05d853d6a17ce5ce5cf82bac7c",
+      "sha256": "1bfd21c7a63d3970f12caa9c26120ea96c60e635fe89842fe1a0c85a7a695d66",
+      "bytes": 4206248,
+      "encoding": "gzip; source hash applies after decompression"
+    }
+  }
+}
