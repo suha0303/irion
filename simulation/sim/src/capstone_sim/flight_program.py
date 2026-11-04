@@ -52,8 +52,8 @@ def validate_program(p, validate_path):
         from .random_flight import validate
 
         return validate(p)
-    if p["duration_s"] not in (180, 900) or p["kind"] != "mixed":
-        raise ValueError("Finite180/900s flight program required")
+    if p["duration_s"] not in (180, 480, 900) or p["kind"] != "mixed":
+        raise ValueError("Finite180/480/900s flight program required")
     if p["radius"] > 1.2 or p["omega"] > 0.08 or not isinstance(p["program"], list):
         raise ValueError("Program motion bound exceeded")
     if p["kind"] == "mixed":

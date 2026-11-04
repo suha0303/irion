@@ -176,6 +176,8 @@ def main():
     r.add_argument("--scenario", choices=list(SCENARIOS), default="hover_normal")
     r.add_argument("--seed", type=int, default=17)
     r.add_argument("--normal-variation-json", help="Frozen healthy conditions and smooth path JSON")
+    r.add_argument("--operation-variation", help="Frozen health-independent conditions/path JSON for collection")
+    r.add_argument("--fault-after-mission-s", type=float, help="Dynamic onset seconds after airborne path zero")
     r.add_argument("--real-time-factor", type=int, choices=(2, 3, 4, 8), default=2)
     r.add_argument("--duration", type=float, default=90)
     r.add_argument("--instance", type=int, default=0)
@@ -276,6 +278,8 @@ def main():
                 capture_interval_ms=a.capture_interval_ms,
                 fault_at_s=a.fault_at_s,
                 configuration=a.configuration,
+                operation_variation=json.loads(a.operation_variation) if a.operation_variation else None,
+                fault_after_mission_s=a.fault_after_mission_s,
                 normal_variation=json.loads(a.normal_variation_json)
                 if a.normal_variation_json
                 else None,

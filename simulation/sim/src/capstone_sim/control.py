@@ -33,7 +33,10 @@ def control(
         same_scenario = selected_scenario == old["name"]
         options = dict(real_time_factor=old.get("requested_real_time_factor", 2))
         if same_scenario:
-            options["fault_at_s"] = old.get("parameters", {}).get("fault_at")
+            if old.get("fault_after_mission_s") is not None:
+                options["fault_after_mission_s"] = old["fault_after_mission_s"]
+            else:
+                options["fault_at_s"] = old.get("parameters", {}).get("fault_at")
         if state.get("configuration", "").startswith("vehicle_profile:"):
             from .recording import verify_generic_metadata
             from .vehicle_runtime import read_prepared
@@ -68,6 +71,7 @@ def control(
                 state["run_id"],
                 configuration="collection",
                 normal_variation=old.get("normal_variation") if same_scenario else None,
+                operation_variation=old.get("operation_variation") if same_scenario else None,
                 **options,
             )
         if state.get("configuration"):
