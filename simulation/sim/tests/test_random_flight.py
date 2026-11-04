@@ -309,7 +309,7 @@ class RandomFlightTest(unittest.TestCase):
                 reached_t=1.0,
                 next_send_us=0,
                 cfg={"mission": "hover"},
-                normal_variation=spec,
+                flight_variation=spec,
                 conn=SimpleNamespace(
                     target_system=1,
                     mav=SimpleNamespace(

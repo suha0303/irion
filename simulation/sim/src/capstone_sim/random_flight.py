@@ -53,8 +53,8 @@ def minimum_speed(a, b):
 
 
 def build(spec, seed, duration):
-    if type(duration) not in (int, float) or duration not in (180, 900):
-        raise ValueError("Random flight requires 180 or 900 seconds")
+    if type(duration) not in (int, float) or duration not in (180, 480, 900):
+        raise ValueError("Random flight requires 180, 480 or 900 seconds")
     limits = dict(LIMITS, horizontal_speed_mps=speed_limit(spec))
     if not 1 <= limits["horizontal_speed_mps"] <= 3:
         raise ValueError("Wind budget outside supported random flight limits")
@@ -147,8 +147,8 @@ def metrics(path):
 def validate(path):
     if set(path) != FIELDS or path.get("revision") != REVISION or path.get("kind") != "random":
         raise ValueError("Retired random path; regenerate with random-continuous-v3")
-    if type(path["duration_s"]) not in (int, float) or path["duration_s"] not in (180, 900):
-        raise ValueError("Random flight duration must be 180/900 seconds")
+    if type(path["duration_s"]) not in (int, float) or path["duration_s"] not in (180, 480, 900):
+        raise ValueError("Random flight duration must be 180/480/900 seconds")
     limits = path["limits"]
     if not isinstance(limits, dict) or limits.keys() != LIMITS.keys():
         raise ValueError("Exact random flight limits required")

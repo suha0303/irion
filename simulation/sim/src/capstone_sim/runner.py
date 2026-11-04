@@ -350,12 +350,21 @@ def run_flight(
     real_time_factor=2,
     vehicle_profile=None,
     gui_preview=False,
+    operation_variation=None,
+    fault_after_mission_s=None,
 ):
     custom = vehicle_profile is not None
     prepared: Any = None
     selected: Any = None
+    if normal_variation is not None and operation_variation is not None:
+        raise ValueError("Normal and operation variation are mutually exclusive")
+    if configuration != "collection" and (
+        operation_variation is not None or fault_after_mission_s is not None
+    ):
+        raise ValueError("Operation variation and mission onset require collection X500")
+    flight_variation = operation_variation if operation_variation is not None else normal_variation
     if custom:
-        if configuration is not None or normal_variation is not None:
+        if configuration is not None or flight_variation is not None:
             raise ValueError(
                 "Custom vehicle profile cannot be mixed with X500 configuration/variation"
             )
@@ -370,7 +379,11 @@ def run_flight(
     if configuration not in (None, "collection"):
         raise ValueError("unknown X500 configuration")
     if configuration:
-        collection_config.validate_request(scenario, duration, fault_at_s)
+        collection_config.validate_request(
+            scenario, duration, fault_at_s,
+            operation_variation=operation_variation,
+            fault_after_mission_s=fault_after_mission_s,
+        )
         collection_config.assert_frozen()
         if not collection_config.PLUGIN.is_file():
             raise FileNotFoundError("Collection plugin not built")
@@ -387,7 +400,13 @@ def run_flight(
             raise ValueError("Variation applies only to healthy Collection normal runs")
         if normal_variation["soc"] < 0.6 and duration > 180:
             raise ValueError("Low-SOC variation requires <=180s duration")
-        parameters.update({k: v for k, v in normal_variation.items() if k != "path"})
+    if flight_variation is not None:
+        parameters.update({k: v for k, v in flight_variation.items() if k != "path"})
+    if operation_variation is not None:
+        parameters["mission"] = operation_variation["path"]["kind"]
+    if fault_after_mission_s is not None:
+        # The native fault stays disabled until airborne/path zero is acknowledged.
+        parameters.update(fault_at=-1, fault_after_mission_s=fault_after_mission_s)
     if not BINARY.exists():
         raise FileNotFoundError("PX4 not built")
     if not math.isfinite(duration) or duration <= 0 or duration > 1800:
@@ -548,6 +567,9 @@ def run_flight(
                     "policy": "phase_locked_skip_missed_slots",
                 },
                 "normal_variation": normal_variation,
+                "operation_variation": operation_variation,
+                "fault_after_mission_s": fault_after_mission_s,
+                "fault_schedule": None,
                 "producer_lock": str(collection_config.producer_lock_path().relative_to(ROOT)) if strict else None,
                 "producer_lock_sha256": sha(collection_config.producer_lock_path()) if strict else None,
             },
@@ -656,6 +678,7 @@ def run_flight(
         for k, v in cfg.items():
             env["X500_" + k.upper()] = str(v)
         processes = []
+        fault_request = None
         logs = []
         conn = None
         fc_socket = Path(f"/tmp/px4-sock-{instance}")
@@ -711,13 +734,13 @@ def run_flight(
             world = prepare_world(
                 run, cfg["payload"], sensor_override, configuration, real_time_factor
             )
-        if normal_variation is not None and normal_variation["path"]["kind"] == "random":
-            state["ground_support"] = prepare_random_ground(world, normal_variation["path"])
+        if flight_variation is not None and flight_variation["path"]["kind"] == "random":
+            state["ground_support"] = prepare_random_ground(world, flight_variation["path"])
         gazebo_args = ["gz", "sim", "-r", "-s", "--seed", str(seed), str(world)]
         if gui_preview:
             from .preview import prepare_gui
 
-            gui_config = prepare_gui(run, world, normal_variation)
+            gui_config = prepare_gui(run, world, flight_variation)
             gazebo_args = [arg for arg in gazebo_args if arg != "-s"]
             gazebo_args.extend(["--gui-config", str(gui_config)])
         px4_etc = PX4 / "build/px4_sitl_default/etc"
@@ -840,6 +863,15 @@ def run_flight(
                 transition("simulator_ready")
                 ready_sim = True
             next_capture_ns = service_capture(recorder, next_capture_ns, capture_interval_ns)
+            if fault_request is not None:
+                schedule = fault_request.poll()
+                if schedule is not None:
+                    cfg["fault_at"] = schedule["scheduled_time_us"] / 1e6
+                    parameters["fault_at"] = cfg["fault_at"]
+                    metadata_path = run / "evaluation/scenario.json"
+                    scenario_metadata = json.loads(metadata_path.read_text())
+                    scenario_metadata.update(parameters=cfg, fault_schedule=schedule)
+                    dump(metadata_path, scenario_metadata)
             batch = receive_before_capture(conn, next_capture_ns)
             next_capture_ns = service_capture(recorder, next_capture_ns, capture_interval_ns)
             for msg in batch:
@@ -946,15 +978,15 @@ def run_flight(
                 target_xyz = (x, y, z)
                 velocity = acceleration = (0.0, 0.0, 0.0)
                 position_mask = 0b100111111000
-                if normal_variation is not None and phase == "flying":
+                if flight_variation is not None and phase == "flying":
                     from .normal_variation import target
 
-                    x, y, z, yaw = target(t, normal_variation)
+                    x, y, z, yaw = target(t, flight_variation)
                     target_xyz = (x, y, z)
-                    if normal_variation["path"]["kind"] == "random":
+                    if flight_variation["path"]["kind"] == "random":
                         from .random_flight import kinematics
 
-                        _, v, a = kinematics(t, normal_variation["path"])
+                        _, v, a = kinematics(t, flight_variation["path"])
                         velocity, acceleration = v[:3], a[:3]
                         # Position with analytic velocity/acceleration feed-forward.
                         # Preserve existing cadence and tracking acceptance limits.
@@ -999,6 +1031,10 @@ def run_flight(
             if phase == "flying" and position.z < -2.5 and reached_t is None:
                 reached_t = now
                 transition("airborne", sim_time=now)
+                if fault_after_mission_s is not None:
+                    from .fault_schedule import MissionFaultRequest
+
+                    fault_request = MissionFaultRequest(reached_t, fault_after_mission_s, env)
             if phase == "flying" and reached_t and now - reached_t > 2:
                 if mode != 6:
                     raise RuntimeError(f"mission mode left OFFBOARD: {mode}")
@@ -1088,6 +1124,11 @@ def run_flight(
                 raise TimeoutError("landing timeout")
         if not success:
             raise TimeoutError("run wall-clock timeout")
+        if fault_after_mission_s is not None and (
+            fault_request is None or not fault_request.finished
+        ):
+            success = False
+            raise RuntimeError("Mission completed without acknowledged native fault schedule")
         state["termination_reason"] = "mission_landed_disarmed"
     except (RuntimeError, TimeoutError, OSError, ValueError, KeyboardInterrupt) as exc:
         state["termination_reason"] = str(exc)
@@ -1099,6 +1140,11 @@ def run_flight(
     finally:
         # Cleanup must precede every finalization write: the output filesystem may fail.
         cleanup_errors = []
+        if fault_request is not None:
+            try:
+                fault_request.close()
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                cleanup_errors.append(str(exc))
         if conn:
             try:
                 conn.close()
@@ -1190,6 +1236,20 @@ def run_flight(
                     if "fault" in cfg
                     else (truth[0]["time_us"] if truth else None)
                 )
+                if fault_after_mission_s is not None:
+                    from .fault_schedule import complete_evidence
+
+                    scenario_path = run / "evaluation/scenario.json"
+                    scenario_metadata = json.loads(scenario_path.read_text())
+                    schedule = scenario_metadata.get("fault_schedule")
+                    if schedule is not None:
+                        schedule["applied_time_us"] = applied
+                    try:
+                        scenario_metadata["fault_schedule"] = complete_evidence(schedule, applied, duration)
+                    except ValueError as exc:
+                        record_secondary_failure(state, "fault_schedule_failure", exc)
+                        dump(run / "run.json", state)
+                    dump(scenario_path, scenario_metadata)
                 if applied is not None:
                     events.append(
                         {
