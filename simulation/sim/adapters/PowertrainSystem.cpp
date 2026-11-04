@@ -1,6 +1,7 @@
 #include "aerodynamics.hpp"
 #include "command.hpp"
 #include "control.hpp"
+#include "fault_schedule.hpp"
 #include "powertrain.hpp"
 #include "sensor.hpp"
 #include "wind.hpp"
@@ -35,6 +36,7 @@ class PowertrainSystem : public gz::sim::System,
   std::mutex mutex;
   std::ofstream truth, control_events, command_trace, sensor_trace;
   Changes changes;
+  MissionFaultSchedule mission_fault;
   gz::math::Vector3d wind{}, gust{};
   Wind turbulence{17, 0};
   double time = 0, last_log = -1, last_wind = -1;
@@ -124,6 +126,8 @@ public:
     const char *f = std::getenv("X500_FAULT");
     if (f)
       fault = f;
+    if (const char *offset = std::getenv("X500_FAULT_AFTER_MISSION_S"))
+      mission_fault.configure(std::stod(offset), fault_at, fault);
     const char *path = std::getenv("X500_TRUTH_PATH");
     if (!path)
       throw std::runtime_error("X500_TRUTH_PATH required");
@@ -141,8 +145,27 @@ public:
                    &PowertrainSystem::change, this);
     node.Advertise("/" + name + "/change_status",
                    &PowertrainSystem::change_status, this);
+    node.Advertise("/" + name + "/schedule_fault",
+                   &PowertrainSystem::schedule_fault, this);
     battery =
         node.Advertise<gz::msgs::Double_V>("/" + name + "/battery_sensor");
+  }
+  bool schedule_fault(const gz::msgs::Double_V &req, gz::msgs::Double_V &reply) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (req.data_size() != 2 || req.data(0) != 1) {
+      reply.add_data(-1);
+      return true;
+    }
+    try {
+      const auto onset = mission_fault.schedule(
+          req.data(1), static_cast<long long>(std::llround(time * 1e6)));
+      fault_at = static_cast<double>(onset) / 1e6;
+      reply.add_data(0);
+      reply.add_data(static_cast<double>(onset));
+    } catch (const std::invalid_argument &) {
+      reply.add_data(-1);
+    }
+    return true;
   }
   bool change(const gz::msgs::Double_V &req, gz::msgs::Double_V &reply) {
     std::lock_guard<std::mutex> lock(mutex);
@@ -233,11 +256,13 @@ public:
     double t = std::chrono::duration<double>(info.simTime).count();
     double dt = std::chrono::duration<double>(info.dt).count();
     Four command;
+    double scheduled_fault_at;
     {
       std::lock_guard<std::mutex> lock(mutex);
       if (t < time)
         throw std::runtime_error("clock reset requires a new run identity");
       time = t;
+      scheduled_fault_at = fault_at;
       for (const auto &r :
            changes.apply(core, static_cast<long long>(t * 1e6))) {
         control_events << "{\"request_id\":" << r.change.id
@@ -263,9 +288,9 @@ public:
       if (bench_axis >= 0)
         command = bench_axis == 2 ? Four{.4, .4, 0, 0} : Four{0, 0, 0, 0};
     }
-    if (fault_at >= 0 && t >= fault_at && (!applied || ramp_s > 0)) {
+    if (scheduled_fault_at >= 0 && t >= scheduled_fault_at && (!applied || ramp_s > 0)) {
       double fraction =
-          ramp_s > 0 ? std::clamp((t - fault_at) / ramp_s, 0., 1.) : 1.;
+          ramp_s > 0 ? std::clamp((t - scheduled_fault_at) / ramp_s, 0., 1.) : 1.;
       if (fault == "r0") {
 #ifdef DRONE_PROFILE_HEADER
         core.p.r0 = profile::interconnect_resistance +
