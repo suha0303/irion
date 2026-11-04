@@ -1,0 +1,246 @@
+{
+  "status": "VERIFIED_FINAL_DATASET_SEALED_STOPPED",
+  "checked_utc": "2026-11-03T12:25:53.920946+00:00",
+  "task": "final-20261103-185815",
+  "design_revision": "final324-diverse-v2",
+  "manifest": "/home/sa/CapstoneV3/Data/processed/final-test/final-20261103-185815/sealed-manifest.json",
+  "manifest_sha256": "6cb1163f0527a572d0414ccfaec6dbae0f154a05d853d6a17ce5ce5cf82bac7c",
+  "planned_cases_sha256": "82952135389bd3f55981e14cf5693d94d66f793dc2470aef39e1259d01e34b60",
+  "cohorts": {
+    "standalone_normal": 108,
+    "paired_control": 108,
+    "anomaly": 108
+  },
+  "pairs": 108,
+  "lineage_groups": 216,
+  "condition_counts": {
+    "standalone_normal": {
+      "motion": {
+        "vertical": 18,
+        "yaw": 18,
+        "random": 18,
+        "composite": 18,
+        "hover": 18,
+        "horizontal": 18
+      },
+      "environment": {
+        "cold": 18,
+        "wind": 18,
+        "low_soc": 18,
+        "middle_soc": 18,
+        "payload": 18,
+        "reference": 18
+      },
+      "planned_mission_seconds": 46440
+    },
+    "paired_control": {
+      "motion": {
+        "horizontal": 18,
+        "vertical": 18,
+        "yaw": 18,
+        "hover": 18,
+        "composite": 18,
+        "random": 18
+      },
+      "environment": {
+        "middle_soc": 18,
+        "reference": 18,
+        "cold": 18,
+        "wind": 18,
+        "low_soc": 18,
+        "payload": 18
+      },
+      "planned_mission_seconds": 46440
+    },
+    "anomaly": {
+      "motion": {
+        "yaw": 18,
+        "vertical": 18,
+        "composite": 18,
+        "horizontal": 18,
+        "random": 18,
+        "hover": 18
+      },
+      "environment": {
+        "cold": 18,
+        "payload": 18,
+        "middle_soc": 18,
+        "wind": 18,
+        "reference": 18,
+        "low_soc": 18
+      },
+      "planned_mission_seconds": 46440
+    }
+  },
+  "phase_counts": {
+    "final-extract": {
+      "COMPLETE": 324
+    },
+    "final-preprocess": {
+      "COMPLETE": 324
+    },
+    "final-quality": {
+      "COMPLETE": 324
+    }
+  },
+  "quality": {
+    "standalone_normal": {
+      "runs": 108,
+      "accepted_targets": 43074,
+      "zero_target_runs": 0,
+      "observed_airborne_seconds": 48787.4,
+      "valid_airborne_seconds": 48713.7,
+      "duplicate_frame_ids": 0,
+      "duplicate_window_ids": 0
+    },
+    "paired_control": {
+      "runs": 108,
+      "accepted_targets": 43057,
+      "zero_target_runs": 0,
+      "observed_airborne_seconds": 48777.3,
+      "valid_airborne_seconds": 48704.2,
+      "duplicate_frame_ids": 0,
+      "duplicate_window_ids": 0
+    },
+    "anomaly": {
+      "runs": 108,
+      "accepted_targets": 43100,
+      "zero_target_runs": 0,
+      "observed_airborne_seconds": 48815.7,
+      "valid_airborne_seconds": 48741.9,
+      "duplicate_frame_ids": 0,
+      "duplicate_window_ids": 0
+    }
+  },
+  "flight_retries": [
+    {
+      "case_id": "F324v2_standalone_normal_wind_normal_709151414",
+      "run_id": "0e38b221fa264ab99cae7b1636edfd4e",
+      "attempt": 2,
+      "previous_attempts": [
+        {
+          "attempt": 1,
+          "run_id": "33ec6d988b2c49c8a330df714918197c",
+          "evidence": "/home/sa/CapstoneV3/Data/operations/pretrain/tasks/final-20261103-185815/final-collection/execution/F324v2_standalone_normal_wind_normal_709151414/attempt-result.json",
+          "error": "Stop: Command exit 4: /home/sa/CapstoneV3/simulation/capstone-sim"
+        }
+      ]
+    },
+    {
+      "case_id": "F324v2_standalone_normal_wind_normal_709151448",
+      "run_id": "ac86e1d5638d400db80bc3ca512a28f1",
+      "attempt": 2,
+      "previous_attempts": [
+        {
+          "attempt": 1,
+          "run_id": "06411a9e2ccd47a3a26fd989cdb12b03",
+          "evidence": "/home/sa/CapstoneV3/Data/operations/pretrain/tasks/final-20261103-185815/final-collection/execution/F324v2_standalone_normal_wind_normal_709151448/attempt-result.json",
+          "error": "Stop: Command exit 4: /home/sa/CapstoneV3/simulation/capstone-sim; producer flying: recording_stalled: PX4 clock advanced but raw capture did not"
+        }
+      ]
+    },
+    {
+      "case_id": "F324v2_anomaly_battery_resistance_ramp_709152381",
+      "run_id": "38ee05ab33b7404bb64e1cc16bf30749",
+      "attempt": 2,
+      "previous_attempts": [
+        {
+          "attempt": 1,
+          "run_id": "3b21f4d3aa574ab7b70232d9024f55b6",
+          "evidence": "/home/sa/CapstoneV3/Data/operations/pretrain/tasks/final-20261103-185815/final-collection/execution/F324v2_anomaly_battery_resistance_ramp_709152381/attempt-result.json",
+          "error": "Stop: Command exit 4: /home/sa/CapstoneV3/simulation/capstone-sim"
+        }
+      ]
+    }
+  ],
+  "cpu_unit_retries": [
+    {
+      "phase": "final-preprocess",
+      "run_id": "947e93ebde124a88a3986b70b585c36d",
+      "attempts": 2,
+      "status": "COMPLETE",
+      "previous_failures": [
+        {
+          "attempt": 1,
+          "error": "947e93ebde124a88a3986b70b585c36d: exit-11: missing completion proof",
+          "exit_code": -11,
+          "evidence": "/home/sa/CapstoneV3/Data/operations/pretrain/tasks/final-20261103-185815/units/final-preprocess/attempts/947e93ebde124a88a3986b70b585c36d/attempt-01"
+        }
+      ]
+    },
+    {
+      "phase": "final-preprocess",
+      "run_id": "6b6ed000c30f4002a9169557a929ab3f",
+      "attempts": 2,
+      "status": "COMPLETE",
+      "previous_failures": [
+        {
+          "attempt": 1,
+          "error": "6b6ed000c30f4002a9169557a929ab3f: exit-11: missing completion proof",
+          "exit_code": -11,
+          "evidence": "/home/sa/CapstoneV3/Data/operations/pretrain/tasks/final-20261103-185815/units/final-preprocess/attempts/6b6ed000c30f4002a9169557a929ab3f/attempt-01"
+        }
+      ]
+    },
+    {
+      "phase": "final-preprocess",
+      "run_id": "417be72f7c2a45bdb788842d153b22cd",
+      "attempts": 2,
+      "status": "COMPLETE",
+      "previous_failures": [
+        {
+          "attempt": 1,
+          "error": "417be72f7c2a45bdb788842d153b22cd: exit-11: missing completion proof",
+          "exit_code": -11,
+          "evidence": "/home/sa/CapstoneV3/Data/operations/pretrain/tasks/final-20261103-185815/units/final-preprocess/attempts/417be72f7c2a45bdb788842d153b22cd/attempt-01"
+        }
+      ]
+    },
+    {
+      "phase": "final-preprocess",
+      "run_id": "8e482be026f4442cb1353e248233645f",
+      "attempts": 2,
+      "status": "COMPLETE",
+      "previous_failures": [
+        {
+          "attempt": 1,
+          "error": "8e482be026f4442cb1353e248233645f: exit-11: missing completion proof",
+          "exit_code": -11,
+          "evidence": "/home/sa/CapstoneV3/Data/operations/pretrain/tasks/final-20261103-185815/units/final-preprocess/attempts/8e482be026f4442cb1353e248233645f/attempt-01"
+        }
+      ]
+    },
+    {
+      "phase": "final-preprocess",
+      "run_id": "f1d5ca9e2ae047deb6e8f58ce96ef4f3",
+      "attempts": 2,
+      "status": "COMPLETE",
+      "previous_failures": [
+        {
+          "attempt": 1,
+          "error": "f1d5ca9e2ae047deb6e8f58ce96ef4f3: exit1: SystemError: /home/sa/CapstoneV3/Data/generation/pretrain/resources/preprocessing/ai/src/capstone_ai/source.py:32: unknown opcode 188",
+          "exit_code": 1,
+          "evidence": "/home/sa/CapstoneV3/Data/operations/pretrain/tasks/final-20261103-185815/units/final-preprocess/attempts/f1d5ca9e2ae047deb6e8f58ce96ef4f3/attempt-01"
+        }
+      ]
+    }
+  ],
+  "retry_policy": "Each unit max3; all retried units succeeded on2nd attempt; failure and partial-output evidence retained",
+  "whole_task_restarted": false,
+  "code_or_plan_changed_during_task": false,
+  "model_training_performed": false,
+  "scaler_fit_performed": false,
+  "calibration_performed": false,
+  "model_performance_evaluation_performed": false,
+  "zero_target_runs": [],
+  "runtime_instability_resolved": false,
+  "runtime_note": "Four preprocessing SIGSEGV and one unknownopcode failure; each succeeded on2nd attempt; passing finalquality is not proof the underlying interpreter/runtime issue is fixed",
+  "service": "active/exited MainPID0 Resultsuccess",
+  "locks": {
+    "Data/operations/pretrain/pretrain.lock": "FREE",
+    "Data/operations/collection.lock": "FREE"
+  },
+  "previous_duplicate_cleanup": "cleanup-completion-report.json",
+  "disk_free_bytes": 137402699776,
+  "errors": []
+}
