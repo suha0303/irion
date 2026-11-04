@@ -78,6 +78,65 @@ def duration_for(plan, case):
     return case.get("mission_seconds", plan["mission_seconds"])
 
 
+def validate_case_conditions(plan, case):
+    """Keep the new final-test operating axes separate from fault parameters."""
+    variation = case.get("operation_variation")
+    onset = case.get("fault_after_mission_s")
+    final = plan.get("collection_profile") == "final324"
+    if variation is not None and case.get("normal_variation") is not None:
+        raise Stop("Normal and operation variation are mutually exclusive")
+    if onset is not None and case.get("fault_at_s") is not None:
+        raise Stop("Boot and mission-relative fault schedules are mutually exclusive")
+    if not final:
+        if variation is not None or onset is not None:
+            raise Stop("Operating variation and mission-relative faults require final324")
+        return
+    if (
+        plan.get("protocol") != COLLECTION_PROTOCOL
+        or plan.get("phase") != "collection"
+        or plan.get("dataset_purpose") != "locked_final_test"
+        or case["role"] not in {"normal_test", "anomaly_test"}
+    ):
+        raise Stop("Final operating conditions require the locked collection test partition")
+    fields = {"soc", "temperature", "payload", "wind_e", "wind_n", "gust_sigma", "path"}
+    if not isinstance(variation, dict) or set(variation) != fields:
+        raise Stop("Exact operation variation fields required; health/fault overrides forbidden")
+    if any(
+        type(variation[key]) not in (int, float) or not math.isfinite(variation[key])
+        for key in fields - {"path"}
+    ) or not isinstance(variation["path"], dict):
+        raise Stop("Finite explicit operating conditions/path required")
+    if not (
+        0.4 <= variation["soc"] <= 0.95
+        and 283.15 <= variation["temperature"] <= 303.15
+        and 0 <= variation["payload"] <= 0.2
+        and 0 <= variation["gust_sigma"] <= 0.4
+        and math.hypot(variation["wind_e"], variation["wind_n"]) <= 2.000001
+    ):
+        raise Stop("Operating conditions exceed the existing engineering envelope")
+    seconds = duration_for(plan, case)
+    if seconds != (180 if variation["soc"] < 0.6 else 480):
+        raise Stop("Final low-SOC operation requires180s; other conditions require480s")
+    dynamic = case["scenario"] in {
+        "battery_resistance_step",
+        "battery_resistance_ramp",
+        "propulsion_loss_step",
+        "propulsion_loss_ramp",
+    }
+    if case.get("fault_at_s") is not None:
+        raise Stop("Final dynamic anomalies require a mission-relative fault schedule")
+    if dynamic:
+        if (
+            case["role"] != "anomaly_test"
+            or type(onset) not in (int, float)
+            or not math.isfinite(onset)
+            or not 0 < onset < seconds
+        ):
+            raise Stop("Final dynamic anomaly requires a finite in-mission fault onset")
+    elif onset is not None:
+        raise Stop("Mission-relative fault onset only applies to dynamic anomalies")
+
+
 def memory_used(snapshot):
     return max(
         snapshot["owned_tree_rss_bytes"],
@@ -776,7 +835,12 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
             or case.get("retries", 0)
         ):
             raise Stop("Duration drift/retry forbidden")
-        if collection and plan["phase"] != "benchmark":
+        validate_case_conditions(plan, case)
+        if (
+            collection
+            and plan["phase"] != "benchmark"
+            and plan.get("collection_profile") != "final324"
+        ):
             seconds = case.get("mission_seconds", duration)
             if (case["scenario"] == "low_soc_normal") != (seconds == 180):
                 raise Stop("Collection low-SOC requires180s; other scenarios cannot use180s")
@@ -1461,10 +1525,17 @@ def _execute_locked(plan, cases, process_helper):
                         args += ["--timing"]
                     if case.get("fault_at_s") is not None:
                         args += ["--fault-at-s", str(case["fault_at_s"])]
+                    if case.get("fault_after_mission_s") is not None:
+                        args += ["--fault-after-mission-s", str(case["fault_after_mission_s"])]
                     if case.get("normal_variation") is not None:
                         args += [
                             "--normal-variation-json",
                             json.dumps(case["normal_variation"], sort_keys=True),
+                        ]
+                    if case.get("operation_variation") is not None:
+                        args += [
+                            "--operation-variation",
+                            json.dumps(case["operation_variation"], sort_keys=True),
                         ]
                     tick = time.monotonic()
                     record["flight_started_monotonic"] = tick
@@ -1507,6 +1578,10 @@ def _execute_locked(plan, cases, process_helper):
                         raise Stop("Unexpected retry/continuation")
                     if scenario.get("requested_duration_s") != duration_for(plan, case):
                         raise Stop("Producer mission duration mismatch")
+                    if scenario.get("operation_variation") != case.get(
+                        "operation_variation"
+                    ) or scenario.get("fault_after_mission_s") != case.get("fault_after_mission_s"):
+                        raise Stop("Producer operation conditions/fault schedule mismatch")
                     if (
                         plan.get("speed_comparison")
                         and scenario.get("requested_real_time_factor")

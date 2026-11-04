@@ -805,6 +805,10 @@ class Runner:
             from .audit_recovery import finish_audit
 
             finish_audit(self)
+        elif self.config.get("collection_profile") == "final324":
+            from .final_dataset import run
+
+            run(self)
         else:
             if self.config["mode"] == "collect":
                 count = self.config["flight_workers"]
@@ -854,7 +858,9 @@ class Runner:
                 raise ValueError("Only new collection and fresh tests may execute")
         verify(self.config["source_sha256"])
         self.update(
-            status="TEST_COMPLETE_STOPPED"
+            status="FINAL_DATASET_SEALED_STOPPED"
+            if self.state.get("final_dataset_sealed")
+            else "TEST_COMPLETE_STOPPED"
             if self.config["mode"] == "test"
             else "PRETRAIN_COMPACT_READY_STOPPED_RESTORE_REQUIRED"
             if self.state.get("dataset_requires_restore")

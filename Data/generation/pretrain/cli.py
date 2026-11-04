@@ -76,8 +76,10 @@ def snapshot(task):
     # Older successful flight tasks cleared the ledger before copying its count.
     # Repair the view only; preserve the original evidence files.
     if state["status"] in {
-        "TEST_COMPLETE_STOPPED", "PRETRAIN_READY_STOPPED_PENDING_USER_REVIEW",
+        "TEST_COMPLETE_STOPPED",
+        "PRETRAIN_READY_STOPPED_PENDING_USER_REVIEW",
         "PRETRAIN_COMPACT_READY_STOPPED_RESTORE_REQUIRED",
+        "FINAL_DATASET_SEALED_STOPPED",
     }:
         for stage in state.get("stages", []):
             if stage["name"] == state.get("stage"):
@@ -114,6 +116,7 @@ def render(task, tick=0):
         "TEST_COMPLETE_STOPPED",
         "PRETRAIN_READY_STOPPED_PENDING_USER_REVIEW",
         "PRETRAIN_COMPACT_READY_STOPPED_RESTORE_REQUIRED",
+        "FINAL_DATASET_SEALED_STOPPED",
     }
     if config["mode"] == "test":
         planned = len(config["levels"]) * (
@@ -150,6 +153,8 @@ def render(task, tick=0):
         planned += 1
     if state.get("planned_stage_count"):
         planned = state["planned_stage_count"]
+    elif config.get("collection_profile") == "final324":
+        planned = 5
     overall = (
         "완료 100%"
         if complete
@@ -196,6 +201,11 @@ def render(task, tick=0):
         "설정   " + settings,
         f"현재   {state.get('stage', '-')}  |  완료 단계 {len(state.get('completed', []))}/{planned}  (시간 진행률 아님)",
     ]
+    if config.get("collection_profile") == "final324":
+        lines[4] = "흐름   최종324run 수집 → 인수 → 관측 추출 → 전처리 → 독립 품질검산·봉인 → 정지"
+        lines.append(
+            "최종 시험   별도 정상108 / paired 대조108 / 이상108 · scaler fit·학습·보정·성능평가 없음"
+        )
     storage = state.get("storage_relocation", {}).get(
         "storage_root", config.get("external_storage")
     )
@@ -421,6 +431,9 @@ def create(args):
         raise ValueError("게이트는 신규 수집 모드에서만 선택합니다")
     if args.collection_sets < 1 or (args.collection_sets != 1 and args.mode != "collect"):
         raise ValueError("수집 묶음 수는 collect 모드의 양의 정수입니다")
+    final = args.collection_profile == "final324"
+    if final and (args.mode != "collect" or args.collection_sets != 1 or args.gates):
+        raise ValueError("최종 평가 수집은 collect·324run 1묶음·별도 게이트 없음으로 고정합니다")
     # Reserve room for16-way benchmark programs and optional gate seeds as well.
     seed_max = 2**31 - 20_000 - seed_stride(args.collection_profile) * args.collection_sets
     if seed_max < 0:
@@ -527,6 +540,10 @@ def create(args):
         )
         config["planned_cases"] = str(task / "planned-cases.json")
         config["source_sha256"][config["planned_cases"]] = sha(task / "planned-cases.json")
+        if final:
+            from .final_dataset import configure
+
+            configure(task, config, planned[0])
     write(task / "config.json", config)
     (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
     print("준비됨:", task)
@@ -701,8 +718,10 @@ def existing_task():
 
 
 def menu():
-    print("드론 · 학습 전 통합 CLI (기본 기체 X500)\n1. 테스트  2. 새 수집→전처리  3. 기존 작업 화면  0. 종료")
-    choice = choose("작업", (1, 2, 3, 0), 2)
+    print(
+        "드론 · 학습 전 통합 CLI (기본 기체 X500)\n1. 테스트  2. 새 수집→전처리  3. 기존 작업 화면  4. 최종 평가 데이터324run  0. 종료"
+    )
+    choice = choose("작업", (1, 2, 3, 4, 0), 2)
     if choice == "0":
         return
     if choice == "3":
@@ -714,6 +733,21 @@ def menu():
         args.levels = [input_integer("시험 병렬 수 (1..16 정수)", 2, MAX_FLIGHT_WORKERS)]
         args.test_flights = True
         print("새120초 비행 → 검증·압축 → 추출·전처리 → 집계·독립 검산. 학습에 투입하지 않습니다.")
+    elif choice == "4":
+        args.collection_profile = "final324"
+        args.storage_profile = "standard"
+        args.name = time.strftime("final-%Y%m%d-%H%M%S")
+        print("별도 정상108(6기동×6환경×3) / paired 정상대조108 / 이상108(6종×6기동×3환경)")
+        print("6기동: 호버·상하·수평·회전·복합·난수 · 모든 군 기본8분·저SOC3분 · paired 조건·길이 동일")
+        print("학습용 분할·scaler fit·학습·보정·성능평가 없음 · 원시 압축본과 실패 증거 보존")
+        args.flight_workers = input_integer("비행 병렬 수 (1..16 정수)", 4, MAX_FLIGHT_WORKERS)
+        args.export_workers = input_integer(
+            "검증·압축 병렬 수", min(2, args.flight_workers), args.flight_workers
+        )
+        args.io_workers = input_integer("압축 해제·검증 병렬 수", 2)
+        args.workers = input_integer("전처리 병렬 수", 2)
+        args.audit_workers = input_integer("품질 검산 병렬 수", 2)
+        args.seed_base = input_seed()
     else:
         args.workers = input_integer("전처리 병렬 수", 4)
         args.io_workers = input_integer("압축 해제·검증 병렬 수", 4)
@@ -732,7 +766,11 @@ def menu():
         args.gates = choose("사전 비행·내구 게이트 실행", ("y", "n"), "n") == "y"
         args.seed_base = input_seed()
     print("예상·고정 RSS 제한 해제 · 가용 RAM1GB 보호 · 제출 시 비어 있는 스왑 사용 허용")
-    print("개별 run 최대 3회 시도 · 실패 증거 보존 후 다음 run · 불완전 데이터셋 인수 금지")
+    print(
+        "각run최대3회(최초1+재시도2)·실패 증거 보존·불완전 최종 세트 봉인 금지"
+        if choice == "4"
+        else "개별 run 최대 3회 시도 · 실패 증거 보존 후 다음 run · 불완전 데이터셋 인수 금지"
+    )
     while True:
         try:
             raw = input(f"최종 데이터 저장 폴더 (기본 {selected_root()}): ").strip()
@@ -811,7 +849,7 @@ def parser():
     init.add_argument("--gates", action="store_true")
     init.add_argument(
         "--collection-profile",
-        choices=("balanced300", "diverse104", "train104"),
+        choices=("balanced300", "diverse104", "train104", "final324"),
         default="balanced300",
     )
     init.add_argument(

@@ -4,14 +4,16 @@ from collections import Counter
 
 from .common import package_imports
 
-SIZES = {"legacy50": 50, "train104": 104, "diverse104": 104, "balanced300": 300}
+SIZES = {"legacy50": 50, "train104": 104, "diverse104": 104, "balanced300": 300, "final324": 324}
 
 
 def seed_stride(profile):
-    return 1000 if profile == "balanced300" else 100
+    return 10000 if profile == "final324" else 1000 if profile == "balanced300" else 100
 
 
 def validation_subsets(cases, profile):
+    if profile == "final324":
+        raise ValueError("Final holdout cannot use training/development subset admission")
     if profile not in SIZES or len(cases) != SIZES[profile]:
         raise ValueError("Collection profile/count mismatch")
     if len({c["case_id"] for c in cases}) != len(cases):
@@ -68,6 +70,11 @@ def validation_subsets(cases, profile):
 
 
 def validate_cases(cases, profile):
+    if profile == "final324":
+        from .final_dataset import validate
+
+        validate(cases)
+        return
     package_imports()
     from preprocessing_tools.control import validate_cases as original
 
