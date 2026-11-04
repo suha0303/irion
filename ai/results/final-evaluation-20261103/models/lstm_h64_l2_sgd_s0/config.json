@@ -1,0 +1,34 @@
+{
+  "spec": {
+    "name": "lstm",
+    "hidden": 64,
+    "layers": 2,
+    "heads": 4,
+    "revision": "interlayer_norm_no_dropout"
+  },
+  "seed": 0,
+  "batch_size": 256,
+  "epochs": 60,
+  "patience": 10,
+  "learning_rate": 0.03,
+  "precision": "float32",
+  "amp": false,
+  "epoch_boundary_only": true,
+  "optimization": {
+    "schema": "drone-ai.warmup-cosine/1",
+    "weight_decay": 0.0,
+    "momentum": 0.0,
+    "nesterov": false,
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "eps": 1e-08,
+    "warmup_fraction": 0.05,
+    "start_ratio": 0.1,
+    "minimum_ratio": 0.01,
+    "restarts": false,
+    "early_stopping_after_warmup": true,
+    "optimizer": "sgd"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "schema": "drone.evaluation-protocol/1",
+  "evaluation_mode": "final_test",
+  "normal_validation_scale": "q95 squared scaled residual per lead/target, floor1e-8",
+  "normal_calibration_quantiles": [
+    0.95,
+    0.975,
+    0.99,
+    0.995,
+    0.999,
+    0.9995,
+    0.9999
+  ],
+  "normal_calibration_union_target_per_hour": 1.0,
+  "detector": {
+    "ewma_alpha": 0.3,
+    "enter_blocks": 3,
+    "exit_blocks": 10,
+    "exit_threshold_ratio": 0.7,
+    "block_seconds": 1
+  },
+  "event_success": "awareness",
+  "max_detection_delay_s": null,
+  "threshold_multiplier": [
+    1.0,
+    1.0
+  ],
+  "threshold_domain_order": [
+    "propulsion",
+    "battery"
+  ],
+  "matching": "applied onset; pre-existing recognition; simultaneous events may share alarm",
+  "point_adjustment": false,
+  "normal_group_bootstrap": {
+    "seed": 17,
+    "draws": 1000
+  },
+  "implementation_sha256": {
+    "capstone_ai.detection": "82d647a8eb0275a52282cd623d089d2253dd429953512967e8acf9d5baeffc36",
+    "capstone_ai.detection_protocol": "7a3f8210454e79ace10ae4cd950a05da2b4aea18875289fb373ff6afa3d4dd64",
+    "capstone_ai.detection_replay": "70f7090b07f6eb3dfb5b9613ec1b8042d5b966a0e202a5d56fcd2b5c3ff3215b",
+    "capstone_ai.inference": "45ec3ecf7390478d442702dbf8c42eddf6dba753ead4d75a9ed9f126f3df8f73",
+    "execution.evaluate": "2b034ab7a5809b3bd5999e0b2aa65f19100fffd79f7f1d2571c8556b4ba7cb9d"
+  },
+  "calibration_policy": "reuse frozen normal-only calibration; never refit on final test",
+  "source_development_protocol_sha256": "c62b1418f5a8e18685e8260a9fc5301468c4dea888d67ca69365aa67872148cf"
+}

@@ -1,0 +1,20 @@
+{
+  "history": [
+    {
+      "alpha": 1.0,
+      "validation_loss": 0.2648889421929662
+    },
+    {
+      "alpha": 10.0,
+      "validation_loss": 0.2646732161305349
+    },
+    {
+      "alpha": 100.0,
+      "validation_loss": 0.2647891200068203
+    }
+  ],
+  "solver": "primal_float64_chunked_statistics",
+  "selected_alpha": 10.0,
+  "seconds": 89.08964307513088,
+  "device": "cpu"
+}

@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "models": 18,
+  "points_each": 129231,
+  "positive_points": 31072,
+  "all_common_keys_equal": true,
+  "all_point_confusion_counts_equal_original": true,
+  "ap_tie_and_independent_formula_checks_passed": true,
+  "source_file_sha256": "585d7d84230816695c680ca312532f168eba7630a73b231648300bf0b28d0e4a",
+  "score_definition": "max(domain EWMA / frozen domain high), alternative raw score also reported",
+  "final_test_posthoc_analysis": true,
+  "model_inference_executed": false,
+  "thresholds_refitted": false
+}
