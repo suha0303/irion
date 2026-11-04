@@ -1,0 +1,266 @@
+{
+  "schema": "drone-ai.normalization-study/1",
+  "id": "normalization-optimizer-study",
+  "updated_at_utc": "2026-11-01T09:29:33.151679+00:00",
+  "status": "IMPLEMENTED_CPU_VERIFIED_PENDING_GPU_PREFLIGHT_APPROVAL",
+  "dataset": {
+    "bundle": "Data/processed/2026-10-31/prepared-portable",
+    "archive_sha256": "9d06f2b0d5491ee3decb4b1ac27d9d54aad14d0d92ab0b04c6a63b3993e41bae",
+    "receipt_sha256": "d35ba6bf8e5636710a3d488b380221066fd3286bed192251f311e966687cc0cf",
+    "runs": 1200,
+    "split_runs": {
+      "normal_train": 720,
+      "normal_validation": 104,
+      "normal_calibration": 104,
+      "normal_dev_eval": 128,
+      "anomaly_dev": 144
+    },
+    "scaler": "One existing merged normal_train-only common scaler; preserve source splits and data-generation seeds"
+  },
+  "model_revision": "interlayer_norm_no_dropout",
+  "variants": [
+    {
+      "id": "lstm_h64_l2_sgd_s0",
+      "name": "lstm",
+      "hidden": 64,
+      "layers": 2,
+      "heads": 4,
+      "optimizer": "sgd"
+    },
+    {
+      "id": "lstm_h64_l2_adam_s0",
+      "name": "lstm",
+      "hidden": 64,
+      "layers": 2,
+      "heads": 4,
+      "optimizer": "adam"
+    },
+    {
+      "id": "transformer_h64_l2_sgd_s0",
+      "name": "transformer",
+      "hidden": 64,
+      "layers": 2,
+      "heads": 4,
+      "optimizer": "sgd"
+    },
+    {
+      "id": "transformer_h64_l2_adam_s0",
+      "name": "transformer",
+      "hidden": 64,
+      "layers": 2,
+      "heads": 4,
+      "optimizer": "adam"
+    },
+    {
+      "id": "lstm_h128_l2_sgd_s0",
+      "name": "lstm",
+      "hidden": 128,
+      "layers": 2,
+      "heads": 4,
+      "optimizer": "sgd"
+    },
+    {
+      "id": "lstm_h128_l2_adam_s0",
+      "name": "lstm",
+      "hidden": 128,
+      "layers": 2,
+      "heads": 4,
+      "optimizer": "adam"
+    },
+    {
+      "id": "transformer_h128_l2_sgd_s0",
+      "name": "transformer",
+      "hidden": 128,
+      "layers": 2,
+      "heads": 4,
+      "optimizer": "sgd"
+    },
+    {
+      "id": "transformer_h128_l2_adam_s0",
+      "name": "transformer",
+      "hidden": 128,
+      "layers": 2,
+      "heads": 4,
+      "optimizer": "adam"
+    },
+    {
+      "id": "lstm_h128_l4_sgd_s0",
+      "name": "lstm",
+      "hidden": 128,
+      "layers": 4,
+      "heads": 4,
+      "optimizer": "sgd"
+    },
+    {
+      "id": "lstm_h128_l4_adam_s0",
+      "name": "lstm",
+      "hidden": 128,
+      "layers": 4,
+      "heads": 4,
+      "optimizer": "adam"
+    },
+    {
+      "id": "transformer_h128_l4_sgd_s0",
+      "name": "transformer",
+      "hidden": 128,
+      "layers": 4,
+      "heads": 4,
+      "optimizer": "sgd"
+    },
+    {
+      "id": "transformer_h128_l4_adam_s0",
+      "name": "transformer",
+      "hidden": 128,
+      "layers": 4,
+      "heads": 4,
+      "optimizer": "adam"
+    },
+    {
+      "id": "lstm_h256_l4_sgd_s0",
+      "name": "lstm",
+      "hidden": 256,
+      "layers": 4,
+      "heads": 8,
+      "optimizer": "sgd"
+    },
+    {
+      "id": "lstm_h256_l4_adam_s0",
+      "name": "lstm",
+      "hidden": 256,
+      "layers": 4,
+      "heads": 8,
+      "optimizer": "adam"
+    },
+    {
+      "id": "transformer_h256_l4_sgd_s0",
+      "name": "transformer",
+      "hidden": 256,
+      "layers": 4,
+      "heads": 8,
+      "optimizer": "sgd"
+    },
+    {
+      "id": "transformer_h256_l4_adam_s0",
+      "name": "transformer",
+      "hidden": 256,
+      "layers": 4,
+      "heads": 8,
+      "optimizer": "adam"
+    }
+  ],
+  "models": [
+    "lstm_h64_l2_sgd_s0",
+    "lstm_h64_l2_adam_s0",
+    "transformer_h64_l2_sgd_s0",
+    "transformer_h64_l2_adam_s0",
+    "lstm_h128_l2_sgd_s0",
+    "lstm_h128_l2_adam_s0",
+    "transformer_h128_l2_sgd_s0",
+    "transformer_h128_l2_adam_s0",
+    "lstm_h128_l4_sgd_s0",
+    "lstm_h128_l4_adam_s0",
+    "transformer_h128_l4_sgd_s0",
+    "transformer_h128_l4_adam_s0",
+    "lstm_h256_l4_sgd_s0",
+    "lstm_h256_l4_adam_s0",
+    "transformer_h256_l4_sgd_s0",
+    "transformer_h256_l4_adam_s0"
+  ],
+  "normalization": {
+    "lstm": "LayerNorm between stacked LSTM layers, separately in encoder and decoder; no extra norm after final layer",
+    "transformer": "Post-LN encoder/decoder with residual connections"
+  },
+  "dropout_modules_present": false,
+  "dropout_removal_function_present": false,
+  "preserved_legacy_reader": "ai/learning/legacy_models.py",
+  "initialization": {
+    "lstm_input": "gate-wise Xavier uniform gain1",
+    "lstm_recurrent": "gate-wise orthogonal gain1",
+    "lstm_effective_forget_bias": 1,
+    "lstm_other_bias": 0,
+    "lstm_lead_embedding": "normal mean0 std1",
+    "transformer_matrices_and_queries": "Xavier uniform gain1",
+    "transformer_other_bias": 0,
+    "output_linear": "Xavier uniform gain1 and bias0",
+    "layernorm": {
+      "gamma": 1,
+      "beta": 0,
+      "eps": 1e-05
+    }
+  },
+  "optimization": {
+    "schema": "drone-ai.warmup-cosine/1",
+    "weight_decay": 0.0,
+    "momentum": 0.0,
+    "nesterov": false,
+    "betas": [
+      0.9,
+      0.999
+    ],
+    "eps": 1e-08,
+    "warmup_fraction": 0.05,
+    "start_ratio": 0.1,
+    "minimum_ratio": 0.01,
+    "restarts": false,
+    "early_stopping_after_warmup": true
+  },
+  "learning_rate_candidates": {
+    "sgd": [
+      0.001,
+      0.01,
+      0.03
+    ],
+    "adam": [
+      0.0001,
+      0.0003,
+      0.001
+    ]
+  },
+  "learning_rate_probe": {
+    "epochs": 3,
+    "train_windows_max": 8192,
+    "validation_windows_max": 4096,
+    "selection": "lowest final validation loss; ties use declared candidate order",
+    "origin_selection": "evenly spaced indices over each frozen normal role",
+    "limitations": "Short normal-only proxy; not guaranteed full-training optimum"
+  },
+  "learning_rate_trial_count": 48,
+  "learning_rate_selection": "normal-only short proxy; all48 trials finite, fixed protocol; never development truth",
+  "main_fit": {
+    "seed": 0,
+    "batch_size": 256,
+    "epochs_max": 60,
+    "early_stopping_patience": 10,
+    "precision": "float32",
+    "amp": false,
+    "initial_weights": "same frozen seed0 weights for paired SGD/Adam and all LR trials",
+    "checkpoint_selection": "lowest normal-validation loss",
+    "automatic_resume": false
+  },
+  "gpu": {
+    "partition": "p02",
+    "node": "DIS01",
+    "nodes": 1,
+    "ntasks": 1,
+    "gpus": 1,
+    "cpus": 4,
+    "memory_gib": 64,
+    "proposed_fit_including_preflight_hours": 48,
+    "queue_hours": 24,
+    "budget_status": "PROPOSED_NOT_SUBMITTED"
+  },
+  "execution_scope": "training_only",
+  "production_training_authorized": false,
+  "gpu_probe_authorized": false,
+  "calibration_authorized": false,
+  "evaluation_authorized": false,
+  "final_test_used": false,
+  "next_round_authorized": false,
+  "automatic_retry": false,
+  "llm_monitoring": false,
+  "llm_auto_resume": false,
+  "preserved_results": "ai/reports/evaluation-20261101/sensitivity-05",
+  "stop_policy": "Finite normal-only candidate search plus exact-model memory/resume/throughput gates and approved main fits only; on runtime/input failure preserve and stop, no smaller batch, new candidate or retry; training-only releases before stop",
+  "verification_record": "ai/reports/optimizer-review-20261101/review.json",
+  "review_status": "CPU_REVIEW_AND_REFACTOR_VERIFIED"
+}
