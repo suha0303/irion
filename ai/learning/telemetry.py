@@ -119,6 +119,6 @@ class Telemetry:
                 max_utilization_pct=self.usage_max if self.usage_count else None,
                 max_device_used_mib=self.memory_max if self.count else None,
                 period_seconds=2,
-                includes="gate, training, calibration, inference; device-level samples",
+                includes="all phases actually executed by this worker; device-level samples",
             ),
         )

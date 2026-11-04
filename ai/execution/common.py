@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -105,33 +106,148 @@ def config_check(cfg):
         raise ValueError("Fixed four-model seed17 configuration mismatch")
 
 
-def memory_available():
-    fields = dict(line.split(":", 1) for line in Path("/proc/meminfo").read_text().splitlines())
-    available = int(fields["MemAvailable"].split()[0]) * 1024
-    # Job cgroup limits can be tighter than node MemAvailable (v1 and v2).
-    for line in Path("/proc/self/cgroup").read_text().splitlines():
+def _memory_mounts(membership, mountinfo):
+    """Resolve memory hierarchies using the process's mount namespace."""
+    mounts = []
+    for line in mountinfo.splitlines():
+        left, right = line.split(" - ", 1)
+        before, after = left.split(), right.split()
+        if after[0] == "cgroup2" or (after[0] == "cgroup" and "memory" in after[2].split(",")):
+
+            def decode(text):
+                # mountinfo escapes whitespace and backslashes.
+                return re.sub(r"\\([0-7]{3})", lambda match: chr(int(match[1], 8)), text)
+
+            mounts.append((after[0], Path(decode(before[3])), Path(decode(before[4]))))
+    for line in membership.splitlines():
         _, controllers, relative = line.split(":", 2)
-        if controllers == "":
-            folder = Path("/sys/fs/cgroup") / relative.lstrip("/")
-            pairs = [("memory.max", "memory.current")]
-        elif "memory" in controllers.split(","):
-            folder = Path("/sys/fs/cgroup/memory") / relative.lstrip("/")
-            pairs = [("memory.limit_in_bytes", "memory.usage_in_bytes")]
-        else:
+        version = "cgroup2" if controllers == "" else "cgroup"
+        if controllers and "memory" not in controllers.split(","):
             continue
-        mount = Path("/sys/fs/cgroup") if controllers == "" else Path("/sys/fs/cgroup/memory")
-        while folder.is_relative_to(mount):
-            for limit, used in pairs:
-                if (folder / limit).exists() and (folder / used).exists():
-                    text = (folder / limit).read_text().strip()
-                    if text != "max":
-                        available = min(
-                            available, max(0, int(text) - int((folder / used).read_text()))
-                        )
-            if folder == mount:
-                break
-            folder = folder.parent
-    return available
+        relative = Path(relative)
+        if not relative.is_absolute() or ".." in relative.parts:
+            raise ValueError("Invalid memory cgroup membership")
+        candidates = [m for m in mounts if m[0] == version and relative.is_relative_to(m[1])]
+        if not candidates:
+            raise ValueError("Memory cgroup mount is not visible for " + str(relative))
+        for _, mount_root, mount in candidates:
+            yield version, mount, mount / relative.relative_to(mount_root)
+
+
+def _cache_credit(folder, version, current):
+    """Credit only a conservative estimate of inactive clean file-backed cache.
+
+    Never credit active cache, anonymous memory, tmpfs, dirty/writeback or slab.
+    Missing counters mean zero credit, not an assumed zero dirty/shared count.
+    """
+    result = dict(stats={}, credited_cache_bytes=0, basis="no cache credit")
+    try:
+        for line in (folder / "memory.stat").read_text().splitlines():
+            key, text = line.split()
+            value = int(text)
+            if value < 0 or key in result["stats"]:
+                raise ValueError("Negative or duplicate memory.stat counter")
+            result["stats"][key] = value
+        if version == "cgroup2":
+            names = ("inactive_file", "file", "file_dirty", "file_writeback", "shmem")
+            result["stats_scope"] = "hierarchical"
+        else:
+            hierarchy = (folder / "memory.use_hierarchy").read_text().strip()
+            result["use_hierarchy"] = hierarchy
+            if hierarchy not in {"0", "1"}:
+                raise ValueError("Unknown v1 hierarchy accounting")
+            prefix = "total_" if hierarchy == "1" else ""
+            names = tuple(
+                prefix + name for name in ("inactive_file", "cache", "dirty", "writeback", "shmem")
+            )
+            result["stats_scope"] = "hierarchical" if prefix else "local"
+        inactive, file_bytes, dirty, writeback, shmem = (result["stats"][k] for k in names)
+        result["credited_cache_bytes"] = max(
+            0, min(current, inactive, file_bytes) - dirty - writeback - shmem
+        )
+        result["basis"] = "max(0, min(current,inactive_file,file_cache)-dirty-writeback-shmem)"
+    except (OSError, ValueError, KeyError) as exc:
+        result["stats_error"] = str(exc)
+    return result
+
+
+def memory_snapshot(proc_root=Path("/proc")):
+    """One read-only, conservative host/cgroup admission observation.
+
+    File cache charged by integrity reads is potentially reclaimable, not RSS.
+    This is an estimate, never a reservation; host/ancestor caps and the caller's
+    reserve still apply. The kernel's limits and reclaim policy are unchanged.
+    """
+    result = dict(
+        timestamp=time.time(),
+        node_available_bytes=None,
+        available_bytes=0,
+        cgroups=[],
+        errors=[],
+        accounting="inactive_clean_file_credit",
+    )
+    try:
+        fields = dict(
+            line.split(":", 1) for line in (proc_root / "meminfo").read_text().splitlines()
+        )
+        available = int(fields["MemAvailable"].split()[0]) * 1024
+        if available < 0:
+            raise ValueError("Negative node MemAvailable")
+        result["node_available_bytes"] = available
+        membership = (proc_root / "self/cgroup").read_text()
+        mountinfo = (proc_root / "self/mountinfo").read_text()
+        result["membership"] = membership
+        seen = set()
+        for version, mount, folder in _memory_mounts(membership, mountinfo):
+            if not folder.is_dir():
+                raise ValueError("Memory cgroup directory is not visible: " + str(folder))
+            while folder.is_relative_to(mount):
+                key = (version, str(folder))
+                if key not in seen:
+                    seen.add(key)
+                    limit_name, current_name = (
+                        ("memory.max", "memory.current")
+                        if version == "cgroup2"
+                        else ("memory.limit_in_bytes", "memory.usage_in_bytes")
+                    )
+                    limit_path, current_path = folder / limit_name, folder / current_name
+                    if limit_path.exists() or current_path.exists():
+                        row = dict(path=str(folder), version=version)
+                        result["cgroups"].append(row)
+                        # v2 root has current/stat but no limit; its bound is node MemAvailable.
+                        if not limit_path.exists() and folder == mount and version == "cgroup2":
+                            row["limit_bytes"] = None
+                            row["current_bytes"] = int(current_path.read_text())
+                        else:
+                            text = limit_path.read_text().strip()
+                            limit = None if text == "max" else int(text)
+                            current = int(current_path.read_text())
+                            if current < 0 or (limit is not None and limit < 0):
+                                raise ValueError("Negative cgroup memory counter")
+                            row.update(
+                                limit_bytes=limit,
+                                current_bytes=current,
+                                **_cache_credit(folder, version, current),
+                            )
+                            if limit is not None:
+                                row["raw_headroom_bytes"] = max(0, limit - current)
+                                row["available_bytes"] = max(
+                                    0, limit - current + row["credited_cache_bytes"]
+                                )
+                                available = min(available, row["available_bytes"])
+                if folder == mount:
+                    break
+                folder = folder.parent
+        result["available_bytes"] = available
+    except (OSError, ValueError, KeyError, IndexError) as exc:
+        result["errors"].append(f"{type(exc).__name__}: {exc}")
+        # Unknown limit/accounting is never permission to use unrestricted host RAM.
+        result["available_bytes"] = 0
+    return result
+
+
+def memory_available():
+    return memory_snapshot()["available_bytes"]
 
 
 class Progress:
@@ -175,5 +291,9 @@ class Progress:
     def check(self):
         if time.monotonic() >= self.deadline:
             raise TimeoutError("Finite wall budget exhausted; no retry")
-        if memory_available() < 1024**3:
+        snapshot = memory_snapshot()
+        if snapshot["available_bytes"] < 1024**3:
+            evidence = self.path.with_name(self.path.stem + "-memory-failure.json")
+            write(evidence, dict(required_bytes=1024**3, passed=False, snapshot=snapshot))
+            self.state["memory_failure"] = str(evidence)
             raise MemoryError("Less than1GiB available job/host RAM; stop without retry")

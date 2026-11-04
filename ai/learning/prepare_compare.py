@@ -9,12 +9,22 @@ import subprocess
 import time
 from pathlib import Path
 
-from execution.common import ROOT, Progress, python_for, read, runtime_profile, sha, verify, write
+from execution.common import (
+    ROOT,
+    Progress,
+    child,
+    python_for,
+    read,
+    runtime_profile,
+    sha,
+    verify,
+    write,
+)
 
 from . import comparison
 
 HOME = ROOT / "ai/configs"
-DEFAULT_BUNDLE = Path(ROOT / "Data/processed/pretrain/merge-1200-20261017-01/prepared-portable")
+DEFAULT_BUNDLE = Path(ROOT / "Data/processed/2026-10-31/prepared-portable")
 
 
 def inventory(root):
@@ -89,15 +99,128 @@ def restore_ref(bundle, ref, destination, progress):
     )
 
 
+def reuse_failed_upstream(source, bundle, receipt, root, remote):
+    """Admit a stopped attempt's immutable data without copying or altering it."""
+    source = external_root(source)
+    if root != remote:
+        raise ValueError(
+            "Reused upstream requires preparation on the same server: root == remote-root"
+        )
+    if root == source or root.is_relative_to(source) or source.is_relative_to(root):
+        raise ValueError("Reuse requires a separate new attempt outside the preserved source")
+    prepared = read(child(source, "prepared.json"))
+    controller = read(child(source, "controller.json"))
+    release = read(child(source, "release.json"))
+    submission = read(child(source, "fit-submission.json"))
+    job_id = submission.get("job_id")
+    states = str(release.get("slurm_state", "")).split()
+    terminal_state = states[0] if states else ""
+    if (
+        controller.get("status") != "FAILED_STOPPED"
+        or release.get("released") is not True
+        or release.get("queue")
+        or release.get("remaining_own_queue")
+        or terminal_state
+        not in {
+            "FAILED",
+            "CANCELLED",
+            "TIMEOUT",
+            "OUT_OF_MEMORY",
+            "NODE_FAIL",
+            "PREEMPTED",
+            "BOOT_FAIL",
+            "DEADLINE",
+            "REVOKED",
+        }
+        or not isinstance(job_id, str)
+        or not job_id.isdigit()
+        or controller.get("job_id") != job_id
+        or release.get("job_id") != job_id
+        or submission.get("uid") != os.getuid()
+        or submission.get("phase") != "fit"
+    ):
+        raise ValueError("Reuse requires a failed, released own fit job with matching identity")
+    input_inventory = child(source, "input/inventory.json")
+    if sha(input_inventory) != prepared.get("input_inventory_sha256"):
+        raise ValueError("Preserved source input inventory changed")
+    verify(source / "input", read(input_inventory))
+    cfg = read(child(source, "input/config.json"))
+    comparison.config_check(cfg)
+    if (
+        comparison.execution_scope(cfg) != "training_only"
+        or prepared.get("execution_scope") != "training_only"
+        or prepared.get("source_receipt_sha256") != sha(bundle / "receipt.json")
+        or cfg.get("source_dataset_sha256") != receipt["dataset"]["sha256"]
+        or sha(child(source, "server-profile.json")) != prepared.get("server_profile_sha256")
+    ):
+        raise ValueError("Preserved source scope, profile, or dataset binding differs")
+    authorization = read(child(source, "authorization.json"))
+    if (
+        authorization.get("config_sha256") != sha(source / "input/config.json")
+        or authorization.get("execution_scope") != "training_only"
+        or authorization.get("calibration_authorized") is not False
+        or authorization.get("evaluation_authorized") is not False
+    ):
+        raise ValueError("Preserved source authorization changed")
+    upstream = external_root(cfg["upstream"])
+    if root == upstream or root.is_relative_to(upstream) or upstream.is_relative_to(root):
+        raise ValueError("New output must not overlap reused upstream")
+    for name, expected in cfg["upstream_files"].items():
+        if name.startswith("evidence/") or name == "preprocessing.json":
+            if sha(child(upstream, name)) != expected:
+                raise ValueError("Preserved source upstream evidence changed: " + name)
+    # The package receipt binds the small provenance files; admission below hashes
+    # actual fit arrays. The worker still verifies the complete upstream seal.
+    for name, expected in receipt["dataset"]["members"].items():
+        if name.startswith("evidence/"):
+            path = child(upstream, name)
+            if path.stat().st_size != expected["bytes"] or sha(path) != expected["sha256"]:
+                raise ValueError("Reused evidence differs from portable package: " + name)
+    seal = read(child(upstream, "evidence/dataset-seal.json"))
+    if seal != cfg["dataset_files"] or any(
+        receipt["dataset"]["members"].get("dataset/" + name, {}).get("sha256") != digest
+        for name, digest in seal.items()
+    ):
+        raise ValueError("Reused dataset seal differs from portable package")
+    provenance = dict(
+        source_attempt=str(source),
+        source_job_id=job_id,
+        upstream=str(upstream),
+        source_input_inventory_sha256=sha(input_inventory),
+        source_config_sha256=sha(source / "input/config.json"),
+        source_prepared_sha256=sha(source / "prepared.json"),
+        source_release_sha256=sha(source / "release.json"),
+        source_receipt_sha256=sha(bundle / "receipt.json"),
+        source_data_modified=False,
+        source_weights_reused=False,
+        copied_upstream_bytes=0,
+        reprocessed=False,
+    )
+    return upstream, provenance
+
+
 def prepare(args):
     from console.profile import load
 
     profile = load(args.profile)
-    if any(
-        type(value) is not int or not 1 <= value <= 168
-        for value in (args.wall_hours, args.evaluation_hours)
-    ):
+    training_only = getattr(args, "training_only", False)
+    normalization_study = getattr(args, "normalization_study", False)
+    if normalization_study and not training_only:
+        raise ValueError("The normalization study requires --training-only")
+    reuse_from = getattr(args, "reuse_from", None)
+    if reuse_from is not None and not training_only:
+        raise ValueError("Explicit upstream reuse is limited to training-only attempts")
+    evaluation_hours = getattr(args, "evaluation_hours", None)
+    if training_only and evaluation_hours is None:
+        evaluation_hours = 0
+    if type(args.wall_hours) is not int or not 1 <= args.wall_hours <= 168:
         raise ValueError("Explicit finite fit/evaluation hours within1..168 required")
+    if type(evaluation_hours) is not int or (
+        evaluation_hours != 0 if training_only else not 1 <= evaluation_hours <= 168
+    ):
+        raise ValueError(
+            "Training-only requires zero evaluation hours; full comparison requires1..168"
+        )
     root, bundle = external_root(args.root), args.bundle.resolve()
     if root.is_relative_to(bundle) or bundle.is_relative_to(root):
         raise ValueError("Preparation must use a separate new directory")
@@ -111,10 +234,14 @@ def prepare(args):
         or receipt["dataset"]["sha256"] != plan["dataset"]["archive_sha256"]
     ):
         raise ValueError("Only the frozen merged1200 portable dataset is admitted")
-    need = receipt["uncompressed_dataset_bytes"] + 24 * 1024**3
+    need = (0 if reuse_from is not None else receipt["uncompressed_dataset_bytes"]) + 24 * 1024**3
     root.parent.mkdir(parents=True, exist_ok=True)
     if shutil.disk_usage(root.parent).free < need:
-        raise OSError("Insufficient selected storage: restored data plus24GiB reserve required")
+        raise OSError(
+            "Insufficient selected storage:24GiB new-attempt reserve required"
+            if reuse_from is not None
+            else "Insufficient selected storage: restored data plus24GiB reserve required"
+        )
     root.mkdir(exist_ok=False)
     from x500_storage import capture
 
@@ -123,42 +250,54 @@ def prepare(args):
     progress = PreparationProgress(root / "prepare-progress.json", storage_root=root, hours=12)
     try:
         upstream = root / "upstream"
+        reuse_provenance = None
         progress.update(
-            stage="restore_verify_dataset",
+            stage="reuse_verify_dataset" if reuse_from is not None else "restore_verify_dataset",
             round=comparison.REVISION,
             done=0,
             total=len(receipt["dataset"]["members"]),
         )
-        restore_ref(bundle, receipt["dataset"], upstream, progress)
+        if reuse_from is None:
+            restore_ref(bundle, receipt["dataset"], upstream, progress)
+        else:
+            upstream, reuse_provenance = reuse_failed_upstream(
+                reuse_from, bundle, receipt, root, remote
+            )
+            if Path(profile["dataset_root"]) != upstream:
+                raise ValueError("Server profile must name the existing reused upstream")
         rows, seal, headers = comparison.admission(upstream)
         preprocess = ROOT / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
         frozen = read(upstream / "evidence/frozen-manifest.json")
         if sha(preprocess) != frozen["revision_lock"]["preprocessing_sha256"]:
             raise ValueError("Preprocessing differs from frozen dataset revision")
         progress.check()
-        shutil.copyfile(preprocess, upstream / "preprocessing.json")
-        progress.update(
-            stage="prepare_evaluator_only_truth",
-            done=0,
-            total=len(receipt["evaluator_truth"]["members"]),
-        )
-        restore_ref(bundle, receipt["evaluator_truth"], root / "truth", progress)
-        index = {}
-        for row in rows:
-            if row["role"] not in {"normal_dev_eval", "anomaly_dev"}:
-                continue
-            name = row["run_id"] + ".jsonl"
-            expected = row["archive"]["members"]["evaluation/events.jsonl"]
-            if receipt["evaluator_truth"]["members"].get(name) != {
-                k: expected[k] for k in ("bytes", "sha256")
-            }:
-                raise ValueError("Development truth differs from frozen source")
-            index[row["run_id"]] = dict(
-                sha256=expected["sha256"], bytes=expected["bytes"], role=row["role"]
+        if reuse_from is None:
+            shutil.copyfile(preprocess, upstream / "preprocessing.json")
+        elif sha(upstream / "preprocessing.json") != sha(preprocess):
+            raise ValueError("Reused preprocessing differs; no source files are overwritten")
+        if not training_only:
+            progress.update(
+                stage="prepare_evaluator_only_truth",
+                done=0,
+                total=len(receipt["evaluator_truth"]["members"]),
             )
-        if set(receipt["evaluator_truth"]["members"]) != {k + ".jsonl" for k in index}:
-            raise ValueError("Unexpected evaluator truth membership")
-        write(root / "truth/index.json", index)
+            restore_ref(bundle, receipt["evaluator_truth"], root / "truth", progress)
+            index = {}
+            for row in rows:
+                if row["role"] not in {"normal_dev_eval", "anomaly_dev"}:
+                    continue
+                name = row["run_id"] + ".jsonl"
+                expected = row["archive"]["members"]["evaluation/events.jsonl"]
+                if receipt["evaluator_truth"]["members"].get(name) != {
+                    k: expected[k] for k in ("bytes", "sha256")
+                }:
+                    raise ValueError("Development truth differs from frozen source")
+                index[row["run_id"]] = dict(
+                    sha256=expected["sha256"], bytes=expected["bytes"], role=row["role"]
+                )
+            if set(receipt["evaluator_truth"]["members"]) != {k + ".jsonl" for k in index}:
+                raise ValueError("Unexpected evaluator truth membership")
+            write(root / "truth/index.json", index)
         inputs = root / "input"
         sources = {}
         for folder in ("execution", "learning", "pipeline", "src/capstone_ai"):
@@ -200,8 +339,11 @@ def prepare(args):
             gate_epochs=4,
             gate_windows=512,
             production_training_authorized=False,
+            execution_scope="training_only" if training_only else "full_comparison",
+            calibration_authorized=not training_only,
+            evaluation_authorized=not training_only,
             wall_hours=args.wall_hours,
-            evaluation_hours=args.evaluation_hours,
+            evaluation_hours=evaluation_hours,
             queue_hours=24,
             memory_gib=64,
             cpus=4,
@@ -216,7 +358,8 @@ def prepare(args):
             development_counts={
                 k: comparison.COUNTS[k] for k in ("normal_dev_eval", "anomaly_dev")
             },
-            upstream=str(remote / "upstream"),
+            upstream=str(upstream if reuse_from is not None else remote / "upstream"),
+            reuse_provenance=reuse_provenance,
             upstream_files={
                 **{"dataset/" + k: v for k, v in seal.items()},
                 **{"evidence/" + p.name: sha(p) for p in (upstream / "evidence").iterdir()},
@@ -224,7 +367,7 @@ def prepare(args):
             },
             dataset_files=seal,
             handoff_sha256=sha(upstream / "evidence/handoff.json"),
-            truth_index_sha256=sha(root / "truth/index.json"),
+            truth_index_sha256=None if training_only else sha(root / "truth/index.json"),
             binding=dict(
                 data={k: seal[k] for k in ("normal_train.npz", "normal_validation.npz")},
                 scaler=seal["scaler.npz"],
@@ -233,6 +376,10 @@ def prepare(args):
             source_dataset_sha256=receipt["dataset"]["sha256"],
             failure_policy="Preserve evidence and stop, no retry or automatic tuning",
         )
+        if normalization_study:
+            from .study import configure
+
+            cfg = configure(cfg)
         comparison.config_check(cfg, require_approval=False)
         progress.check()
         write(inputs / "config.json", cfg)
@@ -252,7 +399,9 @@ def prepare(args):
                 llm_calls=0,
                 memory=memory,
                 fit_budget_hours=args.wall_hours,
-                evaluation_budget_hours=args.evaluation_hours,
+                evaluation_budget_hours=evaluation_hours,
+                execution_scope=cfg["execution_scope"],
+                reuse_provenance=reuse_provenance,
             ),
         )
         progress.update(status="PREPARED_PENDING_TRAINING_APPROVAL", stage="stopped")
@@ -287,6 +436,9 @@ def authorize(root, confirmed):
             models=cfg["models"],
             seed=0,
             config_sha256=sha(root / "input/config.json"),
+            execution_scope=comparison.execution_scope(cfg),
+            calibration_authorized=cfg.get("calibration_authorized", True),
+            evaluation_authorized=cfg.get("evaluation_authorized", True),
             no_next_round=True,
         ),
     )
@@ -397,7 +549,19 @@ def main():
     p.add_argument("--remote-root", type=Path, required=True)
     p.add_argument("--profile", type=Path, required=True, help="직접 입력한 서버·Python 프로필")
     p.add_argument("--wall-hours", type=int, required=True)
-    p.add_argument("--evaluation-hours", type=int, required=True)
+    p.add_argument("--evaluation-hours", type=int)
+    p.add_argument(
+        "--training-only", action="store_true", help="학습·저장·반납 후 정지; 보정·평가 실행 금지"
+    )
+    p.add_argument(
+        "--normalization-study", action="store_true",
+        help="새16종: 층간LN LSTM/Post-LN Transformer, 바닐라SGD/Adam, warmup+cosine",
+    )
+    p.add_argument(
+        "--reuse-from",
+        type=Path,
+        help="실패·반납된 같은 서버 작업의 검증된 upstream을 읽기 전용 재사용; 새 출력 필수",
+    )
     for action in ("authorize", "deploy", "start", "status"):
         p = sub.add_parser(action)
         p.add_argument("--root", type=Path, required=True)
