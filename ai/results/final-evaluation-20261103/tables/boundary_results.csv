@@ -1,0 +1,19 @@
+model,normal_episodes,normal_near_end,normal_min_offset_s,normal_max_offset_s,detected_existing,existing_near_end,definition
+lstm_h64_l2_sgd_s0,17,16,-0.2,46.7,10,5,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+lstm_h64_l2_adam_s0,18,18,-0.3,1.5,6,4,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+transformer_h64_l2_sgd_s0,23,23,-0.2,1.5,6,4,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+transformer_h64_l2_adam_s0,24,24,-0.3,1.5,4,4,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+lstm_h128_l2_sgd_s0,17,16,-0.2,46.7,12,5,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+lstm_h128_l2_adam_s0,17,17,-0.3,1.5,10,10,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+transformer_h128_l2_sgd_s0,29,28,-0.3,46.7,6,4,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+transformer_h128_l2_adam_s0,52,51,-0.3,46.7,13,11,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+lstm_h128_l4_sgd_s0,18,16,-0.2,46.7,18,2,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+lstm_h128_l4_adam_s0,17,17,-0.2,1.5,15,8,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+transformer_h128_l4_sgd_s0,25,24,-0.3,46.7,15,6,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+transformer_h128_l4_adam_s0,45,45,-0.3,1.5,13,6,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+lstm_h256_l4_sgd_s0,21,20,-0.2,46.7,15,2,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+lstm_h256_l4_adam_s0,12,11,-0.2,46.7,12,4,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+transformer_h256_l4_sgd_s0,27,25,-0.2,46.7,8,6,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+transformer_h256_l4_adam_s0,1,0,44.4,44.4,18,0,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+persistence,5,5,-0.2,0.3,2,2,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds
+ridge_forecast,19,19,-0.2,0.9,6,6,post-hoc: -1 <= airborne-envelope end minus alarm start <= 5 seconds

@@ -1,0 +1,52 @@
+{
+  "status": "REPORT_READY_STOPPED",
+  "finished": 1793722135.0273075,
+  "execution_scope": "final_test_evaluation",
+  "final_test_used": true,
+  "analysis_performed": false,
+  "training_repeated": false,
+  "calibration_refitted": false,
+  "models": [
+    "lstm_h64_l2_sgd_s0",
+    "lstm_h64_l2_adam_s0",
+    "transformer_h64_l2_sgd_s0",
+    "transformer_h64_l2_adam_s0",
+    "lstm_h128_l2_sgd_s0",
+    "lstm_h128_l2_adam_s0",
+    "transformer_h128_l2_sgd_s0",
+    "transformer_h128_l2_adam_s0",
+    "lstm_h128_l4_sgd_s0",
+    "lstm_h128_l4_adam_s0",
+    "transformer_h128_l4_sgd_s0",
+    "transformer_h128_l4_adam_s0",
+    "lstm_h256_l4_sgd_s0",
+    "lstm_h256_l4_adam_s0",
+    "transformer_h256_l4_sgd_s0",
+    "transformer_h256_l4_adam_s0",
+    "persistence",
+    "ridge_forecast"
+  ],
+  "inference_release": {
+    "job_id": "35126",
+    "released": true,
+    "queue": [],
+    "slurm_state": "COMPLETED",
+    "exit_code": "0:0",
+    "remaining_own_queue": ""
+  },
+  "evaluation_release": {
+    "job_id": "35181",
+    "released": true,
+    "queue": [],
+    "slurm_state": "COMPLETED",
+    "exit_code": "0:0",
+    "remaining_own_queue": ""
+  },
+  "compute_seal_sha256": "7acf415fdcf567e161769e5c0c16c2b78ba5a87af568380b06c01632a140b5d7",
+  "metrics_sha256": "66e4610b7df3547f0f72768af612afd70fd1704302378514bac5316435b94c67",
+  "evaluation_report_sha256": "e3d76976b2bdbd0ca11c2629db5296b0c380c7464522882addbfc2d18f1127b8",
+  "records_sha256": "7bcd5157a6e23263880809b990916274b294ad06fe40b0a5e1fb9b870f1c6d4f",
+  "automatic_retry": false,
+  "llm_calls": 0,
+  "next_round_authorized": false
+}

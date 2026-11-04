@@ -1,0 +1,880 @@
+{
+  "revision": "normal-postprocess-v7",
+  "status": "provisional",
+  "reference_error_scale_scaled": [
+    [
+      0.1886184248740872,
+      0.47131439786189033,
+      0.0001155157295532822,
+      0.0001378770200792279
+    ],
+    [
+      0.9196452667610437,
+      1.8888698933148487,
+      0.00044633088156773135,
+      0.00028010636860950784
+    ],
+    [
+      1.626640415122333,
+      2.5480787291141,
+      0.0012272255472221129,
+      0.00033600615625334085
+    ],
+    [
+      2.1784313240508557,
+      2.859732739424195,
+      0.0027610344615774645,
+      0.0003676643327366443
+    ],
+    [
+      2.413148556377578,
+      2.8680278203386047,
+      0.005225065431285985,
+      0.0003906242869912438
+    ],
+    [
+      2.532075044851142,
+      2.9244116301061145,
+      0.008653417741679943,
+      0.00040708409857740074
+    ],
+    [
+      2.569469247824788,
+      2.9113218627395017,
+      0.013076799013099485,
+      0.00042751806507455945
+    ],
+    [
+      2.606724764979881,
+      2.9418624651714618,
+      0.018507606524045327,
+      0.0004488412993345337
+    ],
+    [
+      2.6171182166476674,
+      2.892511813719662,
+      0.024496678689137172,
+      0.00046515481135068484
+    ],
+    [
+      2.593960232280692,
+      2.901292316720413,
+      0.030900163906110223,
+      0.0004829279502555692
+    ]
+  ],
+  "error_scale_physical": [
+    [
+      6.273461510567266e-06,
+      7.431200717964405e-05,
+      1.5689669243095348e-07,
+      5.528204684757171e-05
+    ],
+    [
+      3.058746349012365e-05,
+      0.00029781757932750017,
+      6.062190778569941e-07,
+      0.00011230916785752973
+    ],
+    [
+      5.4102169725016374e-05,
+      0.0004017548491436315,
+      1.6668520379910934e-06,
+      0.0001347222913607788
+    ],
+    [
+      7.245477250682224e-05,
+      0.00045089324838794043,
+      3.7501141739278746e-06,
+      0.00014741569592125598
+    ],
+    [
+      8.026148345699337e-05,
+      0.0004522011314385405,
+      7.096829904242173e-06,
+      0.0001566215321511913
+    ],
+    [
+      8.421698647067761e-05,
+      0.0004610911507022564,
+      1.1753313831313956e-05,
+      0.00016322112412587466
+    ],
+    [
+      8.546072017924882e-05,
+      0.00045902729080122146,
+      1.7761273903337174e-05,
+      0.00017141416088086486
+    ],
+    [
+      8.669984118815755e-05,
+      0.00046384261890808636,
+      2.5137548450463308e-05,
+      0.00017996375119420552
+    ],
+    [
+      8.70455280903959e-05,
+      0.0004560615157174283,
+      3.3272073653801736e-05,
+      0.00018650468408503148
+    ],
+    [
+      8.627529197117519e-05,
+      0.0004574459351304416,
+      4.196946624664479e-05,
+      0.00019363085708328474
+    ]
+  ],
+  "scale_fit": "normal validation only, q95 per lead/target, scaled floor1e-8",
+  "high": [
+    108.66334498371852,
+    81.44113105442574
+  ],
+  "chosen": {
+    "q": 0.9995,
+    "high": [
+      108.66334498371852,
+      81.44113105442574
+    ],
+    "union_episodes": 13,
+    "false_alarms_per_hour": 0.570745627942145,
+    "domain_episodes": {
+      "propulsion": 10,
+      "battery": 3
+    }
+  },
+  "candidates": [
+    {
+      "q": 0.95,
+      "high": [
+        1.1793817174649173,
+        0.6437910477251674
+      ],
+      "union_episodes": 450,
+      "false_alarms_per_hour": 19.756579428766557,
+      "domain_episodes": {
+        "propulsion": 369,
+        "battery": 291
+      }
+    },
+    {
+      "q": 0.975,
+      "high": [
+        2.075346031487743,
+        0.907147166257266
+      ],
+      "union_episodes": 369,
+      "false_alarms_per_hour": 16.200395131588575,
+      "domain_episodes": {
+        "propulsion": 253,
+        "battery": 213
+      }
+    },
+    {
+      "q": 0.99,
+      "high": [
+        4.281085318255475,
+        1.8141559224527901
+      ],
+      "union_episodes": 217,
+      "false_alarms_per_hour": 9.52706163564965,
+      "domain_episodes": {
+        "propulsion": 125,
+        "battery": 142
+      }
+    },
+    {
+      "q": 0.995,
+      "high": [
+        8.457605131995823,
+        4.174928035272857
+      ],
+      "union_episodes": 154,
+      "false_alarms_per_hour": 6.7611405156223325,
+      "domain_episodes": {
+        "propulsion": 67,
+        "battery": 112
+      }
+    },
+    {
+      "q": 0.999,
+      "high": [
+        42.49130906862302,
+        35.85757588168597
+      ],
+      "union_episodes": 23,
+      "false_alarms_per_hour": 1.0097807263591796,
+      "domain_episodes": {
+        "propulsion": 17,
+        "battery": 6
+      }
+    },
+    {
+      "q": 0.9995,
+      "high": [
+        108.66334498371852,
+        81.44113105442574
+      ],
+      "union_episodes": 13,
+      "false_alarms_per_hour": 0.570745627942145,
+      "domain_episodes": {
+        "propulsion": 10,
+        "battery": 3
+      }
+    },
+    {
+      "q": 0.9999,
+      "high": [
+        891.3078967233633,
+        434.21450257006404
+      ],
+      "union_episodes": 0,
+      "false_alarms_per_hour": 0.0,
+      "domain_episodes": {
+        "propulsion": 0,
+        "battery": 0
+      }
+    }
+  ],
+  "valid_exposure_hours": 22.77722222222222,
+  "per_run": [
+    {
+      "run_id": "ef498e93b8b94e0792d3ca4157dd1c3c",
+      "group": "x500-hover-seed374096555",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "196d7b8fbf614f8eaa5f3a1c36c039b9",
+      "group": "x500-hover-seed374096536",
+      "hours": 0.2411111111111111,
+      "episodes": 1
+    },
+    {
+      "run_id": "a41bbe1263414df283185457b8a3905f",
+      "group": "x500-horizontal-seed374096542",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "e1c532570dec43e58ce78e836241beab",
+      "group": "x500-hover-seed374096550",
+      "hours": 0.24138888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "1dcb8fe511464e5a994f876833819c17",
+      "group": "x500-waypoint-seed374096549",
+      "hours": 0.24583333333333332,
+      "episodes": 0
+    },
+    {
+      "run_id": "e6bec9bccce1425ab18c28de7f973569",
+      "group": "x500-altitude-seed374096531",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "abdb1d8c75154da0ae4df99756a4d03e",
+      "group": "x500-altitude-seed374096540",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "531af9713d53400d9f8fa704b211601c",
+      "group": "x500-hover-seed374096532",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "ed74a09546a0499fa371d53be16f684b",
+      "group": "x500-hover-seed374096556",
+      "hours": 0.04055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "f8207ea21c504e77bf8ea38b52a45b76",
+      "group": "x500-hover-seed374096534",
+      "hours": 0.24694444444444444,
+      "episodes": 0
+    },
+    {
+      "run_id": "c142e08a26c74bd8b51ff0e0807e7453",
+      "group": "x500-hover-seed374096541",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "2b4300ec51084071aa447324cdd87890",
+      "group": "x500-yaw-seed374096548",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "639255121ef749a1b86a93b1300a24c5",
+      "group": "x500-hover-seed374096538",
+      "hours": 0.24555555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "622303416d1c4e96b829e45cac206bd5",
+      "group": "x500-waypoint-seed374096537",
+      "hours": 0.23972222222222223,
+      "episodes": 1
+    },
+    {
+      "run_id": "7919b778ed154e11baeece67bf86f404",
+      "group": "x500-hover-seed374096547",
+      "hours": 0.23972222222222223,
+      "episodes": 0
+    },
+    {
+      "run_id": "55d035fc5d724e9198192cedbdf3beb3",
+      "group": "x500-yaw-seed374096539",
+      "hours": 0.24666666666666667,
+      "episodes": 0
+    },
+    {
+      "run_id": "e73540b6cc2d4e94bda172cd7b264799",
+      "group": "x500-hover-seed374096545",
+      "hours": 0.2452777777777778,
+      "episodes": 1
+    },
+    {
+      "run_id": "e4a98856853f4db38bc28d3652f0be1c",
+      "group": "x500-hover-seed374096553",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "14837c6d5f8043d7a01362ec06eb3145",
+      "group": "x500-horizontal-seed374096554",
+      "hours": 0.2452777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "8246f3ffc5524589b138487325cd4892",
+      "group": "x500-horizontal-seed374096533",
+      "hours": 0.24388888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "be884077cb77486c8a099248bcd0c716",
+      "group": "x500-hover-seed374096544",
+      "hours": 0.04055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "889e61515e894fcc9863f9db70f99557",
+      "group": "x500-altitude-seed374096552",
+      "hours": 0.24666666666666667,
+      "episodes": 0
+    },
+    {
+      "run_id": "136b3ab8d7e8413fb9a0a56ebf49665d",
+      "group": "x500-waypoint-seed374096546",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "b2f4434dd79d4a5da54688dc4618abd9",
+      "group": "x500-hover-seed374096543",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "f450dd0640e34eeead8948dd986f984c",
+      "group": "x500-yaw-seed374096551",
+      "hours": 0.24055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "1131a194048740db8ff80aceba9d6c10",
+      "group": "x500-hover-seed374096535",
+      "hours": 0.03972222222222222,
+      "episodes": 0
+    },
+    {
+      "run_id": "70648b1209204bb2a57065ade2a35e17",
+      "group": "x500-horizontal-seed374097542",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "29543cf3686c4cfaa59fb7cdac80b018",
+      "group": "x500-hover-seed374097534",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "da69d835d7be42b1bee23acc4ba10cc2",
+      "group": "x500-horizontal-seed374097533",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "588e7d82b2c5405384fed950e29e8046",
+      "group": "x500-hover-seed374097535",
+      "hours": 0.04055555555555555,
+      "episodes": 1
+    },
+    {
+      "run_id": "7128de7bab93462cb596c39fe126a2cb",
+      "group": "x500-hover-seed374097553",
+      "hours": 0.24638888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "c2ffd2f44e9d4debad553c266d7cec24",
+      "group": "x500-altitude-seed374097552",
+      "hours": 0.24027777777777778,
+      "episodes": 1
+    },
+    {
+      "run_id": "02244fff709648178265310fc4e33936",
+      "group": "x500-hover-seed374097538",
+      "hours": 0.24694444444444444,
+      "episodes": 0
+    },
+    {
+      "run_id": "6909aff260ee4affa9c074ab9cc16fd7",
+      "group": "x500-waypoint-seed374097546",
+      "hours": 0.23944444444444443,
+      "episodes": 0
+    },
+    {
+      "run_id": "c1aee5d1550b433ca118652924915a4f",
+      "group": "x500-hover-seed374097532",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "6c3d5d10a99049ebb5d736f2624981bb",
+      "group": "x500-hover-seed374097545",
+      "hours": 0.245,
+      "episodes": 0
+    },
+    {
+      "run_id": "96b858c029914bae8d4a823a6a59ce3e",
+      "group": "x500-waypoint-seed374097549",
+      "hours": 0.23972222222222223,
+      "episodes": 0
+    },
+    {
+      "run_id": "cbe03ac1e02b4a98b6b91078f7ee403f",
+      "group": "x500-hover-seed374097536",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "a21f8d9f009042339925e7f99e8dd48b",
+      "group": "x500-waypoint-seed374097537",
+      "hours": 0.24555555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "9a4a7848b0c145b89061b74254087132",
+      "group": "x500-hover-seed374097556",
+      "hours": 0.04027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "0bad9515d0b74a07892ee718a2431896",
+      "group": "x500-altitude-seed374097531",
+      "hours": 0.24055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "9d2ef7df30f54beb9450f19a36c402d9",
+      "group": "x500-yaw-seed374097539",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "7533bb07c0324ba9a4feb99d9cedd28c",
+      "group": "x500-altitude-seed374097540",
+      "hours": 0.24027777777777778,
+      "episodes": 1
+    },
+    {
+      "run_id": "43f1f38a5f2146d2a003acde1c70daee",
+      "group": "x500-hover-seed374097544",
+      "hours": 0.04111111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "0c18252973054455a25aab3a09dd079e",
+      "group": "x500-yaw-seed374097551",
+      "hours": 0.2452777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "6b206e61b45a445b826c38b9f2274f64",
+      "group": "x500-hover-seed374097541",
+      "hours": 0.24555555555555555,
+      "episodes": 1
+    },
+    {
+      "run_id": "404487a6a8dc488ebeb7a1c74bc96830",
+      "group": "x500-hover-seed374097547",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "1012fec1eed8493cabb6bd23d22fb421",
+      "group": "x500-yaw-seed374097548",
+      "hours": 0.24638888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "5316f727008e41c6af0ea3ff344ada6b",
+      "group": "x500-hover-seed374097543",
+      "hours": 0.24555555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "fcfadd848eb444d4b86f42e71ed65589",
+      "group": "x500-hover-seed374097555",
+      "hours": 0.24055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "02dc1eb764cc4ba0bc1b3e78d0f88313",
+      "group": "x500-hover-seed374097550",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "bf399ebe14e24233a0f52c1260ce723f",
+      "group": "x500-horizontal-seed374097554",
+      "hours": 0.24055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "98f2e18b07194c80869ddf76286ccf7f",
+      "group": "x500-altitude-seed374098531",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "7e35087e32e64067a8b314aca8ce8802",
+      "group": "x500-hover-seed374098544",
+      "hours": 0.04055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "d293cacb8ecf44e384301e72b54084a4",
+      "group": "x500-yaw-seed374098551",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "542bae73688f458f9d774080c74c9255",
+      "group": "x500-hover-seed374098545",
+      "hours": 0.24388888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "76a1339871fd43c28c24acbc9a3157c9",
+      "group": "x500-horizontal-seed374098533",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "07d620b6d4854a0ebedaf0542a373ae0",
+      "group": "x500-hover-seed374098536",
+      "hours": 0.245,
+      "episodes": 0
+    },
+    {
+      "run_id": "b66a495ea56b45369d439aee82339496",
+      "group": "x500-horizontal-seed374098554",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "ea23e4c2e99c40e4b16d4d72f4621671",
+      "group": "x500-hover-seed374098541",
+      "hours": 0.24055555555555555,
+      "episodes": 1
+    },
+    {
+      "run_id": "abcd7cdb29184d30ad6f3e4d037b4f4e",
+      "group": "x500-horizontal-seed374098542",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "1bd54f09f06643958fdb5190d021202e",
+      "group": "x500-hover-seed374098556",
+      "hours": 0.0475,
+      "episodes": 0
+    },
+    {
+      "run_id": "bbbfb363f44c48a8aea124b643b143eb",
+      "group": "x500-yaw-seed374098539",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "1d9484606fe04948b24dee572547c267",
+      "group": "x500-hover-seed374098553",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "98e92ea4674f4d55ba7b4e4b06da24eb",
+      "group": "x500-hover-seed374098543",
+      "hours": 0.24055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "ef53a963a18d4609b881b89113fe1ea2",
+      "group": "x500-hover-seed374098555",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "447ccee1b43d4933a0233d38370e08d7",
+      "group": "x500-yaw-seed374098548",
+      "hours": 0.24027777777777778,
+      "episodes": 1
+    },
+    {
+      "run_id": "056e9bddeca148e5b06b5925d5137a84",
+      "group": "x500-hover-seed374098547",
+      "hours": 0.24638888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "5365844d0ecf49c58f5a84baeafcbb49",
+      "group": "x500-altitude-seed374098552",
+      "hours": 0.24583333333333332,
+      "episodes": 0
+    },
+    {
+      "run_id": "5c525b9479c542b7a9984cf6627beae7",
+      "group": "x500-hover-seed374098534",
+      "hours": 0.24055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "789932dbfff24c9f92ff6cf0bb35d52d",
+      "group": "x500-waypoint-seed374098546",
+      "hours": 0.2452777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "663bcc8efd634da79e99fe4c891e34c3",
+      "group": "x500-waypoint-seed374098549",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "26a3afb1ad0c4d309e68367ae399af2f",
+      "group": "x500-altitude-seed374098540",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "55835935007d4003bc0ccde4c83c9883",
+      "group": "x500-hover-seed374098532",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "278810effda2488d874121ce0bc6586c",
+      "group": "x500-hover-seed374098535",
+      "hours": 0.04027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "d8483966b42e4ee6a56708112eef29f0",
+      "group": "x500-hover-seed374098538",
+      "hours": 0.24555555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "c2a5344241f24e75864f3bbcd296d2f3",
+      "group": "x500-hover-seed374098550",
+      "hours": 0.24666666666666667,
+      "episodes": 0
+    },
+    {
+      "run_id": "25cc9f0133c9484cbda70e50b763aed5",
+      "group": "x500-waypoint-seed374098537",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "6156695bb5094d41baff01351d309893",
+      "group": "x500-hover-seed374099541",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "0eff074095d6431fa7ed15d03e6b96c6",
+      "group": "x500-hover-seed374099536",
+      "hours": 0.24555555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "ba0a80bf407b460fbc0ac5cfbc98d043",
+      "group": "x500-waypoint-seed374099546",
+      "hours": 0.24666666666666667,
+      "episodes": 0
+    },
+    {
+      "run_id": "ccb0505f8a77497bb646221606dcebc5",
+      "group": "x500-yaw-seed374099551",
+      "hours": 0.24055555555555555,
+      "episodes": 0
+    },
+    {
+      "run_id": "5cd06dcadc974cc99ff554e1616c1c5c",
+      "group": "x500-altitude-seed374099552",
+      "hours": 0.24472222222222223,
+      "episodes": 0
+    },
+    {
+      "run_id": "229f89a075234caf94e3af0497ad8602",
+      "group": "x500-hover-seed374099545",
+      "hours": 0.24,
+      "episodes": 1
+    },
+    {
+      "run_id": "5d31604fced8416d905a693e6cab4044",
+      "group": "x500-hover-seed374099547",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "8b0944250be949f1ab4bb40f52b2830b",
+      "group": "x500-hover-seed374099543",
+      "hours": 0.24027777777777778,
+      "episodes": 1
+    },
+    {
+      "run_id": "3f9c8a0ac0a04a848090744241d90e49",
+      "group": "x500-yaw-seed374099539",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "7a93cdb8129e4b50b2fa0b2d91d2350c",
+      "group": "x500-altitude-seed374099531",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    },
+    {
+      "run_id": "9f1a88ee466348e3a056ac81eb2e07f2",
+      "group": "x500-horizontal-seed374099533",
+      "hours": 0.2452777777777778,
+      "episodes": 1
+    },
+    {
+      "run_id": "e31ac96c245043a0a2082e566bcbd6b3",
+      "group": "x500-hover-seed374099550",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "cd4f7d15b9c24560b0b7023669aeaa0e",
+      "group": "x500-hover-seed374099532",
+      "hours": 0.24388888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "767fd148a0524e7382d01f318707eb03",
+      "group": "x500-hover-seed374099556",
+      "hours": 0.04083333333333333,
+      "episodes": 0
+    },
+    {
+      "run_id": "45dfcea740d64e2ca7cbf47814ea113b",
+      "group": "x500-hover-seed374099534",
+      "hours": 0.24694444444444444,
+      "episodes": 0
+    },
+    {
+      "run_id": "6ae2167346bf4599bc38b70e7348f984",
+      "group": "x500-waypoint-seed374099537",
+      "hours": 0.24138888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "fe13744ea02e4e98a056064abd8a96c1",
+      "group": "x500-altitude-seed374099540",
+      "hours": 0.23944444444444443,
+      "episodes": 0
+    },
+    {
+      "run_id": "e74fbfebd1334a4c81a5e73a6126d852",
+      "group": "x500-yaw-seed374099548",
+      "hours": 0.24027777777777778,
+      "episodes": 0
+    },
+    {
+      "run_id": "fa70de5a73e443b7bbbd5ee892726788",
+      "group": "x500-hover-seed374099555",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "8caaaf4bfc9146da96c51dbb5219b981",
+      "group": "x500-hover-seed374099535",
+      "hours": 0.044444444444444446,
+      "episodes": 0
+    },
+    {
+      "run_id": "ea76204ac08344d98572a631c64a37b8",
+      "group": "x500-horizontal-seed374099554",
+      "hours": 0.24,
+      "episodes": 0
+    },
+    {
+      "run_id": "5a5524311d3f4a9787082c925ee69fc4",
+      "group": "x500-hover-seed374099538",
+      "hours": 0.24083333333333334,
+      "episodes": 0
+    },
+    {
+      "run_id": "785b26796ba34274a9e938437404d8e8",
+      "group": "x500-horizontal-seed374099542",
+      "hours": 0.23972222222222223,
+      "episodes": 0
+    },
+    {
+      "run_id": "225ab7e0507e4a7f8dac64823418ad9a",
+      "group": "x500-hover-seed374099544",
+      "hours": 0.04555555555555556,
+      "episodes": 1
+    },
+    {
+      "run_id": "6e1b06720e0249fba03a65c1fc9e642c",
+      "group": "x500-hover-seed374099553",
+      "hours": 0.24138888888888888,
+      "episodes": 0
+    },
+    {
+      "run_id": "a93f6de3585d47a98cce130b100c2b72",
+      "group": "x500-waypoint-seed374099549",
+      "hours": 0.2411111111111111,
+      "episodes": 0
+    }
+  ],
+  "group_bootstrap": {
+    "groups": 104,
+    "interval": [
+      0.2995396223916509,
+      0.863413153192852
+    ],
+    "reason": null
+  },
+  "poisson_zero_event_95_upper_per_hour": null,
+  "poisson_assumption": "independent constant-rate episodes; reference, not a guarantee",
+  "additional_zero_event_hours_for_reference_upper_1": 0,
+  "independent_false_alarm_target_verified": false,
+  "reason": "threshold-fit data cannot certify independent false-alarm performance",
+  "bundle_integrity_sha256": "491ec9892d6cf155f95d70a62f7ba7fc8c2b45cd80bfeb22e97ba67a685e8f7f"
+}

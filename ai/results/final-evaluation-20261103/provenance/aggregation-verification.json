@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "models": 18,
+  "runs_per_model": 324,
+  "events_per_model": 108,
+  "recalculated_event_counts": true,
+  "recalculated_normal_alarm_counts": true,
+  "recalculated_exposure": true,
+  "source_hashes": {
+    "evidence.json": "e2a2a1e1ab4942ce3ea6639f0f7f1d3b22bf1dc2b837c4838069cbfa85758560",
+    "protocol.json": "7979f82bff4e71163840fd0825e4340d819add90992b16aa67006fb913c9dd93",
+    "report.json": "e3d76976b2bdbd0ca11c2629db5296b0c380c7464522882addbfc2d18f1127b8",
+    "metrics.json": "66e4610b7df3547f0f72768af612afd70fd1704302378514bac5316435b94c67"
+  },
+  "common_valid_origins": 129231
+}
