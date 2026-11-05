@@ -1,0 +1,24 @@
+{
+  "schema": "drone-data.main19.storage-basis/1",
+  "measured_mission_seconds": 180,
+  "measured_raw_runs": 16,
+  "raw_bytes_total": 4662685716,
+  "gzip_bytes_total": 953077916,
+  "consumer_bytes_total": 1137730533,
+  "export_bytes_total": 412012483,
+  "export_max_bytes": 27705857,
+  "online_npz_max_bytes": 2669804,
+  "xz_capsule_samples": 4,
+  "xz_capsule_min_bytes": 39721556,
+  "xz_capsule_max_bytes": 51428168,
+  "xz_capsule_mean_bytes": 46184248.0,
+  "capsule_allowance_factor": 1.15,
+  "export_allowance_factor": 1.05,
+  "scratch_allowance_factor": 1.25,
+  "measurement_scope": "Existing FINAL16 bytes only; zero new flights or real fit; complete regular raw member and export byte verification",
+  "provenance": [
+    "/home/sa/CapstoneV3/docs/data/reports/main-collection-connection-20261107/attempt-01/capsule-size-probe.json",
+    "/home/sa/CapstoneV3/docs/data/reports/main-collection-connection-20261107/attempt-01/capsule-extra-probes.json"
+  ],
+  "runtime_requires_prior_tasks": false
+}

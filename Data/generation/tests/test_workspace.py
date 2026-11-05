@@ -19,6 +19,10 @@ def test_source_distribution_has_complete_sealed_package_and_no_machine_state():
     assert all(prefix + name in files for name in package["files"])
     assert all(workspace.sha(files[prefix + name]) == digest for name, digest in package["files"].items())
     assert "Data/generation/drone-data" in files
+    assert "Data/generation/pretrain/ai19.py" in files
+    assert "Data/generation/tools/ai19_one_run.sh" in files
+    assert "ai/learning/history19/preprocessing.py" in files
+    assert "ai/learning/run_health19/data.py" in files
     assert "Data/generation/drone-pretrain" in files
     assert "Data/generation/x500-data" not in files
     assert "Data/generation/x500-pretrain" not in files

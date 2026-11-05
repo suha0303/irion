@@ -234,7 +234,20 @@ def export(args):
     return 0
 
 
+def ai19(args):
+    executable = ENV / "bin/python"
+    if not executable.is_file():
+        raise ValueError("Run ./Data/generation/drone-data setup first")
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
+               PYTHONPATH=os.pathsep.join(str(ROOT / p) for p in ("Data/generation", "ai", "ai/src")),
+               OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1")
+    return subprocess.run([str(executable), "-B", "-m", "pretrain.ai19", *args.arguments],
+                          cwd=ROOT, env=env, check=False).returncode
+
+
 def main():
+    if sys.argv[1:2] == ["ai19"]:
+        return ai19(argparse.Namespace(arguments=sys.argv[2:]))
     parser = argparse.ArgumentParser(description="드론 수집·정제 설치/점검/소스 배포 (기본 X500). 수집·학습 자동 시작 없음")
     sub = parser.add_subparsers(dest="action", required=True)
     install = sub.add_parser("setup", help="CPU 전용 데이터 환경 설치")
@@ -245,9 +258,11 @@ def main():
     check.add_argument("--json", action="store_true")
     pack = sub.add_parser("export", help="호스트 상태를 제외한 독립 소스 압축본 작성")
     pack.add_argument("--output", required=True, help="체크아웃 밖의 새 .tar.gz 경로")
+    new = sub.add_parser("ai19", help="현재 배터리·19신호 두 AI 입력 내보내기; 비행·학습 없음")
+    new.add_argument("arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     try:
-        return {"setup": setup, "doctor": doctor, "export": export}[args.action](args)
+        return {"setup": setup, "doctor": doctor, "export": export, "ai19": ai19}[args.action](args)
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         print("STOP:", exc, file=sys.stderr)
         return 3

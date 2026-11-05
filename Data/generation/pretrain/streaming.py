@@ -48,7 +48,13 @@ def tree_stamp(path):
 
 def retire_owned(paths, allowed, journal, *, proof, budget):
     """All ownership/stability checks precede any deletion. No wildcard deletion."""
-    if proof.get("status") not in {"RUN_CAPSULE_VERIFIED", "PORTABLE_DATASET_VERIFIED"}:
+    user_approved_write = (
+        proof.get("status") == "RUN_CAPSULE_WRITTEN"
+        and proof.get("storage_policy") == "single_xz0_write_no_readback_user_20261108"
+        and proof.get("artifact", {}).get("readback_verified") is False
+    )
+    if (proof.get("status") not in {"RUN_CAPSULE_VERIFIED", "PORTABLE_DATASET_VERIFIED"}
+            and not user_approved_write):
         raise ValueError("Verified recoverable artifact required before retirement")
     verified = []
     for path in paths:
@@ -58,7 +64,9 @@ def retire_owned(paths, allowed, journal, *, proof, budget):
             raise ValueError("Unowned/replaced cleanup target: " + str(path))
         verified.append(path)
     state = dict(
-        status="RETIRING_VERIFIED_OWN_OUTPUTS", paths=[str(p) for p in verified], deleted=[]
+        status="RETIRING_OWN_OUTPUTS_AFTER_WRITE" if user_approved_write
+        else "RETIRING_VERIFIED_OWN_OUTPUTS",
+        paths=[str(p) for p in verified], deleted=[],
     )
     write(journal, state)
     for path in verified:
@@ -69,7 +77,8 @@ def retire_owned(paths, allowed, journal, *, proof, budget):
             path.unlink()
         state["deleted"].append(str(path))
         write(journal, state)
-    state["status"] = "VERIFIED_OWN_OUTPUTS_RETIRED"
+    state["status"] = ("OWN_OUTPUTS_RETIRED_AFTER_WRITE" if user_approved_write
+                       else "VERIFIED_OWN_OUTPUTS_RETIRED")
     write(journal, state)
     return state
 

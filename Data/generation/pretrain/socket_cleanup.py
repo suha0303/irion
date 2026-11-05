@@ -195,6 +195,10 @@ def cleanup(task):
                     active=[],
                 )
                 write(state_path, state)
+    if (task / "config.json").exists() and read(task / "config.json").get("mode") == "main19":
+        from .main_collection import cleanup_finished
+
+        cleanup_finished(task, report)
     return report
 
 

@@ -2,7 +2,7 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 case "${1:-menu}" in
-  setup|doctor|export)
+  setup|doctor|export|ai19)
     exec python3 "$ROOT/Data/generation/tools/workspace.py" "$@"
     ;;
   menu)

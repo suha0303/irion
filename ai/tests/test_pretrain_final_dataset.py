@@ -129,9 +129,6 @@ def test_final_create_is_inert_and_disables_fit_with_bounded_retries(tmp_path, m
         ]
     )
     monkeypatch.setattr(cli, "HOME", tmp_path / "ops")
-    producer_manifest = tmp_path / "runtime-manifest.json"
-    common.write(producer_manifest, {"synthetic_fixture": True})
-    monkeypatch.setattr(cli, "PRODUCER_MANIFEST", producer_manifest)
     monkeypatch.setattr(cli, "producer_sources", lambda: {})
     monkeypatch.setattr(
         final,

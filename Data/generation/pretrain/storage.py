@@ -59,20 +59,51 @@ def verify_bundle(path, expected, budget, destination=None, progress=None):
         raise ValueError("Missing portable members")
 
 
-def pack_files(sources, path, budget):
-    """Losslessly seal explicitly selected files and verify reconstructed bytes."""
+def pack_files(sources, path, budget, *, preset=3, readback=True, expected=None):
+    """Hash while packing; readback remains the default for legacy callers."""
     inventory = {}
-    with tarfile.open(path, "x:xz", preset=3) as tar:
+
+    class HashedReader:
+        def __init__(self, stream):
+            self.stream, self.digest, self.size = stream, hashlib.sha256(), 0
+
+        def read(self, size=-1):
+            budget.check()
+            block = self.stream.read(size)
+            self.digest.update(block)
+            self.size += len(block)
+            return block
+
+    if expected is not None and set(expected) != set(sources):
+        raise ValueError("Packing source inventory changed")
+    with tarfile.open(path, "x:xz", preset=preset, dereference=True) as tar:
         for name, source in sorted(sources.items()):
             budget.check()
             safe_name(name)
             source = Path(source)
             if source.is_symlink() or not source.is_file():
                 raise ValueError("Regular capsule source required")
-            inventory[name] = dict(bytes=source.stat().st_size, sha256=sha(source))
-            tar.add(source, arcname=name, recursive=False)
-    verify_bundle(path, inventory, budget)
-    return dict(path=str(path), sha256=sha(path), bytes=path.stat().st_size, members=inventory)
+            before = source.stat()
+            member = tar.gettarinfo(source, arcname=name)
+            if not member.isfile():
+                raise ValueError("Regular capsule member required")
+            with source.open("rb") as stream:
+                hashed = HashedReader(stream)
+                tar.addfile(member, hashed)
+            after = source.stat()
+            if ((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+                    != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+                    or hashed.size != member.size):
+                raise ValueError("Capsule source changed while packing: " + name)
+            inventory[name] = dict(bytes=hashed.size, sha256=hashed.digest.hexdigest())
+            if expected is not None and inventory[name] != expected[name]:
+                raise ValueError("Capsule source differs from approved inventory: " + name)
+    if readback:
+        verify_bundle(path, inventory, budget)
+    return dict(
+        path=str(path), sha256=sha(path), bytes=path.stat().st_size, members=inventory,
+        compression=dict(format="xz", preset=preset), readback_verified=readback,
+    )
 
 
 def event_body(row, budget):

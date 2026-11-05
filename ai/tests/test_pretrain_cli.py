@@ -209,17 +209,15 @@ def test_expanded_memory_service_uses_available_minus_reserve(monkeypatch):
         cli.service_memory(cfg)
 
 
-def test_expanded_all_menu_selects_same_policy(monkeypatch):
-    inputs = iter(["1", "7", "", "y"])
+def test_lr_menu_defaults_to_no_collection(monkeypatch):
+    from pretrain import training19
+
+    inputs = iter(["1", "n"])
     monkeypatch.setattr("builtins.input", lambda prompt: next(inputs))
-    captured = []
-    monkeypatch.setattr(cli, "create", lambda args: captured.append(args) or Path("fixture"))
-    monkeypatch.setattr(cli, "start", lambda task: None)
-    monkeypatch.setattr(cli, "watch", lambda task: None)
+    monkeypatch.setattr(training19, "prepare_plan", lambda: Path("fixture"))
+    monkeypatch.setattr(training19, "create_task", lambda *args: pytest.fail("LR start was declined"))
+    monkeypatch.setattr(cli, "start", lambda *args: pytest.fail("LR start was declined"))
     cli.menu()
-    args = captured[0]
-    assert args.test_flights and args.use_available_ram and args.ignore_memory_estimate
-    assert args.min_available_ram_gb == 1 and args.levels == [7]
 
 
 def test_expanded_rss_over_eight_and_floor_preserved(tmp_path, monkeypatch):
@@ -304,28 +302,18 @@ def test_new_flight_finish_persists_count_and_duration(tmp_path, monkeypatch):
     assert persisted["stages"][-1]["elapsed_s"] >= 0
 
 
-def test_collection_menu_allows_sixteen_without_gates(monkeypatch):
-    inputs = iter(["2", "16", "16", "16", "2", "16", "16", "n", "", "", "y"])
+def test_main_collection_menu_waits_for_final_user_approval(monkeypatch, tmp_path):
+    from pretrain import training19, training19_main
+
+    monkeypatch.setattr(training19_main, "AUTH", tmp_path / "missing-approval.json")
+    inputs = iter(["2"])
     monkeypatch.setattr("builtins.input", lambda prompt: next(inputs))
-    captured = []
-    monkeypatch.setattr(cli, "create", lambda args: captured.append(args) or Path("fixture"))
-    monkeypatch.setattr(cli, "start", lambda task: None)
-    monkeypatch.setattr(cli, "watch", lambda task: None)
+    monkeypatch.setattr(training19, "create_task", lambda *args: pytest.fail("Main approval is pending"))
+    monkeypatch.setattr(cli, "create", lambda *args: pytest.fail("Old300 route must not run"))
+    monkeypatch.setattr(cli, "start", lambda *args: pytest.fail("Main approval is pending"))
     cli.menu()
-    args = captured[0]
-    assert args.mode == "collect" and args.use_available_ram and not args.gates
-    assert args.collection_sets == 2 and args.collection_profile == "balanced300"
-    assert (
-        args.workers
-        == args.io_workers
-        == args.audit_workers
-        == args.flight_workers
-        == args.export_workers
-        == 16
-    )
 
 
-@pytest.mark.parametrize("mode", ["collect", "test"])
 def test_expanded_memory_includes_postcollection_cpu(tmp_path, monkeypatch, mode):
     from types import SimpleNamespace
 

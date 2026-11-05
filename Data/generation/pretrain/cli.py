@@ -100,6 +100,10 @@ def snapshot(task):
 
 
 def render(task, tick=0):
+    if read(task / "config.json").get("mode") == "main19":
+        from .main_collection import render as main_render
+
+        return main_render(task, tick=tick)
     state = snapshot(task)
     config = read(task / "config.json")
     finished = state.get("finished")
@@ -445,6 +449,11 @@ def create(args):
         raise ValueError("시험 병렬 수는 오름차순·중복 없이, seed는 작업별 허용 범위여야 합니다")
     storage_root = guard(getattr(args, "storage_root", selected_root()))
     storage_policy = capture(storage_root)
+    # Existing pipelines use the sealed ctx6 engine. They are historical-only now.
+    if "profiles/battery-aging/cmu-vah01.json" in producer_sources():
+        raise ValueError(
+            "새 수집은19신호 AI19 연결을 사용합니다: ./Data/generation/drone-data ai19 --help. 기존19+6 신규 작업은 생성하지 않습니다"
+        )
     sources = list((ROOT / "Data/generation/pretrain").glob("*.py")) + [
         ROOT / "Data/generation/drone-pretrain",
         ROOT / "ai/x500_storage.py",
@@ -560,16 +569,35 @@ def systemd_command(arguments):
     )
 
 
-def start(task):
+def start(task, *, pilot_resume=False):
     task = task.resolve()
     if task.parent != HOME / "tasks":
         raise ValueError("등록된 로컬 task 디렉터리가 필요합니다")
-    if (task / "operator/claimed").exists():
+    if (task / "operator/claimed").exists() and not pilot_resume:
         raise ValueError(
             "STOP: Attempt already claimed; no automatic retry. 새 task 이름을 사용하세요."
         )
     verify({str(task / "config.json"): (task / "config.sha256").read_text().strip()})
     cfg = read(task / "config.json")
+    if cfg.get("mode") == "main19":
+        from .main_collection import preflight
+
+        checked = preflight(task)
+        for warning in checked.get("warnings", []):
+            print("용량 주의:", warning)
+    elif cfg.get("mode") == "pilot45":
+        from .pilot45 import preflight
+
+        preflight(task)
+    if pilot_resume:
+        request = task / "operator/resume-request.json"
+        if (
+            cfg.get("mode") not in {"pilot45", "main19"}
+            or not request.exists()
+            or read(request).get("config_sha256") != sha(task / "config.json")
+            or read(request).get("owner_uid") != os.getuid()
+        ):
+            raise ValueError("Explicit identity-checked pilot resume receipt required")
     if cfg.get("python_allocator") not in (None, "debug"):
         raise ValueError("Unsupported task Python allocator")
     verify_runtime(cfg)
@@ -589,7 +617,8 @@ def start(task):
         "--property=OOMPolicy=stop",
         "--property=ExecStopPost="
         + systemd_command([str(PYTHON), "-B", "-m", "pretrain.socket_cleanup", str(task)]),
-        "--property=RemainAfterExit=yes",
+        "--property=RemainAfterExit="
+        + ("no" if cfg.get("flow") or cfg.get("mode") == "main19" else "yes"),
         "--property=MemoryAccounting=yes",
         "--property=MemoryHigh=" + str(memory["high_bytes"]),
         "--property=MemoryMax=" + str(memory["max_bytes"]),
@@ -627,6 +656,11 @@ def start(task):
             memory=memory,
             python_allocator=cfg.get("python_allocator", "default"),
             session_lifetime="user systemd; survives terminal closure, host shutdown/logout may stop user manager",
+            **(
+                dict(owner_uid=os.getuid(), config_sha256=sha(task / "config.json"))
+                if cfg.get("mode") == "main19"
+                else {}
+            ),
         ),
     )
     write(HOME / "latest.json", dict(task=str(task)))
@@ -648,6 +682,8 @@ def service_memory(config):
             "finish_audit",
             "merge_prepared",
             "recover_capsules",
+            "pilot45",
+            "main19",
         }
         or config.get("min_available_ram_gb") != 1
     ):
@@ -719,71 +755,16 @@ def existing_task():
 
 def menu():
     print(
-        "드론 · 학습 전 통합 CLI (기본 기체 X500)\n1. 테스트  2. 새 수집→전처리  3. 기존 작업 화면  4. 최종 평가 데이터324run  0. 종료"
+        "X500 · 데이터 수집\n1. LR용108런 새로 수집  2. 본학습용1674런 처음부터 새로 수집\n3. 기존 작업 화면  0. 종료"
     )
-    choice = choose("작업", (1, 2, 3, 4, 0), 2)
-    if choice == "0":
-        return
-    if choice == "3":
+    choice = choose("작업", (1, 2, 3, 0), 1)
+    if choice in {"1", "2"}:
+        from .main_collection import user_start
+
+        task = user_start("lr108" if choice == "1" else "main")
+        watch(task)
+    elif choice == "3":
         existing_task()
-        return
-    args = parser().parse_args(["init", "--name", time.strftime("local-%Y%m%d-%H%M%S")])
-    args.mode = "test" if choice == "1" else "collect"
-    if args.mode == "test":
-        args.levels = [input_integer("시험 병렬 수 (1..16 정수)", 2, MAX_FLIGHT_WORKERS)]
-        args.test_flights = True
-        print("새120초 비행 → 검증·압축 → 추출·전처리 → 집계·독립 검산. 학습에 투입하지 않습니다.")
-    elif choice == "4":
-        args.collection_profile = "final324"
-        args.storage_profile = "standard"
-        args.name = time.strftime("final-%Y%m%d-%H%M%S")
-        print("별도 정상108(6기동×6환경×3) / paired 정상대조108 / 이상108(6종×6기동×3환경)")
-        print("6기동: 호버·상하·수평·회전·복합·난수 · 모든 군 기본8분·저SOC3분 · paired 조건·길이 동일")
-        print("학습용 분할·scaler fit·학습·보정·성능평가 없음 · 원시 압축본과 실패 증거 보존")
-        args.flight_workers = input_integer("비행 병렬 수 (1..16 정수)", 4, MAX_FLIGHT_WORKERS)
-        args.export_workers = input_integer(
-            "검증·압축 병렬 수", min(2, args.flight_workers), args.flight_workers
-        )
-        args.io_workers = input_integer("압축 해제·검증 병렬 수", 2)
-        args.workers = input_integer("전처리 병렬 수", 2)
-        args.audit_workers = input_integer("품질 검산 병렬 수", 2)
-        args.seed_base = input_seed()
-    else:
-        args.workers = input_integer("전처리 병렬 수", 4)
-        args.io_workers = input_integer("압축 해제·검증 병렬 수", 4)
-        args.audit_workers = input_integer("품질 검산 병렬 수", 4)
-        print("300run: 학습180·검증26·보정26·정상 개발평가26+대조6·이상36")
-        print("정상258run 경로: 기본103 / 복합77 / 제한된 부드러운 난수78 · 기본2배속")
-        print("조건은 실행 전 manifest에 고정 · 새 조건의 실제 비행 통과는 수집 시 검증")
-        print("같은 비행 길이끼리 묶음 / 비행과 이전 묶음 후처리 병행 / 원시 최대2묶음 + 실패 증거")
-        args.collection_sets = input_integer("수집 배율 (1=300run)", 1)
-        args.flight_workers = input_integer("비행 병렬 수 (1..16 정수)", 16, MAX_FLIGHT_WORKERS)
-        while True:
-            args.export_workers = input_integer("검증·압축 병렬 수", min(4, args.flight_workers))
-            if args.export_workers <= args.flight_workers:
-                break
-            print("검증·압축 병렬 수는 비행 병렬 수 이하여야 합니다.")
-        args.gates = choose("사전 비행·내구 게이트 실행", ("y", "n"), "n") == "y"
-        args.seed_base = input_seed()
-    print("예상·고정 RSS 제한 해제 · 가용 RAM1GB 보호 · 제출 시 비어 있는 스왑 사용 허용")
-    print(
-        "각run최대3회(최초1+재시도2)·실패 증거 보존·불완전 최종 세트 봉인 금지"
-        if choice == "4"
-        else "개별 run 최대 3회 시도 · 실패 증거 보존 후 다음 run · 불완전 데이터셋 인수 금지"
-    )
-    while True:
-        try:
-            raw = input(f"최종 데이터 저장 폴더 (기본 {selected_root()}): ").strip()
-            args.storage_root = guard(raw or selected_root())
-            break
-        except (ValueError, UnicodeDecodeError) as exc:
-            print(f"저장 경로 확인: {exc}")
-    print(f"저장: {args.storage_root} · 학습 없음")
-    if choose("선택한 유한 작업 시작", ("y", "n"), "n") != "y":
-        return
-    task = create(args)
-    start(task)
-    watch(task)
 
 
 def positive_int(value):
@@ -829,6 +810,10 @@ class Levels(argparse.Action):
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="action")
+    sub.add_parser("main19", help="LR108·전체1674 실제 수집/전처리/검산·조회/중지/명시재개")
+    sub.add_parser("training19", help="LR108·승인된 본학습1674 계획 조회")
+    sub.add_parser("pilot45", help="새CMU19 예비45 init/seal/start/status/stop/resume; no fit")
+    sub.add_parser("integration19", help="총괄용 단일run 두19입력 연결 시험; no fit")
     init = sub.add_parser("init", help="실행 없이 설정 작성")
     init.add_argument("--name", required=True)
     init.add_argument("--mode", choices=("test", "collect"), default="test")
@@ -931,7 +916,20 @@ def parser():
 
 
 def main(argv=None):
-    args = parser().parse_args(argv)
+    words = list(sys.argv[1:] if argv is None else argv)
+    if words[:1] == ["main19"]:
+        from .main_collection import main as collection_main
+
+        return collection_main(words[1:])
+    if words[:1] == ["training19"]:
+        from .training19 import main as training_main
+
+        return training_main(words[1:])
+    if words[:1] in (["pilot45"], ["integration19"]):
+        from .pilot45 import main as pilot_main
+
+        return pilot_main(words[1:], single_scope=words[0] == "integration19")
+    args = parser().parse_args(words)
     if args.action is None:
         menu()
     elif args.action == "init":
@@ -1034,10 +1032,15 @@ def main(argv=None):
         elif args.action in {"status", "watch"}:
             watch(task, once=args.action == "status")
         else:
-            from .runner import worker
+            if read(task / "config.json").get("mode") == "main19":
+                from .main_collection import worker
+            elif read(task / "config.json").get("mode") == "pilot45":
+                from .pilot45 import worker
+            else:
+                from .runner import worker
 
             worker(task)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
