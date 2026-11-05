@@ -303,12 +303,19 @@ def parser():
         command.add_argument("--profile", default="default")
         command.add_argument("arguments", nargs=argparse.REMAINDER)
     sub.add_parser("menu")
+    local = sub.add_parser("local", help="로컬 CPU 모델·실기체 로그; 원격 접속 없음")
+    local.add_argument("arguments", nargs=argparse.REMAINDER)
     return result
 
 
 def main(argv=None):
     args = parser().parse_args(argv)
     try:
+        if args.action == "local":
+            return subprocess.run(
+                [str(profile.ROOT / "ai/.venv/bin/python"), "-B", "-m",
+                 "localflight.cli", *args.arguments], env=environment({}), check=False,
+            ).returncode
         if args.action in {None, "menu"}:
             return menu()
         if args.action == "configure":
@@ -318,6 +325,23 @@ def main(argv=None):
 
             print(json.dumps(reconcile(args.root), indent=2, ensure_ascii=False))
             return 0
+        if args.action == "train" and args.arguments[:1] == ["run-health"]:
+            executable = profile.ROOT / "ai/.venv/bin/python"
+            return subprocess.run(
+                [str(executable), "-B", "-m", "learning.run_health19.cli", *args.arguments[1:]],
+                env=environment({}), check=False,
+            ).returncode
+        if args.action == "train" and args.arguments[:1] == ["history19"]:
+            # This separate implementation never selects or converts historical inputs.
+            if args.arguments[1:2] == ["fit"] and "--help" not in args.arguments:
+                settings = profile.load(args.profile)
+                return selected_python(settings, "learning.history19.cli", args.arguments[1:],
+                                       profile_file=profile.profile_path(args.profile))
+            executable = profile.ROOT / "ai/.venv/bin/python"
+            return subprocess.run(
+                [str(executable), "-B", "-m", "learning.history19.cli", *args.arguments[1:]],
+                env=environment({}), check=False,
+            ).returncode
         if args.action in {"status", "watch"}:
             if args.action == "watch":
                 watch(args.root)

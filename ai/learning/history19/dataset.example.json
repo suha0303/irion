@@ -1,0 +1,76 @@
+{
+  "schema": "drone-ai.history19.dataset/1",
+  "example_only": true,
+  "feature_profile": "common19_ctx0",
+  "feature_order": [
+    "motor_request_front_right",
+    "motor_request_front_left",
+    "motor_request_rear_right",
+    "motor_request_rear_left",
+    "body_rate_p",
+    "body_rate_q",
+    "body_rate_r",
+    "body_rate_error_p",
+    "body_rate_error_q",
+    "body_rate_error_r",
+    "roll",
+    "pitch",
+    "specific_force_x",
+    "specific_force_y",
+    "specific_force_z",
+    "climb_rate",
+    "climb_rate_error",
+    "pack_voltage",
+    "pack_current"
+  ],
+  "target_order": [
+    "body_rate_p",
+    "body_rate_q",
+    "body_rate_r",
+    "pack_voltage"
+  ],
+  "history": 100,
+  "future": 10,
+  "step_us": 100000,
+  "emit_every_us": 1000000,
+  "scaler_scope": "normal_train_unique_valid_frames",
+  "scaler_fit_run_ids": [
+    "EXAMPLE_TRAIN_RUN"
+  ],
+  "runs": [
+    {
+      "run_id": "EXAMPLE_TRAIN_RUN",
+      "role": "normal_train",
+      "raw_flight_id": "EXAMPLE_TRAIN_FLIGHT",
+      "paired_case_id": "EXAMPLE_TRAIN_PAIR",
+      "group_id": "EXAMPLE_TRAIN_GROUP",
+      "health_eligibility": "confirmed_healthy"
+    },
+    {
+      "run_id": "EXAMPLE_VALIDATION_RUN",
+      "role": "normal_validation",
+      "raw_flight_id": "EXAMPLE_VALIDATION_FLIGHT",
+      "paired_case_id": "EXAMPLE_VALIDATION_PAIR",
+      "group_id": "EXAMPLE_VALIDATION_GROUP",
+      "health_eligibility": "confirmed_healthy"
+    }
+  ],
+  "files": {
+    "normal_train": {
+      "path": "normal_train.npz",
+      "sha256": "UNSET_REPLACE_WITH_ACTUAL_HASH"
+    },
+    "normal_validation": {
+      "path": "normal_validation.npz",
+      "sha256": "UNSET_REPLACE_WITH_ACTUAL_HASH"
+    },
+    "normal_train_frames": {
+      "path": "normal_train_frames.npz",
+      "sha256": "UNSET_REPLACE_WITH_ACTUAL_HASH"
+    },
+    "scaler": {
+      "path": "scaler.npz",
+      "sha256": "UNSET_REPLACE_WITH_ACTUAL_HASH"
+    }
+  }
+}

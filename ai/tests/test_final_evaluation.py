@@ -267,3 +267,74 @@ def test_final_console_does_not_claim_training_or_recalibration(tmp_path):
     assert "최종 추론 완료 모델: 18/18" in screen
     assert "23/324" in screen
     assert "새 정상 보정" not in screen
+
+
+def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(tmp_path, monkeypatch):
+    import hashlib
+    import importlib.util
+    import io
+    import json
+    import tarfile
+    from pathlib import Path
+
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "reports/final-evaluation-20261103/attempt-01/operator/deploy.py"
+    )
+    spec = importlib.util.spec_from_file_location("approved_final_deployment", script)
+    deploy = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(deploy)
+    data, task, out = [tmp_path / n for n in ("data", "task", "output")]
+    for p in (data, task, out):
+        p.mkdir()
+    for key, value in [("ROOT", tmp_path), ("DATA", data), ("TASK", task), ("OUT", out)]:
+        monkeypatch.setattr(deploy, key, value)
+    manifest = manifest_fixture()
+    manifest.update(canonical_sha256={}, protection={}, collection_ledger={})
+    write(task / "planned-cases.json", {"sets": []})
+    write(task / "final-protection.json", {"frozen": True})
+    write(task / "ledger.json", {"complete": True})
+    manifest["cases_sha256"] = sha(task / "planned-cases.json")
+    manifest["protection"]["sha256"] = sha(task / "final-protection.json")
+    manifest["collection_ledger"] = dict(
+        path=str(task / "ledger.json"), sha256=sha(task / "ledger.json")
+    )
+    for row in manifest["runs"]:
+        folder = data / "canonical" / row["run_id"]
+        folder.mkdir(parents=True)
+        for name in ["summary.json", "frames.jsonl", "windows.jsonl", "exclusions.jsonl"]:
+            p = folder / name
+            p.write_text(json.dumps({"run_id": row["run_id"], "bytes": "한글"}) + "\n")
+            manifest["canonical_sha256"][str(p)] = sha(p)
+        raw = tmp_path / (row["run_id"] + ".tar.gz")
+        body = b"" if row["role"] == "normal_test" else b'{"event_id":"fixture"}\n'
+        with tarfile.open(raw, "w:gz") as archive:
+            info = tarfile.TarInfo("evaluation/events.jsonl")
+            info.size = len(body)
+            archive.addfile(info, io.BytesIO(body))
+        row["archive"] = dict(
+            path=str(raw),
+            bytes=raw.stat().st_size,
+            members={
+                "evaluation/events.jsonl": dict(
+                    kind="file", bytes=len(body), sha256=hashlib.sha256(body).hexdigest()
+                )
+            },
+        )
+    write(data / "sealed-manifest.json", manifest)
+    write(data / "seal.json", dict(manifest_sha256=sha(data / "sealed-manifest.json")))
+    write(
+        tmp_path / "ai/reports/final-test-20261103/intake-01/intake.json",
+        dict(manifest_sha256=sha(data / "sealed-manifest.json")),
+    )
+    target, digest = deploy.package_data()
+    assert sha(target) == digest
+    with tarfile.open(target, "r:gz") as archive:
+        content = {m.name: archive.extractfile(m).read() for m in archive if m.isfile()}
+    transfer = json.loads(content["transfer.json"])
+    assert len([n for n in content if n.startswith("truth/")]) == 324
+    assert len([n for n in content if n.startswith("dataset/canonical/")]) == 1296
+    for name, expected in transfer["files"].items():
+        assert hashlib.sha256(content[name]).hexdigest() == expected
+    with pytest.raises(FileExistsError):
+        deploy.package_data()
