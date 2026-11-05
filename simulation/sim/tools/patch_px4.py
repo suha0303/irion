@@ -22,10 +22,15 @@ def replace(path, old, new):
 
 shutil.copyfile(root / "sim/adapters/RawCapture.hpp", g / "RawCapture.hpp")
 shutil.copyfile(root / "sim/adapters/CaptureTiming.hpp", g / "CaptureTiming.hpp")
+# Upgrade exactly the known previous include block before pristine application.
+legacy_bridge_includes = '#include "GZGimbal.hpp"\n#include "RawCapture.hpp"\n#include <lib/battery/battery.h>'
+reviewed_bridge_includes = '#include "GZGimbal.hpp"\n#include "RawCapture.hpp"\n#include "JointPhaseReference.hpp"\n#include <lib/battery/battery.h>'
+if legacy_bridge_includes in (g / "GZBridge.hpp").read_text():
+    replace(g / "GZBridge.hpp", legacy_bridge_includes, reviewed_bridge_includes)
 replace(
     g / "GZBridge.hpp",
     '#include "GZGimbal.hpp"',
-    '#include "GZGimbal.hpp"\n#include "RawCapture.hpp"\n#include <lib/battery/battery.h>',
+    '#include "GZGimbal.hpp"\n#include "RawCapture.hpp"\n#include "JointPhaseReference.hpp"\n#include <lib/battery/battery.h>',
 )
 replace(
     g / "GZBridge.hpp",
@@ -133,3 +138,38 @@ if True:
         text += f"param set CA_ROTOR{i}_KM {rotor['spin'] * 0.05}\n"
     text += "fi\n"
     a.write_text(text)
+
+# Versioned joint phase is opt-in; legacy byte paths remain the default.
+mc = p / "src/modules/mc_pos_control"
+for target in (g, mc):
+    shutil.copyfile(root / "sim/adapters/JointPhaseReference.hpp", target / "JointPhaseReference.hpp")
+replace(g / "GZBridge.hpp", '#include "RawCapture.hpp"', '#include "RawCapture.hpp"\n#include "JointPhaseReference.hpp"')
+replace(g / "GZBridge.cpp", 'void GZBridge::clockCallback(const gz::msgs::Clock &msg)\n{', 'void GZBridge::clockCallback(const gz::msgs::Clock &msg)\n{\n\tstd::unique_lock<std::mutex> joint_lock(joint_phase::clock_mutex(), std::defer_lock);\n\tif (joint_phase::enabled()) { joint_lock.lock(); }')
+replace(mc / "MulticopterPositionControl.hpp", '#include <uORB/topics/trajectory_setpoint.h>', '#include <uORB/topics/trajectory_setpoint.h>\n#include <uORB/topics/vehicle_status.h>\n#include <uORB/topics/vehicle_command.h>\n#include "JointPhaseReference.hpp"')
+replace(mc / "MulticopterPositionControl.hpp", '\tvoid Run() override;', '\tvoid Run() override;\n\tjoint_phase::Reference _joint_reference;\n\tuORB::Subscription _joint_status_sub{ORB_ID(vehicle_status)};\n\tvehicle_status_s _joint_status{};\n\tuORB::Publication<vehicle_command_s> _joint_land_pub{ORB_ID(vehicle_command)};')
+replace(mc / "MulticopterPositionControl.cpp", 'void MulticopterPositionControl::Run()\n{', 'void MulticopterPositionControl::Run()\n{\n\tstd::unique_lock<std::mutex> joint_lock(joint_phase::clock_mutex(), std::defer_lock);\n\tif (_joint_reference.active()) { joint_lock.lock(); }')
+joint_input = """            const auto joint_now = hrt_absolute_time();
+            if (_joint_reference.active()) {
+                _joint_status_sub.update(&_joint_status);
+                _joint_reference.prepare(joint_now, flying && _vehicle_control_mode.flag_armed && _vehicle_control_mode.flag_control_offboard_enabled,
+                    states.position(0), states.position(1), states.position(2), _setpoint);
+            }
+            _control.setInputSetpoint(_setpoint);
+            // Receipt is after the real consumer call, with source clock held.
+            _joint_reference.consumed(joint_now, _vehicle_control_mode.flag_control_offboard_enabled,
+                !_vehicle_control_mode.flag_control_offboard_enabled && _joint_status.nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LAND, _setpoint);
+            if (_joint_reference.land_due(joint_now)) {
+                vehicle_command_s land{};
+                land.timestamp = joint_now;
+                land.command = vehicle_command_s::VEHICLE_CMD_NAV_LAND;
+                land.target_system = _joint_status.system_id;
+                land.target_component = _joint_status.component_id;
+                land.source_system = _joint_status.system_id;
+                land.source_component = _joint_status.component_id;
+                land.from_external = false;
+                _joint_land_pub.publish(land);
+                _joint_reference.land_published(joint_now);
+            }"""
+replace(mc / "MulticopterPositionControl.cpp", '\t\t\t_control.setInputSetpoint(_setpoint);', joint_input)
+
+replace(mc / "MulticopterPositionControl.cpp", "\t\t\t\t// Initial update failed - Try fallback if within timeout", "\t\t\t\t_joint_reference.fallback();\n\t\t\t\t// Initial update failed - Try fallback if within timeout")

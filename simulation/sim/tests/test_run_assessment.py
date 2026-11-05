@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from capstone_sim import collection_config, run_assessment
+from capstone_sim import collection_config, model_envelope, run_assessment
 from capstone_sim.recording import TOPICS, Recorder, dump, integrity
 
 
@@ -40,7 +40,7 @@ class RunAssessmentTest(unittest.TestCase):
         dump(run / "evaluation/execution.json", [dict(state="airborne", sim_time=.2),
                                                  dict(state="landing", sim_time=1.7)])
         dump(run / "evaluation/scenario.json", dict(
-            name="battery_resistance_existing" if anomaly else "hover_normal",
+            name="propulsion_loss_existing" if anomaly else "hover_normal",
             requested_duration_s=1.5, parameters={}, normal_range_revision=collection_config.vehicle()["revision"],
             health_eligibility="abnormal" if anomaly else "confirmed_healthy"))
         path = "profiles/collection/vehicle.yaml"
@@ -149,3 +149,42 @@ class RunAssessmentTest(unittest.TestCase):
             result = self.assess(run)
             self.assertFalse(result["contract_passed"])
             self.assertIn("causal order", result["errors"])
+
+    def test_new_producer_requires_recomputed_mission_envelope_and_keeps_legacy_policy(self):
+        with tempfile.TemporaryDirectory() as td:
+            run = self.fixture(Path(td))
+            original = run_assessment.read
+            def producer(path):
+                if str(path).endswith("artifacts/runtime-manifest.json"):
+                    return dict(files={"sim/src/capstone_sim/model_envelope.py": "fixture"},
+                                fc_parameters=collection_config.fc_parameters())
+                return original(path)
+            source = original(run / "reference/source_lock.json")
+            source["local_sources"]["sim/src/capstone_sim/model_envelope.py"] = "fixture"
+            dump(run / "reference/source_lock.json", source)
+            timeline = original(run / "evaluation/execution.json")
+            path = run / "evaluation/scenario.json"
+            scenario = original(path)
+            envelope = model_envelope.check(run / "evaluation/truth.jsonl", timeline)
+            scenario.update(health_eligibility_scope=model_envelope.POLICY,
+                            health_eligibility_interval_us=[200000, 1700000])
+            dump(path, scenario)
+            dump(run / "evaluation/envelope-check.json", envelope)
+            integrity(run)
+            def assess():
+                with patch.object(run_assessment, "read", side_effect=producer):
+                    return run_assessment.assess(run, 2, 1.5, collection_config.battery()["profile_id"])
+            self.assertTrue(assess()["contract_passed"])
+            truth = run / "evaluation/truth.jsonl"
+            rows = [json.loads(line) for line in truth.read_text().splitlines()]
+            rows[10]["model_valid"] = False
+            truth.write_text("".join(json.dumps(row) + "\n" for row in rows))
+            # A stale report or a self-reported healthy label cannot hide an in-mission violation.
+            integrity(run)
+            result = assess()
+            self.assertIn("mission model-envelope evidence", result["errors"])
+            self.assertIn("normal mission model envelope", result["errors"])
+            self.assertFalse(result["physical_gate_passed"])
+            dump(run / "evaluation/envelope-check.json", model_envelope.check(truth, timeline))
+            integrity(run)
+            self.assertIn("normal mission model envelope", assess()["errors"])

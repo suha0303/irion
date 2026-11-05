@@ -33,7 +33,7 @@ def acceptance(suite):
     for name, key in [
         ("rc-comparison.json", "passed"),
         ("propulsion-comparison.json", "passed"),
-        ("battery-fit.json", "comparison_status"),
+        ("battery-baseline-validation.json", "status"),
         ("live-control.json", "passed"),
         ("process-recovery.json", "passed"),
         ("instance-lease.json", "passed"),

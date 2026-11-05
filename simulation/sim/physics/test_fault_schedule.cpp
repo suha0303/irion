@@ -17,7 +17,7 @@ int main() {
   MissionFaultSchedule disabled;
   rejects([&] { disabled.schedule(17000000, 18000000); });
   assert(disabled.onset_us == -1);
-  for (const auto kind : {"r0", "friction"}) {
+  for (const auto kind : {"friction", "battery_stage"}) {
     MissionFaultSchedule schedule;
     schedule.configure(100, -1, kind);
     assert(schedule.onset_us == -1);
@@ -28,8 +28,10 @@ int main() {
                        std::numeric_limits<double>::infinity()})
       rejects([&] { schedule.schedule(bad, 18000000); });
     assert(schedule.origin_us == -1);
-    assert(schedule.schedule(17000000, 18000000) == 117000000);
-    assert(schedule.schedule(17000000, 118000000) == 117000000);
+    const auto first = schedule.schedule(17000000, 18000000);
+    assert(first == 117000000);
+    const auto duplicate = schedule.schedule(17000000, 118000000);
+    assert(duplicate == 117000000);
     rejects([&] { schedule.schedule(17000001, 18000000); });
     assert(schedule.onset_us == 117000000);
   }
@@ -37,9 +39,9 @@ int main() {
                      std::numeric_limits<double>::quiet_NaN(),
                      std::numeric_limits<double>::infinity()}) {
     MissionFaultSchedule schedule;
-    rejects([&] { schedule.configure(bad, -1, "r0"); });
+    rejects([&] { schedule.configure(bad, -1, "friction"); });
   }
   MissionFaultSchedule mixed, unsupported;
-  rejects([&] { mixed.configure(100, 180, "r0"); });
+  rejects([&] { mixed.configure(100, 180, "friction"); });
   rejects([&] { unsupported.configure(100, -1, "battery_soc"); });
 }

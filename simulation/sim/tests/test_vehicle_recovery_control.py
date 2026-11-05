@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import test_vehicle_contract as fixtures
-from capstone_sim import collection_config
+from capstone_sim import collection_config, propulsion_health
 from capstone_sim import control as controls
 from capstone_sim.recording import dump, integrity, sha, verify_generic_metadata
 from capstone_sim.recovery import recover
@@ -23,6 +23,8 @@ class VehicleRecoveryControlTest(unittest.TestCase):
         self.run = self.fixture.make_run(self.folder)
 
     def custom_run(self):
+        dump(self.run / "evaluation/propulsion-selection.json",
+             propulsion_health.resolve("propulsion_loss_step"))
         profile = self.fixture.profile(8)
         metadata = self.fixture.record(self.run, 8, profile=profile)
         path = self.run / "reference/vehicle-profile.json"
@@ -43,7 +45,7 @@ class VehicleRecoveryControlTest(unittest.TestCase):
         dump(
             self.run / "evaluation/scenario.json",
             dict(
-                name="battery_resistance_step",
+                name="propulsion_loss_step",
                 seed=81,
                 requested_duration_s=240,
                 requested_real_time_factor=4,
@@ -123,7 +125,7 @@ class VehicleRecoveryControlTest(unittest.TestCase):
             result = controls.control(self.run, "reset")
         self.assertEqual(result, {"not_executed": True})
         args, options = flight.call_args
-        self.assertEqual(args, ("battery_resistance_step", 81, 240, 6, self.run.name))
+        self.assertEqual(args, ("propulsion_loss_step", 81, 240, 6, self.run.name))
         self.assertEqual(options["vehicle_profile"], manifest["source_profile"])
         self.assertEqual(options["fault_at_s"], 187)
         self.assertEqual(options["real_time_factor"], 4)
@@ -151,6 +153,7 @@ class VehicleRecoveryControlTest(unittest.TestCase):
             flight.assert_not_called()
 
     def collection_run(self, scenario, *, variation=None):
+        dump(self.run / "evaluation/propulsion-selection.json", propulsion_health.resolve(scenario))
         dump(
             self.run / "run.json",
             dict(run_id=self.run.name, status="completed", configuration="collection", instance=7),
@@ -167,25 +170,34 @@ class VehicleRecoveryControlTest(unittest.TestCase):
         return old
 
     def test_collection_reset_retains_required_fault_onset_and_original_variation(self):
-        self.collection_run("battery_resistance_step")
+        self.collection_run("propulsion_loss_step")
         with patch.object(controls, "run_flight", return_value={}) as flight:
             controls.control(self.run, "reset")
         args, options = flight.call_args
-        self.assertEqual(args, ("battery_resistance_step", 44, 240, 7, self.run.name))
+        self.assertEqual(args, ("propulsion_loss_step", 44, 240, 7, self.run.name))
         self.assertEqual(options["configuration"], "collection")
         self.assertEqual(options["fault_at_s"], 180)
+        self.assertEqual(options["propulsion_transition_s"], 1)
         collection_config.validate_request(args[0], args[2], options["fault_at_s"])
         old = self.collection_run("hover_normal", variation=dict(soc=0.95, path="frozen_fixture"))
         with patch.object(controls, "run_flight", return_value={}) as flight:
             controls.control(self.run, "reset")
         self.assertEqual(flight.call_args.kwargs["normal_variation"], old["normal_variation"])
 
+    def test_historical_friction_recipe_cannot_silently_reset_into_joint_profile(self):
+        self.collection_run("propulsion_loss_step")
+        (self.run / "evaluation/propulsion-selection.json").unlink()
+        with patch.object(controls, "run_flight") as flight:
+            with self.assertRaisesRegex(ValueError, "friction-only recipe retired"):
+                controls.control(self.run, "reset")
+            flight.assert_not_called()
+
     def test_collection_scenario_change_uses_new_onset_without_the_old_normal_variation(self):
         self.collection_run("hover_normal", variation=dict(soc=0.95, path="frozen_fixture"))
         with patch.object(controls, "run_flight", return_value={}) as flight:
-            controls.control(self.run, "set_scenario", scenario="battery_resistance_ramp")
+            controls.control(self.run, "set_scenario", scenario="propulsion_loss_ramp")
         args, options = flight.call_args
-        self.assertEqual(args[0], "battery_resistance_ramp")
+        self.assertEqual(args[0], "propulsion_loss_ramp")
         self.assertEqual(options["fault_at_s"], 180)
         self.assertIsNone(options["normal_variation"])
         collection_config.validate_request(args[0], args[2], options["fault_at_s"])

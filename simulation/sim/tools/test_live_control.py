@@ -3,13 +3,16 @@
 import json
 import subprocess
 import time
+import uuid
 
 from capstone_sim.control import control
 from capstone_sim.recording import dump, verify
 from capstone_sim.runner import ROOT
 
+out = ROOT / "artifacts" / ("live-control-" + uuid.uuid4().hex)
+out.mkdir()
 before = set((ROOT / "runs").iterdir())
-log = (ROOT / "artifacts/live-control-run.stdout.json").open("w")
+log = (out / "run.stdout.json").open("w")
 p = subprocess.Popen(
     [
         str(ROOT / "capstone-sim"),
@@ -39,10 +42,10 @@ try:
         time.sleep(0.2)
     assert run is not None
     # Same-time requests apply FIFO at physics boundary, identical duplicate is a no-op.
-    args = (run, "apply_parameter_change", 100, "battery_r0", 0.05, 50000000)
+    args = (run, "apply_parameter_change", 100, "motor_friction", 0.00002, 50000000)
     results.append(control(*args))
     results.append(control(*args))
-    results.append(control(run, "apply_parameter_change", 100, "battery_r0", 0.06, 50000000))
+    results.append(control(run, "apply_parameter_change", 100, "motor_friction", 0.00003, 50000000))
     results.append(control(run, "apply_parameter_change", 101, "motor_friction", 0.00002, 50000000))
     while time.monotonic() < until:
         receipt = control(run, "status", 100)
@@ -66,7 +69,7 @@ try:
         and actual["request-101"]["profile_revision"] == 2
     )
     dump(
-        ROOT / "artifacts/live-control.json",
+        out / "live-control.json",
         dict(
             passed=passed,
             exit_code=exit_code,

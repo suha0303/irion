@@ -12,7 +12,6 @@ int main(int argc, char **argv) {
     for (auto &v : p.ocv_cell) b >> v;
     m >> p.kt_prop >> p.kq_prop >> p.friction >> p.coulomb >> p.esc_efficiency >> p.resistance;
     if (!b || !m) throw std::runtime_error("runtime files");
-    p.calibrated = true;
     p.battery_heat_capacity = x500::profile::battery_heat_capacity;
     p.battery_cooling = x500::profile::battery_cooling;
     x500::Powertrain pulse(p);

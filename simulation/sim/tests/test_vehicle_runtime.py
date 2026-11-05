@@ -115,7 +115,9 @@ class VehicleRuntimeTest(unittest.TestCase):
     def test_resigned_runtime_text_cannot_disagree_with_frozen_physics(self):
         _, (folder, record) = self.prepare()
         source = folder / "battery_runtime.txt"
-        source.write_text(source.read_text().replace("0.06742070443911984", "0.5"))
+        values = source.read_text().split()
+        values[0] = str(float(values[0]) * 2)
+        source.write_text(" ".join(values) + "\n")
         record["files"][source.name] = runtime.sha(source)
         dump(folder / "manifest.json", record)
         with self.assertRaisesRegex(ValueError, "native inputs disagree"):

@@ -11,7 +11,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from capstone_sim import collection_config, runner, vehicle_assets, vehicle_runtime
+from capstone_sim import (
+    collection_config,
+    propulsion_health,
+    runner,
+    vehicle_assets,
+    vehicle_runtime,
+)
 from capstone_sim.profile import load_battery, load_profile
 
 
@@ -21,7 +27,9 @@ class RecorderFixture:
         self.selected_vehicle = vehicle_profile
         self.through, self.count, self.latest = 0, 0, {}
         (run / "observations/metadata.json").write_text('{"vehicle": {}}')
-        (run / "evaluation/truth.jsonl").write_text('{"time_us":0,"model_valid":true}\n')
+        (run / "evaluation/truth.jsonl").write_text(
+            '{"time_us":0,"model_valid":true,"fault_applied":false}\n'
+        )
         self.closed = self.released = False
 
     def close(self):
@@ -36,6 +44,29 @@ def message(kind, **fields):
 
 
 class VehicleRunnerTest(unittest.TestCase):
+    def test_high_uint32_keeps_logical_seed_and_uses_attached_signed_cli_option(self):
+        seed = 2993778865
+        with tempfile.TemporaryDirectory() as folder:
+            result = self.run_mocked(Path(folder), custom=False, configuration="collection", flight_options={"seed":seed})
+            scenario = json.loads((result["run"] / "evaluation/scenario.json").read_text())
+            self.assertEqual(scenario["seed"],seed)
+            self.assertEqual(scenario["wind_model"]["seed_u32"],seed)
+            self.assertEqual(result["environment"]["X500_SEED"],str(seed))
+            self.assertEqual(scenario["gazebo_seed_transport"]["gazebo_native_seed_u32"],seed)
+            argv = result["popen"].call_args_list[0].args[0]
+            self.assertIn("--seed=-1301188431",argv)
+            self.assertNotIn(str(seed),argv)
+            self.assertNotIn("--seed",argv)
+
+    def test_collection_instance31_reaches_launch_but_custom_stays_within16(self):
+        with tempfile.TemporaryDirectory() as folder:
+            result = self.run_mocked(Path(folder), custom=False, configuration="collection", instance=31)
+            self.assertEqual(json.loads((result["run"] / "run.json").read_text())["instance"], 31)
+        with tempfile.TemporaryDirectory() as folder, self.assertRaisesRegex(ValueError, "0..15"):
+            self.run_mocked(Path(folder), instance=16)
+        with tempfile.TemporaryDirectory() as folder, self.assertRaisesRegex(ValueError, "0..31"):
+            self.run_mocked(Path(folder), custom=False, configuration="collection", instance=32)
+
     def fixture(self, directory):
         root = directory / "simulation"
         root.mkdir()
@@ -47,6 +78,11 @@ class VehicleRunnerTest(unittest.TestCase):
             shutil.copy2(example.parent / name, prepared / name)
         (prepared / "profile.hpp").write_text("// mocked compiled header")
         (prepared / "libDronePowertrain.so").write_text("mocked plugin")
+        prop = vehicle["propulsion"]
+        (prepared / "propulsion_runtime.txt").write_text(" ".join(map(str, [
+            prop["thrust_coefficient"], prop["torque_coefficient"], prop["friction_nms"],
+            prop["coulomb_nm"], prop["esc_efficiency"], prop["resistance_ohm"],
+        ])))
         selected = dict(
             vehicle=vehicle,
             battery=pack,
@@ -66,9 +102,10 @@ class VehicleRunnerTest(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("{}")
         for name in (
-            "profiles/cmu_vah07_4s2p.json",
+            "profiles/collection/battery.json",
             "profiles/x500_reference.yaml",
             "artifacts/propulsion-comparison.json",
+            "profiles/propulsion_runtime.txt",
         ):
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -85,6 +122,8 @@ class VehicleRunnerTest(unittest.TestCase):
         gate=None,
         recorder_error=False,
         instance=0,
+        flight_options=None,
+        duration=10,
     ):
         root, prepared, selected = self.fixture(directory)
         world = root / "mock-world.sdf"
@@ -214,10 +253,11 @@ class VehicleRunnerTest(unittest.TestCase):
             )
             result = runner.run_flight(
                 scenario,
-                duration=10,
+                duration=duration,
                 instance=instance,
                 configuration=configuration,
                 vehicle_profile=Path("selected.yaml") if custom else None,
+                **(flight_options or {}),
             )
         run = Path(result["run"])
         return dict(
@@ -244,18 +284,19 @@ class VehicleRunnerTest(unittest.TestCase):
                 result["environment"]["CAPSTONE_ESC_ORDER"],
                 ",".join(result["selected"]["vehicle"]["motor_order"]),
             )
-            self.assertEqual(
-                float(result["environment"]["X500_CAPACITY"]),
-                result["selected"]["battery"]["capacity_ah"],
-            )
+            self.assertNotIn("X500_CAPACITY", result["environment"])
             self.assertEqual(
                 result["environment"]["X500_BATTERY_FILE"],
                 str(result["prepared"] / "battery_runtime.txt"),
             )
             self.assertEqual(
                 result["environment"]["X500_PROPULSION_FILE"],
-                str(result["prepared"] / "propulsion_runtime.txt"),
+                str(result["run"] / "evaluation/propulsion-initial.txt"),
             )
+            self.assertEqual(result["environment"]["X500_PROPULSION_PROFILE_LOCKED"], "1")
+            selection = json.loads((result["run"] / "evaluation/propulsion-selection.json").read_text())
+            self.assertEqual(selection["initial"], propulsion_health.read_runtime(
+                result["prepared"] / "propulsion_runtime.txt"))
             self.assertEqual(
                 result["recorder"].selected_vehicle, result["selected"]["observation_vehicle"]
             )
@@ -329,34 +370,21 @@ class VehicleRunnerTest(unittest.TestCase):
                     )
             prepared.assert_not_called()
 
-    def test_custom_loss_severity_scales_from_its_own_propulsion_baseline(self):
-        vehicle = {"propulsion": {"friction_nms": 8e-5}}
-        pack = {"r0_ohm": 0.08, "interconnect_resistance_ohm": 0.01, "capacity_ah": 12}
-        for scenario in (
-            "propulsion_loss_existing",
-            "propulsion_loss_step",
-            "propulsion_loss_ramp",
-        ):
-            with self.subTest(scenario=scenario):
-                selected = runner.custom_scenario_parameters(scenario, None, vehicle, pack)
-                key = "friction" if "friction" in selected else "fault_value"
-                self.assertAlmostEqual(selected[key], 8e-5 * 20)
-                self.assertGreater(selected[key], vehicle["propulsion"]["friction_nms"])
-                legacy = runner.scenario_parameters(scenario)
-                self.assertEqual(legacy[key], 4e-5)
-        combined = runner.custom_scenario_parameters("combined_existing", None, vehicle, pack)
-        legacy = runner.scenario_parameters("combined_existing")
-        self.assertAlmostEqual(combined["r0"], 0.01 + 0.07 * legacy["r0"] / 0.04)
-        capacity = runner.custom_scenario_parameters(
-            "battery_capacity_existing", None, vehicle, pack
-        )
-        self.assertAlmostEqual(capacity["capacity"], 12 * 0.7)
-        dynamic = runner.custom_scenario_parameters("battery_resistance_step", None, vehicle, pack)
-        self.assertEqual(dynamic["fault_value"], 1.4)
-        with self.assertRaisesRegex(ValueError, "positive profile baseline friction"):
-            runner.custom_scenario_parameters(
-                "propulsion_loss_step", None, {"propulsion": {"friction_nms": 0}}, pack
-            )
+    def test_custom_joint_loss_preserves_its_own_baseline_and_all_three_impairments(self):
+        baseline = propulsion_health.load_catalog()["states"]["normal"]
+        normal = dict(baseline, resistance=.2, kt_prop=2e-5, kq_prop=4e-7, friction=0.0)
+        for scenario in propulsion_health.SCENARIOS:
+            selection = propulsion_health.resolve(scenario, normal)
+            target = selection["target"]
+            self.assertEqual(selection["normal"], normal)
+            self.assertAlmostEqual(target["resistance"] / normal["resistance"], 1.04)
+            self.assertAlmostEqual(target["kt_prop"] / normal["kt_prop"], .99)
+            self.assertAlmostEqual(target["kq_prop"] / normal["kq_prop"], 1.01)
+            self.assertAlmostEqual(target["friction"], 2e-6 * normal["kq_prop"] / baseline["kq_prop"])
+        for scenario in ("combined_existing", "motor_resistance_existing", "propeller_load_existing",
+                         "propulsion_loss_strong_existing"):
+            with self.assertRaises(ValueError):
+                runner.scenario_parameters(scenario)
 
     def test_startup_recorder_failure_preserves_evidence_and_releases_lease(self):
         with tempfile.TemporaryDirectory() as temporary:

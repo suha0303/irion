@@ -10,6 +10,7 @@ from pathlib import Path
 
 import yaml
 
+from . import propulsion_health
 from .runtime_manifest import PLUGIN as CURRENT_PLUGIN
 from .runtime_manifest import RUNTIME_MANIFEST, TRANSPORT, verify_runtime
 
@@ -18,6 +19,7 @@ DIRECTORY = ROOT / "profiles/collection"
 PLUGIN = ROOT / CURRENT_PLUGIN
 HEADER = DIRECTORY / "vehicle_generated.hpp"
 NAME = "collection"
+MAX_INSTANCES = 32
 # Read-only identities for previously recorded evidence. New runs use NAME.
 LEGACY_NAME = "r3_long15"
 LEGACY_BATTERY_ID = "vtc6_4s4p_r3_long15"
@@ -29,17 +31,18 @@ NORMAL = {
     "waypoint_normal", "low_soc_normal", "wind_normal", "cold_normal", "payload_normal",
 }
 ANOMALY = {
-    "battery_resistance_existing", "propulsion_loss_existing",
-    "battery_resistance_step", "propulsion_loss_step",
-    "battery_resistance_ramp", "propulsion_loss_ramp",
+    "propulsion_loss_existing", "propulsion_loss_step", "propulsion_loss_ramp",
+    "battery_aging_existing", "battery_aging_step", "battery_aging_ramp",
 }
 
 
 def validate_request(
-    scenario, duration, fault_at_s, *, operation_variation=None, fault_after_mission_s=None
+    scenario, duration, fault_at_s, *, operation_variation=None, fault_after_mission_s=None,
+    battery_transition_s=None, propulsion_transition_s=None,
 ):
     if scenario not in NORMAL | ANOMALY:
         raise ValueError("scenario outside collection scope")
+    propulsion_health.resolve(scenario, transition_s=propulsion_transition_s)
     maximum = 300 if scenario == "low_soc_normal" else 900 if scenario in NORMAL else 480
     if not math.isfinite(duration) or not 0 < duration <= maximum:
         raise ValueError(f"Collection {scenario} duration must be within (0,{maximum}] seconds")
@@ -58,7 +61,8 @@ def validate_request(
             raise ValueError("Mission-relative onset requires a dynamic collection operation")
         if fault_at_s is not None:
             raise ValueError("Boot and mission-relative fault schedules are mutually exclusive")
-        ramp = 20 if scenario.endswith("ramp") else 0
+        specified = propulsion_transition_s if scenario in propulsion_health.DYNAMIC else battery_transition_s
+        ramp = specified if specified is not None else 1 if scenario.endswith("step") else 20
         if (
             type(fault_after_mission_s) not in (int, float)
             or not math.isfinite(fault_after_mission_s)
@@ -69,6 +73,11 @@ def validate_request(
     elif scenario.endswith(("step", "ramp")):
         if fault_at_s != 180:
             raise ValueError("Collection dynamic anomaly requires --fault-at-s 180 PX4 boot seconds")
+        specified = propulsion_transition_s if scenario in propulsion_health.DYNAMIC else battery_transition_s
+        ramp = specified if specified is not None else 1 if scenario.endswith("step") else 20
+        if (type(ramp) not in (int, float) or not math.isfinite(ramp)
+                or not 0 < ramp <= 1800 or fault_at_s + ramp >= duration):
+            raise ValueError("Profile transition must finish within the requested duration")
     elif fault_at_s is not None:
         raise ValueError("Collection fault onset only applies to dynamic anomalies")
 
@@ -133,22 +142,22 @@ def prepare_fc(run, upstream_etc, *, gui_preview=False):
         lines[matches[0]] = f"param set {key} {value:.12g}"
     airframe.write_text("\n".join(lines) + "\n")
     # PX4's default aliases instances above9 onto14549. Only the private collection
-    # startup copy changes; every one of our16 lanes needs its own receiver.
+    # startup copy changes; every supported lane needs its own receiver.
     mavlink = target / "init.d-posix/px4-rc.mavlink"
     text = mavlink.read_text()
     alias = '[ "$px4_instance" -gt 9 ] && udp_offboard_port_remote=14549 # use the same ports for more than 10 instances to avoid port overlaps'
     if text.count(alias) != 1:
         raise ValueError("unexpected PX4 offboard port alias policy")
-    text = text.replace(alias, "# collection: unique14540+instance for lanes0..15")
+    text = text.replace(alias, "# collection: unique14540+instance for lanes0..31")
     # The default GCS destination14550 is lane10's offboard receiver. Keep GCS
-    # telemetry in a separate range, including when no ground station is open.
+    # telemetry separate from offboard14540..14571 and local14580..14611.
     gcs = "mavlink start -x -u $udp_gcs_port_local -r 4000000 -f"
     lines = text.splitlines()
     if lines.count(gcs) != 1:
         raise ValueError("unexpected PX4 GCS startup policy")
     index = lines.index(gcs)
     lines[index:index + 1] = [
-        "udp_gcs_port_remote=$((14600+px4_instance))",
+        "udp_gcs_port_remote=$((14700+px4_instance))",
         gcs + " -o $udp_gcs_port_remote",
     ]
     if gui_preview:

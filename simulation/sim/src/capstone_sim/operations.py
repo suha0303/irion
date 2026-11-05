@@ -19,7 +19,7 @@ def fetch(out):
         meta = json.load(r)
     dump(out / "metadata.json", meta)
     result = []
-    for name in ["README.txt", "VAH07.csv"]:
+    for name in ["README.txt", "VAH01.csv", "VAH01_impedance.csv"]:
         entry = next(f for f in meta["files"] if f["name"] == name)
         p = out / name
         if (
@@ -176,7 +176,6 @@ def bench(config):
                 str(c.get("duration_s", 10)),
                 str(c.get("soc", 0.9)),
                 str(c.get("duty", 0.55)),
-                str(c.get("capacity_ah", 6)),
             ],
             stdout=f,
             stderr=subprocess.PIPE,
@@ -188,6 +187,6 @@ def bench(config):
         "output": str(out),
         "stderr": p.stderr,
         "origin": "physics_bench",
-        "profile": "analytic_prior",
+        "profile": "CMU_VAH01_measured_baseline",
         "closed_loop": False,
     }

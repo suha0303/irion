@@ -1,0 +1,25 @@
+{
+  "revision": "native-consumption-identical-clock-v2",
+  "generation_source_sha256": "abef1a85b38bed9f049a3227d9d3b3a7cbd1679374d7089eacea3bf5912e1d5f",
+  "generation_runtime_sha256": "0712f775e05b3abaa02993272c6bcac68254bcfa3f22ae22d10c3deb18f54c85",
+  "generation_policy_sha256": "a671a0266e15304f31d55e70c27ad2b1ec15fd191eb791be361c5d4a9ad178e8",
+  "schema": "drone.native-consumption-audit-manifest/1",
+  "frozen_utc": "2026-11-07T06:50:29.687624+00:00",
+  "audit_files": {
+    "__init__.py": "cf5c7e7f03c3e5d51fe9b0cfd70941eef383267ca465dc451a38221c54fac95d",
+    "api.py": "707c29be74a10a07b89ab64f74dc696bdd79a3f084256f13399bbefa4fbbed2b",
+    "cli.py": "944b25d0546a5ee289297529fe1cf7895da1c9ac676307a646f3f8b51ec3bcaf",
+    "native_joint.py": "b354c8c88652c068b92ce813295c6d9f9fa5c51de71e1e65881217b9f3a068b1",
+    "run_assessment.py": "c4f3b05a86f7c7dbded46dc9bca85d7d24217335392f3b945772d865a6b3b895",
+    "test_native_joint.py": "cd1045100532308a17d8cb33f28faa0388e98717df8ae4c5ab52d616a1920bc0"
+  },
+  "generation_dependencies": {
+    "config/producer-sources.json": "abef1a85b38bed9f049a3227d9d3b3a7cbd1679374d7089eacea3bf5912e1d5f",
+    "artifacts/runtime-manifest.json": "0712f775e05b3abaa02993272c6bcac68254bcfa3f22ae22d10c3deb18f54c85",
+    "profiles/collection/joint-phase-policy.json": "a671a0266e15304f31d55e70c27ad2b1ec15fd191eb791be361c5d4a9ad178e8",
+    "sim/src/capstone_sim/joint_phase.py": "b943ec8099f46be90f331d430a02dd4603cec0a643234a695dfa89928b337d6d",
+    "sim/src/capstone_sim/run_assessment.py": "fd79fbf5c6f7271de5f10db955cdd351e80aa6695e460158d8fc052fb6db1b9a",
+    "sim/src/capstone_sim/runtime_manifest.py": "f9c541921d674ba31773289fa1ea9d61386aa06d7b4f31f8c3915c4b4d9e7879"
+  },
+  "generation_policy_not_rewritten": true
+}

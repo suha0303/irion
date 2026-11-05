@@ -7,7 +7,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from . import collection_config
+import yaml
+
+from . import collection_config, model_envelope, wind_model
 from .recording import TOPICS
 from .runtime_manifest import PLUGIN, PX4_BINARY, RUNTIME_MANIFEST, TRANSPORT
 
@@ -127,7 +129,8 @@ def stream_contract(run, start, end):
 
 
 def assess(run, instance, duration, profile_id):
-    if not math.isfinite(duration) or duration <= 0 or not 0 <= instance <= 15:
+    if (not math.isfinite(duration) or duration <= 0
+            or type(instance) is not int or not 0 <= instance < collection_config.MAX_INSTANCES):
         raise ValueError("invalid assessment duration/instance")
     run = Path(run)
     state = read(run / "run.json")
@@ -148,15 +151,9 @@ def assess(run, instance, duration, profile_id):
     expected_id = collection_config.LEGACY_BATTERY_ID if legacy else collection_config.battery()["profile_id"]
     if profile_id != expected_id or metadata["vehicle"].get("battery_profile_id") != expected_id:
         errors.append("profile identity")
-    profile_digest = (
-        collection_config.LEGACY_PROFILE_SHA256
-        if legacy else file_hash(collection_config.ROOT / profile_path)
-    )
-    if source["local_sources"].get(profile_path) != profile_digest:
-        errors.append("profile source hash")
     resolved_profile = run / "reference/resolved_vehicle.yaml"
-    if resolved_profile.is_file() and file_hash(resolved_profile) != profile_digest:
-        errors.append("resolved profile source hash")
+    frozen_vehicle = (yaml.safe_load(resolved_profile.read_text())
+                      if resolved_profile.is_file() else collection_config.vehicle())
     lock_name = scenario.get("producer_lock") or (
         "artifacts/round001-r3/producer-lock.json" if legacy else RUNTIME_MANIFEST
     )
@@ -181,6 +178,15 @@ def assess(run, instance, duration, profile_id):
         else:
             errors.append("producer lock changed")
     producer = read(lock_path)
+    # The archived producer binds its profile; today's wind envelope must never
+    # retroactively change an old run's profile identity or revision.
+    profile_digest = (collection_config.LEGACY_PROFILE_SHA256 if legacy else
+                      producer["files"].get(profile_path, file_hash(collection_config.ROOT / profile_path)))
+    if source["local_sources"].get(profile_path) != profile_digest:
+        errors.append("profile source hash")
+    if resolved_profile.is_file() and file_hash(resolved_profile) != profile_digest:
+        errors.append("resolved profile source hash")
+
     for relative, expected in producer["files"].items():
         if relative.startswith(("sim/", "profiles/", "contracts/")):
             if source["local_sources"].get(relative) != expected:
@@ -217,21 +223,66 @@ def assess(run, instance, duration, profile_id):
                  and state.get("mavlink_source_checked") is True
                  and state.get("configuration") in (collection_config.NAME, collection_config.LEGACY_NAME))
     evidence: dict[str, Any] = dict(samples=0, min_voltage_v=None, min_soc=None, max_duty=None,
-                    min_thrust_weight_ratio=None, max_thrust_weight_ratio=None, outside_samples=0)
-    mass = collection_config.vehicle()["geometry"]["body_mass_kg"] + 4*collection_config.vehicle()["geometry"]["rotor_mass_kg_each"]
+                    min_thrust_weight_ratio=None, max_thrust_weight_ratio=None, outside_samples=0,
+                    max_relative_airspeed_mps=None, max_inplane_advance_ratio=None)
+    mass = frozen_vehicle["geometry"]["body_mass_kg"] + 4*frozen_vehicle["geometry"]["rotor_mass_kg_each"]
     mass += scenario["parameters"].get("payload", 0)
     finite = True
+    wind_evidence_required = "sim/src/capstone_sim/wind_model.py" in producer["files"]
+    wind_metadata = wind_model.expected_metadata(scenario) if wind_evidence_required else None
+    if ("sim/src/capstone_sim/bounded_wind.py" in producer["files"]
+            and scenario.get("wind_profile") is None and scenario["parameters"].get("gust_sigma", 0) != 0):
+        errors.append("Gaussian wind is outside current bounded support")
+    if wind_evidence_required:
+        if scenario.get("wind_model") != wind_metadata:
+            errors.append("OU wind metadata")
+        try:
+            wind_model.verify_trace(run / "evaluation/truth.jsonl", wind_metadata)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            finite = False
+            errors.append("OU wind trace: " + str(exc))
+    if scenario.get("joint_phase_policy") is not None:
+        try:
+            from .joint_phase import verify as verify_joint_phase
+
+            verify_joint_phase(run)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            finite = False
+            errors.append("Joint native consumption: " + str(exc))
     with (run / "evaluation/truth.jsonl").open() as stream:
         for line in stream:
             e = json.loads(line)
             if not start_us <= e["time_us"] <= end_us:
                 continue
+            if wind_evidence_required:
+                try:
+                    wind_model.verify_record(e, wind_metadata)
+                except (ValueError, KeyError, TypeError) as exc:
+                    finite = False
+                    errors.append("OU wind record: " + str(exc))
+                    continue
             values = [e["voltage_v"], e["soc"], *e["command"], *e["thrust_n"], e["solver_residual_v"]]
             if not all(math.isfinite(v) for v in values) or not 0 <= e["soc"] <= 1:
                 finite = False
                 continue
             if abs(e["solver_residual_v"]) > 1e-6:
                 finite = False
+            if "sim/src/capstone_sim/operating_envelope.py" in producer["files"]:
+                airspeed, advance = e.get("relative_airspeed_mps"), e.get("max_inplane_advance_ratio")
+                if any(type(v) not in (int,float) or not math.isfinite(v) or v < 0
+                       for v in (airspeed,advance)):
+                    finite = False
+                    errors.append("missing wind-relative model evidence")
+                    continue
+                for key,value in (("max_relative_airspeed_mps",airspeed),
+                                  ("max_inplane_advance_ratio",advance)):
+                    evidence[key] = value if evidence[key] is None else max(evidence[key],value)
+                if e["model_valid"] and (airspeed > frozen_vehicle["validity"]["max_air_speed_mps"]
+                        or not e.get("inplane_advance_ratio_defined")
+                        or advance > frozen_vehicle["validity"].get("max_inplane_advance_ratio",0)):
+                    finite = False
+                    errors.append("inconsistent wind-relative model gate")
+
             evidence["samples"] += 1
             evidence["outside_samples"] += not e["model_valid"]
             ratio = sum(e["thrust_n"])/(mass*9.80665)
@@ -240,14 +291,58 @@ def assess(run, instance, duration, profile_id):
                                    ("min_thrust_weight_ratio", ratio, min),
                                    ("max_thrust_weight_ratio", ratio, max)]:
                 evidence[key] = value if evidence[key] is None else op(evidence[key], value)
-    anomaly = scenario["name"] in collection_config.ANOMALY
-    if scenario["name"] not in collection_config.NORMAL | collection_config.ANOMALY:
+    propulsion_catalog = "profiles/propulsion-health.json"
+    anomaly_names = set(collection_config.ANOMALY)
+    if propulsion_catalog not in producer["files"]:
+        # Historical sealed producers keep their original individual experiments.
+        anomaly_names |= {"motor_resistance_existing", "propeller_load_existing", "combined_existing"}
+        anomaly_names |= {f"{kind}_{level}_existing" for kind in
+                          ("motor_resistance", "propulsion_loss", "propeller_load")
+                          for level in ("mild", "medium", "strong")}
+    anomaly = scenario["name"] in anomaly_names
+    if scenario["name"] not in collection_config.NORMAL | anomaly_names:
         errors.append("unsupported Collection scenario")
-    expected_revision = collection_config.LEGACY_REVISION if legacy else collection_config.vehicle()["revision"]
+    expected_revision = collection_config.LEGACY_REVISION if legacy else frozen_vehicle["revision"]
+    catalog_name = "profiles/battery-aging/cmu-vah01.json"
+    if catalog_name in producer["files"]:
+        from . import battery_aging
+
+        try:
+            selection = read(run / "evaluation/battery-selection.json")
+            battery_aging.verify_selection(
+                selection, run / "evaluation/battery-catalog.json",
+                read(run / "reference/battery.json"), scenario["name"],
+                producer["files"][catalog_name],
+            )
+            battery_aging.verify_truth(run / "evaluation/truth.jsonl", selection)
+            expected_revision += "+" + selection["catalog_revision"]
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append("CMU battery profile: " + str(exc))
+    if propulsion_catalog in producer["files"]:
+        from . import propulsion_health
+
+        try:
+            selection = read(run / "evaluation/propulsion-selection.json")
+            propulsion_health.verify_selection(
+                selection, run / "evaluation/propulsion-catalog.json", scenario["name"],
+                producer["files"][propulsion_catalog],
+            )
+            propulsion_health.verify_truth(run / "evaluation/truth.jsonl", selection)
+            expected_revision += "+" + selection["catalog_revision"]
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            errors.append("Joint propulsion profile: " + str(exc))
     if scenario.get("normal_range_revision") != expected_revision:
         errors.append("health policy revision")
     if not anomaly and scenario.get("health_eligibility") != "confirmed_healthy":
         errors.append("normal health eligibility")
+    if "sim/src/capstone_sim/model_envelope.py" in producer["files"]:
+        envelope = model_envelope.check(run / "evaluation/truth.jsonl", timeline)
+        if (read(run / "evaluation/envelope-check.json") != envelope
+                or scenario.get("health_eligibility_scope") != model_envelope.POLICY
+                or scenario.get("health_eligibility_interval_us") != [envelope["mission_start_us"], envelope["mission_end_us"]]):
+            errors.append("mission model-envelope evidence")
+        if not anomaly and not envelope["normal_eligibility_passed"]:
+            errors.append("normal mission model envelope")
     normal_gate = bool(evidence["samples"] and finite and evidence["outside_samples"] == 0
                        and evidence["min_voltage_v"] >= 12.4 and evidence["min_soc"] >= .2
                        and evidence["max_duty"] <= .9)

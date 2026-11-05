@@ -14,7 +14,7 @@ struct MissionFaultSchedule {
   void configure(double seconds, double boot_onset, const std::string &kind) {
     if (enabled || !std::isfinite(seconds) || seconds <= 0 || seconds > 1800 ||
         !std::isfinite(boot_onset) || boot_onset >= 0 ||
-        (kind != "r0" && kind != "friction"))
+        (kind != "friction" && kind != "battery_stage" && kind != "propulsion_profile"))
       throw std::invalid_argument("invalid deferred physical fault configuration");
     const auto delay = std::llround(seconds * 1e6);
     if (delay <= 0 || std::abs(seconds * 1e6 - delay) > 1e-6)

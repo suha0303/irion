@@ -10,8 +10,8 @@ from capstone_sim.runner import SCENARIOS, scenario_parameters
 class FaultOnsetTest(unittest.TestCase):
     def test_override_keeps_physical_magnitude_ramp_and_global_defaults(self):
         for name in [
-            "battery_resistance_step",
-            "battery_resistance_ramp",
+            "propulsion_loss_step",
+            "propulsion_loss_ramp",
             "propulsion_loss_step",
             "propulsion_loss_ramp",
         ]:
@@ -22,12 +22,12 @@ class FaultOnsetTest(unittest.TestCase):
             self.assertEqual(scenario_parameters(name)["fault_at"], 60)
 
     def test_rejects_nonphysical_or_invalid_override(self):
-        for name in ["hover_normal", "battery_resistance_existing", "sensor_dropout_quality"]:
+        for name in ["hover_normal", "propulsion_loss_existing", "sensor_dropout_quality"]:
             with self.assertRaises(ValueError):
                 scenario_parameters(name, 110)
         for value in [0, -1, 1801, float("nan"), float("inf")]:
             with self.assertRaises(ValueError):
-                scenario_parameters("battery_resistance_step", value)
+                scenario_parameters("propulsion_loss_step", value)
 
     def test_cli_passes_boot_time_without_changing_recording_interval(self):
         args = [

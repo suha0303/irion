@@ -8,12 +8,15 @@ int main(int argc, char **argv) {
     double duration = argc > 1 ? std::stod(argv[1]) : 10;
     double soc = argc > 2 ? std::stod(argv[2]) : .9;
     double duty = argc > 3 ? std::stod(argv[3]) : .55;
-    double capacity = argc > 4 ? std::stod(argv[4]) : 6;
+    if (argc > 5)
+      throw std::invalid_argument("capacity override retired; optional fourth argument is inertia scale");
+    double inertia_scale = argc > 4 ? std::stod(argv[4]) : 1;
+    if (!std::isfinite(inertia_scale) || inertia_scale <= 0)
+      throw std::invalid_argument("positive inertia scale required");
+    core.p.inertia *= inertia_scale;
     if (duration <= 0 || duration > 3600 || soc <= 0 || soc > 1)
       throw std::invalid_argument("bench bounds");
-    core.p.inertia *= argc > 5 ? std::stod(argv[5]) : 1;
     core.state.soc = soc;
-    core.p.capacity_ah = capacity;
     std::cout << std::setprecision(12)
               << "time_s,voltage_v,current_a,omega_rad_s,thrust_total_n,soc,"
                  "charge_c,energy_residual_j,bus_energy_j\n";

@@ -16,7 +16,7 @@ for soc, duty, inertia in [
     (0.9, 0.55, 2),
 ]:
     p = subprocess.run(
-        [str(root / "build/powertrain_bench"), "2", str(soc), str(duty), "6", str(inertia)],
+        [str(root / "build/powertrain_bench"), "2", str(soc), str(duty), str(inertia)],
         capture_output=True,
         text=True,
         check=True,
@@ -40,7 +40,7 @@ for soc, duty, inertia in [
     )
 report = dict(
     origin="physics_bench",
-    profile="analytic_prior",
+    profile="CMU_VAH01_measured_baseline",
     not_hardware_validation=True,
     rows=rows,
     passed=rows[1]["final_voltage_v"] < rows[0]["final_voltage_v"]

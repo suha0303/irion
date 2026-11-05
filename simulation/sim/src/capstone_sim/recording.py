@@ -23,7 +23,11 @@ def dump(path, value):
 
 
 def sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def generic_vehicle(profile):
@@ -153,13 +157,19 @@ TOPICS = {
 
 
 class Recorder:
-    def __init__(self, run, origin="px4_sitl", timing=False, *, vehicle_profile=None):
+    def __init__(self, run, origin="px4_sitl", timing=False, *, vehicle_profile=None,
+                 sync_interval_s=0.0):
         self.run = Path(run)
         self.id = self.run.name
         generic = vehicle_profile is not None
         vehicle = generic_vehicle(vehicle_profile) if generic else None
         profile_binding = generic_binding(self.run, vehicle_profile) if generic else None
         self.raw_schema = GENERIC_RAW if generic else "drone.raw.event/2.0"
+        if not math.isfinite(sync_interval_s) or not 0 <= sync_interval_s <= 0.1:
+            raise ValueError("Recording sync interval must be within0..0.1 wall seconds")
+        self.sync_interval_s = sync_interval_s
+        self.last_sync_wall = time.monotonic()
+        self.last_synced_count = 0
         self.count = 0
         self.latest = {}
         self.last_sample = {}
@@ -214,7 +224,9 @@ class Recorder:
                     "rear_right",
                 ],
                 "nominal_series_cells": 4,
-                "nominal_capacity_ah": 6,
+                "nominal_capacity_ah": 12,
+                "nominal_parallel_cells": 4,
+                "battery_profile_id": "vtc6_4s4p",
             },
             "actuation": {
                 "semantic": "esc_request",
@@ -283,6 +295,8 @@ class Recorder:
         self.pending = lines.pop()
         batch["pending_bytes_after"] = len(self.pending)
         if not lines:
+            if self.sync_interval_s and self.count != self.last_synced_count:
+                self.flush(False, batch)
             self.trace(dict(kind="capture_empty", **batch))
             return
         batch["transform_start_host_monotonic_ns"] = self.stamp()
@@ -347,6 +361,14 @@ class Recorder:
         self.flush(False, batch)
 
     def flush(self, closed, timing_batch=None):
+        if not closed and self.sync_interval_s:
+            if self.count == self.last_synced_count:
+                return
+            if time.monotonic() - self.last_sync_wall < self.sync_interval_s:
+                # Keep every raw event and its native timestamp; batch only durability.
+                if timing_batch:
+                    self.trace(dict(kind="capture_batch_buffered", **timing_batch))
+                return
         timing = dict(timing_batch or {})
         timing["stream_flush_start_host_monotonic_ns"] = self.stamp()
         self.stream.flush()
@@ -371,6 +393,8 @@ class Recorder:
         timing["watermark_fsync_start_host_monotonic_ns"] = self.stamp()
         os.fsync(self.watermarks.fileno())
         timing["watermark_fsync_end_host_monotonic_ns"] = self.stamp()
+        self.last_sync_wall = time.monotonic()
+        self.last_synced_count = self.count
         self.trace(
             dict(
                 kind="watermark_commit",

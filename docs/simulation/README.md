@@ -7,3 +7,5 @@
 별도 기체 프로파일 확장은 [다른 multirotor 프로파일](VEHICLE_PROFILES.md)을 따른다. 지원 범위는 고정 수직축4..8모터이며 기존 X500 경로와 AI 학습은 유지한다. 예제 quad/hex는 공학 fixture로, 실제 비행이나 해당 기체의 AI 성능을 검증한 결과가 아니다.
 
 현재 수집 설정은 `collection`, 프로파일 폴더는 `simulation/profiles/collection/`이다. 구현은 `collection_config.py`와 `run_assessment.py`, 관련 도구는 `generate_collection_header.py`, `run_collection.py`, `assess_run.py`를 사용한다. 과거 회차를 뜻하는 이름은 새 실행 경로로 사용하지 않으며 기존 데이터·봉인 패키지·시험 증거 안에서는 원래 의미를 보존한다.
+
+정상·노후 배터리의 CMU 실측 단계와 비행 중 선형 전환은 [배터리 열화 프로파일](BATTERY_AGING.md)을 따른다. 새 보정 revision은 기존 동결 데이터·모델과 구분한다.

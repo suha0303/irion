@@ -401,6 +401,7 @@ class Setup:
             PX4_BINARY,
             PLUGIN,
             "build/libDronePowertrain.so",
+            "build/current/joint_wind_verify",
             TRANSPORT,
             "runtime/gazebo-transport/lib/libgz-transport13-log.so.13.6.0",
             "runtime/gazebo-transport/lib/libgz-transport13-parameters.so.13.6.0",
@@ -520,7 +521,7 @@ def main(argv=None):
             ROOT / ".cache/setup.lock",
             ROOT.parent / "Data/operations/collection.lock",
         ]
-        paths += [ROOT / ".cache/instances" / f"{i}.lock" for i in range(16)]
+        paths += [ROOT / ".cache/instances" / f"{i}.lock" for i in range(32)]
         for path in paths:
             path.parent.mkdir(parents=True, exist_ok=True)
             stream = path.open("a")

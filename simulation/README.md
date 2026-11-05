@@ -11,7 +11,9 @@
 
 `.cache/instances/`는 PX4 인스턴스 잠금, `runs/`는 시뮬레이터가 관리하는 임시 원시 run이다. 최종 데이터는 상위 `Data/` 또는 사용자가 선택한 저장소에 둔다. 과거 생산자 잠금과 증거는 로컬 보존 자료로 유지한다. 배터리·추진·물리·비행·C9·입출력 계약을 설치 편의 때문에 바꾸지 않는다. 직접 비행·수집은 사용자가 선택한 범위에서만 실행한다.
 
-수집용 설정은 `--configuration collection`이며 입력은 `profiles/collection/`에 있다. 기체 선택을 생략하면 X500이다. 직접 `run`의 기본 reference 설정과 수집 콘솔의 장시간 수집 설정은 서로 다른 설정이므로 이름 변경만으로 배터리나 물리값을 바꾸지 않는다.
+수집용 설정은 `--configuration collection`이며 입력은 `profiles/collection/`에 있다. 기체 선택을 생략하면 X500이다. 기본 reference와 collection X500은 VAH01 한 셀에서 보정한 동일한 4S4P 배터리 코어를 사용한다. 정상은 rpt_00, 열화는 rpt_16으로 고정하며 비행 중 변화는 rpt_00에서 rpt_16으로의 선형 전환으로 계산한다. 모터 고장도 같은 배터리 부하 계산으로 연결된다. 출처·수식·제약·실행 검증은 [배터리 구현·검증 보고](../docs/simulation/BATTERY_AGING.md)를 따른다.
+
+추진계는 `profiles/propulsion-health.json`의 정상·열화 두 프로파일을 사용한다. 열화는 권선 저항 증가·마찰 증가·프로펠러 성능 저하를 함께 적용한다. 실행 종류는 `propulsion_loss_existing`, `propulsion_loss_step`, `propulsion_loss_ramp` 세 개이며, 기본 급격 전환은 1초, 점진 전환은 20초다. `--propulsion-transition-s`로 전환 시간을 지정할 수 있다. 약·중·강 및 부품별 단독 열화는 현재 실행 경로에서 제거했다. 실제 운전 시간이 수명 열화로 누적되는 모델은 아니며, 열화 강도는 운용 여유를 검사한 공학적 설정이다.
 
 모든 새 run은 `run.json`에 실제 PX4 `instance`를 기록한다. 완료·실패한 run의 `control --operation reset` 또는 `set_scenario`는 그 번호를 유지하며 새 run을 만든다. 옛 기록에 번호가 없거나 유효하지 않으면 0번을 추측하지 않고 거절한다. 이때 기존 증거를 보존하고 사용자가 `run --instance <번호>`로 별도 실행을 선택한다.
 

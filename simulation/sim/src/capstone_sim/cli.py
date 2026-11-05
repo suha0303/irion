@@ -154,13 +154,18 @@ def main():
     dt.add_argument("operation", choices=["fetch"])
     dt.add_argument("--dataset", choices=["cmu-evtol"], required=True)
     dt.add_argument("--out", required=True)
-    fit = sub.add_parser("fit-battery")
-    fit.add_argument("--config", default="profiles/fitting/cmu.yaml")
+    sub.add_parser("fit-battery", help="Calibrate VAH01 only; development validation, no flight/training")
+    sub.add_parser("fit-battery-aging", help="Fit CMU measured age snapshots; no flight or training")
+    sub.add_parser("validate-battery", help="Evaluate the untouched VAH01 temporal holdout")
     be = sub.add_parser("bench")
     be.add_argument("--config", default="profiles/bench/reference.yaml")
     ex = sub.add_parser("export")
     ex.add_argument("--run", required=True)
     ex.add_argument("--format", choices=["drone-raw-2", "drone-raw-3"], required=True)
+    pair_check = sub.add_parser("pair-check", help="Verify actual joint native phase/reference/weather evidence")
+    pair_check.add_argument("--normal-run", required=True)
+    pair_check.add_argument("--anomaly-run", required=True)
+    pair_check.add_argument("--output", required=True)
     r = sub.add_parser("run")
     selection = r.add_mutually_exclusive_group()
     selection.add_argument(
@@ -174,13 +179,29 @@ def main():
     )
     r.add_argument("--configuration", choices=["collection"], default=None)
     r.add_argument("--scenario", choices=list(SCENARIOS), default="hover_normal")
+    r.add_argument("--battery-stage", choices=["rpt_16"],
+                   help="Aged battery: rpt_16 only (automatic for battery-aging; optional with propulsion faults)")
+    r.add_argument("--battery-transition-s", type=float,
+                   help="Linear profile transition seconds (step default 1; ramp default 20)")
+    r.add_argument("--propulsion-transition-s", type=float,
+                   help="Joint propulsion profile transition seconds (step default 1; ramp default 20)")
+    r.add_argument("--wind-environment", choices=("calm", "low", "strong"),
+                   help="Bounded instantaneous3D wind:0 /0<speed<=2.5 /2.5<speed<=5m/s")
+    r.add_argument("--wind-direction-deg", type=float, default=0.,
+                   help="Prevailing direction towards north0/east90 degrees; requires wind environment")
+    r.add_argument("--wind-variation", type=float, default=1.,
+                   help="Dimensionless variability0.5..1.5; not physical wind standard deviation")
     r.add_argument("--seed", type=int, default=17)
+    r.add_argument("--parent-attempt-id", help="Previous raw run ID for an unchanged-case retry; recorded as parent_attempt_id")
     r.add_argument("--normal-variation-json", help="Frozen healthy conditions and smooth path JSON")
+    r.add_argument("--phase-policy", choices=["joint-native-consumption-c2-v2"])
+    r.add_argument("--paired-case-id")
     r.add_argument("--operation-variation", help="Frozen health-independent conditions/path JSON for collection")
     r.add_argument("--fault-after-mission-s", type=float, help="Dynamic onset seconds after airborne path zero")
     r.add_argument("--real-time-factor", type=int, choices=(2, 3, 4, 8), default=2)
     r.add_argument("--duration", type=float, default=90)
-    r.add_argument("--instance", type=int, default=0)
+    r.add_argument("--instance", type=int, default=0,
+                   help="Collection0..31; custom profiles0..15; reference0..9")
     r.add_argument("--timing", action="store_true", help="Separate native/producer timing sidecars")
     r.add_argument("--capture-interval-ms", type=float, default=5.0)
     r.add_argument(
@@ -207,7 +228,7 @@ def main():
         required=True,
     )
     ctl.add_argument("--request-id", type=int, default=1)
-    ctl.add_argument("--target", default="battery_r0")
+    ctl.add_argument("--target", default="motor_friction")
     ctl.add_argument("--value", type=float, default=0.0)
     ctl.add_argument("--requested-us", type=int, default=0)
     ctl.add_argument("--scenario", choices=list(SCENARIOS))
@@ -226,14 +247,11 @@ def main():
             result = profile_operation(a.operation, a.path, jobs=a.jobs, retry=a.retry)
         elif a.action == "data":
             result = fetch(a.out)
-        elif a.action == "fit-battery":
-            if a.config != "profiles/fitting/cmu.yaml":
-                raise ValueError("only the supplied fixed CMU protocol is implemented")
-            result = command(
-                [sys.executable, "sim/tools/fit_battery.py"],
-                "artifacts/battery-fit.stdout.log",
-            )
-            code = 4 if result["exit_code"] else 0
+        elif a.action in ("fit-battery", "fit-battery-aging", "validate-battery"):
+            from .battery_fit import fit_to_file
+
+            result = fit_to_file(final=a.action == "validate-battery")
+            code = 0 if result["status"] == "passed" else 4
         elif a.action == "bench":
             result = bench(a.config)
             code = 4 if result["exit_code"] else 0
@@ -268,12 +286,18 @@ def main():
                 else fly(ROOT / a.plan)
             )
             code = 4 if result.get("status") == "failed" else 0
+        elif a.action == "pair-check":
+            from .joint_phase import verify_pair
+
+            result = verify_pair(a.normal_run, a.anomaly_run, a.output)
+            code = 0 if result["status"] == "passed" else 4
         elif a.action == "run":
             result = run_flight(
                 a.scenario,
                 a.seed,
                 a.duration,
                 a.instance,
+                parent=a.parent_attempt_id,
                 timing=a.timing,
                 capture_interval_ms=a.capture_interval_ms,
                 fault_at_s=a.fault_at_s,
@@ -285,6 +309,14 @@ def main():
                 else None,
                 real_time_factor=a.real_time_factor,
                 vehicle_profile=a.vehicle_profile,
+                battery_stage=a.battery_stage,
+                battery_transition_s=a.battery_transition_s,
+                propulsion_transition_s=a.propulsion_transition_s,
+                wind_environment=a.wind_environment,
+                wind_direction_deg=a.wind_direction_deg,
+                wind_variation=a.wind_variation,
+                phase_policy=a.phase_policy,
+                paired_case_id=a.paired_case_id,
             )
             code = 0 if result["status"] == "completed" else 4
         elif a.action == "verify":

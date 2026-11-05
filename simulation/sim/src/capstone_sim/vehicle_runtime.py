@@ -248,7 +248,7 @@ def read_prepared(path):
         pack["r0_ohm"],
         pack["r1_ohm"],
         pack["c1_f"],
-        pack["capacity_ah"],
+        pack.get("actual_capacity_ah", pack["capacity_ah"]),
         *pack["ocv_cell_v"],
     ]
     prop_values = [
@@ -344,7 +344,7 @@ def _prepare(item, folder, jobs, retry, assets):
                         pack["r0_ohm"],
                         pack["r1_ohm"],
                         pack["c1_f"],
-                        pack["capacity_ah"],
+                        pack.get("actual_capacity_ah", pack["capacity_ah"]),
                         *pack["ocv_cell_v"],
                     ],
                 )

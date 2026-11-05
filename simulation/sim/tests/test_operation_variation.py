@@ -45,19 +45,19 @@ class OperationVariationTest(unittest.TestCase):
         for key in ("r0", "friction", "fault_value", "fault_at", "capacity"):
             bad = dict(spec, **{key: 1})
             with self.assertRaises(ValueError):
-                collection_config.validate_request("battery_resistance_existing", 180, None, operation_variation=bad)
+                collection_config.validate_request("propulsion_loss_existing", 180, None, operation_variation=bad)
 
     def test_new_onset_does_not_weaken_old_boot_policy(self):
         spec = sample("hover_normal", 41)
         for value in (0, -1, 480, 460, True, .0000001, math.inf, math.nan):
             with self.assertRaises(ValueError):
-                collection_config.validate_request("battery_resistance_ramp", 480, None, operation_variation=spec, fault_after_mission_s=value)
+                collection_config.validate_request("propulsion_loss_ramp", 480, None, operation_variation=spec, fault_after_mission_s=value)
         with self.assertRaises(ValueError):
-            collection_config.validate_request("battery_resistance_step", 480, 240)
-        collection_config.validate_request("battery_resistance_step", 480, 180)
+            collection_config.validate_request("propulsion_loss_step", 480, 240)
+        collection_config.validate_request("propulsion_loss_step", 480, 180)
         with self.assertRaises(ValueError):
-            collection_config.validate_request("battery_resistance_step", 480, 180, operation_variation=spec, fault_after_mission_s=240)
-        for scenario in ("hover_normal", "battery_resistance_existing"):
+            collection_config.validate_request("propulsion_loss_step", 480, 180, operation_variation=spec, fault_after_mission_s=240)
+        for scenario in ("hover_normal", "propulsion_loss_existing"):
             with self.assertRaises(ValueError):
                 collection_config.validate_request(scenario, 480, None, operation_variation=spec, fault_after_mission_s=240)
         with self.assertRaises(ValueError):
@@ -77,13 +77,17 @@ class OperationVariationTest(unittest.TestCase):
         self.assertIsNone(run.call_args.kwargs["normal_variation"])
 
     def test_reset_preserves_relative_schedule_and_operating_conditions(self):
+        from capstone_sim import propulsion_health
+
         spec = sample("hover_normal", 41)
         with tempfile.TemporaryDirectory() as folder:
             run = Path(folder) / ("a" * 32)
             (run / "evaluation").mkdir(parents=True)
+            (run / "evaluation/propulsion-selection.json").write_text(json.dumps(
+                propulsion_health.resolve("propulsion_loss_ramp", transition_s=30)))
             (run / "run.json").write_text(json.dumps(dict(run_id=run.name, status="completed", configuration="collection", instance=3)))
             (run / "evaluation/scenario.json").write_text(json.dumps(dict(
-                name="battery_resistance_ramp", seed=41, requested_duration_s=480,
+                name="propulsion_loss_ramp", seed=41, requested_duration_s=480,
                 parameters={"fault_at": 287.123}, operation_variation=spec,
                 fault_after_mission_s=240, normal_variation=None,
             )))
@@ -92,6 +96,7 @@ class OperationVariationTest(unittest.TestCase):
             options = launch.call_args.kwargs
             self.assertEqual(options["operation_variation"], spec)
             self.assertEqual(options["fault_after_mission_s"], 240)
+            self.assertEqual(options["propulsion_transition_s"], 30)
             self.assertNotIn("fault_at_s", options)
 
 

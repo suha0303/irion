@@ -10,7 +10,7 @@ from .runner import run_flight
 
 
 def control(
-    run, operation, request_id=1, target="battery_r0", value=0.0, requested_us=0, scenario=None
+    run, operation, request_id=1, target="motor_friction", value=0.0, requested_us=0, scenario=None
 ):
     run = Path(run).resolve()
     state = json.loads((run / "run.json").read_text())
@@ -22,7 +22,9 @@ def control(
                 "finalize the current run before reset; never mix clocks in one stream"
             )
         instance = state.get("instance")
-        limit = 15 if state.get("configuration") else 9
+        limit = (collection_config.MAX_INSTANCES - 1
+                 if state.get("configuration") == collection_config.NAME
+                 else 15 if state.get("configuration") else 9)
         if type(instance) is not int or not 0 <= instance <= limit:
             raise ValueError(
                 "Original PX4 instance is missing or invalid; reset cannot assume instance 0. "
@@ -33,6 +35,30 @@ def control(
         same_scenario = selected_scenario == old["name"]
         options = dict(real_time_factor=old.get("requested_real_time_factor", 2))
         if same_scenario:
+            propulsion_path = run / "evaluation/propulsion-selection.json"
+            if not propulsion_path.is_file() and selected_scenario.startswith("propulsion_loss_"):
+                raise ValueError("Original friction-only recipe retired; start a separate joint-profile run")
+            if propulsion_path.is_file():
+                from . import propulsion_health
+                from .recording import sha
+
+                selection = json.loads(propulsion_path.read_text())
+                if selection["catalog_sha256"] != sha(propulsion_health.CATALOG):
+                    raise ValueError("Original propulsion catalog changed; start a separate new run")
+                if selected_scenario in propulsion_health.DYNAMIC:
+                    options["propulsion_transition_s"] = selection["transition_s"]
+            selection_path = run / "evaluation/battery-selection.json"
+            if selection_path.is_file():
+                selection = json.loads(selection_path.read_text())
+                from .battery_aging import CATALOG
+                from .recording import sha
+
+                if selection["catalog_sha256"] != sha(CATALOG):
+                    raise ValueError("Original CMU battery catalog changed; start a separate new run")
+                if selection["target_stage"] != "rpt_00":
+                    options["battery_stage"] = selection["target_stage"]
+                if selected_scenario in {"battery_aging_step", "battery_aging_ramp"}:
+                    options["battery_transition_s"] = selection["transition_s"]
             if old.get("fault_after_mission_s") is not None:
                 options["fault_after_mission_s"] = old["fault_after_mission_s"]
             else:
@@ -91,11 +117,16 @@ def control(
         env = collection_config.transport_environment(env)
     env.update(GZ_PARTITION="x500_" + run.name, GZ_IP="127.0.0.1", GZ_HOMEDIR=str(run / "gz"))
     if operation == "apply_parameter_change":
-        fields = {"battery_r0": 0, "motor_friction": 1, "battery_r1": 2}
+        if (run / "evaluation/propulsion-selection.json").is_file():
+            raise ValueError("Joint propulsion profile is locked; select a scenario in a new run")
+        if ((run / "evaluation/battery-selection.json").is_file()
+                and target in ("battery_r0", "battery_r1")):
+            raise ValueError("CMU battery profile is locked; select another stage in a new run")
+        fields = {"motor_friction": 1}
         if target not in fields:
             raise ValueError("unsupported physical parameter")
-        if not math.isfinite(value) or value < 0 or (target == "battery_r1" and value == 0):
-            raise ValueError("invalid parameter; dynamic R1=0 is unsupported")
+        if not math.isfinite(value) or value < 0:
+            raise ValueError("invalid motor friction")
         values = [1, request_id, fields[target], value, requested_us]
         service = "apply_parameter_change"
     else:

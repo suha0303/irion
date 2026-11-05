@@ -11,10 +11,12 @@ from .recording import dump, sha, verify
 from .runner import ROOT, SCENARIOS, run_flight
 
 CONFIG_KEYS = {"checkpoint", "concurrency", "instance_offset", "cases"}
-CASE_KEYS = {"scenario", "seed", "duration", "parent_attempt_id"}
+CASE_KEYS = {"scenario", "seed", "duration", "parent_attempt_id",
+             "battery_stage", "battery_transition_s"}
 PROTECTED_CHECKPOINTS = {
     "source_lock.json", "runtime-manifest.json", "setup-status.json", "environment.json",
-    "battery-fit.json", "propulsion-comparison.json", "mass-inertia-ledger.json",
+    "battery-fit.json", "battery-baseline-validation.json",
+    "propulsion-comparison.json", "mass-inertia-ledger.json",
 }
 
 
@@ -66,6 +68,13 @@ def plan(path):
         supported_keys(case, CASE_KEYS, f"campaign case {index}")
         if not isinstance(case.get("scenario"), str) or case["scenario"] not in SCENARIOS:
             raise ValueError(f"campaign case {index} has an unsupported scenario")
+        from . import battery_aging, collection_config
+
+        battery_aging.validate_selection(case["scenario"], case.get("battery_stage"),
+                                         case.get("battery_transition_s"), None)
+        if case.get("battery_stage") is not None:
+            battery_aging.resolve(case["scenario"], case["battery_stage"],
+                                  case.get("battery_transition_s"), collection_config.battery())
         seed = case.get("seed", 17)
         if type(seed) is not int or not 0 <= seed <= 0xFFFFFFFF:
             raise ValueError(f"campaign case {index} seed must be a uint32 integer")
@@ -121,6 +130,7 @@ def campaign(path):
                 c.get("duration", 90),
                 instance,
                 old.get("run_id", c.get("parent_attempt_id")),
+                **{k: c[k] for k in ("battery_stage", "battery_transition_s") if k in c},
             )
             result["run_id"] = Path(result["run"]).name
             result["contract"] = verify(result["run"])

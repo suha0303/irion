@@ -1,0 +1,37 @@
+{
+  "schema": "drone.propulsion-health/1",
+  "revision": "x500-propulsion-binary-v1",
+  "states": {
+    "normal": {
+      "kt_prop": 1.2296996501129959e-05,
+      "kq_prop": 1.718657729631943e-07,
+      "friction": 4.1012149502659346e-17,
+      "coulomb": 0.008303736161277128,
+      "esc_efficiency": 0.858681252985813,
+      "resistance": 0.115
+    },
+    "abnormal": {
+      "kt_prop": 1.2174026536118659e-05,
+      "kq_prop": 1.7358443069282626e-07,
+      "friction": 2.000000000041012e-06,
+      "coulomb": 0.008303736161277128,
+      "esc_efficiency": 0.858681252985813,
+      "resistance": 0.11960000000000001
+    }
+  },
+  "normal_basis": {
+    "path": "artifacts/propulsion-comparison.json",
+    "sha256": "24a553a78dd3dd09e7bb9eef63751998ed29946a54d3861bcd72b6d84740ff8a"
+  },
+  "abnormal_basis": "Joint engineering impairment: winding resistance +4%, added viscous friction2e-6 Nms/rad, thrust coefficient-1%, load torque coefficient+1%. Reduced after the initial candidate exceeded duty1 at the aged-battery/low-SOC/payload reserve corner. Not a measured motor lifetime stage.",
+  "transition_defaults_s": {
+    "step": 1.0,
+    "ramp": 20.0
+  },
+  "scope": "Common parameters for all rotors; independent rotor speeds, currents and temperatures",
+  "limitations": [
+    "No mapping to hours, cycles, SOH or RUL.",
+    "ESC efficiency and Coulomb friction stay at the healthy fitted values.",
+    "Custom profiles use the same resistance/thrust/torque ratios; added viscous friction scales with their healthy torque coefficient. This is an unmeasured engineering transfer."
+  ]
+}

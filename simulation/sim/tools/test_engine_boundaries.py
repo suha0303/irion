@@ -5,6 +5,7 @@ import os
 import signal
 import subprocess
 import sys
+import uuid
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -12,10 +13,13 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "sim/src"))
+from capstone_sim import collection_config  # noqa: E402
 from capstone_sim.profile import load_profile  # noqa: E402
 from capstone_sim.runner import prepare_world  # noqa: E402
 
-out = ROOT / "artifacts/remediation-20261014"
+out = ROOT / "artifacts" / ("engine-boundaries-" + uuid.uuid4().hex)
+out.mkdir()
+collection_config.assert_frozen()
 profile = load_profile()
 positions = np.array(
     [[r["position_m"][0], -r["position_m"][1], -r["position_m"][2]] for r in profile["rotors"]]
@@ -47,12 +51,14 @@ for axis in range(3):
     model = w.find("model[@name='x500_0']")
     model.find("pose").text = "0 0 10 0 0 0"
     tree.write(world, encoding="unicode")
-    env = os.environ.copy()
+    env = collection_config.transport_environment(os.environ.copy())
     env.update(
-        GZ_PARTITION=f"x500-remediation-axis{axis}",
+        GZ_PARTITION=f"{out.name}-axis{axis}",
         GZ_IP="127.0.0.1",
         GZ_HOMEDIR=str(folder / "gz"),
         GZ_SIM_RESOURCE_PATH=str(ROOT / "vendor/PX4-Autopilot/Tools/simulation/gz/models"),
+        X500_BATTERY_FILE=str(ROOT / "profiles/collection/battery_runtime.txt"),
+        X500_PROPULSION_FILE=str(ROOT / "profiles/propulsion_runtime.txt"),
         X500_TRUTH_PATH=str(folder / "truth.jsonl"),
         X500_ROTATION_TEST=str(axis),
     )

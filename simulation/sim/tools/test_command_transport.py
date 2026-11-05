@@ -6,26 +6,32 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "sim/src"))
+from capstone_sim import collection_config  # noqa: E402
 from capstone_sim.control import control  # noqa: E402
 from capstone_sim.runner import prepare_world  # noqa: E402
 
-out = ROOT / "artifacts/remediation-20261014"
+out = ROOT / "artifacts" / ("command-transport-" + uuid.uuid4().hex)
+out.mkdir()
+collection_config.assert_frozen()
 folder = out / "protocol-world"
 (folder / "reference").mkdir(parents=True, exist_ok=True)
 (folder / "run.json").write_text(
     json.dumps(dict(run_id=folder.name, status="running", origin="gazebo_protocol_fixture"))
 )
 world = prepare_world(folder, 0)
-env = os.environ.copy()
+env = collection_config.transport_environment(os.environ.copy())
 env.update(
     GZ_PARTITION="x500_" + folder.name,
     GZ_IP="127.0.0.1",
     GZ_HOMEDIR=str(folder / "gz"),
     GZ_SIM_RESOURCE_PATH=str(ROOT / "vendor/PX4-Autopilot/Tools/simulation/gz/models"),
+    X500_BATTERY_FILE=str(ROOT / "profiles/collection/battery_runtime.txt"),
+    X500_PROPULSION_FILE=str(ROOT / "profiles/propulsion_runtime.txt"),
     X500_TRUTH_PATH=str(folder / "truth.jsonl"),
 )
 log = (folder / "gz.log").open("w")
@@ -124,7 +130,7 @@ try:
     publish(2, now, semantic="rpm")
     publish(2, now + 1000000)
     rpc = []
-    for args in [(1, "battery_r0", 0.05), (1, "battery_r0", 0.05), (1, "battery_r0", 0.06)]:
+    for args in [(1, "motor_friction", 0.00002), (1, "motor_friction", 0.00002), (1, "motor_friction", 0.00003)]:
         rpc.append(control(folder, "apply_parameter_change", args[0], args[1], args[2], 0))
     cli = subprocess.run(
         [
@@ -137,9 +143,9 @@ try:
             "--request-id",
             "1",
             "--target",
-            "battery_r0",
+            "motor_friction",
             "--value",
-            ".06",
+            ".00003",
         ],
         capture_output=True,
         text=True,

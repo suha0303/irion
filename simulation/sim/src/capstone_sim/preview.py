@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def plan(seed, duration):
     spec = sample("hover_normal", seed)
     spec.update(soc=0.95, temperature=298.15, payload=0.0, wind_e=0.0, wind_n=0.0, gust_sigma=0.0)
-    spec = build(spec, "random", seed, duration, 0)
+    spec = build(spec, "random", seed, duration, 0, random_revision=REVISION)
     return dict(
         schema="drone.random-preview/1",
         revision=REVISION,

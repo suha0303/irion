@@ -21,9 +21,10 @@ class Changes {
 
 public:
   bool enqueue(const Change &c) {
-    if (c.id == 0 || c.field < 0 || c.field > 2 || !std::isfinite(c.value) ||
-        c.value < 0 || c.value > (c.field == 1 ? .001 : .2) ||
-        c.requested_us < 0 || (c.field == 2 && c.value == 0))
+    if (c.field != 1)
+      throw std::invalid_argument("scalar battery changes retired; select a measured snapshot");
+    if (c.id == 0 || !std::isfinite(c.value) ||
+        c.value < 0 || c.value > .001 || c.requested_us < 0)
       throw std::invalid_argument("invalid physical change");
     auto i = receipts.find(c.id);
     if (i != receipts.end()) {
@@ -45,12 +46,7 @@ public:
       auto c = pending.front();
       if (c.requested_us > now)
         break;
-      if (c.field == 0)
-        core.p.r0 = c.value;
-      else if (c.field == 1)
-        core.p.friction = c.value;
-      else
-        core.p.r1 = c.value;
+      core.p.friction = c.value;
       auto &r = receipts.at(c.id);
       r.applied_us = now;
       r.revision = ++revision;

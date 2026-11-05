@@ -10,18 +10,24 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from capstone_sim import cli, runner
+from capstone_sim import cli, collection_config, runner
 
 
 class CollectionIsolationTest(unittest.TestCase):
     def setUp(self):
+        # This suite checks process isolation using synthetic binaries. Runtime
+        # integrity is exercised separately against the real sealed runtime.
+        frozen = patch.object(collection_config, "assert_frozen")
+        frozen.start()
+        self.addCleanup(frozen.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         for relative in [
-            "profiles/cmu_vah07_4s2p.json",
+            "profiles/collection/battery.json",
             "profiles/x500_reference.yaml",
             "artifacts/propulsion-comparison.json",
+            "profiles/propulsion_runtime.txt",
         ]:
             target = self.root / relative
             target.parent.mkdir(parents=True, exist_ok=True)

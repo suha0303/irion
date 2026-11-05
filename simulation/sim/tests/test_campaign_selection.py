@@ -50,6 +50,22 @@ class CampaignSelectionTest(unittest.TestCase):
         self.assertEqual(result["total"], 1)
         self.assertTrue((self.root / "artifacts/nested/campaign.config.json").is_file())
 
+    def test_measured_stage_is_validated_before_launch_and_forwarded(self):
+        self.config["cases"][0].update(scenario="battery_aging_existing", battery_stage="rpt_16")
+        with (
+            patch.object(module, "run_flight", return_value=dict(
+                status="completed", run=str(self.root / ("a" * 32)),
+            )) as flight,
+            patch.object(module, "verify", return_value=dict(status="passed")),
+        ):
+            module.campaign(self.write())
+        flight.assert_called_once_with("battery_aging_existing", 17, 90, 0, None, battery_stage="rpt_16")
+        for stage in ("rpt_00", "rpt_12", "unknown"):
+            self.config["cases"][0]["battery_stage"] = stage
+            with patch.object(module, "run_flight") as flight, self.assertRaises(ValueError):
+                module.plan(self.write())
+            flight.assert_not_called()
+
     def test_unsupported_explicit_choices_fail_before_any_job_or_artifact(self):
         for key in ("vehicle", "vehicle_profile", "configuration", "real_time_factor",
                     "normal_variation", "typo"):

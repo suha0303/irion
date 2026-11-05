@@ -13,6 +13,25 @@ inline Vec3 flu_to_frd(const Vec3 &v) { return {v[0], -v[1], -v[2]}; }
 struct Wrench {
   Vec3 force{}, moment{};
 };
+struct InplaneFlow {
+  double maximum_ratio = 0;
+  bool defined = true;
+};
+inline InplaneFlow inplane_flow(const State &s, const Vec3 &air, const Vec3 &rates) {
+  InplaneFlow result;
+  for (std::size_t i = 0; i < rotor_count; ++i) {
+    auto local = cross(rates, rotor_positions_flu[i]);
+    const double speed = std::hypot(air[0]+local[0], air[1]+local[1]);
+    const double tip_speed = s.omega[i]*profile::propeller_radius_m;
+    if (tip_speed <= 1e-9) {
+      if (speed > 1e-9)
+        result.defined = false; // Unpowered rotor: ratio is undefined, never infinity in JSON.
+    } else {
+      result.maximum_ratio = std::max(result.maximum_ratio, speed/tip_speed);
+    }
+  }
+  return result;
+}
 inline Wrench wrench(const Parameters &p, const State &s, const Output &o,
                      const Vec3 &air, const Vec3 &rates) {
   Wrench out;

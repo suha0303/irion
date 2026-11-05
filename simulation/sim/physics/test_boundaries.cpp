@@ -44,7 +44,10 @@ int main() {
     rejected = true;
   }
   check(rejected, "dynamic R1 zero rejected before state mutation");
-  check(changes.enqueue({2, 2, .02, 1000}), "positive R1 accepted");
+  rejected = false;
+  try { changes.enqueue({2, 2, .02, 1000}); }
+  catch (const std::invalid_argument &) { rejected = true; }
+  check(rejected, "legacy scalar R1 changes are retired");
   Powertrain p;
   p.state.polarization = .2;
   auto before = p.state;
@@ -52,7 +55,7 @@ int main() {
   check(p.state.polarization == before.polarization &&
             p.state.soc == before.soc &&
             p.state.battery_heat_energy == before.battery_heat_energy,
-        "R1 positive change preserves RC state and energy");
+        "rejected legacy request preserves RC state and energy");
   BatterySensor a(71), b(71);
   a.cfg.voltage_noise_std_v = b.cfg.voltage_noise_std_v = 0;
   a.cfg.current_noise_std_a = b.cfg.current_noise_std_a = 0;

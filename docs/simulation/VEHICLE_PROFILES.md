@@ -62,7 +62,7 @@ PX4 startup은 각 run의 `reference/px4_etc/`에 복사해 수정한다. vendor
 
 `--instance 0..15`, `--real-time-factor 2`, 기존 유한 시나리오를 사용할 수 있다. 처음 선택한 기체는 짧은 hover부터 비행·FC gate·운용 범위를 따로 확인해야 한다. `run` 응답의 경로 아래 `run.json`, `reference/vehicle-profile.json`, `reference/fc-configuration.json`, `reference/hover-estimate.json`, `native_logs/`, `observations/`가 해당 실행의 근거다. payload 시나리오는 추가 질량을 포함해 호버 여유와 FC 호버 추정치를 다시 계산한다. 추정은 정상 SOC0.9의 정적 계산이며 온도·바람·과도 상태·비행시간 보장은 아니다.
 
-다른 기체의 고장 시나리오는 원래 X500 절대값을 그대로 덮어쓰지 않는다. 마찰·R0·용량의 X500 기준 대비 비율을 선택한 기체의 정상값에 적용하고, R0의 고정 배선 저항은 보존한다. 예를 들어 `propulsion_loss_existing`은 해당 모터의 정상 점성 마찰을20배로 설정한다. 이는 동일한 검출 난이도나 실제 손상률을 보장하는 값이 아니다. 마찰이0인 프로파일에서 이 배율 고장은 명시적으로 거절한다. 적용된 실제 값은 `evaluation/scenario.json`에 기록한다. 기존 X500 시나리오의 값은 바뀌지 않는다.
+현재 추진계 고장은 정상·열화 두 프로파일과 고정·급격·점진 세 실행으로 통일했다. 다른 기체의 정상 추진 파라미터를 유지하면서 열화 목표에는 권선 저항 1.04배, 추력계수 0.99배, 토크계수 1.01배를 함께 적용한다. 점성마찰 증가량은 `2e-6 * (해당 기체 정상 kQ / X500 정상 kQ)`이며 쿨롱 마찰과 ESC 효율은 유지한다. 이 전달 규칙은 다른 모터의 실측 수명 데이터로 검증되지 않은 공학 가정이다. X500의 수치·SITL 통과를 다른 기체의 비행 검증으로 확대하지 않는다. 선택한 두 끝점과 실제 전환은 `evaluation/propulsion-selection.json` 및 truth에 보관한다. 옛 마찰 20배 규칙과 개별 고장·약/중/강은 과거 봉인 자료에서만 해석한다.
 
 현재 수집 명령은 `./Data/generation/drone-pretrain`이며 동작의 기본값은 기존 X500이다. 현재 300run 수집·정제/AI 인수는 X500 전용이다. 새 기체의 `drone.observation.metadata/3.0`, `drone.raw.event/3.0`은 simulator 전용이며 `ai_compatible: false`다. 검증은 `capstone-sim verify --run <경로>`, 관측 경로 출력은 `capstone-sim export --run <경로> --format drone-raw-3`을 사용한다. 이 검증이 기존 X500 C9·AI 성능 통과를 뜻하지 않는다. `recover`는 완료 비행이 아닌 관측 단편을 만들며 학습 인수 대상으로 표시하지 않는다.
 

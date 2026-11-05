@@ -1,16 +1,7 @@
-revision: cmu-holybro-v3
+revision: vtc6-4s4p-cmu-vah01-v1
 scope: X500_reference_engineering_simulation
-basis: healthy means declared baseline physical parameters; no hardware certification
+basis: CMU VAH01 initial snapshot defines normal physical health; no hardware certification
 normal_health:
-  battery_r0_multiplier:
-  - 1.0
-  - 1.0
-  battery_r1_multiplier:
-  - 1.0
-  - 1.0
-  battery_capacity_multiplier:
-  - 1.0
-  - 1.0
   motor_resistance_multiplier:
   - 1.0
   - 1.0
@@ -25,28 +16,70 @@ normal_operation:
   central_payload_kg:
   - 0.0
   - 0.2
-  mean_wind_mps:
-  - 0.0
-  - 2.0
-  gust_sigma_mps:
-  - 0.0
-  - 0.4
   mission:
   - hover
   - altitude
   - horizontal
   - yaw
   - waypoint
+  instantaneous_total_wind_mps:
+  - 0.0
+  - 5.0
+  bounded_variation_dimensionless:
+  - 0.5
+  - 1.5
 anomaly_levels:
-  configuration: profiles/scenarios/degradation-levels.yaml
-  levels:
-  - mild
-  - medium
-  - strong
-  meaning: engineering equivalent parameter changes, not hardware damage or lifetime
+  battery: measured VAH01 rpt_16 only
+  motor: profiles/propulsion-health.json; normal or abnormal joint profile only
 limits:
 - values are engineering experiments, not measured detection limits or lifetime severity
   curves
 - independent resets at same initial SOC are not same initial remaining Ah when Q
   differs
 - no same_asset_future continuity is claimed
+cmu_battery_model:
+  revision: cmu-vah01-baseline/1
+  catalog: profiles/battery-aging/cmu-vah01.json
+  normal: rpt_00
+  aged: rpt_16
+  flight_policy: cmu-vah01-rpt16-only/1
+  cell_scope: VAH01 only
+  all_motor_scenarios: same model; optional fixed rpt_16
+  transition: linear R0/R1/C1/Q/OCV; continuous SOC and Vp with signed charge/energy
+    ledger
+propulsion_health:
+  revision: x500-propulsion-binary-v1
+  normal: normal
+  abnormal: abnormal
+  scenarios:
+  - propulsion_loss_existing
+  - propulsion_loss_step
+  - propulsion_loss_ramp
+  transition: simultaneous linear Rm,b,kF,kQ; step1s/ramp20s
+wind_support:
+  revision: bounded-latent-ou-c2-enu-v1
+  physical_quantity: magnitude of instantaneous3D air-mass velocity in ENU
+  environments:
+    calm:
+    - 0.0
+    - 0.0
+    low:
+      bin: 0<speed<=2.5
+      generator:
+      - 0.25
+      - 2.25
+    strong:
+      bin: 2.5<speed<=5
+      generator:
+      - 2.75
+      - 4.75
+  latent_knot_std_dimensionless: 1.0
+  latent_tau_s: 2.0
+  latent_knot_period_s: 1.0
+  interpolation: quintic C2 in latent coordinates
+  legacy_gaussian_ou: original formula and m/s sigma semantics preserved for reference;
+    not current bounded admission
+  planned_airspeed_max_mps: 7.0
+  model_airspeed_max_mps: 8.0
+  max_inplane_advance_ratio: 0.1
+  qualification: unit/numeric/SITL only; no hardware or measured wind spectrum certification

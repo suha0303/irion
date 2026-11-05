@@ -1,6 +1,6 @@
 schema: drone.vehicle/2.0
 id: x500_reference
-revision: vtc6-4s4p
+revision: vtc6-4s4p-cmu-vah01-bounded-wind-v4
 frame: FRD
 rotor_count: 4
 motor_order:
@@ -43,9 +43,10 @@ battery:
   profile: vtc6_4s4p
   nominal_series_cells: 4
   nominal_capacity_ah: 12.0
-  provenance: profiles/collection/battery.json
+  provenance: CMU_VAH01_baseline_RPT_and_mission_fit
   nominal_parallel_cells: 4
   capacity_nameplate_ah: 12.48
+  parameters_file: battery.json
 propulsion:
   kv_rpm_per_v: 920
   resistance_ohm: 0.115
@@ -53,18 +54,23 @@ propulsion:
   thrust_coefficient: 1.2296996501129959e-05
   torque_coefficient: 1.718657729631943e-07
   provenance: manufacturer_table_fit_plus_engineering_dynamic_thermal_assumptions
+  propeller_radius_m: 0.127
 validity:
-  scope: hover_and_gentle_low_speed
+  scope: instantaneous_bounded_wind5_C2_engineering_simulation
   hardware_validated: false
   public_data_compared: true
-  max_air_speed_mps: 5.0
+  max_air_speed_mps: 8.0
   max_body_rate_radps: 2.0
   max_rotor_speed_radps: 1000.0
   outside_policy: continue_finite_physics_flag_evaluation_exclude_normal_eligibility
-  basis: engineering low-speed and usable-charge envelope; voltage/SOC floors are
-    assumptions, not hardware certification
+  basis: Bounded preset generation guarantees instantaneous3D wind bins0/0..2.5/2.5..5
+    without clipping. Full wind-set path budget<=7m/s, actual relative airspeed<=8m/s,
+    rotor inplane ratio<=0.1. Engineering model; no measured turbulence-spectrum or
+    hardware accuracy certification.
   min_pack_voltage_v: 12.4
   min_soc: 0.2
+  max_inplane_advance_ratio: 0.1
+  max_instantaneous_wind_mps: 5.0
 sensors:
   rates_hz:
     imu_sensor: 250

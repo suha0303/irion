@@ -14,6 +14,12 @@ void Parameters::validate() const {
     throw std::invalid_argument("ESC efficiency");
   if (series_cells < 1 || series_cells > 16)
     throw std::invalid_argument("battery series cells outside PX4 range [1,16]");
+  double previous = 0;
+  for (double v : ocv_cell) {
+    if (!std::isfinite(v) || v <= 0 || v >= 5 || v < previous)
+      throw std::invalid_argument("measured monotonic battery OCV required; no fallback model");
+    previous = v;
+  }
 }
 Output Powertrain::evaluate(double voltage, const State &s, const RotorValues &duty,
                             bool armed) const {
@@ -142,6 +148,6 @@ double Powertrain::battery_energy_residual() const {
   double stored =
       p.r1 > 0 ? .5 * p.c1 * state.polarization * state.polarization : 0;
   return state.battery_source_energy - state.battery_terminal_energy -
-         state.battery_heat_energy - stored;
+         state.battery_heat_energy - stored + state.battery_rc_parameter_work_j;
 }
 } // namespace x500

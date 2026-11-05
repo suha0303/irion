@@ -1,10 +1,14 @@
 #include "aerodynamics.hpp"
+#include "battery_aging.hpp"
 #include "command.hpp"
 #include "control.hpp"
 #include "fault_schedule.hpp"
+#include "joint_phase.hpp"
 #include "powertrain.hpp"
+#include "propulsion_health.hpp"
 #include "sensor.hpp"
 #include "wind.hpp"
+#include "bounded_wind.hpp"
 #include <cstdlib>
 #include <fstream>
 #include <gz/msgs/Utility.hh>
@@ -17,6 +21,7 @@
 #include <gz/transport/Node.hh>
 #include <iomanip>
 #include <mutex>
+#include <optional>
 #include <random>
 
 namespace x500 {
@@ -34,13 +39,26 @@ class PowertrainSystem : public gz::sim::System,
   unsigned rejected_commands = 0;
   int bench_axis = -1;
   std::mutex mutex;
-  std::ofstream truth, control_events, command_trace, sensor_trace;
+  std::ofstream truth, control_events, command_trace, sensor_trace, wind_trace;
+  uint64_t wind_update_index = 0;
   Changes changes;
   MissionFaultSchedule mission_fault;
+  BatteryTransition battery_transition;
+  PropulsionTransition propulsion_transition;
+  bool battery_profile_locked = false;
+  bool propulsion_profile_locked = false;
   gz::math::Vector3d wind{}, gust{};
   Wind turbulence{17, 0};
+  JointWeatherClock joint_clock;
+  bool joint_phase_enabled = false;
+  std::ofstream joint_wind_trace;
+  double weather_time = 0;
+  std::optional<BoundedWind> bounded;
+  uint64_t bounded_samples = 0, wind_force_evaluations = 0;
+  double bounded_max_norm = 0, bounded_min_norm = 1e100, bounded_max_step_delta = 0;
+  gz::math::Vector3d previous_bounded_wind{};
   double time = 0, last_log = -1, last_wind = -1;
-  double ambient = 298.15, fault_at = -1, fault_value = 1, base_r0 = .04;
+  double ambient = 298.15, fault_at = -1, fault_value = 1;
   std::string fault;
   bool applied = false;
   long long applied_at = -1, boundary_at = -1;
@@ -82,34 +100,28 @@ public:
     link.EnableVelocityChecks(ecm);
     const auto name = model.Name(ecm);
     const char *battery_file = std::getenv("X500_BATTERY_FILE");
-    if (battery_file) {
-      std::ifstream f(battery_file);
-      f >> core.p.r0 >> core.p.r1 >> core.p.c1 >> core.p.capacity_ah;
-      for (auto &v : core.p.ocv_cell)
-        f >> v;
-      if (!f)
-        throw std::runtime_error("invalid calibrated battery file");
-      core.p.calibrated = true;
-    }
+    if (!battery_file)
+      throw std::runtime_error("explicit measured battery profile required");
+    BatterySnapshot::read(battery_file).install(core.p);
     const char *prop_file = std::getenv("X500_PROPULSION_FILE");
-    if (prop_file) {
-      std::ifstream f(prop_file);
-      f >> core.p.kt_prop >> core.p.kq_prop >> core.p.friction >>
-          core.p.coulomb >> core.p.esc_efficiency >> core.p.resistance;
-      if (!f)
-        throw std::runtime_error("invalid propulsion profile");
+    if (prop_file)
+      PropulsionSnapshot::read(prop_file).install(core.p);
+    propulsion_profile_locked = env("X500_PROPULSION_PROFILE_LOCKED", 0) == 1;
+    if (propulsion_profile_locked) {
+      if (!prop_file)
+        throw std::invalid_argument("locked propulsion requires a snapshot");
+      for (const char *key : {"X500_MOTOR_R_MULTIPLIER", "X500_KT_MULTIPLIER",
+                              "X500_KQ_MULTIPLIER", "X500_FRICTION"})
+        if (std::getenv(key))
+          throw std::invalid_argument("scalar propulsion overrides retired; select a joint profile");
     }
     core.state.soc = env("X500_SOC", .9);
     ambient = env("X500_TEMPERATURE", 298.15);
     core.state.temperature = ambient;
     core.state.motor_temperature.fill(ambient);
-    core.p.r0 = env("X500_R0", core.p.r0);
-    core.p.r1 *= env("X500_R1_MULTIPLIER", 1);
     core.p.resistance *= env("X500_MOTOR_R_MULTIPLIER", 1);
     core.p.kt_prop *= env("X500_KT_MULTIPLIER", 1);
     core.p.kq_prop *= env("X500_KQ_MULTIPLIER", 1);
-    base_r0 = core.p.r0;
-    core.p.capacity_ah = env("X500_CAPACITY", core.p.capacity_ah);
 #ifdef DRONE_PROFILE_HEADER
     core.p.battery_heat_capacity = profile::battery_heat_capacity;
     core.p.battery_cooling = profile::battery_cooling;
@@ -121,17 +133,82 @@ public:
     turbulence = Wind(static_cast<unsigned>(env("X500_SEED", 17)),
                       env("X500_GUST_SIGMA", 0));
     wind.Set(env("X500_WIND_E", 0), env("X500_WIND_N", 0), 0);
+    if (const char *environment = std::getenv("X500_WIND_ENVIRONMENT")) {
+      if (wind.Length() != 0 || turbulence.sigma != 0)
+        throw std::invalid_argument("bounded and legacy wind cannot be mixed");
+      bounded.emplace(static_cast<unsigned>(env("X500_SEED", 17)), environment,
+                      env("X500_WIND_DIRECTION_DEG", 0), env("X500_WIND_VARIATION", 1));
+      auto initial = bounded->sample(0);
+      wind.Set(initial[0], initial[1], initial[2]);
+      previous_bounded_wind = wind;
+    }
+    joint_phase_enabled = std::getenv("X500_JOINT_ORIGIN") != nullptr;
+    if (joint_phase_enabled && !bounded) throw std::invalid_argument("joint phase requires bounded wind");
     fault_at = env("X500_FAULT_AT", -1);
     fault_value = env("X500_FAULT_VALUE", 1.4);
     const char *f = std::getenv("X500_FAULT");
     if (f)
       fault = f;
+    if (propulsion_profile_locked && fault == "friction")
+      throw std::invalid_argument("friction-only fault retired; select joint propulsion profile");
+    battery_profile_locked = env("X500_BATTERY_PROFILE_LOCKED", 0) == 1;
+    if (battery_profile_locked) {
+      if (!battery_file)
+        throw std::invalid_argument("locked battery requires a snapshot file");
+      auto snapshot = BatterySnapshot::read(battery_file);
+      // Reject conflicting environment overrides of the selected initial state.
+      if (core.p.r0 != snapshot.r0 || core.p.r1 != snapshot.r1 ||
+          core.p.c1 != snapshot.c1 || core.p.capacity_ah != snapshot.capacity)
+        throw std::invalid_argument("battery environment overrides the selected snapshot");
+    }
+    if (fault == "battery_stage") {
+      const char *target = std::getenv("X500_BATTERY_TARGET_FILE");
+      if (!battery_profile_locked || !target)
+        throw std::invalid_argument("battery transition requires locked initial/target snapshots");
+      battery_transition.configure(core, BatterySnapshot::read(target), ramp_s);
+    }
+    if (fault == "propulsion_profile") {
+      const char *target = std::getenv("X500_PROPULSION_TARGET_FILE");
+      if (!propulsion_profile_locked || !target)
+        throw std::invalid_argument("propulsion transition requires locked endpoints");
+      propulsion_transition.configure(core, PropulsionSnapshot::read(target), ramp_s);
+    }
     if (const char *offset = std::getenv("X500_FAULT_AFTER_MISSION_S"))
       mission_fault.configure(std::stod(offset), fault_at, fault);
     const char *path = std::getenv("X500_TRUTH_PATH");
     if (!path)
       throw std::runtime_error("X500_TRUTH_PATH required");
     truth.open(path);
+    if (joint_phase_enabled) {
+      joint_wind_trace.open(std::string(path) + ".joint-wind.csv");
+      joint_wind_trace << "source_us,weather_seconds,east,north,up\n" << std::setprecision(17);
+      if (!joint_wind_trace) throw std::runtime_error("joint wind trace open");
+    }
+    wind_trace.open(std::string(path) + ".wind-trace.jsonl");
+    if (bounded) {
+      double center = bounded->environment == "calm" ? 0 : bounded->environment == "low" ? 1.25 : 3.75;
+      double amplitude = bounded->environment == "calm" ? 0 : 1;
+      wind_trace << std::setprecision(17)
+                 << "{\"schema\":\"drone.bounded-wind-trace/" << (joint_phase_enabled ? "2" : "1") << "\",\"kind\":\"configuration\",\"seed_u32\":"
+                 << static_cast<unsigned>(env("X500_SEED", 17))
+                 << ",\"profile\":{\"revision\":\"bounded-latent-ou-c2-enu-v1\",\"environment\":\""
+                 << bounded->environment << "\",\"direction_deg\":" << bounded->direction_deg
+                 << ",\"variation\":" << bounded->variation << "},\"latent_std_dimensionless\":1,\"latent_tau_s\":2,\"latent_knot_period_s\":1"
+                 << ",\"speed_midpoint_mps\":" << center << ",\"speed_amplitude_mps\":" << amplitude
+                 << ",\"direction_amplitude_rad\":" << BoundedWind::pi / 3
+                 << ",\"elevation_amplitude_rad\":" << BoundedWind::pi / 12;
+      if (joint_phase_enabled) wind_trace << ",\"phase_revision\":\"joint-native-consumption-c2-v2\"";
+      wind_trace << "}\n";
+    } else {
+    wind_trace << std::setprecision(17)
+               << "{\"schema\":\"drone.ou-wind-trace/1\",\"kind\":\"configuration\",\"seed_u32\":"
+               << static_cast<unsigned>(env("X500_SEED", 17))
+               << ",\"sigma_per_axis_mps\":" << turbulence.sigma
+               << ",\"tau_s\":" << turbulence.tau
+               << ",\"mean_enu_mps\":[" << wind.X() << ',' << wind.Y() << ",0]}\n";
+    }
+    if (!wind_trace)
+      throw std::runtime_error("cannot open OU wind trace");
     control_events.open(std::string(path) + ".control-events.jsonl");
     command_trace.open(std::string(path) + ".command-trace.jsonl");
     sensor_trace.open(std::string(path) + ".sensor-trace.jsonl");
@@ -169,6 +246,10 @@ public:
   }
   bool change(const gz::msgs::Double_V &req, gz::msgs::Double_V &reply) {
     std::lock_guard<std::mutex> lock(mutex);
+    if (propulsion_profile_locked) {
+      reply.add_data(-1);
+      return true;
+    }
     if (req.data_size() != 5 || req.data(0) != 1) {
       reply.add_data(-1);
       return true;
@@ -288,18 +369,38 @@ public:
       if (bench_axis >= 0)
         command = bench_axis == 2 ? Four{.4, .4, 0, 0} : Four{0, 0, 0, 0};
     }
+    if (joint_phase_enabled && joint_clock.origin_us < 0) {
+      std::ifstream marker(std::getenv("X500_JOINT_ORIGIN"));
+      std::string record;
+      if (std::getline(marker, record)) {
+        const auto field = record.find("\"actual_start_us\":");
+        if (field == std::string::npos) throw std::runtime_error("invalid native joint origin receipt");
+        const auto origin = std::stoll(record.substr(field + 18));
+        joint_clock.notice(origin, static_cast<int64_t>(std::llround(t*1e6)));
+        if (mission_fault.enabled) {
+          std::lock_guard<std::mutex> lock(mutex);
+          const auto onset = mission_fault.schedule(static_cast<double>(origin), static_cast<int64_t>(std::llround(t*1e6)));
+          fault_at = static_cast<double>(onset)/1e6; scheduled_fault_at = fault_at;
+        }
+        const std::string destination = std::string(std::getenv("X500_JOINT_ORIGIN"));
+        const auto slash = destination.find_last_of('/');
+        const std::string receipt_path = destination.substr(0, slash+1) + "joint-physics-origin.json";
+        std::ofstream receipt(receipt_path + ".tmp");
+        receipt << "{\"schema\":\"drone.joint-physics-origin/1\",\"origin_us\":" << origin
+                << ",\"notice_us\":" << joint_clock.notice_us << ",\"fault_onset_us\":"
+                << (mission_fault.enabled ? mission_fault.onset_us : -1) << "}\n";
+        receipt.close();
+        if (!receipt || std::rename((receipt_path+".tmp").c_str(), receipt_path.c_str())) throw std::runtime_error("joint physics receipt commit");
+      }
+    }
     if (scheduled_fault_at >= 0 && t >= scheduled_fault_at && (!applied || ramp_s > 0)) {
       double fraction =
           ramp_s > 0 ? std::clamp((t - scheduled_fault_at) / ramp_s, 0., 1.) : 1.;
-      if (fault == "r0") {
-#ifdef DRONE_PROFILE_HEADER
-        core.p.r0 = profile::interconnect_resistance +
-                    (base_r0 - profile::interconnect_resistance) *
-                        (1 + fraction * (fault_value - 1));
-#else
-        core.p.r0 = base_r0 * (1 + fraction * (fault_value - 1));
-#endif
-      } else if (fault == "friction")
+      if (fault == "battery_stage")
+        battery_transition.apply(core, t - scheduled_fault_at);
+      else if (fault == "propulsion_profile")
+        propulsion_transition.apply(core, t - scheduled_fault_at);
+      else if (fault == "friction")
         core.p.friction =
             base_friction + fraction * (fault_value - base_friction);
       else
@@ -311,12 +412,41 @@ public:
       if (boundary_at < 0 && fraction >= .5)
         boundary_at = static_cast<long long>(std::llround(t * 1e6));
     }
-    if (t - last_wind >= .01) {
+    if (bounded) {
+      weather_time = joint_phase_enabled ? joint_clock.phase_seconds(static_cast<int64_t>(std::llround(t*1e6))) : t;
+      auto current = bounded->sample(weather_time);
+      wind.Set(current[0], current[1], current[2]);
+      gust.Set(0, 0, 0);
+      double magnitude = wind.Length();
+      bool inside = bounded->environment == "calm" ? magnitude == 0 :
+                    bounded->environment == "low" ? magnitude > 0 && magnitude <= 2.5 :
+                    magnitude > 2.5 && magnitude <= 5;
+      if (!std::isfinite(magnitude) || !inside)
+        throw std::runtime_error("bounded generator left declared wind environment");
+      ++wind_force_evaluations;
+      bounded_min_norm = std::min(bounded_min_norm, magnitude);
+      bounded_max_norm = std::max(bounded_max_norm, magnitude);
+      bounded_max_step_delta = std::max(bounded_max_step_delta, (wind - previous_bounded_wind).Length());
+      previous_bounded_wind = wind;
+      if (joint_phase_enabled) {
+        joint_wind_trace << static_cast<int64_t>(std::llround(t*1e6)) << ',' << weather_time << ',' << wind.X() << ',' << wind.Y() << ',' << wind.Z() << '\n';
+        if (!joint_wind_trace) throw std::runtime_error("joint wind write");
+      }
+      last_wind = t;
+    } else if (t - last_wind >= .01) {
       double h = last_wind < 0 ? .01 : t - last_wind;
       turbulence.step(h);
       for (int k = 0; k < 3; ++k)
         gust[k] = turbulence.gust[k];
       last_wind = t;
+      ++wind_update_index;
+      wind_trace << "{\"kind\":\"update\",\"index\":" << wind_update_index
+                 << ",\"time_us\":" << static_cast<int64_t>(t * 1e6)
+                 << ",\"dt_s\":" << h << ",\"gust_enu_mps\":["
+                 << gust.X() << ',' << gust.Y() << ',' << gust.Z() << "]}\n";
+      wind_trace.flush();
+      if (!wind_trace)
+        throw std::runtime_error("OU wind trace write failed");
     }
     auto o = core.step(dt, command, true, ambient);
     auto pose = link.WorldPose(ecm);
@@ -343,6 +473,11 @@ public:
     link.AddWorldWrench(ecm, q.RotateVector(force), q.RotateVector(moment));
     bool valid = air.Length() <= profile::max_air_speed_mps &&
                  body_rate.Length() <= profile::max_body_rate_radps;
+    const auto advance = inplane_flow(core.state, {air.X(),air.Y(),air.Z()},
+                                     {body_rate.X(),body_rate.Y(),body_rate.Z()});
+    if (profile::max_inplane_advance_ratio > 0)
+      valid = valid && advance.defined &&
+              advance.maximum_ratio <= profile::max_inplane_advance_ratio;
 #ifdef DRONE_PROFILE_HEADER
     valid = valid && core.state.soc >= profile::min_soc &&
             o.voltage >= profile::min_pack_voltage_v;
@@ -367,9 +502,40 @@ public:
       sensor_trace.flush();
     }
     if (t - last_log >= .01) {
+      if (bounded) {
+        ++bounded_samples;
+        wind_trace << "{\"kind\":\"sample\",\"index\":" << bounded_samples
+                   << ",\"time_us\":" << static_cast<int64_t>(t * 1e6)
+                   << ",\"sample_time_s\":" << t
+                   << (joint_phase_enabled ? ",\"weather_time_s\":" + std::to_string(weather_time) : "") << ",\"wind_enu_mps\":["
+                   << wind.X() << ',' << wind.Y() << ',' << wind.Z()
+                   << "],\"latent_state\":[" << bounded->state[0] << ',' << bounded->state[1] << ',' << bounded->state[2]
+                   << "],\"latent_knot_index\":" << bounded->knot << "}\n";
+        wind_trace.flush();
+        if (!wind_trace)
+          throw std::runtime_error("bounded wind trace write failed");
+      }
       truth << "{\"time_us\":" << static_cast<long long>(t * 1e6)
             << ",\"voltage_v\":" << o.voltage << ",\"current_a\":" << o.current
             << ",\"model_valid\":" << (valid ? "true" : "false")
+            << ",\"relative_airspeed_mps\":" << air.Length()
+            << ",\"max_inplane_advance_ratio\":" << advance.maximum_ratio
+            << ",\"inplane_advance_ratio_defined\":" << (advance.defined ? "true" : "false")
+            << ",\"ground_velocity_enu_mps\":[" << vel->X() << ',' << vel->Y() << ',' << vel->Z() << ']'
+            << ",\"air_velocity_flu_mps\":[" << air.X() << ',' << air.Y() << ',' << air.Z() << ']';
+      if (bounded) {
+        truth << ",\"wind_sample_index\":" << bounded_samples
+              << ",\"wind_force_evaluations\":" << wind_force_evaluations
+              << ",\"wind_observed_min_norm_mps\":" << bounded_min_norm
+              << ",\"wind_observed_max_norm_mps\":" << bounded_max_norm
+              << ",\"wind_max_physics_step_delta_mps\":" << bounded_max_step_delta;
+      } else {
+        truth
+            << ",\"wind_update_index\":" << wind_update_index
+            << ",\"wind_update_time_us\":" << static_cast<int64_t>(last_wind * 1e6)
+            << ",\"gust_enu_mps\":[" << gust.X() << ',' << gust.Y() << ',' << gust.Z() << ']';
+      }
+      truth
             << ",\"sensor_dropped_total\":" << sensor.dropped
             << ",\"command_sequence\":" << command_gate.sequence
             << ",\"command_sample_us\":" << command_gate.sample_us
@@ -383,7 +549,19 @@ public:
             << moment.Z() << ']' << ",\"soc\":" << core.state.soc
             << ",\"temperature_k\":" << core.state.temperature
             << ",\"r0_ohm\":" << core.p.r0 << ",\"r1_ohm\":" << core.p.r1
+            << ",\"c1_f\":" << core.p.c1
+            << ",\"battery_stage_fraction\":" << battery_transition.fraction
+            << ",\"battery_stage_onset_us\":"
+            << static_cast<long long>(std::llround(scheduled_fault_at * 1e6))
+            << ",\"battery_parameter_charge_c\":" << core.state.battery_parameter_charge_c
+            << ",\"battery_parameter_energy_j\":" << core.state.battery_parameter_energy_j
+            << ",\"battery_rc_parameter_work_j\":" << core.state.battery_rc_parameter_work_j
             << ",\"motor_resistance_ohm\":" << core.p.resistance
+            << ",\"motor_coulomb_nm\":" << core.p.coulomb
+            << ",\"esc_efficiency\":" << core.p.esc_efficiency
+            << ",\"propulsion_profile_fraction\":" << propulsion_transition.fraction
+            << ",\"propulsion_profile_onset_us\":"
+            << (fault == "propulsion_profile" ? static_cast<long long>(std::llround(scheduled_fault_at * 1e6)) : -1)
             << ",\"kt_prop\":" << core.p.kt_prop
             << ",\"kq_prop\":" << core.p.kq_prop
             << ",\"friction_nms\":" << core.p.friction
@@ -396,7 +574,10 @@ public:
             << core.battery_energy_residual()
             << ",\"bus_energy_j\":" << core.state.bus_energy
             << ",\"solver_residual_v\":" << o.residual
-            << ",\"altitude_m\":" << pose->Pos().Z() << ",\"command\":[";
+            << ",\"altitude_m\":" << pose->Pos().Z() << ",\"battery_ocv_cell_v\":[";
+      for (std::size_t i = 0; i < core.p.ocv_cell.size(); ++i)
+        truth << (i ? "," : "") << core.p.ocv_cell[i];
+      truth << "],\"command\":[";
       for (std::size_t i = 0; i < rotor_count; ++i)
         truth << (i ? "," : "") << command[i];
       truth << "],\"omega_rad_s\":[";
@@ -415,7 +596,7 @@ public:
       for (std::size_t i = 0; i < rotor_count; ++i)
         truth << (i ? "," : "") << core.state.motor_temperature[i];
       truth << "],\"wind_enu_mps\":[" << wind.X() + gust.X() << ','
-            << wind.Y() + gust.Y() << ',' << gust.Z() << "]}\n";
+            << wind.Y() + gust.Y() << ',' << wind.Z() + gust.Z() << "]}\n";
       truth.flush();
       if (!truth)
         throw std::runtime_error("truth write failed");

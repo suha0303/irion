@@ -8,7 +8,12 @@ import bisect
 import math
 import random
 
-REVISION = "random-continuous-v3"
+from .operating_envelope import directional_speed_limit, random_speed_limit, validate_wind
+
+REVISION = "random-continuous-v5-ou"  # Preserved legacy constructor API.
+BOUNDED_REVISION = "random-continuous-v6-bounded-wind"
+FIXED_WIND_REVISION = "random-continuous-v4-wind5"
+LEGACY_REVISION = "random-continuous-v3"
 FIELDS = {"kind", "revision", "duration_s", "limits", "program"}
 LIMITS = {
     "min_altitude_m": 3.0,
@@ -26,9 +31,9 @@ LIMITS = {
 D1, D2 = 1.875, 10 / math.sqrt(3)
 
 
-def speed_limit(spec):
-    # Planning margin, not a hard bound on stochastic wind.
-    return min(3.0, 4.5 - math.hypot(spec["wind_e"], spec["wind_n"]) - 3 * spec["gust_sigma"])
+def speed_limit(spec, *, revision=None):
+    revision = revision or (BOUNDED_REVISION if "wind_profile" in spec else REVISION)
+    return random_speed_limit(spec, legacy=revision == LEGACY_REVISION, directional=revision == REVISION)
 
 
 def clamp(value, low, high):
@@ -52,10 +57,16 @@ def minimum_speed(a, b):
     return math.hypot(a[5] + u * dx, a[6] + u * dy)
 
 
-def build(spec, seed, duration):
+def build(spec, seed, duration, *, revision=None):
+    revision = revision or (BOUNDED_REVISION if "wind_profile" in spec else REVISION)
+    if revision == BOUNDED_REVISION and "wind_profile" not in spec:
+        raise ValueError("Bounded v6 requires an explicit wind profile")
     if type(duration) not in (int, float) or duration not in (180, 480, 900):
         raise ValueError("Random flight requires 180, 480 or 900 seconds")
-    limits = dict(LIMITS, horizontal_speed_mps=speed_limit(spec))
+    validate_wind(spec, revision=revision)
+    if revision not in (BOUNDED_REVISION, REVISION, FIXED_WIND_REVISION, LEGACY_REVISION):
+        raise ValueError("Unknown random planning revision")
+    limits = dict(LIMITS, horizontal_speed_mps=speed_limit(spec, revision=revision))
     if not 1 <= limits["horizontal_speed_mps"] <= 3:
         raise ValueError("Wind budget outside supported random flight limits")
     rng = random.Random(seed ^ 0x434F4E5433)
@@ -83,6 +94,8 @@ def build(spec, seed, duration):
                 speed = speeds[index % 4] * limits["horizontal_speed_mps"]
                 # Climb/descent inputs change independently of horizontal steering.
                 vd = -0.65 if index == 0 else clamp((-altitude_goal - left[3]) * 0.08, -0.65, 0.65)
+                if revision == REVISION:
+                    speed = min(speed, directional_speed_limit(spec, course, vd))
                 velocity = [speed * math.cos(course), speed * math.sin(course), vd]
                 heading = course + rng.choice((0, 0, 0, math.pi / 6, -math.pi / 6))
                 turn_yaw = math.atan2(math.sin(heading - left[4]), math.cos(heading - left[4]))
@@ -91,7 +104,7 @@ def build(spec, seed, duration):
             points.append([left[0] + dt, *position, yaw, *velocity])
         points[-1][0] = float(duration)
         path = dict(
-            kind="random", revision=REVISION, duration_s=duration, limits=limits, program=points
+            kind="random", revision=revision, duration_s=duration, limits=limits, program=points
         )
         try:
             validate(path)
@@ -145,8 +158,8 @@ def metrics(path):
 
 
 def validate(path):
-    if set(path) != FIELDS or path.get("revision") != REVISION or path.get("kind") != "random":
-        raise ValueError("Retired random path; regenerate with random-continuous-v3")
+    if set(path) != FIELDS or path.get("revision") not in (BOUNDED_REVISION, REVISION, FIXED_WIND_REVISION, LEGACY_REVISION) or path.get("kind") != "random":
+        raise ValueError("Retired random path; use current v5 or preserved v3/v4 revision")
     if type(path["duration_s"]) not in (int, float) or path["duration_s"] not in (180, 480, 900):
         raise ValueError("Random flight duration must be 180/480/900 seconds")
     limits = path["limits"]
@@ -187,6 +200,8 @@ def validate(path):
     ):
         raise ValueError("Continuous takeoff start and final braking required")
     result = metrics(path)
+    if path["revision"] in (REVISION, BOUNDED_REVISION) and result["horizontal_speed_mps"] < 1 - 1e-8:
+        raise ValueError("Current random path must actually reach1m/s")
     for key in (
         "horizontal_speed_mps",
         "vertical_speed_mps",
@@ -225,11 +240,14 @@ def kinematics(t, path):
     integral = u**4 * (2.5 + u * (-3 + u))
     ds = 30 * u * u * (1 - u) ** 2 / dt
     dds = 60 * u * (1 - u) * (1 - 2 * u) / dt**2
-    dv = [w - v for v, w in zip(a[5:8], b[5:8])]
+    dn, de, dd = b[5] - a[5], b[6] - a[6], b[7] - a[7]
     dyaw = b[4] - a[4]
+    # These are always three axes. Explicit coordinates avoid the temporary
+    # zip/generator frames implicated in the preserved interpreter crashes.
     return (
-        tuple(x + dt * (v * u + d * integral) for x, v, d in zip(a[1:4], a[5:8], dv))
-        + (a[4] + dyaw * s,),
-        tuple(v + d * s for v, d in zip(a[5:8], dv)) + (dyaw * ds,),
-        tuple(d * ds for d in dv) + (dyaw * dds,),
+        (a[1] + dt * (a[5] * u + dn * integral),
+         a[2] + dt * (a[6] * u + de * integral),
+         a[3] + dt * (a[7] * u + dd * integral), a[4] + dyaw * s),
+        (a[5] + dn * s, a[6] + de * s, a[7] + dd * s, dyaw * ds),
+        (dn * ds, de * ds, dd * ds, dyaw * dds),
     )

@@ -12,14 +12,18 @@ def smooth(u):
     return u**4 * (35 + u * (-84 + u * (70 - 20 * u)))
 
 
-def build(spec, mode, seed, duration, basic_index):
+def build(spec, mode, seed, duration, basic_index, *, random_revision=None):
     from .normal_variation import validate
 
     if mode == "random":
+        from .random_flight import BOUNDED_REVISION, FIXED_WIND_REVISION, LEGACY_REVISION, REVISION
         from .random_flight import build as build_random
 
         result = copy.deepcopy(spec)
-        result["path"] = build_random(spec, seed, duration)
+        # Preserve existing low-wind frozen recipes. New campaigns can select
+        # v5 explicitly for every bin; archived v3/v4 retain their original scope.
+        revision = random_revision or (BOUNDED_REVISION if "wind_profile" in spec else LEGACY_REVISION if math.hypot(spec["wind_e"], spec["wind_n"]) <= 2+1e-9 else FIXED_WIND_REVISION if spec["gust_sigma"] == 0 else REVISION)
+        result["path"] = build_random(spec, seed, duration, revision=revision)
         return validate(result)
     rng = random.Random(seed ^ 0xC3B0300)
     result = copy.deepcopy(spec)

@@ -79,6 +79,10 @@ public:
       fclose(diag);
   }
   void update(uint64_t now) {
+    // Do not consume uORB messages before the shared PX4 boot clock starts.
+    // A positive publisher timestamp with availability0 is not a valid capture.
+    if (now == 0)
+      return;
     if (!f) {
       const char *path = getenv("X500_CAPTURE_PATH");
       if (!path)

@@ -18,6 +18,20 @@ from capstone_sim.runner import PX4, prepare_world, run_flight, scenario_paramet
 
 
 class CollectionConfigurationTest(unittest.TestCase):
+    def test_all_32_collection_ports_are_unique_and_do_not_cross_link(self):
+        with tempfile.TemporaryDirectory() as folder:
+            etc = collection_config.prepare_fc(Path(folder), PX4 / "ROMFS/px4fmu_common")
+            source = (etc / "init.d-posix/px4-rc.mavlink").read_text()
+            self.assertNotIn('&& udp_offboard_port_remote=14549', source)
+            self.assertIn('udp_gcs_port_remote=$((14700+px4_instance))', source)
+            receivers = set(range(14540, 14572))
+            offboard_local = set(range(14580, 14612))
+            gcs_remote = set(range(14700, 14732))
+            self.assertEqual(collection_config.MAX_INSTANCES, 32)
+            self.assertFalse(receivers & offboard_local)
+            self.assertFalse(receivers & gcs_remote)
+            self.assertFalse(offboard_local & gcs_remote)
+
     def test_fc_gate_recovers_lost_requests_without_boot_clock_deadline(self):
         gate = collection_config.FCParameterGate()
         sent = []
@@ -157,14 +171,16 @@ class CollectionConfigurationTest(unittest.TestCase):
 
     def test_cell_topology_rc_and_capacity_basis(self):
         p = collection_config.battery()
-        old = json.loads((collection_config.ROOT / "profiles/cmu_vah07_4s2p.json").read_text())
+        from capstone_sim.battery_aging import load_catalog
+        cell = load_catalog()["stages"][0]["cell"]
         self.assertEqual((p["ns"], p["np"], p["capacity_ah"]), (4, 4, 12))
         self.assertEqual(p["capacity_ah"], p["np"] * p["cell_capacity_selected_ah"])
-        self.assertAlmostEqual(p["r0_ohm"] - .005, old["r0_ohm"] / 2)
-        self.assertAlmostEqual(p["r1_ohm"], old["r1_ohm"] / 2)
-        self.assertAlmostEqual(p["c1_f"], old["c1_f"] * 2)
-        self.assertAlmostEqual(p["r1_ohm"] * p["c1_f"], old["r1_ohm"] * old["c1_f"])
-        self.assertEqual(p["ocv_cell_v"], old["ocv_cell_v"])
+        self.assertAlmostEqual(p["r0_ohm"] - .005, cell["r0_ohm"])
+        self.assertAlmostEqual(p["r1_ohm"], cell["r1_ohm"])
+        self.assertAlmostEqual(p["c1_f"], cell["c1_f"])
+        self.assertAlmostEqual(p["actual_capacity_ah"], 4 * cell["capacity_ah"])
+        self.assertAlmostEqual(p["r1_ohm"] * p["c1_f"], cell["r1_ohm"] * cell["c1_f"])
+        self.assertEqual(p["ocv_cell_v"], cell["ocv_cell_v"])
 
     def test_world_mass_inertia_profile_and_sensor_rates(self):
         v = collection_config.vehicle()
@@ -214,7 +230,8 @@ class CollectionConfigurationTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 collection_config.validate_request(scenario, duration + 1, onset)
             if onset:
-                self.assertEqual(scenario_parameters(scenario)["fault_at"], 60)
+                self.assertEqual(scenario_parameters(scenario)["fault_at"],
+                                 180 if scenario.startswith("battery_aging_") else 60)
                 self.assertEqual(scenario_parameters(scenario, onset)["fault_at"], 180)
                 if scenario.endswith("ramp"):
                     self.assertEqual(scenario_parameters(scenario, onset)["fault_ramp_s"], 20)

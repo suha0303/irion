@@ -13,10 +13,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
 from pymavlink import mavutil
 
-from . import collection_config
+from . import bounded_wind, collection_config, model_envelope, propulsion_health, wind_model
 from .profile import assert_generated, load_profile
 from .progress_guard import SimulationClockGuard, SimulationClockStalled, record_secondary_failure
 from .recording import Recorder, dump, integrity, sha
@@ -27,6 +26,39 @@ PX4 = ROOT / "vendor/PX4-Autopilot"
 BINARY = PX4 / "build/px4_sitl_default/bin/px4"
 MODEL = PX4 / "Tools/simulation/gz/models"
 COLLECTION_PHASE_WAIT_S = {"streaming": 300, "takeoff": 180, "landing": 300}
+
+
+def gazebo_seed_transport(seed):
+    """Gazebo8 Ruby FFI is int32; native nonzero int converts to uint32 intact.
+
+    Use an attached option because Ruby's optional Integer arg rejects a
+    separate negative token. Zero retains Gazebo's existing default sentinel.
+    Logical path/wind seeds are never changed by this wire representation.
+    """
+    if type(seed) is not int or not 0 <= seed <= 0xFFFFFFFF:
+        raise ValueError("Simulation seed must be a uint32 integer")
+    signed = seed if seed < 0x80000000 else seed - 0x100000000
+    return dict(revision="gz-sim8-int32-bitpattern/1", logical_seed_u32=seed,
+                gazebo_cli_seed_i32=signed, gazebo_cli_option=f"--seed={signed}",
+                gazebo_native_seed_u32=seed,
+                gazebo_seed_mode="explicit_uint32" if seed else "native_default_zero_sentinel")
+
+
+def fault_evidence(path):
+    """Keep only the event timestamps when long parallel flights finalize."""
+    result: dict[str, int | None] = dict(first_time_us=None, applied_time_us=None, boundary_time_us=None)
+    path = Path(path)
+    if path.exists():
+        with path.open() as stream:
+            for line in stream:
+                row = json.loads(line)
+                if result["first_time_us"] is None:
+                    result["first_time_us"] = row["time_us"]
+                if result["applied_time_us"] is None and row["fault_applied"]:
+                    result["applied_time_us"] = row.get("fault_applied_time_us", row["time_us"])
+                if result["boundary_time_us"] is None and row.get("fault_boundary_time_us", -1) >= 0:
+                    result["boundary_time_us"] = row["fault_boundary_time_us"]
+    return result
 
 
 def capture_health(recorder, px4_now_s, active_since_s, max_lag_s=5.0):
@@ -126,13 +158,12 @@ def stop_owned_process(process, name, *, run=None, env=None):
 
 SCENARIOS: dict[str, dict[str, float | str]] = {
     "hover_normal": {},
+    "battery_aging_existing": {},
+    "battery_aging_step": {"fault": "battery_stage", "fault_at": 180, "fault_ramp_s": 1.0},
+    "battery_aging_ramp": {"fault": "battery_stage", "fault_at": 180, "fault_ramp_s": 20.0},
     "sensor_bias_quality": {"sensor_voltage_bias": 0.08, "sensor_current_bias": 0.15},
     "sensor_delay_quality": {"sensor_delay": 0.08},
     "sensor_dropout_quality": {"sensor_drop_begin": 40, "sensor_drop_end": 42},
-    "battery_rc_existing": {"r1_multiplier": 1.5},
-    "motor_resistance_existing": {"motor_r_multiplier": 1.2},
-    "propeller_load_existing": {"kt_multiplier": 0.9, "kq_multiplier": 1.1},
-    "combined_existing": {"r0": 0.0563926575, "friction": 0.00004},
     "altitude_normal": {"mission": "altitude"},
     "horizontal_normal": {"mission": "horizontal"},
     "yaw_normal": {"mission": "yaw"},
@@ -141,28 +172,14 @@ SCENARIOS: dict[str, dict[str, float | str]] = {
     "wind_normal": {"wind_e": 2, "gust_sigma": 0.4},
     "cold_normal": {"temperature": 283.15},
     "payload_normal": {"payload": 0.2},
-    "battery_resistance_existing": {"r0": 0.056},
-    "battery_capacity_existing": {"capacity": 4.2},
-    "propulsion_loss_existing": {"friction": 0.00004},
-    "battery_resistance_ramp": {
-        "fault": "r0",
-        "fault_at": 60,
-        "fault_value": 1.4,
-        "fault_ramp_s": 20,
-    },
+    "propulsion_loss_existing": {},
     "propulsion_loss_ramp": {
-        "fault": "friction",
+        "fault": "propulsion_profile",
         "fault_at": 60,
-        "fault_value": 0.00004,
         "fault_ramp_s": 20,
     },
-    "battery_resistance_step": {"fault": "r0", "fault_at": 60, "fault_value": 1.4},
-    "propulsion_loss_step": {"fault": "friction", "fault_at": 60, "fault_value": 0.00004},
+    "propulsion_loss_step": {"fault": "propulsion_profile", "fault_at": 60, "fault_ramp_s": 1.0},
 }
-
-SCENARIOS.update(
-    yaml.safe_load((ROOT / "profiles/scenarios/degradation-levels.yaml").read_text())["cases"]
-)
 
 
 def required_element(parent: ET.Element, path: str) -> ET.Element:
@@ -318,22 +335,8 @@ def scenario_parameters(scenario, fault_at_s=None):
 
 
 def custom_scenario_parameters(scenario, fault_at_s, vehicle, pack):
-    """Express the legacy experiment severity relative to the selected healthy pack/motor."""
-    parameters = scenario_parameters(scenario, fault_at_s)
-    friction = vehicle["propulsion"]["friction_nms"]
-    if "friction" in parameters or parameters.get("fault") == "friction":
-        if friction <= 0:
-            raise ValueError(
-                "A friction-loss scenario requires a positive profile baseline friction"
-            )
-        key = "friction" if "friction" in parameters else "fault_value"
-        parameters[key] = parameters[key] / 2e-6 * friction
-    if "r0" in parameters:
-        wire = pack.get("interconnect_resistance_ohm", 0.0)
-        parameters["r0"] = wire + (pack["r0_ohm"] - wire) * parameters["r0"] / 0.04
-    if "capacity" in parameters:
-        parameters["capacity"] = pack["capacity_ah"] * parameters["capacity"] / 6
-    return parameters
+    """Custom propulsion endpoints are resolved from the prepared healthy profile."""
+    return scenario_parameters(scenario, fault_at_s)
 
 
 def run_flight(
@@ -352,7 +355,22 @@ def run_flight(
     gui_preview=False,
     operation_variation=None,
     fault_after_mission_s=None,
+    battery_stage=None,
+    battery_transition_s=None,
+    propulsion_transition_s=None,
+    wind_environment=None,
+    wind_direction_deg=0.,
+    wind_variation=1.,
+    phase_policy=None,
+    paired_case_id=None,
 ):
+    from . import battery_aging
+
+    seed_transport = gazebo_seed_transport(seed)
+    battery_aging.validate_selection(scenario, battery_stage, battery_transition_s, configuration)
+    propulsion_health.resolve(scenario, transition_s=propulsion_transition_s)
+    use_cmu = vehicle_profile is None
+    aging_selection = None
     custom = vehicle_profile is not None
     prepared: Any = None
     selected: Any = None
@@ -362,8 +380,32 @@ def run_flight(
         operation_variation is not None or fault_after_mission_s is not None
     ):
         raise ValueError("Operation variation and mission onset require collection X500")
+    cli_wind_profile = None
+    if wind_environment is not None:
+        cli_wind_profile = bounded_wind.profile(wind_environment, wind_direction_deg, wind_variation)
+        if vehicle_profile is not None or configuration != "collection":
+            raise ValueError("Bounded environments require collection X500")
+        if operation_variation is not None:
+            if "wind_profile" in operation_variation:
+                raise ValueError("Select wind profile in operation JSON or CLI, not both")
+            operation_variation = dict(operation_variation, wind_profile=cli_wind_profile,
+                                       wind_e=0., wind_n=0., gust_sigma=0.)
+        if normal_variation is not None:
+            if "wind_profile" in normal_variation:
+                raise ValueError("Select wind profile in normal JSON or CLI, not both")
+            normal_variation = dict(normal_variation, wind_profile=cli_wind_profile,
+                                    wind_e=0., wind_n=0., gust_sigma=0.)
+    elif wind_direction_deg != 0 or wind_variation != 1:
+        raise ValueError("Wind direction/variation require an explicit bounded environment")
     flight_variation = operation_variation if operation_variation is not None else normal_variation
+    selected_wind_profile = flight_variation.get("wind_profile") if flight_variation else cli_wind_profile
+    if selected_wind_profile is not None:
+        bounded_wind.validate(selected_wind_profile)
+        if configuration != "collection" or vehicle_profile is not None:
+            raise ValueError("Bounded environments require collection X500")
     if custom:
+        if battery_stage is not None or scenario in battery_aging.SCENARIOS:
+            raise ValueError("CMU stage selection applies to the built-in X500; custom profiles supply their own pack")
         if configuration is not None or flight_variation is not None:
             raise ValueError(
                 "Custom vehicle profile cannot be mixed with X500 configuration/variation"
@@ -383,15 +425,24 @@ def run_flight(
             scenario, duration, fault_at_s,
             operation_variation=operation_variation,
             fault_after_mission_s=fault_after_mission_s,
+            battery_transition_s=battery_transition_s,
+            propulsion_transition_s=propulsion_transition_s,
         )
         collection_config.assert_frozen()
         if not collection_config.PLUGIN.is_file():
             raise FileNotFoundError("Collection plugin not built")
+    elif not custom:
+        collection_config.assert_frozen()
     parameters = (
         custom_scenario_parameters(scenario, fault_at_s, selected["vehicle"], selected["battery"])
         if custom
         else scenario_parameters(scenario, fault_at_s)
     )
+    if scenario in battery_aging.SCENARIOS and scenario != "battery_aging_existing":
+        if battery_transition_s is not None:
+            parameters["fault_ramp_s"] = battery_transition_s
+    if scenario in propulsion_health.DYNAMIC and propulsion_transition_s is not None:
+        parameters["fault_ramp_s"] = propulsion_transition_s
     if normal_variation is not None:
         from .normal_variation import validate
 
@@ -401,27 +452,32 @@ def run_flight(
         if normal_variation["soc"] < 0.6 and duration > 180:
             raise ValueError("Low-SOC variation requires <=180s duration")
     if flight_variation is not None:
-        parameters.update({k: v for k, v in flight_variation.items() if k != "path"})
+        parameters.update({k: v for k, v in flight_variation.items() if k not in {"path", "wind_profile"}})
     if operation_variation is not None:
         parameters["mission"] = operation_variation["path"]["kind"]
     if fault_after_mission_s is not None:
         # The native fault stays disabled until airborne/path zero is acknowledged.
         parameters.update(fault_at=-1, fault_after_mission_s=fault_after_mission_s)
+    from . import joint_phase
+
+    joint_phase.validate(phase_policy, configuration, duration, flight_variation, custom, paired_case_id)
+    tracking = (joint_phase.policy()["tracking_acceptance"] if phase_policy is not None else dict(
+        max_position_error_m=2.0, position_tolerance_m=0.75, position_coverage_min=0.95,
+        yaw_tolerance_rad=0.25, yaw_coverage_min=0.95,
+    ))
     if not BINARY.exists():
         raise FileNotFoundError("PX4 not built")
     if not math.isfinite(duration) or duration <= 0 or duration > 1800:
         raise ValueError("duration must be finite and within (0,1800] seconds")
-    if type(instance) is not int or instance < 0 or instance > (15 if strict else 9):
-        raise ValueError("instance must be 0..15 for collection, otherwise 0..9")
+    instance_limit = collection_config.MAX_INSTANCES - 1 if configuration else 15 if custom else 9
+    if type(instance) is not int or not 0 <= instance <= instance_limit:
+        raise ValueError(f"instance must be 0..{instance_limit} for the selected configuration")
     if not math.isfinite(capture_interval_ms) or not 1 <= capture_interval_ms <= 50:
         raise ValueError("capture interval must be finite and within [1,50] host milliseconds")
     capture_interval_ns = int(capture_interval_ms * 1e6)
     cfg: dict[str, float | str] = {
         "soc": 0.9,
         "temperature": 298.15,
-        "r0": 0.04,
-        "capacity": 6,
-        "friction": 2e-6,
         "wind_e": 0,
         "wind_n": 0,
         "gust_sigma": 0,
@@ -432,8 +488,6 @@ def run_flight(
         selected["battery"]
         if custom
         else collection_config.battery()
-        if configuration
-        else json.loads((ROOT / "profiles/cmu_vah07_4s2p.json").read_text())
     )
     vehicle_profile = (
         selected["vehicle"] if custom else collection_config.vehicle() if configuration else load_profile()
@@ -445,25 +499,26 @@ def run_flight(
         if configuration
         else ROOT / "build/libDronePowertrain.so"
     )
-    prop = (
-        dict(friction=selected["propulsion"]["friction_nms"])
-        if custom
-        else json.loads((ROOT / "artifacts/propulsion-comparison.json").read_text())["parameters"]
+    propulsion_normal = propulsion_health.read_runtime(
+        prepared / "propulsion_runtime.txt" if custom else ROOT / "profiles/propulsion_runtime.txt"
     )
-    cfg.update(r0=pack["r0_ohm"], capacity=pack["capacity_ah"], friction=prop["friction"])
+    if not custom and propulsion_normal != propulsion_health.load_catalog()["states"]["normal"]:
+        raise ValueError("X500 healthy propulsion differs from the sealed normal profile")
+    propulsion_selection = propulsion_health.resolve(
+        scenario, propulsion_normal, propulsion_transition_s
+    )
+    if custom:
+        cfg.update(r0=pack["r0_ohm"], capacity=pack["capacity_ah"])
     cfg.update(parameters)
-    if "r0_multiplier" in cfg:
-        cfg["r0"] = pack["r0_ohm"] * float(cfg["r0_multiplier"])
-    if "capacity_multiplier" in cfg:
-        cfg["capacity"] = pack["capacity_ah"] * float(cfg["capacity_multiplier"])
-    if scenario == "battery_resistance_existing":
-        cfg["r0"] = pack["r0_ohm"] * 1.4
-        if strict:
-            wire = pack.get("interconnect_resistance_ohm", 0.0)
-            cfg["r0"] = (pack["r0_ohm"] - wire) * 1.4 + wire
-            parameters = dict(parameters, r0=cfg["r0"])
-    if scenario == "battery_capacity_existing":
-        cfg["capacity"] = pack["capacity_ah"] * 0.7
+    if selected_wind_profile is not None:
+        cfg.update(wind_e=0., wind_n=0., gust_sigma=0.)
+    elif cfg["gust_sigma"] != 0:
+        raise ValueError("Gaussian OU is preserved as historical reference; choose an explicit bounded wind environment")
+    if use_cmu:
+        aging_selection = battery_aging.resolve(scenario, battery_stage, battery_transition_s, pack)
+        cfg.update(r0=aging_selection["initial"]["r0_ohm"],
+                   capacity=aging_selection["initial"]["capacity_ah"],
+                   battery_profile_locked=1)
     run_hover = (
         vehicle_runtime.hover_estimate(vehicle_profile, pack, payload=cfg["payload"])
         if custom
@@ -542,6 +597,13 @@ def run_flight(
             {
                 "name": scenario,
                 "seed": seed,
+                "gazebo_seed_transport": seed_transport,
+                "wind_profile": selected_wind_profile,
+                "wind_model": bounded_wind.definition(seed, selected_wind_profile)
+                if selected_wind_profile is not None else wind_model.metadata(seed, cfg),
+                "wind_support_status": "bounded_current" if selected_wind_profile is not None
+                else "fixed_wind_regression" if cfg["gust_sigma"] == 0
+                else "legacy_gaussian_reference_outside_current_support",
                 "parameters": cfg,
                 "paired_case_id": f"{vehicle_profile['id'] if custom else 'x500'}-{cfg['mission']}-seed{seed}",
                 "vehicle_instance_id": vehicle_profile["id"] + "-001"
@@ -575,10 +637,38 @@ def run_flight(
             },
         )
         (run / "evaluation/events.jsonl").touch()
-        recorder = Recorder(
-            run, timing=timing, vehicle_profile=selected["observation_vehicle"] if custom else None
+        if aging_selection is not None:
+            dump(run / "evaluation/battery-selection.json", aging_selection)
+            (run / "evaluation/battery-catalog.json").write_bytes(battery_aging.CATALOG.read_bytes())
+            battery_aging.write_runtime(run / "evaluation/battery-initial.txt", aging_selection["initial"])
+            battery_aging.write_runtime(run / "evaluation/battery-target.txt", aging_selection["target"])
+            scenario_path = run / "evaluation/scenario.json"
+            scenario_record = json.loads(scenario_path.read_text())
+            scenario_record.update(
+                battery_selection="evaluation/battery-selection.json",
+                battery_model_revision=aging_selection["catalog_revision"],
+                normal_range_revision=vehicle_profile["revision"] + "+" + aging_selection["catalog_revision"],
+                health_basis="CMU VAH01 initial snapshot" if scenario in collection_config.NORMAL
+                else "CMU VAH01 snapshot/transition; motor and propeller health specified separately",
+            )
+            dump(scenario_path, scenario_record)
+        dump(run / "evaluation/propulsion-selection.json", propulsion_selection)
+        (run / "evaluation/propulsion-catalog.json").write_bytes(propulsion_health.CATALOG.read_bytes())
+        propulsion_health.write_runtime(run / "evaluation/propulsion-initial.txt", propulsion_selection["initial"])
+        propulsion_health.write_runtime(run / "evaluation/propulsion-target.txt", propulsion_selection["target"])
+        scenario_path = run / "evaluation/scenario.json"
+        scenario_record = json.loads(scenario_path.read_text())
+        scenario_record.update(
+            propulsion_selection="evaluation/propulsion-selection.json",
+            propulsion_model_revision=propulsion_selection["catalog_revision"],
+            normal_range_revision=scenario_record["normal_range_revision"] + "+" + propulsion_selection["catalog_revision"],
         )
-        if configuration:
+        dump(scenario_path, scenario_record)
+        recorder = Recorder(
+            run, timing=timing, vehicle_profile=selected["observation_vehicle"] if custom else None,
+            sync_interval_s=0.1 if phase_policy is not None else 0.0,
+        )
+        if not custom:
             for name in ["battery.json", "mass-ledger.json", "health_policy.yaml"]:
                 (run / "reference" / name).write_bytes((collection_config.DIRECTORY / name).read_bytes())
             metadata_path = run / "observations/metadata.json"
@@ -600,7 +690,7 @@ def run_flight(
             dump(run / "evaluation/execution.json", timeline)
 
         env = os.environ.copy()
-        if strict:
+        if strict or use_cmu:
             env = collection_config.transport_environment(env)
             for key in list(env):
                 if key.startswith(("X500_", "PX4_PARAM_")) or key in (
@@ -637,6 +727,8 @@ def run_flight(
                     "px4_sim_speed_factor_env": 1,
                     "native_capture_schedule_sim_us": 10000,
                     "stream_and_watermark_fsync": True,
+                    "watermark_commit_interval_wall_s": recorder.sync_interval_s,
+                    "raw_events_and_native_timestamps_unchanged": True,
                     "native_capture_and_timing_fsync": False,
                     "timing_enabled": True,
                 },
@@ -662,21 +754,41 @@ def run_flight(
                 if custom
                 else collection_config.DIRECTORY / "battery_runtime.txt"
                 if configuration
-                else ROOT / "profiles/battery_runtime.txt"
+                else collection_config.DIRECTORY / "battery_runtime.txt"
             ),
             X500_PROPULSION_FILE=str(
-                prepared / "propulsion_runtime.txt"
-                if custom
-                else ROOT / "profiles/propulsion_runtime.txt"
+                run / "evaluation/propulsion-initial.txt"
             ),
+            X500_PROPULSION_PROFILE_LOCKED="1",
+            X500_PROPULSION_TARGET_FILE=str(run / "evaluation/propulsion-target.txt"),
         )
+        joint_info = None
+        if phase_policy is not None:
+            joint_info = joint_phase.prepare(run, flight_variation, duration)
+            env.update(joint_phase.environment(run, joint_info))
+            scenario_path = run / "evaluation/scenario.json"
+            scenario_record = json.loads(scenario_path.read_text())
+            scenario_record.update(joint_phase_policy=joint_info, paired_case_id=paired_case_id,
+                position_command_schedule=dict(clock="native_consumption_relative_phase", period_us=100_000,
+                    policy="preloaded_zero_order_hold_actual_controller_consumption; Python stream is keepalive"))
+            scenario_record["wind_model"] = wind_model.expected_metadata(scenario_record)
+            dump(scenario_path, scenario_record)
+        if selected_wind_profile is not None:
+            env.update(X500_WIND_ENVIRONMENT=selected_wind_profile["environment"],
+                       X500_WIND_DIRECTION_DEG=str(selected_wind_profile["direction_deg"]),
+                       X500_WIND_VARIATION=str(selected_wind_profile["variation"]))
         if custom:
             env.update(
                 CAPSTONE_ESC_ORDER=",".join(vehicle_profile["motor_order"]),
                 CAPSTONE_ROTOR_COUNT=str(vehicle_profile["rotor_count"]),
             )
         for k, v in cfg.items():
-            env["X500_" + k.upper()] = str(v)
+            if k not in {"r0", "capacity"}:
+                env["X500_" + k.upper()] = str(v)
+        if aging_selection is not None:
+            env["X500_BATTERY_FILE"] = str(run / "evaluation/battery-initial.txt")
+            if not aging_selection["fixed_for_flight"]:
+                env["X500_BATTERY_TARGET_FILE"] = str(run / "evaluation/battery-target.txt")
         processes = []
         fault_request = None
         logs = []
@@ -736,7 +848,7 @@ def run_flight(
             )
         if flight_variation is not None and flight_variation["path"]["kind"] == "random":
             state["ground_support"] = prepare_random_ground(world, flight_variation["path"])
-        gazebo_args = ["gz", "sim", "-r", "-s", "--seed", str(seed), str(world)]
+        gazebo_args = ["gz", "sim", "-r", "-s", seed_transport["gazebo_cli_option"], str(world)]
         if gui_preview:
             from .preview import prepare_gui
 
@@ -824,6 +936,7 @@ def run_flight(
         mission_errors = []
         yaw_errors = []
         mission_started = False
+        joint_finished = False
         fc_gate: Any = (
             vehicle_assets.FCParameterGate(fc_expected, timeout_wall_s=300)
             if custom
@@ -838,6 +951,7 @@ def run_flight(
         target_yaw = 0.0
         phase_wait = COLLECTION_PHASE_WAIT_S if strict else {"streaming": 45, "takeoff": 30, "landing": 45}
         state["wait_policy"] = dict(
+            recording_sync_interval_wall_s=recorder.sync_interval_s,
             clock_stall_wall_seconds=300 if strict else None,
             phase_sim_seconds=phase_wait,
             gazebo_shutdown_method="partition_server_control_then_signals",
@@ -872,6 +986,38 @@ def run_flight(
                     scenario_metadata = json.loads(metadata_path.read_text())
                     scenario_metadata.update(parameters=cfg, fault_schedule=schedule)
                     dump(metadata_path, scenario_metadata)
+            if phase_policy is not None and reached_t is None:
+                native_origin = joint_phase.receipt(run, "origin")
+                if native_origin is not None:
+                    reached_t = native_origin["actual_start_us"] / 1e6
+                    transition("airborne", sim_time=reached_t, observed_px4_boot_s=now,
+                               boundary_source="native_actual_reference_consumption")
+                    transition("mission", sim_time=reached_t, observed_px4_boot_s=now,
+                               boundary_source="native_actual_reference_consumption")
+                    mission_started = True
+                    scenario_path = run / "evaluation/scenario.json"
+                    scenario_record = json.loads(scenario_path.read_text())
+                    scenario_record["joint_phase_policy"]["actual_start"] = native_origin
+                    dump(scenario_path, scenario_record)
+            if phase_policy is not None and reached_t is not None and fault_after_mission_s is not None:
+                physics_path = run / "evaluation/joint-physics-origin.json"
+                if physics_path.exists():
+                    physics = json.loads(physics_path.read_text())
+                    expected_onset = round((reached_t + fault_after_mission_s)*1e6)
+                    if physics["origin_us"] != round(reached_t*1e6) or physics["fault_onset_us"] != expected_onset:
+                        raise ValueError("Native joint physical fault origin mismatch")
+                    cfg["fault_at"] = expected_onset / 1e6
+                    scenario_path = run / "evaluation/scenario.json"
+                    scenario_record = json.loads(scenario_path.read_text())
+                    if scenario_record.get("fault_schedule") is None:
+                        scenario_record.update(parameters=cfg, fault_schedule=dict(
+                            clock="px4-boot", origin="actual_native_joint_consumption",
+                            mission_origin_time_us=round(reached_t*1e6),
+                            requested_offset_us=round(fault_after_mission_s*1e6),
+                            scheduled_time_us=expected_onset, acknowledged=True,
+                            acknowledgement_source="native_physics_receipt",
+                            applied_time_us=None))
+                        dump(scenario_path, scenario_record)
             batch = receive_before_capture(conn, next_capture_ns)
             next_capture_ns = service_capture(recorder, next_capture_ns, capture_interval_ns)
             for msg in batch:
@@ -966,6 +1112,8 @@ def run_flight(
                 z = -3.0
                 if phase == "flying":
                     t = now - (reached_t or now)
+                    if phase_policy is not None:
+                        t = max(0., min(duration, math.floor(t*10)/10))
                     if cfg["mission"] == "altitude":
                         z = -3.0 - 0.8 * math.sin(t * 0.15)
                     elif cfg["mission"] == "horizontal":
@@ -999,12 +1147,12 @@ def run_flight(
                     1,
                     1,
                     position_mask,
-                    x,
-                    y,
-                    z,
+                    0. if phase_policy is not None else x,
+                    0. if phase_policy is not None else y,
+                    -3. if phase_policy is not None else z,
                     *velocity,
                     *acceleration,
-                    yaw,
+                    0. if phase_policy is not None else yaw,
                     0,
                 )
                 # Preserve the nominal2x cadence in PX4 time, skipping missed slots.
@@ -1028,7 +1176,7 @@ def run_flight(
                 transition("armed", sim_time=now)
                 phase = "flying"
                 phase_t = now
-            if phase == "flying" and position.z < -2.5 and reached_t is None:
+            if phase_policy is None and phase == "flying" and position.z < -2.5 and reached_t is None:
                 reached_t = now
                 transition("airborne", sim_time=now)
                 if fault_after_mission_s is not None:
@@ -1036,7 +1184,7 @@ def run_flight(
 
                     fault_request = MissionFaultRequest(reached_t, fault_after_mission_s, env)
             if phase == "flying" and reached_t and now - reached_t > 2:
-                if mode != 6:
+                if mode != 6 and not (phase_policy is not None and now - reached_t >= duration):
                     raise RuntimeError(f"mission mode left OFFBOARD: {mode}")
                 if not mission_started:
                     transition(
@@ -1057,44 +1205,61 @@ def run_flight(
                     yaw_errors.append(
                         abs(math.atan2(math.sin(yaw - target_yaw), math.cos(yaw - target_yaw)))
                     )
-                if error > 2.0:
-                    raise RuntimeError(f"mission tracking error exceeded 2m: {error}")
-            if phase == "flying" and reached_t and now - reached_t >= duration:
+                if error > tracking["max_position_error_m"]:
+                    raise RuntimeError(
+                        f"mission tracking error exceeded {tracking['max_position_error_m']:g}m: {error}"
+                    )
+            if ((phase_policy is None and phase == "flying" and reached_t and now - reached_t >= duration)
+                    or (phase_policy is not None and not joint_finished
+                        and joint_phase.receipt(run, "landing") is not None)):
                 if (
                     not mission_errors
-                    or sum(e <= 0.75 for e in mission_errors) / len(mission_errors) < 0.95
+                    or sum(e <= tracking["position_tolerance_m"] for e in mission_errors)
+                    / len(mission_errors) < tracking["position_coverage_min"]
                 ):
                     raise RuntimeError("mission target tolerance coverage below 95 percent")
-                if not yaw_errors or sum(e <= 0.25 for e in yaw_errors) / len(yaw_errors) < 0.95:
+                if (not yaw_errors or sum(e <= tracking["yaw_tolerance_rad"] for e in yaw_errors)
+                        / len(yaw_errors) < tracking["yaw_coverage_min"]):
                     raise RuntimeError("yaw target tolerance coverage below 95 percent")
                 dump(
                     run / "evaluation/mission-check.json",
                     dict(
                         status="passed",
-                        position_tolerance_m=0.75,
-                        yaw_tolerance_rad=0.25,
-                        position_coverage=sum(e <= 0.75 for e in mission_errors)
+                        tracking_acceptance=tracking,
+                        position_tolerance_m=tracking["position_tolerance_m"],
+                        yaw_tolerance_rad=tracking["yaw_tolerance_rad"],
+                        position_coverage=sum(e <= tracking["position_tolerance_m"] for e in mission_errors)
                         / len(mission_errors),
-                        yaw_coverage=sum(e <= 0.25 for e in yaw_errors) / len(yaw_errors),
+                        yaw_coverage=sum(e <= tracking["yaw_tolerance_rad"] for e in yaw_errors) / len(yaw_errors),
                         max_position_error_m=max(mission_errors),
                         max_yaw_error_rad=max(yaw_errors),
                         samples=len(mission_errors),
                     ),
                 )
-                conn.mav.command_long_send(
-                    conn.target_system,
-                    1,
-                    21,
-                    0,
-                    0,
-                    0,
-                    0,
-                    float("nan"),
-                    float("nan"),
-                    float("nan"),
-                    float("nan"),
-                )
-                transition("landing", sim_time=now)
+                if phase_policy is None:
+                    conn.mav.command_long_send(
+                        conn.target_system,
+                        1,
+                        21,
+                        0,
+                        0,
+                        0,
+                        0,
+                        float("nan"),
+                        float("nan"),
+                        float("nan"),
+                        float("nan"),
+                    )
+                    transition("landing", sim_time=now)
+                else:
+                    native_landing = joint_phase.receipt(run, "landing")
+                    transition("landing", sim_time=native_landing["actual_time_us"]/1e6,
+                               observed_px4_boot_s=now, boundary_source="native_actual_auto_land_consumption")
+                    joint_finished = True
+                    scenario_path = run / "evaluation/scenario.json"
+                    scenario_record = json.loads(scenario_path.read_text())
+                    scenario_record["joint_phase_policy"]["actual_landing"] = native_landing
+                    dump(scenario_path, scenario_record)
                 phase = "landing"
                 phase_t = now
             if phase == "flying" and reached_t is not None and not armed:
@@ -1124,11 +1289,13 @@ def run_flight(
                 raise TimeoutError("landing timeout")
         if not success:
             raise TimeoutError("run wall-clock timeout")
-        if fault_after_mission_s is not None and (
+        if phase_policy is None and fault_after_mission_s is not None and (
             fault_request is None or not fault_request.finished
         ):
             success = False
             raise RuntimeError("Mission completed without acknowledged native fault schedule")
+        if phase_policy is not None:
+            joint_phase.check(run)
         state["termination_reason"] = "mission_landed_disarmed"
     except (RuntimeError, TimeoutError, OSError, ValueError, KeyboardInterrupt) as exc:
         state["termination_reason"] = str(exc)
@@ -1216,26 +1383,8 @@ def run_flight(
                     )
                 )
             if unhealthy:
-                truth = (
-                    [
-                        json.loads(s)
-                        for s in (run / "evaluation/truth.jsonl").read_text().splitlines()
-                    ]
-                    if (run / "evaluation/truth.jsonl").exists()
-                    else []
-                )
-                applied = (
-                    next(
-                        (
-                            r.get("fault_applied_time_us", r["time_us"])
-                            for r in truth
-                            if r["fault_applied"]
-                        ),
-                        None,
-                    )
-                    if "fault" in cfg
-                    else (truth[0]["time_us"] if truth else None)
-                )
+                evidence = fault_evidence(run / "evaluation/truth.jsonl")
+                applied = evidence["applied_time_us"] if "fault" in cfg else evidence["first_time_us"]
                 if fault_after_mission_s is not None:
                     from .fault_schedule import complete_evidence
 
@@ -1259,7 +1408,7 @@ def run_flight(
                             "kind": scenario,
                             "target": "battery_pack" if "battery" in scenario else "propulsion",
                             "onset_kind": (
-                                "in_flight_ramp" if "fault_ramp_s" in cfg else "in_flight_step"
+                                "in_flight_step" if scenario.endswith("step") else "in_flight_ramp"
                             )
                             if "fault" in cfg
                             else "pre_existing",
@@ -1268,18 +1417,13 @@ def run_flight(
                             "applied_time_us": applied if "fault" in cfg else 0,
                             "end_time_us": None,
                             "profile_revision": 1,
-                            "parameters": parameters,
+                            "parameters": dict(parameters, battery_stage=aging_selection["target_stage"],
+                                               battery_selection="evaluation/battery-selection.json")
+                            if aging_selection is not None else parameters,
                             **(
                                 {
                                     "ramp_duration_us": int(float(cfg["fault_ramp_s"]) * 1e6),
-                                    "degradation_boundary_time_us": next(
-                                        (
-                                            r["fault_boundary_time_us"]
-                                            for r in truth
-                                            if r.get("fault_boundary_time_us", -1) >= 0
-                                        ),
-                                        None,
-                                    ),
+                                    "degradation_boundary_time_us": evidence["boundary_time_us"],
                                     "degradation_boundary_definition": "50 percent of configured parameter change",
                                 }
                                 if "fault_ramp_s" in cfg
@@ -1320,31 +1464,29 @@ def run_flight(
                     "physical parameter anomaly initialized or applied during run"
                 )
                 dump(scenario_path, scenario_metadata)
-            envelope_samples = envelope_invalid = 0
-            with (run / "evaluation/truth.jsonl").open() as truth_file:
-                for line in truth_file:
-                    if not line.endswith("\n"):
-                        continue
-                    entry = json.loads(line)
-                    envelope_samples += 1
-                    envelope_invalid += not entry.get("model_valid", True)
-            dump(
-                run / "evaluation/envelope-check.json",
-                dict(
-                    samples=envelope_samples,
-                    outside_samples=envelope_invalid,
-                    policy="continue_finite_physics_exclude_normal_eligibility",
-                ),
+            if aging_selection is not None:
+                try:
+                    check = battery_aging.verify_truth(run / "evaluation/truth.jsonl", aging_selection)
+                except (ValueError, KeyError, OSError) as exc:
+                    check = {"status": "failed", "error": str(exc)}
+                    record_secondary_failure(state, "battery_profile_failure", exc)
+                    dump(run / "run.json", state)
+                dump(run / "evaluation/battery-profile-check.json", check)
+            envelope = model_envelope.check(run / "evaluation/truth.jsonl", timeline)
+            dump(run / "evaluation/envelope-check.json", envelope)
+            scenario_path = run / "evaluation/scenario.json"
+            scenario_metadata = json.loads(scenario_path.read_text())
+            scenario_metadata.update(
+                health_eligibility_scope=model_envelope.POLICY,
+                health_eligibility_interval_us=[envelope["mission_start_us"], envelope["mission_end_us"]],
             )
-            if envelope_invalid:
-                scenario_path = run / "evaluation/scenario.json"
-                scenario_metadata = json.loads(scenario_path.read_text())
-                if scenario_metadata["health_eligibility"] == "confirmed_healthy":
-                    scenario_metadata.update(
-                        health_eligibility="uncertain",
-                        health_basis="outside declared model validity envelope",
-                    )
-                    dump(scenario_path, scenario_metadata)
+            if (not envelope["normal_eligibility_passed"]
+                    and scenario_metadata["health_eligibility"] == "confirmed_healthy"):
+                scenario_metadata.update(
+                    health_eligibility="uncertain",
+                    health_basis="missing mission interval or outside declared model validity envelope during mission",
+                )
+            dump(scenario_path, scenario_metadata)
             integrity(run)
         except (OSError, ValueError) as exc:
             record_secondary_failure(state, "finalization_failure", exc)

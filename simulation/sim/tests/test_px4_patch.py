@@ -39,7 +39,7 @@ class PX4PatchTest(unittest.TestCase):
         script = root / "sim/tools/patch_px4.py"
         script.parent.mkdir(parents=True)
         shutil.copyfile(PATCHER, script)
-        for name in ("RawCapture.hpp", "CaptureTiming.hpp"):
+        for name in ("RawCapture.hpp", "CaptureTiming.hpp", "JointPhaseReference.hpp"):
             adapter = root / "sim/adapters" / name
             adapter.parent.mkdir(exist_ok=True)
             shutil.copyfile(NATIVE / "sim/adapters" / name, adapter)

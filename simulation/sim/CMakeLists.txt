@@ -39,3 +39,27 @@ target_compile_options(capture_timing_fixture PRIVATE -Wall -Wextra -Werror)
 add_executable(fault_schedule_test physics/test_fault_schedule.cpp)
 target_compile_options(fault_schedule_test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
 add_test(NAME fault_schedule COMMAND fault_schedule_test)
+
+add_executable(battery_aging_test physics/test_battery_aging.cpp)
+target_link_libraries(battery_aging_test PRIVATE drone_powertrain)
+target_compile_options(battery_aging_test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+add_test(NAME battery_aging COMMAND battery_aging_test)
+
+add_executable(propulsion_health_test physics/test_propulsion_health.cpp)
+target_link_libraries(propulsion_health_test PRIVATE drone_powertrain)
+target_compile_options(propulsion_health_test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+add_test(NAME propulsion_health COMMAND propulsion_health_test)
+
+add_executable(bounded_wind_test physics/test_bounded_wind.cpp)
+target_link_libraries(bounded_wind_test PRIVATE drone_powertrain)
+target_compile_options(bounded_wind_test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+add_test(NAME bounded_wind COMMAND bounded_wind_test)
+
+add_executable(joint_phase_test physics/test_joint_phase.cpp)
+target_link_libraries(joint_phase_test PRIVATE drone_powertrain)
+target_compile_options(joint_phase_test PRIVATE -Wall -Wextra -Werror -UNDEBUG)
+add_test(NAME joint_phase COMMAND joint_phase_test)
+
+add_executable(joint_wind_verify physics/joint_wind_verify.cpp)
+target_link_libraries(joint_wind_verify PRIVATE drone_powertrain)
+target_compile_options(joint_wind_verify PRIVATE -Wall -Wextra -Werror)

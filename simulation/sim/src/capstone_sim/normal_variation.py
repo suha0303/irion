@@ -4,6 +4,8 @@ import math
 import random
 from typing import Any
 
+from .operating_envelope import MEAN_WIND_MAX_MPS, validate_wind_path
+
 FIELDS = {"soc", "temperature", "payload", "wind_e", "wind_n", "gust_sigma", "path"}
 PATH_FIELDS = {
     "kind",
@@ -19,7 +21,7 @@ KINDS = {"hover", "line", "ellipse", "figure8", "lissajous", "altitude", "yaw", 
 
 
 def validate(spec):
-    if set(spec) != FIELDS:
+    if set(spec) not in (FIELDS, FIELDS | {"wind_profile"}):
         raise ValueError("Exact normal variation fields required; health/fault overrides forbidden")
     for key in FIELDS - {"path"}:
         if type(spec[key]) not in (int, float) or not math.isfinite(spec[key]):
@@ -29,16 +31,12 @@ def validate(spec):
         and 283.15 <= spec["temperature"] <= 303.15
         and 0 <= spec["payload"] <= 0.2
         and 0 <= spec["gust_sigma"] <= 0.4
-        and math.hypot(spec["wind_e"], spec["wind_n"]) <= 2.000001
+        and math.hypot(spec["wind_e"], spec["wind_n"]) <= MEAN_WIND_MAX_MPS+1e-9
     ):
         raise ValueError("Normal variation exceeds declared engineering envelope")
     p = spec["path"]
     validate_path(p)
-    if p["kind"] == "random":
-        from .random_flight import speed_limit
-
-        if p["limits"]["horizontal_speed_mps"] > speed_limit(spec) + 1e-8:
-            raise ValueError("Random speed exceeds wind-adjusted airspeed margin")
+    validate_wind_path(spec)
     return spec
 
 

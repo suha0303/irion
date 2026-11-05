@@ -199,8 +199,16 @@ class VehicleContractTest(unittest.TestCase):
             metadata = self.record(run, 4)
             legacy = copy.deepcopy(config)
             legacy.pop("battery_profile_id", None)
+            self.assertEqual(metadata["vehicle"]["nominal_capacity_ah"], 12)
+            self.assertEqual(metadata["vehicle"]["battery_profile_id"], "vtc6_4s4p")
             legacy["nominal_capacity_ah"] = 6
-            validate_metadata(metadata, legacy)
+            with self.assertRaisesRegex(ValueError, "unsupported nameplate"):
+                validate_metadata(metadata, legacy)
+            historical = copy.deepcopy(metadata)
+            historical["vehicle"]["nominal_capacity_ah"] = 6
+            historical["vehicle"].pop("nominal_parallel_cells")
+            historical["vehicle"].pop("battery_profile_id")
+            validate_metadata(historical, legacy)
 
 
 if __name__ == "__main__":

@@ -10,12 +10,12 @@ void check(bool value, const std::string &name) {
     throw std::runtime_error(name);
   std::cout << "PASS " << name << '\n';
 }
-Powertrain run(double step) {
+Powertrain run(double step, double duration = 2, double duty = .55) {
   Parameters p;
   p.max_substep = step;
   Powertrain a(p);
-  for (int i = 0; i < std::lround(2 / step); ++i)
-    a.step(step, {.55, .55, .55, .55}, true);
+  for (int i = 0; i < std::lround(duration / step); ++i)
+    a.step(step, {duty, duty, duty, duty}, true);
   return a;
 }
 int main() {
@@ -24,6 +24,16 @@ int main() {
     check(flu_to_frd({1, 2, 3}) == Vec3{1, -2, -3}, "FLU FRD basis");
     check(enu_to_ned(enu_to_ned({1, 2, 3})) == Vec3{1, 2, 3},
           "coordinate roundtrip");
+    State flow_state;
+    flow_state.omega.fill(700);
+    auto inplane = inplane_flow(flow_state,{7,0,0},{0,0,0});
+    check(inplane.defined && std::abs(inplane.maximum_ratio-7/(700*profile::propeller_radius_m))<1e-12,
+          "wind-relative rotor advance ratio uses tip speed");
+    check(inplane_flow(flow_state,{10,0,0},{0,0,0}).maximum_ratio>.1,
+          "excessive rotor in-plane flow remains outside engineering range");
+    flow_state.omega[0]=0;
+    check(!inplane_flow(flow_state,{5,0,0},{0,0,0}).defined,
+          "unpowered rotor advance ratio is explicitly undefined");
     Output symmetric;
     symmetric.thrust = {5, 5, 5, 5};
     symmetric.torque = {.1, .1, .1, .1};
@@ -45,16 +55,16 @@ int main() {
           "rotor inertia reaction included once");
     Changes changes;
     Powertrain controlled;
-    check(changes.enqueue({1, 0, .08, 1000}), "request queued");
-    check(!changes.enqueue({1, 0, .08, 1000}), "duplicate request idempotent");
+    check(changes.enqueue({1, 1, .00004, 1000}), "request queued");
+    check(!changes.enqueue({1, 1, .00004, 1000}), "duplicate request idempotent");
     check(changes.apply(controlled, 999).empty(), "no early physical apply");
     auto receipts = changes.apply(controlled, 1000);
-    check(receipts.size() == 1 && controlled.p.r0 == .08 &&
+    check(receipts.size() == 1 && controlled.p.friction == .00004 &&
               receipts[0].applied_us == 1000,
           "step boundary applied timestamp");
     bool conflict = false;
     try {
-      changes.enqueue({1, 0, .09, 1000});
+      changes.enqueue({1, 1, .00005, 1000});
     } catch (const std::invalid_argument &) {
       conflict = true;
     }
@@ -109,8 +119,11 @@ int main() {
     check(a.solve(low, {.5, .5, .5, .5}, true).voltage < o.voltage,
           "SOC affects bus at fixed command");
     auto b = run(.001), c = run(.0005), d = run(.00025);
-    double e1 = std::abs(b.state.omega[0] - c.state.omega[0]);
-    double e2 = std::abs(c.state.omega[0] - d.state.omega[0]);
+    // Measure order during a smooth unsaturated transient, rather than at a
+    // near-equilibrium point where solver rounding dominates omega differences.
+    auto tb = run(.001, .05, .2), tc = run(.0005, .05, .2), td = run(.00025, .05, .2);
+    double e1 = std::abs(tb.state.omega[0] - tc.state.omega[0]);
+    double e2 = std::abs(tc.state.omega[0] - td.state.omega[0]);
     std::cout << "convergence omega " << e1 << ' ' << e2 << " energy "
               << b.energy_residual() << ' ' << c.energy_residual() << ' '
               << d.energy_residual() << '\n';
@@ -146,8 +159,15 @@ int main() {
               d.state.soc == snapshot.state.soc,
           "physical snapshot deterministic continuation");
     d = restored;
-    auto steady = d.solve(d.state, {.55, .55, .55, .55}, true);
-    check(std::abs(steady.acceleration[0]) < 1, "near steady torque balance");
+    auto fixed = d;
+    for (int k = 0; k < 4000; ++k) {
+      auto operating = fixed.solve(fixed.state, {.55, .55, .55, .55}, true);
+      for (std::size_t i = 0; i < rotor_count; ++i)
+        fixed.state.omega[i] += .00025 * operating.acceleration[i];
+    }
+    auto steady = fixed.solve(fixed.state, {.55, .55, .55, .55}, true);
+    check(std::abs(steady.acceleration[0]) < 1e-3,
+          "motor steady torque balance with fixed battery/thermal background");
     double kinetic_before = d.state.omega[0] * d.state.omega[0];
     d.step(.1, {0, 0, 0, 0}, false);
     check(d.state.omega[0] * d.state.omega[0] < kinetic_before,

@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 from capstone_sim.flight_program import build
 from capstone_sim.normal_variation import sample, validate
-from capstone_sim.random_flight import REVISION, kinematics, metrics
+from capstone_sim.random_flight import LEGACY_REVISION, kinematics, metrics
 
 
 def route(seed=17, duration=900, *, wind=0.0, gust=0.0):
@@ -162,7 +162,7 @@ class RandomFlightTest(unittest.TestCase):
                 spec = route(seed, duration)
                 self.assertEqual(spec, route(seed, duration))
                 p = spec["path"]
-                self.assertEqual(p["revision"], REVISION)
+                self.assertEqual(p["revision"], LEGACY_REVISION)
                 self.assertNotIn("radius_m", p["limits"])
                 self.assertNotEqual(p["program"][-1][1:3], [0, 0])
                 self.assertEqual(p["program"][-1][0], duration)
@@ -305,6 +305,7 @@ class RandomFlightTest(unittest.TestCase):
                 __package__="capstone_sim",
                 math=math,
                 phase=phase,
+                phase_policy=None,
                 now=20.0,
                 reached_t=1.0,
                 next_send_us=0,
