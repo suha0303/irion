@@ -16,6 +16,7 @@ from threading import RLock
 from .contracts import InputProfile, SourceConfig, NormalizedInput, ProcessedFrame
 from .npz_archive import NpzArchive
 from .telemetry import TelemetryRun, MAX_AGE
+from .file_io import hash_file
 
 BUFFER_MS = 300_000
 MAX_BUFFER_RECORDS = 60_000
@@ -88,7 +89,7 @@ class SessionRun:
                     elif item['type']=='issue':
                         self.excluded+=1;self.issues.append(item['issue'])
             self.state='finished'
-            with self.path.open('rb') as f: self.sha256=hashlib.file_digest(f, 'sha256').hexdigest()
+            self.sha256=hash_file(self.path)
         for spec in self.profile.signals.values():
             if spec.message in self.core.max_age: self.core.max_age[spec.message]=spec.ttl_ms
         self.core.rates = dict(self.profile.expected_rates_hz)
@@ -144,6 +145,9 @@ class SessionRun:
             self.issue('다른 system 제외',record);return False
         if self.config.source_component is not None and record['source_component'] != self.config.source_component:
             self.issue('다른 component 제외',record);return False
+        # Preserve the full passive transport for the independent common19 adapter.
+        # Display-only decoding may exclude IMU messages or nonzero battery instances.
+        self._write({'type':'mavlink','raw':safe(record),'boundary':self.force_boundary})
         record=dict(record,quality={'profile':self.profile.profile_id})
         ok=self.core.ingest(record, force_boundary=self.force_boundary)
         if not ok:
@@ -315,11 +319,14 @@ class SessionRun:
         if self.live:
             if self.archive:self.archive.close()
             self.writer.close();self.live=False;self.state='finished'
-            with self.path.open('rb') as f: self.sha256=hashlib.file_digest(f,'sha256').hexdigest()
+            self.sha256=hash_file(self.path)
         return self.sha256
 
 class LiveSources:
-    def __init__(self,store): self.store=store;self.tasks={};self.handles={}
+    def __init__(self,store):
+        from .message_rates import MessageRates
+        self.store=store;self.tasks={};self.handles={}
+        self.rates=MessageRates(self)
 
     async def connect(self, run):
         await self.disconnect(run)
@@ -334,7 +341,7 @@ class LiveSources:
             else:
                 import serial
                 if not c.device.startswith('/dev/'): raise ValueError('명시적인 /dev/ 시리얼 장치가 필요합니다.')
-                handle=serial.Serial(c.device,c.baud,timeout=0,exclusive=True)
+                handle=serial.Serial(c.device,c.baud,timeout=0,write_timeout=.2,exclusive=True)
             self.handles[run.run_id]=handle
             self.tasks[run.run_id]=asyncio.create_task(self._read(run,handle))
             run.state='waiting';run.error=''
@@ -342,6 +349,7 @@ class LiveSources:
             run.state='error';run.error=str(e);raise ValueError(str(e)) from e
 
     async def disconnect(self,run):
+        await self.rates.disconnect(run.run_id)
         task=self.tasks.pop(run.run_id,None)
         if task:
             task.cancel()
@@ -359,14 +367,16 @@ class LiveSources:
         try:
             while True:
                 if run.config.kind=='udp':
-                    try: data,_=handle.recvfrom(65535)
+                    try: data,peer=handle.recvfrom(65535)
                     except BlockingIOError:
                         await asyncio.sleep(.005);continue
                 else:
+                    peer=None
                     data=handle.read(65535)
                     if not data: await asyncio.sleep(.01);continue
                 for msg in decoder.parse_buffer(data) or []:
                     if msg.get_type()=='BAD_DATA': run.issue('MAVLink 프레임 해석 실패');continue
+                    self.rates.observe(run,msg,peer)
                     fields=msg.to_dict();fields.pop('mavpackettype',None)
                     run.append_raw({'receive_monotonic_ns':time.monotonic_ns(),'receive_utc_ns':time.time_ns(),
                                     'source_system':msg.get_srcSystem(),'source_component':msg.get_srcComponent(),

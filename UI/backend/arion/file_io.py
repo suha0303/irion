@@ -33,4 +33,8 @@ def append_json(path, value):
 
 
 def hash_file(path):
-    with Path(path).open('rb') as f: return hashlib.file_digest(f, 'sha256').hexdigest()
+    result = hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1 << 20), b''):
+            result.update(chunk)
+    return result.hexdigest()

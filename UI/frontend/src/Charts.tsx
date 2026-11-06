@@ -8,7 +8,7 @@ import type { Detection, Point } from './types';
 echarts.use([LineChart, ScatterChart, GridComponent, TooltipComponent, MarkLineComponent, MarkAreaComponent, CanvasRenderer]);
 export const motorColors = ['#079d8e', '#5878e0', '#d49536', '#9e6dc7'];
 
-function Chart({ option, height, label }: { option: EChartsCoreOption; height: number; label: string }) {
+export function Chart({ option, height, label }: { option: EChartsCoreOption; height: number; label: string }) {
   const element = useRef<HTMLDivElement>(null);
   const instance = useRef<echarts.EChartsType | null>(null);
   useEffect(() => {

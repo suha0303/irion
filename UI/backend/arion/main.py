@@ -22,6 +22,8 @@ from .streaming import LiveSources, SessionRun
 from .npz_replay import NpzReplay
 from .providers import ProviderRegistry, contract_for
 from .contracts import SourceConfig, InputProfile, Provider, ProcessedFrame
+from .local_flight import attach as attach_local_flight
+from .local_live import attach as attach_local_live
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -40,12 +42,18 @@ def create_app(data_dir=None):
     @asynccontextmanager
     async def lifespan(app):
         yield
+        await local_live.close()
+        await local_flight.close()
         await providers.close()
         await sources.close()
         await adapter.close()
         await asyncio.to_thread(store.close)
 
     app = FastAPI(title="ARION Dashboard", version="0.4.0", lifespan=lifespan)
+    local_data = data_dir or os.environ.get('ARION_DATA_DIR')
+    local_flight = attach_local_flight(app, Path(local_data) / "local-ai" if local_data else None)
+    app.state.sources = sources
+    local_live = attach_local_live(app, local_flight, store)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver"])
     app.state.store, app.state.adapter = store, adapter
     app.state.providers, app.state.sources = providers, sources
@@ -234,8 +242,8 @@ def create_app(data_dir=None):
     @app.post('/api/sessions/{run_id}/finish')
     async def session_finish(run_id: str):
         if run_id not in store.active: raise HTTPException(422,'활성 세션이 아닙니다.')
-        run=store.get(run_id); await sources.disconnect(run)
-        return (await asyncio.to_thread(store.finish_session,run_id)).manifest()
+        finished = await local_live.finalize(run_id)
+        return finished.manifest()
 
     @app.post('/api/sessions/{run_id}/frames')
     async def session_frame(run_id: str, body: dict):
@@ -307,7 +315,9 @@ def create_app(data_dir=None):
     @app.websocket("/api/ws/runs/{run_id}")
     async def replay(ws: WebSocket, run_id: str):
         origin = ws.headers.get("origin")
-        if origin and origin not in {"http://localhost:8765", "http://127.0.0.1:8765", "http://localhost:5173", "http://127.0.0.1:5173"}:
+        ui_port = int(os.environ.get('ARION_PORT', '8765'))
+        allowed_origins = {f'http://{host}:{port}' for host in ('localhost', '127.0.0.1') for port in (ui_port, 5173)}
+        if origin and origin not in allowed_origins:
             await ws.close(code=1008)
             return
         try:

@@ -1,5 +1,6 @@
 """Versioned input and provider contracts. Normalized data is never resampled here."""
 from typing import Literal
+from ipaddress import IPv4Address
 from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, StrictInt, model_validator
 from .telemetry import LABELS, MAX_AGE, RATE_TARGETS
 
@@ -78,12 +79,20 @@ class SourceConfig(Contract):
     name: str = Field(default='실시간 비행', min_length=1, max_length=120)
     kind: Literal['udp', 'serial', 'normalized'] = 'udp'
     profile_id: str = 'mavlink_common_v1'
-    host: Literal['127.0.0.1', 'localhost'] = '127.0.0.1'
+    host: str = Field(default='127.0.0.1', max_length=64)
     port: int = Field(default=14560, ge=1024, le=65535)
     device: str = Field(default='', max_length=256)
     baud: int = Field(default=115200, ge=1200, le=3000000)
     source_system: int | None = Field(default=None, ge=1, le=255)
     source_component: int | None = Field(default=None, ge=0, le=255)
+
+    @model_validator(mode='after')
+    def bind_address(self):
+        if self.host != 'localhost':
+            address = IPv4Address(self.host)
+            if address.is_multicast or not (address.is_private or address.is_loopback or address.is_unspecified):
+                raise ValueError('UDP 수신 주소는 로컬 IPv4 주소 또는 0.0.0.0이어야 합니다.')
+        return self
 
 class IncomingSignal(Contract):
     value: FiniteFloat | None
