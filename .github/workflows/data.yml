@@ -2,8 +2,22 @@ name: Data portability
 on:
   push:
     branches: [main]
+    paths:
+      - 'ai/**'
+      - 'Data/generation/**'
+      - 'simulation/**'
+      - 'UI/**'
+      - 'docs/specifications/**'
+      - '.github/workflows/data.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'ai/**'
+      - 'Data/generation/**'
+      - 'simulation/**'
+      - 'UI/**'
+      - 'docs/specifications/**'
+      - '.github/workflows/data.yml'
 jobs:
   cpu-data:
     runs-on: ubuntu-24.04
@@ -18,5 +32,28 @@ jobs:
           OMP_NUM_THREADS: '1'
         run: >-
           Data/generation/.venv/bin/python -B -m pytest -q
+          -c Data/generation/pyproject.toml -m "not local_evidence"
           Data/generation/tests ai/tests/test_pretrain_portability.py
           ai/tests/test_pretrain_source_lock.py
+
+      - name: Check maintained Python style
+        run: |
+          Data/generation/.venv/bin/python -m pip install ruff==0.11.13
+          Data/generation/.venv/bin/ruff check ai Data/generation UI/backend
+          Data/generation/.venv/bin/ruff format --check ai Data/generation UI/backend
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: UI/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: UI/frontend/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
