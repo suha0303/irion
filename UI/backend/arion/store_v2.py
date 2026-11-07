@@ -14,8 +14,6 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
-import numpy as np
-
 from .contracts import (
     InputProfile,
     Provider,
@@ -26,15 +24,12 @@ from .contracts import (
 from .file_io import atomic_json, hash_file, read_json
 from .npz_archive import (
     NpzArchive,
-    atomic_npz,
     export_npz,
     load_npz,
-    npz_metadata,
-    row_arrays,
 )
 from .npz_replay import NpzReplay
 from .storage import Store
-from .streaming import SessionRun, encode
+from .streaming import SessionRun
 from .telemetry import LABELS
 
 
@@ -42,6 +37,8 @@ class StoreV2(Store):
     def __init__(self, root):
         self.active = {}
         self.export_executor = None
+        self._archive_cache = lru_cache(maxsize=4)(self._load_archive)
+        self._journal_cache = lru_cache(maxsize=2)(self._load_journal)
         super().__init__(root)
         self._profiles = read_json(self.root / "profiles.json", {})
         for p in builtin_profiles():
@@ -161,11 +158,13 @@ class StoreV2(Store):
             self.catalog["sessions"][id]["sha"] = sha
             self._catalog_save()
             self.active.pop(id)
-        self.journal.cache_clear()
+        self._journal_cache.cache_clear()
         return self.get(id)
 
-    @lru_cache(maxsize=4)
     def archive_for(self, id):
+        return self._archive_cache(id)
+
+    def _load_archive(self, id):
         if id in self.active:
             return self.active[id].archive
         row = self.catalog["sessions"].get(id)
@@ -186,8 +185,10 @@ class StoreV2(Store):
             archive.recover()
         return archive
 
-    @lru_cache(maxsize=2)
     def journal(self, id, path):
+        return self._journal_cache(id, path)
+
+    def _load_journal(self, id, path):
         archive = self.archive_for(id)
         if archive and archive.data["chunks"]:
             summary = read_json(self.root / "records" / id / "manifest.json")
@@ -373,7 +374,6 @@ class StoreV2(Store):
             ticks = arrays["tick_ns"]
             epochs = arrays["epoch"]
             base = int(ticks[0])
-            last_epoch = -1
             for i in range(len(ticks)):
                 values = {}
                 for j, key in enumerate(profile.feature_order):
@@ -478,6 +478,9 @@ class StoreV2(Store):
             archive.close()
         if self.export_executor:
             self.export_executor.shutdown(wait=True)
+        self._journal_cache.cache_clear()
+        self._archive_cache.cache_clear()
+        super().close()
 
     def archives(self):
         for id in self.catalog["sessions"]:

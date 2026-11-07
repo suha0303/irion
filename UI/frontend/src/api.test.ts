@@ -12,13 +12,11 @@ it('turns a browser connection failure into an actionable Korean error', async (
 it('keeps file validation errors separate from connection failures', async () => {
   vi.stubGlobal(
     'fetch',
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(JSON.stringify({ detail: '재생할 수 있는 유효한 레코드가 없습니다.' }), {
-          status: 422,
-        }),
-      ),
+    vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ detail: '재생할 수 있는 유효한 레코드가 없습니다.' }), {
+        status: 422,
+      }),
+    ),
   );
   await expect(api('/runs/import')).rejects.toMatchObject({
     kind: 'http',
@@ -42,13 +40,11 @@ it('does not misreport invalid JSON as a network failure', async () => {
   await expect(api('/runs')).rejects.toMatchObject({ kind: 'response' });
 });
 it('sends a Korean JSONL filename as multipart without overriding its boundary', async () => {
-  const fetch = vi
-    .fn()
-    .mockResolvedValue(
-      new Response(JSON.stringify({ accepted_records: 4281, excluded_records: 1 }), {
-        status: 200,
-      }),
-    );
+  const fetch = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify({ accepted_records: 4281, excluded_records: 1 }), {
+      status: 200,
+    }),
+  );
   vi.stubGlobal('fetch', fetch);
   const file = new File(['{}\n'], '비행수집_2026-10-05_185146_mavlink_raw.jsonl', {
     type: 'application/x-ndjson',

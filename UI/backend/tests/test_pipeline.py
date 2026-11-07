@@ -2,17 +2,16 @@ import asyncio
 import hashlib
 import io
 import json
-import time
-from pathlib import Path
 
 import httpx
 import numpy as np
 import pytest
+from fastapi.testclient import TestClient
+
 from arion.ai import AIAdapter, fixture_events, validate_events
 from arion.main import create_app
 from arion.storage import Store
 from arion.telemetry import TelemetryRun
-from fastapi.testclient import TestClient
 
 
 def record(name, ms, fields, **extra):

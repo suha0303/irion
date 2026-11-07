@@ -7,9 +7,9 @@ from functools import lru_cache
 from pathlib import Path
 from threading import RLock
 
-from .contracts import InputProfile, SourceConfig
-from .file_io import hash_file, read_json
-from .npz_archive import NpzArchive, load_npz
+from .contracts import SourceConfig
+from .file_io import hash_file
+from .npz_archive import load_npz
 from .streaming import SessionRun
 from .telemetry import TelemetryRun
 
@@ -20,6 +20,9 @@ class NpzReplay(SessionRun):
         self.archive = archive
         self.run_id = archive.run_id
         self.lock = RLock()
+        self._producer_epoch = None
+        self._producer_sequence = None
+        self._chunk_cache = lru_cache(maxsize=2)(self._load_chunk)
         self.profile = archive.profile
         with self.path.open("rb") as f:
             header = json.loads(f.readline())
@@ -82,8 +85,10 @@ class NpzReplay(SessionRun):
                     elif item.get("type") == "sample":
                         raw = item.get("raw", {})
                         sequence = raw.get("sequence")
-                        if sequence is not None and raw.get("epoch") == getattr(
-                            self, "_producer_epoch", None
+                        if (
+                            sequence is not None
+                            and self._producer_sequence is not None
+                            and raw.get("epoch") == self._producer_epoch
                         ):
                             self.dropped_sequences += max(
                                 0, sequence - self._producer_sequence - 1
@@ -105,8 +110,10 @@ class NpzReplay(SessionRun):
                     )
         self._summary = summary
 
-    @lru_cache(maxsize=2)
     def _chunk(self, index):
+        return self._chunk_cache(index)
+
+    def _load_chunk(self, index):
         chunk = self.archive.data["chunks"][index]
         meta, arrays = load_npz(self.archive.path / chunk["filename"])
         if hash_file(self.archive.path / chunk["filename"]) != chunk["sha256"]:

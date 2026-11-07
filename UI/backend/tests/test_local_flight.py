@@ -2,9 +2,10 @@ import asyncio
 import json
 
 import pytest
+from fastapi.testclient import TestClient
+
 from arion.local_flight import LocalFlight
 from arion.main import create_app
-from fastapi.testclient import TestClient
 
 
 def test_real_cpu_catalog_and_immutable_profile(tmp_path):

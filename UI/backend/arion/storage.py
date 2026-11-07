@@ -25,6 +25,7 @@ class Store:
             {"schema_version": "arion-files-v1", "runs": {}, "sessions": {}},
         )
         self._event_cache = {}
+        self._run_cache = lru_cache(maxsize=6)(self._load_run)
         self._migrate_sqlite()
 
     def _catalog_save(self):
@@ -146,8 +147,15 @@ class Store:
             self._catalog_save()
         return self.get(run.run_id)
 
-    @lru_cache(maxsize=6)
     def get(self, run_id):
+        return self._run_cache(run_id)
+
+    def close(self):
+        """Release cached runs when the owning service shuts down."""
+        self._run_cache.cache_clear()
+        self._event_cache.clear()
+
+    def _load_run(self, run_id):
         row = self.catalog["runs"].get(run_id)
         if not row:
             raise KeyError(run_id)

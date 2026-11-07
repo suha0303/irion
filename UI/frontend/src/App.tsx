@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import LocalFlight from './LocalFlight';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import LocalLive from './LocalLive';
 import {
   Activity,
@@ -37,12 +36,14 @@ import { Diagnostics, EventDetail, EventList } from './Panels';
 import type { Detection, Manifest, Metrics, Point, ProviderState } from './types';
 import { detectionKey, numeric, statusLabel, targetLabel, timeLabel } from './types';
 import { useReplay } from './useReplay';
-import { Flight3D } from './Flight3D';
 import { ProviderCards, ProviderDialog, SourceDialog } from './Integrations';
 import { useServerHealth } from './useServerHealth';
 import { compareModels } from './comparison';
 import { ArchivePanel } from './ArchivePanel';
 import './extension.css';
+
+const LocalFlight = lazy(() => import('./LocalFlight'));
+const Flight3D = lazy(() => import('./Flight3D').then((module) => ({ default: module.Flight3D })));
 
 type Tab = 'monitor' | 'events' | 'diagnostics';
 const titles = {
@@ -364,7 +365,7 @@ export default function App() {
                   터미널에서 대시보드 폴더의 <code>./server.sh start</code>를 실행하세요. 화면과
                   업로드는 서버가 실행 중일 때 동작합니다.
                 </p>
-                <small>실행 위치: /Users/ijunseo/Capstone/dashboard</small>
+                <small>소스 실행: 프로젝트의 UI 폴더 · 설치형 실행: ./drone-local start</small>
               </div>
               <button className="button small" onClick={() => server.check()}>
                 연결 다시 확인
@@ -546,7 +547,15 @@ export default function App() {
                   )}
                   <ArchivePanel run={run} frame={frame} />
                   <div className="monitor-hero">
-                    <Flight3D frame={frame} points={points} connected={connected} />
+                    <Suspense
+                      fallback={
+                        <section className="panel" role="status">
+                          3D 비행 화면을 불러오는 중…
+                        </section>
+                      }
+                    >
+                      <Flight3D frame={frame} points={points} connected={connected} />
+                    </Suspense>
                     <aside className="model-comparison" aria-label="LSTM과 Transformer 비교">
                       <div className="comparison-heading">
                         <h2>모델 비교</h2>
@@ -994,7 +1003,11 @@ export default function App() {
           close={() => setAiModal(false)}
         />
       )}
-      {localModal && <LocalFlight close={() => setLocalModal(false)} />}
+      {localModal && (
+        <Suspense fallback={<div role="status">기체 관리 화면을 불러오는 중…</div>}>
+          <LocalFlight close={() => setLocalModal(false)} />
+        </Suspense>
+      )}
       {sourceModal && (
         <SourceDialog
           close={() => setSourceModal(false)}

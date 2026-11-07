@@ -22,7 +22,7 @@ from .contracts import (
 )
 from .file_io import hash_file
 from .npz_archive import NpzArchive
-from .telemetry import MAX_AGE, TelemetryRun
+from .telemetry import TelemetryRun
 
 BUFFER_MS = 300_000
 MAX_BUFFER_RECORDS = 60_000
@@ -789,7 +789,6 @@ class LiveSources:
 
         decoder = common.MAVLink(None)
         decoder.robust_parsing = True
-        loop = asyncio.get_running_loop()
         try:
             while True:
                 if run.config.kind == "udp":

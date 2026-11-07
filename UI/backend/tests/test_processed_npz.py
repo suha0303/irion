@@ -1,24 +1,22 @@
 import hashlib
 import io
 import json
-import os
 import sqlite3
 import time
 from copy import deepcopy
-from pathlib import Path
 
 import numpy as np
 import pytest
+from fastapi.testclient import TestClient
+from test_pipeline import long_records
+from test_streaming_v2 import stream_event
+
 from arion.contracts import InputProfile, SignalDefinition, SourceConfig
 from arion.file_io import hash_file
 from arion.main import create_app
 from arion.npz_archive import export_npz, load_npz
 from arion.npz_replay import NpzReplay
-from arion.providers import validate_result
 from arion.store_v2 import StoreV2
-from fastapi.testclient import TestClient
-from test_pipeline import long_records
-from test_streaming_v2 import stream_event
 
 
 def create_processed(store, period=100):
@@ -543,3 +541,42 @@ def test_external_finish_updates_websocket_manifest_to_replay(tmp_path):
                     changed = True
                     break
             assert changed
+
+
+def test_replay_recovers_legacy_sequence_fields_without_guessing_gaps(tmp_path):
+    store = StoreV2(tmp_path)
+    run = create_processed(store)
+    for sequence in range(1, 5):
+        run.append_normalized(processed(run, sequence, (sequence - 1) * 100))
+    replay = store.finish_session(run.run_id)
+    rows = [json.loads(line) for line in run.path.read_text().splitlines()]
+    samples = [item for item in rows if item.get("type") == "sample"]
+    for item in samples:
+        item["raw"].pop("epoch", None)
+    samples[1]["raw"].pop("sequence", None)
+    samples[-1]["raw"]["sequence"] = 6
+    legacy = tmp_path / "legacy-copy.jsonl"
+    legacy.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    recovered = NpzReplay(legacy, replay.archive)
+    assert recovered.dropped_sequences == 2
+    assert recovered.frame(300)["values"] == replay.frame(300)["values"]
+    store.close()
+
+
+def test_closed_store_and_replay_are_not_retained_by_shared_caches(tmp_path):
+    import gc
+    import weakref
+
+    def make_closed():
+        store = StoreV2(tmp_path)
+        run = create_processed(store)
+        run.append_normalized(processed(run))
+        replay = store.finish_session(run.run_id)
+        replay.frame(0)
+        references = weakref.ref(store), weakref.ref(replay)
+        store.close()
+        return references
+
+    references = make_closed()
+    gc.collect()
+    assert all(reference() is None for reference in references)

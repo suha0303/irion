@@ -1,6 +1,5 @@
 import asyncio
 import io
-import json
 import math
 import os
 import time

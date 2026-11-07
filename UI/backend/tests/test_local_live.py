@@ -6,9 +6,10 @@ import time
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
+
 from arion.contracts import SourceConfig
 from arion.main import create_app
-from fastapi.testclient import TestClient
 
 
 def test_udp_bind_address_accepts_lan_not_arbitrary_hostname():

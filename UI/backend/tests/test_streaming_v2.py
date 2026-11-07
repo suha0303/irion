@@ -1,14 +1,15 @@
 import asyncio
-import hashlib
 import json
 import os
 import socket
-import time
 from copy import deepcopy
-from pathlib import Path
 
 import httpx
 import pytest
+from fastapi.testclient import TestClient
+from pymavlink.dialects.v20 import common
+from test_pipeline import battery, long_records, record
+
 from arion.ai import fixture_events
 from arion.contracts import (
     AnalysisResult,
@@ -21,10 +22,7 @@ from arion.main import create_app
 from arion.providers import ProviderRegistry, compatibility, validate_result
 from arion.storage import Store
 from arion.store_v2 import StoreV2
-from arion.streaming import LiveSources, SessionRun, encode
-from fastapi.testclient import TestClient
-from pymavlink.dialects.v20 import common
-from test_pipeline import battery, long_records, record
+from arion.streaming import LiveSources, SessionRun
 
 
 @pytest.fixture

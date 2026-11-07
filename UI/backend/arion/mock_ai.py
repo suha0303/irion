@@ -1,7 +1,11 @@
 """Explicitly artificial local API for integration checks: port 8766."""
 
+import asyncio
+import os
 from pathlib import Path
+from urllib.parse import urlparse
 
+import httpx
 from fastapi import FastAPI, HTTPException
 
 from .ai import fixture_events
@@ -9,7 +13,6 @@ from .file_io import read_json
 from .telemetry import TelemetryRun
 
 app = FastAPI(title="ARION 시험용 AI API — 실제 모델 아님")
-import os
 
 data_root = Path(
     os.environ.get(
@@ -40,12 +43,6 @@ def results(run_id: str, input_sha256: str):
         "results": events,
     }
 
-
-import asyncio
-import os
-from urllib.parse import urlparse
-
-import httpx
 
 DASHBOARD_URL = os.environ.get("ARION_DASHBOARD_URL", "http://127.0.0.1:8765")
 if urlparse(DASHBOARD_URL).hostname not in ("127.0.0.1", "localhost", "::1"):

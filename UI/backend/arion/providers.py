@@ -1,6 +1,4 @@
 import asyncio
-import hashlib
-import json
 import time
 from urllib.parse import urlparse
 

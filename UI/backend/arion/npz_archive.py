@@ -1,6 +1,5 @@
 """NPZ chunks from durable journal byte ranges. Compression never blocks ingest."""
 
-import hashlib
 import json
 import os
 import tempfile

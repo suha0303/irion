@@ -4,10 +4,11 @@ import pty
 import socket
 
 import pytest
+from pymavlink.dialects.v20 import common
+
 from arion.contracts import SourceConfig
 from arion.store_v2 import StoreV2
 from arion.streaming import LiveSources
-from pymavlink.dialects.v20 import common
 
 
 @pytest.mark.parametrize("transport", ["udp", "serial"])
