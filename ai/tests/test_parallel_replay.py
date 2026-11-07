@@ -6,6 +6,9 @@ import shutil
 import numpy as np
 import pytest
 import torch
+from test_post_training_sensitivity import config as sensitivity_config
+from test_replay_optimized import FixturePredictor, case
+
 from capstone_ai.detection_replay import records
 from capstone_ai.source import read_json, sha
 from learning import post_training as post
@@ -16,8 +19,6 @@ from learning.parallel_replay import (
     read_development,
 )
 from pipeline.pipeline import seal_development
-from test_post_training_sensitivity import config as sensitivity_config
-from test_replay_optimized import FixturePredictor, case
 
 
 class Progress:

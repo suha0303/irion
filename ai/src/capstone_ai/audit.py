@@ -1,3 +1,5 @@
+"""Audit recorded flight inputs before admitting them to preprocessing."""
+
 import json
 from collections import Counter, defaultdict
 from pathlib import Path

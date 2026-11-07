@@ -12,6 +12,8 @@ import sys
 import numpy as np
 import pytest
 import torch
+from torch import nn
+
 from learning import models
 from learning.diagnostic import same
 from learning.models import (
@@ -28,7 +30,6 @@ from learning.optimization import (
     warmup_steps,
 )
 from learning.training import backend
-from torch import nn
 
 
 @pytest.mark.parametrize("name", ["lstm", "transformer"])
@@ -300,8 +301,9 @@ run_fit(StudySpec(name,8),arrays,arrays,root/phase,
 
 
 def test_study_contract_is_sixteen_post_ln_variants():
-    from learning import comparison, lifecycle, study
     from test_model_comparison import config
+
+    from learning import comparison, lifecycle, study
 
     cfg = study.configure(
         dict(

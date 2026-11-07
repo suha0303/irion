@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from capstone_ai.dataset import feature_transform, target_transform
 from capstone_ai.mapping import FEATURES, TARGETS
 from learning.admission19 import MISSION_POLICY, ONLINE_UNITS
@@ -368,21 +369,22 @@ def test_aggregate_calls_independent_audit_once_and_returns_both_sealed_receipts
     )
     monkeypatch.setattr(ag, "_pairs", lambda *a: 0)
 
-    def audit(index, root, **kwargs):
+    def audit(records, root, **kwargs):
         calls.append(str(root))
         result = dict(
             passed=True,
             actual_data_verified=False,
             fixture_only=True,
-            scope="main",
+            scope="lr108",
         )
-        return dict(result, receipt=write_new(kwargs["output"], result))
+        return result
 
-    monkeypatch.setattr(ag, "audit_aggregate", audit)
+    monkeypatch.setattr(ag, "_audit_compiled", audit)
+    write_new(tmp_path / "fixture-index", {"fixture_only": True})
     result = ag.aggregate(
         tmp_path / "fixture-index",
         tmp_path / "aggregate",
-        scope="main",
+        scope="lr108",
         producer=producer(),
         protection=registry(),
         policy_bundle={},

@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+
 from capstone_ai.mapping import FEATURES
 from execution.prepare import npz_headers
-
 from learning.admission19 import (
     check_producer,
     check_protection,

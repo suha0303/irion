@@ -5,13 +5,14 @@ import hashlib
 import random
 from pathlib import Path
 
-import capstone_ai.models as model_source
-import capstone_ai.training as training_source
 import numpy as np
 import torch
+from safetensors.torch import load_file, save_file
+
+import capstone_ai.models as model_source
+import capstone_ai.training as training_source
 from capstone_ai.models import device_for, make_model
 from capstone_ai.training import loss, seed_all
-from safetensors.torch import load_file, save_file
 
 from . import backend as backend_source
 from .backend import (

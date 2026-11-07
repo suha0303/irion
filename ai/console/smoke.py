@@ -17,6 +17,7 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
+
 from execution.common import Progress, child, read, sha, write
 from execution.prepare import npz_headers
 
@@ -461,6 +462,7 @@ def _child(root, model, phase, profile=None):
     ):
         raise ValueError("Smoke input/source binding changed")
     import torch
+
     from learning.models import ModelSpec
     from learning.training import run_fit
 
@@ -542,6 +544,7 @@ def restore_gate(root, cfg, progress, *, profile=None):
                     timeout=480,
                 )
         import torch
+
         from learning.diagnostic import same
 
         full, resumed = [

@@ -2,13 +2,14 @@ import json
 
 import numpy as np
 import pytest
+from safetensors.torch import load_file
+
 from capstone_ai.mapping import FEATURES
 from localflight.adapt import fit
 from localflight.analysis import compare
 from localflight.catalog import DEFAULT_BUNDLE, digest
 from localflight.prepared import REVISION, load, windows
 from localflight.runtime import Runtime
-from safetensors.torch import load_file
 
 
 def flight(root, name, role, health="confirmed_normal"):

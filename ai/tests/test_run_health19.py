@@ -10,6 +10,8 @@ import sys
 import numpy as np
 import pytest
 import torch
+from safetensors.torch import load_file
+
 from capstone_ai.mapping import FEATURES
 from learning.history19.training import backend
 from learning.run_health19 import data
@@ -23,7 +25,6 @@ from learning.run_health19.models import (
 )
 from learning.run_health19.scoring import Calibration, components
 from learning.run_health19.training import fit_cpu, restore
-from safetensors.torch import load_file
 
 
 @pytest.fixture(autouse=True)

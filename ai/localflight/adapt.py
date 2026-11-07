@@ -5,8 +5,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from capstone_ai.training import loss as objective
 from safetensors.torch import load_file, save_file
+
+from capstone_ai.training import loss as objective
 
 from .catalog import Catalog, digest
 from .prepared import distinct_flights, load, segment_ranges, windows

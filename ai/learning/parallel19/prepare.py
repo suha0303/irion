@@ -1,14 +1,13 @@
 """Build portable normalized normal-only caches from independently audited aggregates."""
 
-import json
 import os
 import shutil
 import tempfile
 from pathlib import Path
 
 import numpy as np
-from execution.common import read, sha, write
 
+from execution.common import read, sha, write
 from learning.collection19.aggregate import (
     load_shared_scaler,
     whole_manifest_paths,

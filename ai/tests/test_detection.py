@@ -2,6 +2,7 @@ import copy
 
 import numpy as np
 import pytest
+
 from capstone_ai.detection import (
     DetectionLedger,
     DomainAlarms,

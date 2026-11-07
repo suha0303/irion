@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+
 from capstone_ai.mapping import FEATURES, TARGETS
 from capstone_ai.training import Predictor
 from execution.common import (

@@ -11,8 +11,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from execution.prepare import npz_headers
 from safetensors.torch import load_file
+
+from execution.prepare import npz_headers
 
 from .adapt import write
 from .catalog import Catalog, digest, read_json

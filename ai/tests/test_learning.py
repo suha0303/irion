@@ -8,6 +8,7 @@ import sys
 import numpy as np
 import pytest
 import torch
+
 from capstone_ai.models import make_model as reference
 from learning.benchmark import measure
 from learning.models import ModelSpec, make_model

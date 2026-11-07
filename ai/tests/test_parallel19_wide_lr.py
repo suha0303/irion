@@ -124,6 +124,7 @@ def test_remaining_model_can_use_all_nine_candidate_slots(tmp_path):
 
 def test_handover_preserves_selections_from_paused_snapshot(tmp_path):
     import pytest
+
     from learning.parallel19.handover_upgrade import preserve_final_selections
 
     old = tmp_path / "old"

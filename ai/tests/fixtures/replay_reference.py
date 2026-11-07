@@ -4,6 +4,7 @@ Independent regression oracle; never imported by production code.
 """
 
 import numpy as np
+
 from capstone_ai.detection import DomainAlarms, residual_evidence
 from capstone_ai.inference import PendingForecasts
 

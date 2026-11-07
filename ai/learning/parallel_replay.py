@@ -371,6 +371,7 @@ def benchmark_workers(upstream, out, cfg, progress):
     import statistics
 
     import numpy as np
+
     from capstone_ai.source import sha
     from capstone_ai.training import Predictor
     from execution.common import write

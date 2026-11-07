@@ -10,10 +10,11 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from torch.profiler import ProfilerActivity, profile, record_function
+
 from capstone_ai.training import loss, seed_all
 from execution.common import ROOT, Progress, memory_snapshot, read, sha, write
 from pipeline.runtime import check
-from torch.profiler import ProfilerActivity, profile, record_function
 
 from . import comparison, study
 from .benchmark import measure

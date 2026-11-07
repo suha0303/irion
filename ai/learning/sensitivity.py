@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+
 from capstone_ai.detection_protocol import fit_calibration
 from capstone_ai.training import Predictor
 from execution.common import sha, write

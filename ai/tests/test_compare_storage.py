@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+
 from execution.common import ROOT
 from learning import prepare_compare
 

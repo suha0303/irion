@@ -1,6 +1,5 @@
-import json
-
 import pytest
+
 from execution.delivery import export_final as e
 from execution.delivery.fetch_final import verify
 

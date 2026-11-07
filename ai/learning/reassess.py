@@ -11,6 +11,7 @@ import math
 from pathlib import Path
 
 import numpy as np
+
 from capstone_ai.detection import DomainAlarms
 from capstone_ai.detection_protocol import (
     evaluation_metrics,

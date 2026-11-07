@@ -1,7 +1,6 @@
 """Replace only a dispatcher; adopt its GPU workers and preserve its evidence."""
 
 import argparse
-import copy
 import os
 import shutil
 import signal

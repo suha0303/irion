@@ -2,15 +2,16 @@ import hashlib
 import json
 
 import pytest
+
 from execution.delivery.poweroff_after_fetch import ready
 
 
 def fixture(tmp_path):
     names = [
-        f"{t}_{a}_h{h}_l{l}"
+        f"{t}_{a}_h{h}_l{layers}"
         for t in ("forecast", "run_health")
         for a in ("lstm", "transformer")
-        for h, l in ((64, 2), (64, 4), (128, 2), (128, 4))
+        for h, layers in ((64, 2), (64, 4), (128, 2), (128, 4))
     ]
     for n in names:
         p = tmp_path / "models" / n / "model.safetensors"

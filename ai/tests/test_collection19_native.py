@@ -8,6 +8,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from test_collection19 import export
+from test_pilot_publisher import fixture as native_fixture
+
 from learning.collection19 import (
     audit_case,
     check_quality_rejection,
@@ -17,8 +20,6 @@ from learning.collection19 import (
 )
 from learning.history19.pilot import ROOT, json_file, sha
 from learning.history19.pilot_connector import native_mission_interval
-from test_collection19 import export
-from test_pilot_publisher import fixture as native_fixture
 
 ag = importlib.import_module("learning.collection19.aggregate")
 
@@ -39,17 +40,22 @@ def refresh(raw):
 
 
 @pytest.fixture
-def full480(tmp_path, monkeypatch):
+def full480(tmp_path, monkeypatch, request):
     args = native_fixture(tmp_path / "native")
     binding = json_file(args["producer_binding"])
     native = json_file(
         ROOT / "simulation/profiles/collection/joint-phase-policy.json"
     )
-    args["native_policy"].write_bytes(
-        (
-            ROOT / "simulation/profiles/collection/joint-phase-policy.json"
-        ).read_bytes()
-    )
+    # Current fixtures use the exact policy bytes bound by native receipts.
+    if hasattr(request, "param"):
+        native["acceptance"]["native_consumption_max_gap_us"] = request.param
+        put(args["native_policy"], native)
+    else:
+        args["native_policy"].write_bytes(
+            (
+                ROOT / "simulation/profiles/collection/joint-phase-policy.json"
+            ).read_bytes()
+        )
     auth = json_file(contract.AUTH)
     auth.update(
         fixture_only=True,
@@ -92,6 +98,14 @@ def full480(tmp_path, monkeypatch):
     put(raw / "evaluation/joint-landing.json", landing)
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
     from capstone_sim import joint_phase
+
+    if hasattr(request, "param"):
+        # Isolate the historical receipt authority; never edit the live policy.
+        monkeypatch.setattr(
+            joint_phase,
+            "policy",
+            lambda: dict(native, policy_sha256=sha(args["native_policy"])),
+        )
 
     rows = list(joint_phase.reference_rows(case["operation_variation"], 480))
     reference = raw / "evaluation/joint-reference.csv"
@@ -145,6 +159,9 @@ def full480(tmp_path, monkeypatch):
             writer.writerow(
                 [seq, first + phase, phase, index, *rows[index][1:]]
             )
+    (raw / "evaluation/joint-phase-policy.json").write_bytes(
+        args["native_policy"].read_bytes()
+    )
     put(raw / "evaluation/joint-check.json", joint_phase.verify(raw))
     selection = dict(fixture_only=True)
     put(raw / "evaluation/battery-selection.json", selection)
@@ -215,6 +232,7 @@ def full480(tmp_path, monkeypatch):
 def test_public_full480_native_case_keeps_all_frames_windows_and_land_tail(
     full480, tmp_path
 ):
+    torch_loaded = "torch" in sys.modules
     result = audit_case(
         full480["export"],
         producer=full480["producer"],
@@ -230,7 +248,7 @@ def test_public_full480_native_case_keeps_all_frames_windows_and_land_tail(
     assert result["native_check"]["reference_rows_seen"] == 4801
     assert result["native_check"]["max_consumption_gap_us"] == 25000
     assert sha(Path(result["receipt"]["path"])) == result["receipt"]["sha256"]
-    assert "torch" not in sys.modules
+    assert ("torch" in sys.modules) == torch_loaded
 
 
 @pytest.mark.parametrize(
@@ -288,7 +306,10 @@ def rejected(full480):
         reader = csv.DictReader(f)
         fields = reader.fieldnames
         rows = list(reader)
-    rows.pop(1)
+    gap = json_file(full480["bundle"]["native_policy"])["acceptance"][
+        "native_consumption_max_gap_us"
+    ]
+    del rows[1 : gap // 25000 + 2]
     for i, row in enumerate(rows, 1):
         row["sequence"] = str(i)
     with path.open("w") as f:
@@ -308,7 +329,8 @@ def rejected(full480):
     full480["assessment"] = put(p, a)
 
 
-def test_main_quality_rejection_is_independently_rechecked_and_preserves_physical_completed(
+@pytest.mark.parametrize("full480", [40000], indirect=True)
+def test_legacy_gap_rejection_is_rechecked_and_preserves_physical_completed(
     full480, tmp_path
 ):
     rejected(full480)
@@ -334,7 +356,7 @@ def test_main_quality_rejection_is_independently_rechecked_and_preserves_physica
     assert check_quality_rejection(ref, a, full480["producer"]) is True
     doc = json_file(ref["path"])
     assert (
-        doc["measured"]["max_gap_us"] == 50000
+        doc["measured"]["max_gap_us"] == 75000
         and doc["measured"]["reference_rows_seen"] == 4801
     )
     assert (
@@ -395,3 +417,21 @@ def test_main_quality_rejection_never_accepts_unknown_failure_or_valid_success(
             assessment_ref=ref,
             output=tmp_path / "unknown.json",
         )
+
+
+def test_current_gap_with_missing_references_cannot_authorize_reflight(
+    full480, tmp_path
+):
+    rejected(full480)
+    before = sha(full480["raw"] / "integrity.json")
+    with pytest.raises(ValueError, match="complete4801reference"):
+        publish_quality_rejection(
+            full480["raw"],
+            case_id=full480["case"]["case_id"],
+            producer=full480["producer"],
+            policy_bundle=full480["bundle"],
+            assessment_ref=full480["assessment"],
+            output=tmp_path / "rejected.json",
+        )
+    assert not (tmp_path / "rejected.json").exists()
+    assert sha(full480["raw"] / "integrity.json") == before

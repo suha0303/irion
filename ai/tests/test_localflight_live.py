@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import pytest
+
 from localflight.live import Mapper, completed, decode, validate
 from localflight.prepare import causal_frames
 from localflight.prepared import load

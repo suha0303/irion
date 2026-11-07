@@ -4,6 +4,7 @@ import copy
 import json
 
 import pytest
+
 from capstone_ai.dataset import validate_split, verify_input
 from capstone_ai.evaluation import flight_bootstrap, match_event
 from capstone_ai.source import dump, sha
@@ -142,6 +143,7 @@ def test_deadline_bracket_strict_boundary():
 
 def test_live_jitter_keeps_origin_cadence_and_unverified_no_score():
     import numpy as np
+
     from capstone_ai.inference import PendingForecasts
 
     p = PendingForecasts(np.ones((10, 4)), [1, 1])

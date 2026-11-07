@@ -19,6 +19,8 @@ def test_runtime_drift_blocks_service_before_submission(tmp_path, monkeypatch):
     )
     (task / "config.sha256").write_text(common.sha(task / "config.json"))
     monkeypatch.setattr(cli, "HOME", home)
+    # Exercise the preserved legacy config path without authorizing collection.
+    monkeypatch.setattr(cli, "producer_sources", lambda: {})
     monkeypatch.setattr(
         cli.subprocess, "run", lambda *a, **k: pytest.fail("must not submit")
     )
@@ -32,6 +34,8 @@ def test_new_task_pins_actual_runtime_without_execution(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setattr(cli, "HOME", home)
+    # Exercise the preserved legacy config path without authorizing collection.
+    monkeypatch.setattr(cli, "producer_sources", lambda: {})
     args = cli.parser().parse_args(
         ["init", "--name", "runtime-pin", "--mode", "collect"]
     )

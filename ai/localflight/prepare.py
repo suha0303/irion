@@ -13,6 +13,7 @@ import shutil
 from pathlib import Path
 
 import numpy as np
+
 from capstone_ai.mapping import FEATURES, RATES
 from learning.history19.preprocessing import LowPass
 
@@ -176,8 +177,9 @@ def bin_events(path, profile, maps=None):
 
 
 def px4_events(path, profile, maps=None):
-    from capstone_ai.mapping import mapped
     from pyulog import ULog
+
+    from capstone_ai.mapping import mapped
 
     ulog = ULog(str(path), message_name_filter_list=list(PX4_REQUIRED))
     streams = {}

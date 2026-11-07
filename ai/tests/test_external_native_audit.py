@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 
 import pytest
+from test_pilot_publisher import fixture
+
 from learning.history19 import joint_native
 from learning.history19.native_audit import (
     RAW_MEMBERS,
@@ -11,7 +13,6 @@ from learning.history19.native_audit import (
     verified_check,
 )
 from learning.history19.pilot import json_file, sha
-from test_pilot_publisher import fixture
 
 
 def write(path, value):

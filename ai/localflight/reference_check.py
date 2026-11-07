@@ -8,6 +8,7 @@ release gate. Retain the historical allclose statistic for traceability.
 from pathlib import Path
 
 import numpy as np
+
 from capstone_ai.detection_protocol import score_sequence
 from learning.run_health19.scoring import Calibration, components
 

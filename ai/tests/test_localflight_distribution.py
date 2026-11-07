@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+
 from localflight.distribution import build, copy_regular
 
 
@@ -40,3 +41,16 @@ def test_oversized_log_rejected_before_parser_reads_it(tmp_path):
     with pytest.raises(ValueError, match="256 MiB"):
         inspect_log(path)
     assert path.stat().st_size == 256 * 1024 * 1024 + 1
+
+
+def test_distribution_finds_public_clone_and_developer_ui_layouts(tmp_path):
+    from localflight.distribution import ui_source
+
+    with pytest.raises(ValueError, match="complete project checkout"):
+        ui_source(tmp_path)
+    development = tmp_path / "irion-upload/UI"
+    (development / "backend/arion").mkdir(parents=True)
+    assert ui_source(tmp_path) == development
+    public = tmp_path / "UI"
+    (public / "backend/arion").mkdir(parents=True)
+    assert ui_source(tmp_path) == public

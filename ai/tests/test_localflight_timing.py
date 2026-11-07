@@ -3,13 +3,14 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from test_localflight_adapt import flight
+
 from capstone_ai.mapping import FEATURES
 from localflight.catalog import digest
 from localflight.prepare import bin_events, bin_values, causal_frames, prepare
 from localflight.prepared import distinct_flights, load, windows
 from localflight.runtime import Runtime
 from localflight.timing import ClockAudit, clock_maps, split_streams
-from test_localflight_adapt import flight
 
 
 def events(seconds=40, gap=None):

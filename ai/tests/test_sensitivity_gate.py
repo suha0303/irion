@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+
 from execution import engine
 from execution.common import read, sha, write
 from learning import sensitivity

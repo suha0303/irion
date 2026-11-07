@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import pytest
 import torch
+
 from capstone_ai.mapping import FEATURES, TARGETS
 from execution.common import ROOT, sha
 from learning.history19 import data, runner
@@ -507,8 +508,9 @@ def test_bounded_CPU_benchmark_uses_new_X_only_model(tmp_path):
 
 
 def test_raw_file_replay_is_synthetic_and_source_is_unchanged(tmp_path):
-    from learning.history19.preprocessing import replay
     from test_preprocessing import CONFIG, META, events
+
+    from learning.history19.preprocessing import replay
 
     run = tmp_path / "synthetic-raw"
     (run / "observations").mkdir(parents=True)

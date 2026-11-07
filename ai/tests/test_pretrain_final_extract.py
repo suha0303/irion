@@ -8,8 +8,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-import x500_storage as storage
 
+import x500_storage as storage
 from pretrain import common
 from pretrain import final_dataset as final
 

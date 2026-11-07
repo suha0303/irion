@@ -3,11 +3,12 @@ import zipfile
 
 import numpy as np
 import pytest
+from test_localflight_adapt import flight
+
 from localflight import registry
 from localflight.adapt import fit
 from localflight.analysis import analyze, compare
 from localflight.catalog import DEFAULT_BUNDLE
-from test_localflight_adapt import flight
 
 
 @pytest.mark.parametrize(

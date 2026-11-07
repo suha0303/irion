@@ -1,3 +1,5 @@
+"""Train forecast baselines and restore versioned prediction bundles."""
+
 import copy
 import hashlib
 import random
@@ -15,15 +17,16 @@ from .source import dump, read_json, sha
 
 
 def normalized(dataset, split, scaler):
-    a = np.load(Path(dataset) / (split + ".npz"))
-    return {
-        "X": (a["X"] - scaler["x_mean"]) / scaler["x_scale"],
-        "C": (a["C"] - scaler["c_mean"]) / scaler["c_scale"],
-        "Y": (a["Y"] - scaler["y_mean"]) / scaler["y_scale"],
-        "run_id": a["run_id"],
-        "origin_us": a["origin_us"],
-        "segment": a["segment"],
-    }
+    """Load normalized arrays and close the NPZ before returning to training."""
+    with np.load(Path(dataset) / (split + ".npz"), allow_pickle=False) as data:
+        return {
+            "X": (data["X"] - scaler["x_mean"]) / scaler["x_scale"],
+            "C": (data["C"] - scaler["c_mean"]) / scaler["c_scale"],
+            "Y": (data["Y"] - scaler["y_mean"]) / scaler["y_scale"],
+            "run_id": data["run_id"],
+            "origin_us": data["origin_us"],
+            "segment": data["segment"],
+        }
 
 
 def loss(yhat, y):
@@ -196,7 +199,8 @@ def train_models(config_path):
             "training revision exists; choose a new output directory"
         )
     out.mkdir(parents=True, exist_ok=True)
-    scaler = dict(np.load(dataset / "scaler.npz"))
+    with np.load(dataset / "scaler.npz", allow_pickle=False) as archive:
+        scaler = dict(archive)
     train, val = [
         normalized(dataset, s, scaler) for s in ["train", "validation"]
     ]
@@ -221,6 +225,8 @@ def train_models(config_path):
                 prediction = (v @ coefficients).reshape(val["Y"].shape)
                 error = (prediction - val["Y"]) ** 2
                 value = 0.5 * error[..., :3].mean() + 0.5 * error[..., 3].mean()
+                if not np.isfinite(value):
+                    raise ValueError("Nonfinite ridge validation loss")
                 history.append(
                     {"alpha": alpha, "validation_loss": float(value)}
                 )
@@ -304,7 +310,8 @@ class Predictor:
             or self.metadata["target_order"] != TARGETS
         ):
             raise ValueError("bundle forecast contract mismatch")
-        self.scaler = dict(np.load(self.folder / "scaler.npz"))
+        with np.load(self.folder / "scaler.npz", allow_pickle=False) as archive:
+            self.scaler = dict(archive)
         if self.name in {"lstm", "transformer"}:
             revision = self.metadata.get("model_revision")
             if revision in {
@@ -339,9 +346,10 @@ class Predictor:
             )
             self.model.eval()
         elif self.name == "ridge_forecast":
-            self.coefficients = np.load(self.folder / "ridge.npz")[
-                "coefficients"
-            ]
+            with np.load(
+                self.folder / "ridge.npz", allow_pickle=False
+            ) as archive:
+                self.coefficients = archive["coefficients"]
 
     def predict_scaled(self, x, c):
         if self.name == "persistence":

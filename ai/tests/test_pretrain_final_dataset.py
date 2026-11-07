@@ -228,27 +228,18 @@ def test_final_cannot_request_training_multipliers_or_gate_fit(extra):
         cli.create(args)
 
 
-def test_menu_four_selects_final_without_start_until_user_confirmation(
-    monkeypatch, capsys, tmp_path
-):
-    choices = iter(["4", "n"])
-    monkeypatch.setattr(cli, "choose", lambda *a: next(choices))
+def test_removed_final_menu_reprompts_without_starting(monkeypatch, capsys):
+    from pretrain import main_collection
+
+    choices = iter(["4", "0"])
+    monkeypatch.setattr("builtins.input", lambda *args: next(choices))
     monkeypatch.setattr(
-        cli, "input_integer", lambda prompt, default, *rest: default
-    )
-    monkeypatch.setattr(cli, "input_seed", lambda: None)
-    monkeypatch.setattr("builtins.input", lambda *a: str(tmp_path / "data"))
-    monkeypatch.setattr(
-        cli, "create", lambda *a: pytest.fail("declined menu must not create")
-    )
-    monkeypatch.setattr(
-        cli, "start", lambda *a: pytest.fail("declined menu must not start")
+        main_collection,
+        "user_start",
+        lambda *args: pytest.fail("No selected collection"),
     )
     cli.menu()
-    text = capsys.readouterr().out
-    assert "4. 최종 평가 데이터324run" in text
-    assert "paired 정상대조108" in text
-    assert "최초1+재시도2" in text
+    assert "1674" in capsys.readouterr().out
 
 
 def test_final_run_only_uses_existing_extract_preprocess_audit(
@@ -626,32 +617,19 @@ if action=='audit':
             assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_menu_four_user_confirmation_routes_to_final_task(
-    tmp_path, monkeypatch
-):
-    choices = iter(["4", "y"])
-    monkeypatch.setattr(cli, "choose", lambda *a: next(choices))
+def test_menu_exit_never_creates_or_starts_a_task(monkeypatch):
+    from pretrain import main_collection
+
+    monkeypatch.setattr("builtins.input", lambda *args: "0")
     monkeypatch.setattr(
-        cli, "input_integer", lambda prompt, default, *rest: default
-    )
-    monkeypatch.setattr(cli, "input_seed", lambda: None)
-    monkeypatch.setattr("builtins.input", lambda *a: str(tmp_path / "data"))
-    calls = []
-    task = tmp_path / "only-a-mock"
-    monkeypatch.setattr(cli, "create", lambda args: calls.append(args) or task)
-    monkeypatch.setattr(
-        cli, "start", lambda path: calls.append(("start", path))
+        main_collection,
+        "user_start",
+        lambda *args: pytest.fail("Exit must not submit"),
     )
     monkeypatch.setattr(
-        cli, "watch", lambda path: calls.append(("watch", path))
+        cli, "create", lambda *args: pytest.fail("Exit must not create")
     )
     cli.menu()
-    args = calls[0]
-    assert args.collection_profile == "final324" and args.mode == "collect"
-    assert args.collection_sets == 1 and not args.gates
-    assert args.flight_workers == 4 and args.export_workers == 2
-    assert calls[1:] == [("start", task), ("watch", task)]
-    assert not task.exists()
 
 
 def test_failed_final_collection_cannot_enter_preprocessing(

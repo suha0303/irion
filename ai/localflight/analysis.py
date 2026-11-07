@@ -55,153 +55,188 @@ def load_runtime(model_id, metadata, *, bundle, adapted=None):
     return runtime, adaptation
 
 
-def analyze(model_id, manifest, *, bundle, adapted=None, data_root=None):
-    started = perf_counter()
-    metadata, values, times = load(manifest)
-    runtime, adaptation = load_runtime(
-        model_id, metadata, bundle=bundle, adapted=adapted
-    )
-    from .calibration import annotate, binding, forecast_scores, health_score
+def _forecast_results(runtime, metadata, values, times, ranges):
+    """Return forecast metrics, calibrated scores, and per-segment series."""
+    from .calibration import forecast_scores
 
     s = runtime.scaler
-    ranges = segment_ranges(metadata, len(values))
     segment_results = []
-    if runtime.entry["task"] == "forecast":
-        x, y, persistence, origins = windows(metadata, values, times, s)
-        predicted = predict(runtime, x)
-        scale = s["y_scale"].copy()
-        scale[3] *= metadata["profile"]["series_cells"]
-        errors = (y - predicted) * scale
-        baseline_errors = (y - persistence[:, None, :]) * scale
-        predicted_physical = predicted * s["y_scale"] + s["y_mean"]
-        observed_physical = y * s["y_scale"] + s["y_mean"]
-        predicted_physical[:, :, 3] *= metadata["profile"]["series_cells"]
-        observed_physical[:, :, 3] *= metadata["profile"]["series_cells"]
-        series = []
-        for index, (a, b) in enumerate(segment_ranges(metadata, len(values))):
-            mask = (origins >= times[a]) & (origins <= times[b - 1])
-            series.append(
-                dict(
-                    segment=index,
-                    horizon_us=1000000,
-                    origin_us=origins[mask].tolist(),
-                    time_us=(origins[mask] + 1000000).tolist(),
-                    observed=observed_physical[mask, -1].tolist(),
-                    predicted=predicted_physical[mask, -1].tolist(),
-                    residual=errors[mask, -1].tolist(),
-                )
+    x, y, persistence, origins = windows(metadata, values, times, s)
+    predicted = predict(runtime, x)
+    scale = s["y_scale"].copy()
+    scale[3] *= metadata["profile"]["series_cells"]
+    errors = (y - predicted) * scale
+    baseline_errors = (y - persistence[:, None, :]) * scale
+    predicted_physical = predicted * s["y_scale"] + s["y_mean"]
+    observed_physical = y * s["y_scale"] + s["y_mean"]
+    predicted_physical[:, :, 3] *= metadata["profile"]["series_cells"]
+    observed_physical[:, :, 3] *= metadata["profile"]["series_cells"]
+    series = []
+    for index, (a, b) in enumerate(ranges):
+        mask = (origins >= times[a]) & (origins <= times[b - 1])
+        series.append(
+            dict(
+                segment=index,
+                horizon_us=1000000,
+                origin_us=origins[mask].tolist(),
+                time_us=(origins[mask] + 1000000).tolist(),
+                observed=observed_physical[mask, -1].tolist(),
+                predicted=predicted_physical[mask, -1].tolist(),
+                residual=errors[mask, -1].tolist(),
             )
-            segment_results.append(
-                dict(
-                    start_us=int(times[a]),
-                    end_us=int(times[b - 1]) + 100000,
-                    frames=b - a,
-                    metrics=dict(
-                        targets=[
-                            "body_rate_p",
-                            "body_rate_q",
-                            "body_rate_r",
-                            "pack_voltage",
-                        ],
-                        units=["rad/s", "rad/s", "rad/s", "V"],
-                        windows=int(mask.sum()),
-                        rmse=np.sqrt(
-                            np.mean(errors[mask] ** 2, axis=(0, 1))
-                        ).tolist(),
-                        persistence_rmse=np.sqrt(
-                            np.mean(baseline_errors[mask] ** 2, axis=(0, 1))
-                        ).tolist(),
-                    ),
-                    scores=forecast_scores(
-                        y[mask, -1], predicted[mask, -1], s
+        )
+        segment_results.append(
+            dict(
+                start_us=int(times[a]),
+                end_us=int(times[b - 1]) + 100000,
+                frames=b - a,
+                metrics=dict(
+                    targets=[
+                        "body_rate_p",
+                        "body_rate_q",
+                        "body_rate_r",
+                        "pack_voltage",
+                    ],
+                    units=["rad/s", "rad/s", "rad/s", "V"],
+                    windows=int(mask.sum()),
+                    rmse=np.sqrt(
+                        np.mean(errors[mask] ** 2, axis=(0, 1))
                     ).tolist(),
-                    series=[series[-1]],
-                )
+                    persistence_rmse=np.sqrt(
+                        np.mean(baseline_errors[mask] ** 2, axis=(0, 1))
+                    ).tolist(),
+                ),
+                scores=forecast_scores(
+                    y[mask, -1], predicted[mask, -1], s
+                ).tolist(),
+                series=[series[-1]],
             )
-        scoring = dict(
-            scores=forecast_scores(y[:, -1], predicted[:, -1], s).tolist(),
-            time_us=(origins + 1000000).tolist(),
-            unit="one_second_max_abs_standardized_residual",
         )
-        result = dict(
-            targets=[
-                "body_rate_p",
-                "body_rate_q",
-                "body_rate_r",
-                "pack_voltage",
-            ],
-            units=["rad/s", "rad/s", "rad/s", "V"],
-            windows=len(x),
-            rmse=np.sqrt(np.mean(errors**2, axis=(0, 1))).tolist(),
-            persistence_rmse=np.sqrt(
-                np.mean(baseline_errors**2, axis=(0, 1))
-            ).tolist(),
-            first_origin_us=int(origins[0]),
-            last_origin_us=int(origins[-1]),
-            series=series,
-        )
-    else:
-        physical = values.copy()
-        physical[:, 17] /= metadata["profile"]["series_cells"]
-        physical[:, 18] /= metadata["profile"]["capacity_ah"]
-        x = ((physical - s["x_mean"]) / s["x_scale"]).astype("f4")
-        from learning.run_health19.scoring import components
+    scoring = dict(
+        scores=forecast_scores(y[:, -1], predicted[:, -1], s).tolist(),
+        time_us=(origins + 1000000).tolist(),
+        unit="one_second_max_abs_standardized_residual",
+    )
+    result = dict(
+        targets=["body_rate_p", "body_rate_q", "body_rate_r", "pack_voltage"],
+        units=["rad/s", "rad/s", "rad/s", "V"],
+        windows=len(x),
+        rmse=np.sqrt(np.mean(errors**2, axis=(0, 1))).tolist(),
+        persistence_rmse=np.sqrt(
+            np.mean(baseline_errors**2, axis=(0, 1))
+        ).tolist(),
+        first_origin_us=int(origins[0]),
+        last_origin_us=int(origins[-1]),
+        series=series,
+    )
+    return result, scoring, segment_results
 
-        segments = []
-        for a, b in segment_ranges(metadata, len(x)):
-            predicted = runtime.predict_scaled(
-                x[None, a:b], np.array([b - a], dtype="i8")
-            )[0]
-            segments.append(
-                dict(
-                    start_us=int(times[a]),
-                    end_us=int(times[b - 1]) + 100000,
-                    frames=b - a,
-                    components=components(
-                        predicted,
-                        x[a:b, 17],
-                        cell_voltage_scale=float(s["x_scale"][17]),
-                    ),
-                )
+
+def _health_results(runtime, metadata, values, times, ranges):
+    """Return completed-segment health scores without inventing a run verdict."""
+    from .calibration import health_score
+
+    s = runtime.scaler
+    segment_results = []
+    physical = values.copy()
+    physical[:, 17] /= metadata["profile"]["series_cells"]
+    physical[:, 18] /= metadata["profile"]["capacity_ah"]
+    x = ((physical - s["x_mean"]) / s["x_scale"]).astype("f4")
+    from learning.run_health19.scoring import components
+
+    segments = []
+    for a, b in ranges:
+        predicted = runtime.predict_scaled(
+            x[None, a:b], np.array([b - a], dtype="i8")
+        )[0]
+        segments.append(
+            dict(
+                start_us=int(times[a]),
+                end_us=int(times[b - 1]) + 100000,
+                frames=b - a,
+                components=components(
+                    predicted,
+                    x[a:b, 17],
+                    cell_voltage_scale=float(s["x_scale"][17]),
+                ),
             )
-        scoring = dict(
-            scores=[
-                health_score(row["components"], float(s["x_scale"][17]))
-                for row in segments
-            ],
-            time_us=[row["end_us"] for row in segments],
-            unit="segment_voltage_standardized_rmse",
         )
-        result = dict(
-            segments=segments, frames=len(x), whole_flight_verdict=False
-        )
-        for row, score in zip(segments, scoring["scores"]):
-            c = row["components"]
-            segment_results.append(
-                dict(
-                    start_us=row["start_us"],
-                    end_us=row["end_us"],
-                    frames=row["frames"],
-                    metrics=dict(
-                        samples=c["samples"],
-                        short_cell_v=c["short_cell_v"],
-                        long_cell_v=c["long_cell_v"],
-                        pack_voltage_rmse=float(
-                            np.hypot(c["short_cell_v"], c["long_cell_v"])
-                            * metadata["profile"]["series_cells"]
-                        ),
+    scoring = dict(
+        scores=[
+            health_score(row["components"], float(s["x_scale"][17]))
+            for row in segments
+        ],
+        time_us=[row["end_us"] for row in segments],
+        unit="segment_voltage_standardized_rmse",
+    )
+    result = dict(segments=segments, frames=len(x), whole_flight_verdict=False)
+    for row, score in zip(segments, scoring["scores"]):
+        c = row["components"]
+        segment_results.append(
+            dict(
+                start_us=row["start_us"],
+                end_us=row["end_us"],
+                frames=row["frames"],
+                metrics=dict(
+                    samples=c["samples"],
+                    short_cell_v=c["short_cell_v"],
+                    long_cell_v=c["long_cell_v"],
+                    pack_voltage_rmse=float(
+                        np.hypot(c["short_cell_v"], c["long_cell_v"])
+                        * metadata["profile"]["series_cells"]
                     ),
-                    scores=[score],
-                )
+                ),
+                scores=[score],
             )
+        )
+    return result, scoring, segment_results
+
+
+def analyze(model_id, manifest, *, bundle, adapted=None, data_root=None):
+    """Validate one flight package and analyze it with one CPU model.
+
+    Args:
+        model_id: A model identifier from the frozen delivery.
+        manifest: Path to an audited, prepared flight manifest.
+        bundle: Directory containing the immutable model delivery.
+        adapted: Optional aircraft-bound output-head adaptation directory.
+        data_root: Optional registry containing aircraft calibration.
+
+    Returns:
+        Metrics, segment details, coverage evidence, and calibration decisions.
+
+    Raises:
+        ValueError: Input, model, adaptation, or calibration binding is invalid.
+    """
+    started = perf_counter()
+    loaded = load(manifest)
+    runtime, adaptation = load_runtime(
+        model_id, loaded[0], bundle=bundle, adapted=adapted
+    )
+    return _analyze_loaded(runtime, adaptation, loaded, data_root, started)
+
+
+def _analyze_loaded(runtime, adaptation, loaded, data_root, started):
+    """Analyze data already validated for this job; never reload mutable files."""
+    from .calibration import annotate, binding
     from .run_summary import evidence
 
+    metadata, values, times = loaded
+    ranges = segment_ranges(metadata, len(values))
+    calculate = (
+        _forecast_results
+        if runtime.entry["task"] == "forecast"
+        else _health_results
+    )
+    result, scoring, segment_results = calculate(
+        runtime, metadata, values, times, ranges
+    )
     output = dict(
         run_evidence=evidence(metadata, times, ranges),
         segment_results=segment_results,
         calibration_binding=binding(runtime, metadata, adaptation),
         scoring=scoring,
-        model_id=model_id,
+        model_id=runtime.entry["id"],
         adapted=adaptation is not None,
         profile_id=metadata["profile"]["id"],
         profile_version=fingerprint(metadata["profile"]),
@@ -213,7 +248,7 @@ def analyze(model_id, manifest, *, bundle, adapted=None, data_root=None):
         health_verdict=None,
         calibration_status="not_calibrated_for_this_aircraft",
         timing=metadata.get("timing"),
-        retained_segments=len(segment_ranges(metadata, len(values))),
+        retained_segments=len(ranges),
         real_aircraft_validated=False,
         elapsed_seconds=perf_counter() - started,
         coverage=metadata.get("timing", {}).get("coverage", 1.0),
@@ -231,7 +266,13 @@ def analyze(model_id, manifest, *, bundle, adapted=None, data_root=None):
 
 
 def analyze_run(models, manifests, *, bundle, data_root=None, use_active=False):
-    """One source run, possibly multiple sensor-specific prepared packages."""
+    """Analyze a source run with bounded memory and one validation per package.
+
+    Results retain chronological package order and the requested model order.
+    Only one model is retained between segments; adapted weights are rebound
+    when the aircraft profile or origin changes. This avoids hashing and
+    decoding the same log for every selected model.
+    """
     from .registry import active_folder
     from .run_summary import aggregate
 
@@ -262,25 +303,43 @@ def analyze_run(models, manifests, *, bundle, data_root=None, use_active=False):
         )
     if sum(len(v) for _, v, _ in loaded) > 72000:
         raise ValueError("Run summary input exceeds two hours")
-    analyses = []
-    for path, (m, _, _) in sorted(
-        zip(manifests, loaded), key=lambda row: int(row[1][2][0])
-    ):
-        for mid in models:
+    # Keep only one model resident, even when all 16 models are selected.
+    ordered = sorted(loaded, key=lambda item: int(item[2][0]))
+    by_package = [[] for _ in ordered]
+    for model_id in models:
+        runtime = adaptation = None
+        previous_binding = None
+        for index, package in enumerate(ordered):
+            started = perf_counter()
+            metadata = package[0]
             adapted = (
-                active_folder(data_root, m["profile"], mid, bundle=bundle)
+                active_folder(
+                    data_root, metadata["profile"], model_id, bundle=bundle
+                )
                 if use_active
                 else None
             )
-            analyses.append(
-                analyze(
-                    mid,
-                    path,
-                    bundle=bundle,
-                    data_root=data_root,
-                    adapted=adapted,
+            # Base weights are profile-independent. Adaptations are not.
+            model_binding = (
+                (
+                    str(adapted),
+                    fingerprint(metadata["profile"]),
+                    metadata["origin"],
+                )
+                if adapted
+                else (model_id,)
+            )
+            if runtime is None or model_binding != previous_binding:
+                runtime, adaptation = load_runtime(
+                    model_id, metadata, bundle=bundle, adapted=adapted
+                )
+                previous_binding = model_binding
+            by_package[index].append(
+                _analyze_loaded(
+                    runtime, adaptation, package, data_root, started
                 )
             )
+    analyses = [result for package in by_package for result in package]
     return dict(analyses=analyses, run_summary=aggregate(analyses))
 
 

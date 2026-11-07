@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 import torch
+
 from execution.common import read, sha, write
 from learning import comparison, lifecycle, operator, prepare_compare
 from learning.training import Batches
@@ -568,7 +569,6 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
     admitted, tmp_path, monkeypatch, training_only, normalization_study
 ):
     from execution.common import ROOT
-
     from pretrain.storage import pack_files
 
     frozen = read(admitted / "evidence/frozen-manifest.json")

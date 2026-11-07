@@ -2,14 +2,15 @@ import json
 
 import numpy as np
 import pytest
+from test_localflight_adapt import flight
+from test_localflight_live import request
+from test_localflight_timing import events
+
 from localflight.analysis import analyze, analyze_run
 from localflight.catalog import DEFAULT_BUNDLE, digest
 from localflight.live import completed
 from localflight.prepare import causal_frames
 from localflight.run_summary import aggregate, partition, source_context
-from test_localflight_adapt import flight
-from test_localflight_live import request
-from test_localflight_timing import events
 
 
 def fixture(root, name="summary"):
@@ -206,7 +207,10 @@ def test_partition_short_unselected_and_bounded_durations():
     ]
 
 
-def test_separate_packages_match_one_segmented_package(tmp_path):
+def test_separate_packages_match_one_segmented_package(tmp_path, monkeypatch):
+    from unittest.mock import Mock
+
+    from localflight import analysis
     from localflight.prepared import load, segment_ranges
 
     original = fixture(tmp_path)
@@ -226,7 +230,13 @@ def test_separate_packages_match_one_segmented_package(tmp_path):
     one = analyze_run(models, [str(original)], bundle=DEFAULT_BUNDLE)[
         "run_summary"
     ]
+    checked_load = Mock(wraps=analysis.load)
+    checked_runtime = Mock(wraps=analysis.load_runtime)
+    monkeypatch.setattr(analysis, "load", checked_load)
+    monkeypatch.setattr(analysis, "load_runtime", checked_runtime)
     grouped = analyze_run(models, list(reversed(paths)), bundle=DEFAULT_BUNDLE)
+    assert checked_load.call_count == len(paths)
+    assert checked_runtime.call_count == len(models)
     starts = [a["segment_results"][0]["start_us"] for a in grouped["analyses"]]
     assert starts == sorted(starts)
     joined = grouped["run_summary"]

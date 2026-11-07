@@ -1,6 +1,7 @@
 import os
 
 import pytest
+
 from localflight.bin_reader import open_bin
 from localflight.flight_events import summarize
 

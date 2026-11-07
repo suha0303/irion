@@ -95,6 +95,7 @@ def environment(root, device):
     sys.path.insert(0, str(root / "ai/src"))
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     import torch
+
     from capstone_ai import training
     from capstone_ai.models import device_for
 

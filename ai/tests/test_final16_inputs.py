@@ -6,6 +6,9 @@ import json
 from pathlib import Path
 
 import pytest
+from test_short_cycle_inputs import refresh, short_request, write
+from test_wind_metadata import fixture as wind_fixture
+
 from learning.admission19 import FINAL16, check_protection, validate_lineages
 from learning.history19 import final16
 from learning.history19.pilot import CRITICAL, ROOT, json_file, sha
@@ -13,8 +16,6 @@ from learning.history19.pilot_connector import (
     native_mission_interval,
     project_pair_receipt,
 )
-from test_short_cycle_inputs import refresh, short_request, write
-from test_wind_metadata import fixture as wind_fixture
 
 
 @pytest.fixture

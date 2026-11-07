@@ -4,6 +4,7 @@ import copy
 import os
 
 import pytest
+
 from execution.common import read, sha, write
 from learning import operator
 from learning import post_training as post

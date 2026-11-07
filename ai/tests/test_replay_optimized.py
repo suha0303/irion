@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+
 from capstone_ai.dataset import feature_transform
 from capstone_ai.detection import DetectionLedger
 from capstone_ai.detection_replay import records, replay

@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+
 from execution.common import Progress, read, sha, verify, write
 from pipeline.pipeline import normalized_role
 from pipeline.runtime import check
@@ -65,7 +66,8 @@ def stop_signal(signum, frame):
 def gate_child(root, name, phase):
     root = Path(root)
     settings = read(root / "run.json")
-    data = dict(np.load(root / "output/gate-input.npz"))
+    with np.load(root / "output/gate-input.npz", allow_pickle=False) as archive:
+        data = dict(archive)
     progress = Progress(
         root / "output" / f"gate-{name}-{phase}.json", hours=0.15
     )
@@ -180,7 +182,10 @@ def main_run(root):
         check(root / "ai", root / "output", "benchmark", job_prefix="drone-ai-")
         progress.update(stage="load_normal_train")
         started = time.monotonic()
-        scaler = dict(np.load(upstream / "dataset/scaler.npz"))
+        with np.load(
+            upstream / "dataset/scaler.npz", allow_pickle=False
+        ) as archive:
+            scaler = dict(archive)
         train = normalized_role(upstream / "dataset", "normal_train", scaler)
         write(
             root / "output/loading.json",

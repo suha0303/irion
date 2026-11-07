@@ -5,6 +5,8 @@ import os
 import sys
 
 import pytest
+from test_reassessment import Progress, fixture_evaluation
+
 from execution.common import read, sha, write
 from execution.evaluate import (
     default_protocol_manifest,
@@ -13,7 +15,6 @@ from execution.evaluate import (
 )
 from learning import final_test as final
 from learning import operator
-from test_reassessment import Progress, fixture_evaluation
 
 
 def final_fixture(tmp_path):

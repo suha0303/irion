@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import torch
+
 from learning.parallel19.fit import Data, ranking, trial
 
 
@@ -44,7 +45,6 @@ def test_staged_continuation_equals_full_and_initial_is_shared(tmp_path, task):
 
 
 def test_balanced_probe_preserves_all_runs(tmp_path):
-    rng = np.random.default_rng(1)
     for role in ("normal_train", "normal_validation"):
         p = tmp_path / "forecast" / role
         p.mkdir(parents=True)

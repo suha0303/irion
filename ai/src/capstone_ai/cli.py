@@ -1,3 +1,5 @@
+"""Expose preprocessing, training, evaluation, and inference commands."""
+
 import argparse
 import json
 import platform

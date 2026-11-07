@@ -1,3 +1,5 @@
+"""Map source messages into the fixed common19 feature and target contract."""
+
 import math
 
 MOTORS = ["front_right", "front_left", "rear_right", "rear_left"]

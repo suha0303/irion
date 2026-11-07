@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from console import smoke
 from execution.common import Progress, read, sha, write
 

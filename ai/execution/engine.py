@@ -11,6 +11,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from safetensors.torch import load_file, save_file
+
 from capstone_ai.detection_protocol import fit_calibration
 from capstone_ai.mapping import FEATURES, TARGETS
 from capstone_ai.models import make_model
@@ -18,7 +20,6 @@ from capstone_ai.training import Predictor, flat, loss, seed_all
 from pipeline.backend import backend_scope, check_model, trace_batch
 from pipeline.fit import batch
 from pipeline.pipeline import normalized_role, seal_development
-from safetensors.torch import load_file, save_file
 
 from .common import MODELS, read, sha, verify, write
 
@@ -317,7 +318,8 @@ def neural_fit(name, cfg, train, val, folder, progress, device="cuda"):
 
 def bundles(root, out, cfg, progress, *, device="cuda"):
     dataset = root / "dataset"
-    scaler = dict(np.load(dataset / "scaler.npz", allow_pickle=False))
+    with np.load(dataset / "scaler.npz", allow_pickle=False) as archive:
+        scaler = dict(archive)
     train, val = [
         normalized_role(dataset, r, scaler)
         for r in ("normal_train", "normal_validation")

@@ -14,9 +14,10 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from safetensors.torch import save_file
+
 from capstone_ai.training import loss, seed_all
 from execution.common import write
-from safetensors.torch import save_file
 
 from .models import STUDY_REVISION, make_model
 

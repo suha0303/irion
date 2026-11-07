@@ -7,6 +7,7 @@ import tarfile
 from pathlib import Path
 
 import numpy as np
+
 from capstone_ai.detection_protocol import (
     event_result,
     grouped_rate_interval,

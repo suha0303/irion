@@ -4,11 +4,12 @@ import pickle
 import time
 
 import pytest
+from test_preprocessing import CONFIG, META, events
+
 from capstone_ai.file_wait import FileWaiter
 from capstone_ai.preprocessing import Preprocessor
 from capstone_ai.resume_state import restore_runtime, save_runtime
 from capstone_ai.source import DirectoryTail, sha
-from test_preprocessing import CONFIG, META, events
 
 
 def test_fast_runtime_restore_partial_rows_queued_marks_and_duplicate_semantics(
@@ -232,8 +233,9 @@ def test_handover_persists_causal_state_without_mutating_event_archive(
 ):
     import io
 
-    from capstone_ai.resume_state import StateReader, save_handover_state
     from test_preprocessing import run
+
+    from capstone_ai.resume_state import StateReader, save_handover_state
 
     engine = run(list(events(64)))
     tail = DirectoryTail(tmp_path, engine)

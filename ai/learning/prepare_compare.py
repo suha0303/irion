@@ -88,7 +88,6 @@ class PreparationProgress(Progress):
 
 def restore_ref(bundle, ref, destination, progress):
     from execution.common import child
-
     from pretrain.storage import verify_bundle
 
     progress.check()

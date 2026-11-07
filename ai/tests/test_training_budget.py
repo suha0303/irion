@@ -5,6 +5,7 @@ import copy
 import numpy as np
 import pytest
 import torch
+
 from execution.common import read
 from learning import benchmark
 from learning.models import ModelSpec

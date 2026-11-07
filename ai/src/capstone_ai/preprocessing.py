@@ -1,3 +1,5 @@
+"""Produce causal common19 frames and forecast windows from raw signals."""
+
 import copy
 import heapq
 import math

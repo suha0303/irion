@@ -2,6 +2,7 @@ import json
 
 import numpy as np
 import pytest
+
 from capstone_ai.detection import DomainAlarms
 from execution.common import read, sha, write
 from execution.evaluate import ResidualSummary, evaluate, forecast_errors

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from execution.common import ROOT, Progress, read, sha, write
 
+from execution.common import ROOT, Progress, read, sha, write
 from learning.diagnostic import same
 from learning.optimization import CANDIDATES, POLICY, policy_for
 from learning.study import PROBE
@@ -320,7 +320,6 @@ def fit(manifest, out, *, approved=False):
         check(ROOT / "ai", out, "fit", job_prefix="drone-ai-")
         from execution.common import child, memory_snapshot
         from execution.prepare import npz_headers
-
         from learning.comparison import memory_plan
 
         manifest_path = Path(manifest).absolute()

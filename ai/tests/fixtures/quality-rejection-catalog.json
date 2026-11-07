@@ -1,0 +1,127 @@
+{
+  "schema": "drone-ai.short-cycle.quality-rejection-catalog/1",
+  "task_id": "SHORT_CYCLE_20261107",
+  "fixture_only": true,
+  "root_review": {},
+  "original_physical_ledger": {},
+  "producer": {
+    "battery_policy": "cmu-vah01-rpt16-only/1",
+    "battery_revision": "cmu-vah01-baseline/1",
+    "catalog_sha256": "08ae8e7cabb835a5b1d59e053ad524c14629c047b942649e56583132c984719e",
+    "propulsion_revision": "x500-propulsion-binary-v1",
+    "propulsion_catalog_sha256": "fc974a80265c6d32753d25a4dd63a322bb3b300f5d9d3a2f24181cf135b220c2",
+    "source_manifest_sha256": "f2c388476ab22c9455e298c2cba1e3dc2ce34b097b73165ed02cee9eea469fa7",
+    "runtime_sha256": "b9af577d934469d981e189d8b216811eecde018ed9224a6f97f8f3374af3113a"
+  },
+  "native_policy_sha256": "344c2ececc4084fa0772e220a56866a544ddd6f2c48f66286a9eb3e2f6012769",
+  "approved_run_ids": [
+    "12a8f7764990425f94cc2d55a4e0cdb0",
+    "a92abf2e82ff4911a50d4cc966cf7d1e",
+    "6046a91f7d2b429cad8a1b72652158ca"
+  ],
+  "entries": {
+    "12a8f7764990425f94cc2d55a4e0cdb0": {
+      "case": {
+        "case_id": "short180-20261107-c02-45:s180-normal-06-2",
+        "case_kind": "normal_base",
+        "role": "normal_test",
+        "seed": 2993799045,
+        "motion": "yaw",
+        "environment": "strong",
+        "operation_sha256": "3e7da4296497de19d104bf756d0f20199fbfe73943fff04c1f1622b6f0af8883",
+        "pair_id": "x500-yaw-seed2993799045",
+        "health_family": null,
+        "timing": null,
+        "lineage": [
+          "pair:x500-yaw-seed2993799045",
+          "group:short180-20261107-c02-45:s180-normal-06-2",
+          "retry:short180-20261107-c02-45:s180-normal-06-2"
+        ]
+      },
+      "original_attempt": {
+        "index": 1,
+        "parent_attempt_id": null,
+        "seed": 2993799045,
+        "lineage": [
+          "pair:x500-yaw-seed2993799045",
+          "group:short180-20261107-c02-45:s180-normal-06-2",
+          "retry:short180-20261107-c02-45:s180-normal-06-2"
+        ],
+        "run_id": "12a8f7764990425f94cc2d55a4e0cdb0",
+        "physical_status": "completed"
+      },
+      "expected_gap_us": 41000,
+      "refs": {}
+    },
+    "a92abf2e82ff4911a50d4cc966cf7d1e": {
+      "case": {
+        "case_id": "short180-20261107-c02-45:s180-pair-00-normal",
+        "case_kind": "paired_normal",
+        "role": "normal_test",
+        "seed": 2993878756,
+        "motion": "hover",
+        "environment": "calm",
+        "operation_sha256": "ad5eeceffbe37dd8b55c1bca9b4e00a76db7087e115015ad4e058b878bc32212",
+        "pair_id": "x500-hover-seed2993878756",
+        "health_family": null,
+        "timing": null,
+        "lineage": [
+          "pair:x500-hover-seed2993878756",
+          "group:short180-20261107-c02-45:s180-pair-00",
+          "retry:short180-20261107-c02-45:s180-pair-00-normal"
+        ]
+      },
+      "original_attempt": {
+        "index": 1,
+        "parent_attempt_id": null,
+        "seed": 2993878756,
+        "lineage": [
+          "pair:x500-hover-seed2993878756",
+          "group:short180-20261107-c02-45:s180-pair-00",
+          "retry:short180-20261107-c02-45:s180-pair-00-normal"
+        ],
+        "run_id": "a92abf2e82ff4911a50d4cc966cf7d1e",
+        "physical_status": "completed"
+      },
+      "expected_gap_us": 60000,
+      "refs": {}
+    },
+    "6046a91f7d2b429cad8a1b72652158ca": {
+      "case": {
+        "case_id": "short180-20261107-c02-45:s180-normal-08-0",
+        "case_kind": "normal_base",
+        "role": "normal_test",
+        "seed": 2993803081,
+        "motion": "random",
+        "environment": "calm",
+        "operation_sha256": "baeab6de5090a86f82a4700bfe63c08dd73877037d3018db062f95b178c5064a",
+        "pair_id": "x500-random-seed2993803081",
+        "health_family": null,
+        "timing": null,
+        "lineage": [
+          "pair:x500-random-seed2993803081",
+          "group:short180-20261107-c02-45:s180-normal-08-0",
+          "retry:short180-20261107-c02-45:s180-normal-08-0"
+        ]
+      },
+      "original_attempt": {
+        "index": 1,
+        "parent_attempt_id": null,
+        "seed": 2993803081,
+        "lineage": [
+          "pair:x500-random-seed2993803081",
+          "group:short180-20261107-c02-45:s180-normal-08-0",
+          "retry:short180-20261107-c02-45:s180-normal-08-0"
+        ],
+        "run_id": "6046a91f7d2b429cad8a1b72652158ca",
+        "physical_status": "completed"
+      },
+      "expected_gap_us": 41000,
+      "refs": {}
+    }
+  },
+  "max_gap_us": 40000,
+  "max_physical_attempts": 3,
+  "scope": "Only listed3C03 physical-completed/native-gap-rejected raws; does not authorize execution or regeneration of accepted raw",
+  "official_rejection_index": {}
+}

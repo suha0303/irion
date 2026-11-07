@@ -2,14 +2,16 @@
 
 import copy
 import csv
+import hashlib
 import json
 from pathlib import Path
 
 import pytest
+from test_pilot45_admission import make_request
+
 from learning.admission19 import SHORT
 from learning.history19 import quality_rejection as qr
 from learning.history19.pilot import json_file, plan_and_ledger, sha
-from test_pilot45_admission import make_request
 
 
 def write(path, value):
@@ -20,7 +22,9 @@ def write(path, value):
 
 @pytest.fixture
 def evidence(tmp_path, monkeypatch):
-    catalog = json_file(qr.CATALOG)
+    catalog = json_file(
+        Path(__file__).parent / "fixtures/quality-rejection-catalog.json"
+    )
     catalog["fixture_only"] = True
     for name in (
         "root_review",
@@ -32,8 +36,24 @@ def evidence(tmp_path, monkeypatch):
         )
     for rid, entry in catalog["entries"].items():
         raw = tmp_path / "raw" / rid
-        # Only immutable small metadata is borrowed; events below are synthetic.
-        scenario = json_file(entry["refs"]["scenario"]["path"])
+        # Bind generated metadata, so this regression needs no archived flight.
+        operation = {"fixture_only": True, "run_id": rid}
+        entry["case"]["operation_sha256"] = hashlib.sha256(
+            json.dumps(
+                operation, sort_keys=True, separators=(",", ":")
+            ).encode()
+        ).hexdigest()
+        scenario = dict(
+            seed=entry["case"]["seed"],
+            operation_variation=operation,
+            producer_lock_sha256=catalog["producer"]["runtime_sha256"],
+            requested_duration_s=180,
+            joint_phase_policy=dict(
+                revision="joint-native-consumption-c2-v2",
+                duration_us=180000000,
+                policy_sha256=catalog["native_policy_sha256"],
+            ),
+        )
         refs = dict(
             run=write(
                 raw / "run.json",

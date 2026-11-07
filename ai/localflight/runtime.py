@@ -2,11 +2,12 @@
 
 import numpy as np
 import torch
+from safetensors.torch import load_file
+
 from learning.history19.models import ModelSpec as ForecastSpec
 from learning.history19.models import make_model as forecast_model
 from learning.run_health19.models import ModelSpec as RunSpec
 from learning.run_health19.models import make_model as run_model
-from safetensors.torch import load_file
 
 from .catalog import Catalog
 

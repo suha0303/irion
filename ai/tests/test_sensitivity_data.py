@@ -4,6 +4,7 @@ import copy
 
 import numpy as np
 import pytest
+
 from execution.common import write
 from learning.sensitivity_data import (
     REGRESSION_ORIGIN_US,

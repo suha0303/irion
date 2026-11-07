@@ -207,8 +207,9 @@ def test_px4_explicit_cell_count_capacity_and_changed_setting():
 
 
 def test_inventory_retains_invalid_parameter_changes(monkeypatch):
-    from localflight.logs import scan_bin
     from pymavlink import DFReader
+
+    from localflight.logs import scan_bin
 
     class Message:
         def __init__(self, value):

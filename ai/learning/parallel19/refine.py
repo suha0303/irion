@@ -4,13 +4,11 @@ import argparse
 import datetime
 import fcntl
 import hashlib
-import json
 import math
 import os
 import shutil
 import signal
 import subprocess
-import sys
 import time
 from pathlib import Path
 
@@ -105,6 +103,7 @@ def stopped(root):
 
 def worker(args):
     import torch
+
     from capstone_ai.training import seed_all
 
     from .fit import (

@@ -6,6 +6,7 @@ import json
 import math
 
 import numpy as np
+
 from execution.common import child, read, sha, write
 
 from .models import STUDY_REVISION, StudySpec

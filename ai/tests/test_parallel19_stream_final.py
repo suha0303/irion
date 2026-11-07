@@ -1,6 +1,7 @@
 import copy
 
 import pytest
+
 from learning.parallel19.control import read, sha, write
 from learning.parallel19.final_verify import selection_binding
 from learning.parallel19.refine import (

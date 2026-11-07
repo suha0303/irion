@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+
 from execution.common import read
 from learning.replay_validation import check_prediction_batch
 

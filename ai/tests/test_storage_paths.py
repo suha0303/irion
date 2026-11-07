@@ -10,8 +10,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-import x500_storage as paths
 
+import x500_storage as paths
 from pretrain import cli, collection, common
 
 

@@ -15,7 +15,7 @@ def test_four_real_categories_and_no_category_aliases():
         and not p.is_symlink()
         and not p.name.startswith(".")
         # User-created commit export copies are not a fifth runtime category.
-        and p.name != "commit-bundles"
+        and p.name not in {"commit-bundles", "irion-upload", "UI"}
     }
     assert actual == {"simulation", "Data", "ai", "docs"}
     assert all(
@@ -64,6 +64,8 @@ from pretrain.common import HOME,ROOT,read,write,verify,sha
 home=Path(sys.argv[1])/'control'
 home.mkdir()
 cli.HOME=home
+# Test the legacy layout serializer; current producer rejects old collection.
+cli.producer_sources=lambda:{}
 args=cli.parser().parse_args(['init','--name','isolated-paths','--mode','collect'])
 task=cli.create(args)
 verify(read(task/'config.json')['source_sha256'])

@@ -250,21 +250,26 @@ def test_expanded_memory_service_uses_available_minus_reserve(monkeypatch):
         cli.service_memory(cfg)
 
 
-def test_lr_menu_defaults_to_no_collection(monkeypatch):
-    from pretrain import training19
+def test_lr_menu_routes_to_current_collection_without_legacy_create(
+    monkeypatch,
+):
+    from pretrain import main_collection
 
-    inputs = iter(["1", "n"])
-    monkeypatch.setattr("builtins.input", lambda prompt: next(inputs))
-    monkeypatch.setattr(training19, "prepare_plan", lambda: Path("fixture"))
+    calls = []
+    monkeypatch.setattr("builtins.input", lambda prompt: "1")
     monkeypatch.setattr(
-        training19,
-        "create_task",
-        lambda *args: pytest.fail("LR start was declined"),
+        main_collection,
+        "user_start",
+        lambda scope: calls.append(scope) or Path("fixture"),
     )
+    monkeypatch.setattr(cli, "watch", lambda path: calls.append(path))
     monkeypatch.setattr(
-        cli, "start", lambda *args: pytest.fail("LR start was declined")
+        cli,
+        "create",
+        lambda *args: pytest.fail("Legacy collection must not run"),
     )
     cli.menu()
+    assert calls == ["lr108", Path("fixture")]
 
 
 def test_expanded_rss_over_eight_and_floor_preserved(tmp_path, monkeypatch):
@@ -361,30 +366,23 @@ def test_new_flight_finish_persists_count_and_duration(tmp_path, monkeypatch):
     assert persisted["stages"][-1]["elapsed_s"] >= 0
 
 
-def test_main_collection_menu_waits_for_final_user_approval(
-    monkeypatch, tmp_path
-):
-    from pretrain import training19, training19_main
+def test_main_collection_menu_propagates_current_admission_failure(monkeypatch):
+    from pretrain import main_collection
 
+    def blocked(scope):
+        assert scope == "main"
+        raise ValueError("fixture current admission blocked")
+
+    monkeypatch.setattr("builtins.input", lambda prompt: "2")
+    monkeypatch.setattr(main_collection, "user_start", blocked)
     monkeypatch.setattr(
-        training19_main, "AUTH", tmp_path / "missing-approval.json"
+        cli, "watch", lambda *args: pytest.fail("No blocked task to watch")
     )
-    inputs = iter(["2"])
-    monkeypatch.setattr("builtins.input", lambda prompt: next(inputs))
-    monkeypatch.setattr(
-        training19,
-        "create_task",
-        lambda *args: pytest.fail("Main approval is pending"),
-    )
-    monkeypatch.setattr(
-        cli, "create", lambda *args: pytest.fail("Old300 route must not run")
-    )
-    monkeypatch.setattr(
-        cli, "start", lambda *args: pytest.fail("Main approval is pending")
-    )
-    cli.menu()
+    with pytest.raises(ValueError, match="current admission blocked"):
+        cli.menu()
 
 
+@pytest.mark.parametrize("mode", ["test", "collect"])
 def test_expanded_memory_includes_postcollection_cpu(
     tmp_path, monkeypatch, mode
 ):
@@ -405,7 +403,8 @@ def test_expanded_memory_includes_postcollection_cpu(
 
 def test_create_collection_expansion_frozen_config(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "HOME", tmp_path)
-    # Config serialization only; no service or hash verification is run here.
+    monkeypatch.setattr(cli, "producer_sources", lambda: {})
+    # Legacy config serialization only; no service or hash verification is run here.
     monkeypatch.setattr(cli, "sha", lambda path: "fixture-digest")
     args = cli.parser().parse_args(
         [
@@ -883,7 +882,6 @@ def test_real_worker_on_small_synthetic_raw_stream(tmp_path):
     """Exercise the worker entry point and original engine, with72s synthetic data only."""
     common.package_imports()
     from capstone_ai.cli import process
-
     from pretrain.worker import execute
 
     fixtures = common.load(

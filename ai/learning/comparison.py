@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
+
 from execution.common import read, sha, write
 from execution.prepare import npz_headers
 

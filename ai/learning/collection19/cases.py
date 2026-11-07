@@ -4,10 +4,10 @@ import sys
 from pathlib import Path
 
 import numpy as np
+
 from capstone_ai.dataset import feature_transform, target_transform
 from capstone_ai.mapping import FEATURES, TARGETS
 from execution.common import child
-
 from learning.admission19 import (
     check_producer,
     check_protection,

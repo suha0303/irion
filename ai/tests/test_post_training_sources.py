@@ -3,10 +3,11 @@
 import copy
 
 import pytest
+from test_post_training import fresh_config
+
 from execution.common import sha, write
 from learning import comparison, study
 from learning import post_training as post
-from test_post_training import fresh_config
 
 
 def baseline_reference():

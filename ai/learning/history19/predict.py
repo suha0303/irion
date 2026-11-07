@@ -4,8 +4,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from execution.common import child, read, sha
 from safetensors.torch import load_file
+
+from execution.common import child, read, sha
 
 from .models import ModelSpec, make_model
 

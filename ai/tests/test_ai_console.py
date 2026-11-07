@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+
 from console import cli, control, environment, profile
 
 

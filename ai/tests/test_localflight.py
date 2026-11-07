@@ -2,6 +2,7 @@ import copy
 
 import numpy as np
 import pytest
+
 from localflight.catalog import MODEL_IDS, Catalog
 from localflight.profiles import eligibility, list_profiles, save_profile
 from localflight.runtime import Runtime

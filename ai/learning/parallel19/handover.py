@@ -6,7 +6,6 @@ input or existing evidence is modified. A separate READY seals the successor.
 """
 
 import argparse
-import json
 import os
 import signal
 import subprocess

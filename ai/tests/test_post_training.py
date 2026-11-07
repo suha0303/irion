@@ -7,6 +7,7 @@ import tarfile
 from types import SimpleNamespace
 
 import pytest
+
 from execution.common import read, sha, write
 from learning import comparison, operator
 from learning import post_training as post
@@ -508,8 +509,9 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
     policy_options = {}
     if policy_kind is not None:
         if policy_kind == "sensitivity":
-            import learning.sensitivity_data
             from test_post_training_sensitivity import policy
+
+            import learning.sensitivity_data
 
             monkeypatch.setattr(
                 learning.sensitivity_data,

@@ -6,6 +6,7 @@ import sys
 
 import numpy as np
 import pytest
+
 from execution import cli, common, engine, prepare, remote
 
 
@@ -480,6 +481,7 @@ def test_four_model_end_to_end_synthetic_cpu_and_fixed_development_evaluator(
         expected_models = comparison.MODELS
         cfg.update(
             revision=comparison.REVISION,
+            model_revision="explicit_dropout_v1",
             variants=comparison.VARIANTS,
             models=expected_models,
             seed=0,

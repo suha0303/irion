@@ -1,3 +1,5 @@
+"""Read source contracts, verify file identities, and write JSON evidence."""
+
 import hashlib
 import json
 import sys

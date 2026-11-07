@@ -5,9 +5,9 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
+
 from capstone_ai.mapping import FEATURES
 from execution.prepare import npz_headers
-
 from learning.history19.pilot import regular
 
 

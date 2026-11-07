@@ -5,6 +5,7 @@ import copy
 import numpy as np
 import pytest
 import torch
+
 from capstone_ai.training import loss, seed_all
 from execution import common
 from learning import comparison, study

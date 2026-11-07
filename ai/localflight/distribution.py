@@ -57,6 +57,26 @@ def copy_tree(source, destination, *, python_only=False):
         copy_regular(p, Path(destination) / relative)
 
 
+def ui_source(root):
+    """Find UI sources in a public clone or the developer upload checkout.
+
+    Args:
+        root: Project root containing the AI package.
+
+    Returns:
+        The UI source directory. Publication layout takes precedence.
+
+    Raises:
+        ValueError: Neither supported layout contains the backend package.
+    """
+    for candidate in (Path(root) / "UI", Path(root) / "irion-upload/UI"):
+        if (candidate / "backend/arion").is_dir():
+            return candidate
+    raise ValueError(
+        "UI backend sources are missing; use a complete project checkout"
+    )
+
+
 def build(output, ui_packages):
     if (
         sys.version_info[:2] != (3, 10)
@@ -90,9 +110,10 @@ def build(output, ui_packages):
         raise ValueError(
             "Insufficient free space for staging and application package"
         )
+    ui_root = ui_source(ROOT)
     if (
         not (ui_packages / "fastapi").is_dir()
-        or not (ROOT / "irion-upload/UI/frontend/dist/index.html").is_file()
+        or not (ui_root / "frontend/dist/index.html").is_file()
     ):
         raise ValueError(
             "Resolve UI dependencies into the isolated build folder and build the frontend first"
@@ -108,11 +129,11 @@ def build(output, ui_packages):
     ):
         copy_tree(ROOT / directory, output / directory, python_only=True)
     copy_tree(
-        ROOT / "irion-upload/UI/backend/arion",
+        ui_root / "backend/arion",
         output / "irion-upload/UI/backend/arion",
     )
     copy_tree(
-        ROOT / "irion-upload/UI/frontend/dist",
+        ui_root / "frontend/dist",
         output / "irion-upload/UI/frontend/dist",
     )
     frozen = catalog.root.relative_to(ROOT)
@@ -171,7 +192,7 @@ def build(output, ui_packages):
     licenses.mkdir()
     for label, path in [
         ("python", base / "lib/python3.10/LICENSE.txt"),
-        ("ui", ROOT / "irion-upload/LICENSE"),
+        ("ui", ui_root.parent / "LICENSE"),
     ]:
         if path.is_file():
             copy_regular(path, licenses / (label + ".txt"))

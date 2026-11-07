@@ -156,20 +156,24 @@ def save_profile(root, profile):
     try:
         with path.open("xb") as f:
             f.write(encoded + b"\n")
-    except FileExistsError:
+    except FileExistsError as error:
         if read_json(path) != profile:
-            raise ValueError("Immutable profile version conflict")
+            raise ValueError("Immutable profile version conflict") from error
     return dict(
         profile=profile, version=version, eligibility=eligibility(profile)
     )
 
 
 def list_profiles(root):
-    return [
-        dict(
-            profile=read_json(p),
-            version=p.stem,
-            eligibility=eligibility(read_json(p)),
+    """Return each stored version with eligibility from the same JSON read."""
+    records = []
+    for path in sorted((Path(root) / "aircraft").glob("*/*.json")):
+        profile = read_json(path)
+        records.append(
+            dict(
+                profile=profile,
+                version=path.stem,
+                eligibility=eligibility(profile),
+            )
         )
-        for p in sorted((Path(root) / "aircraft").glob("*/*.json"))
-    ]
+    return records

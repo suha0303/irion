@@ -41,14 +41,15 @@ def prepare(task, output, cohort="final"):
     output.mkdir(parents=True, exist_ok=False)
     protection = read(root / "protection.json")
     producer = read(task / "expected-producer.json")
-    scaler = dict(np.load(root / "scaler.npz", allow_pickle=False))
+    with np.load(root / "scaler.npz", allow_pickle=False) as archive:
+        scaler = dict(archive)
     whole = {}
     for p in whole_manifest_paths(root):
         for row in read(p)["runs"]:
             whole[row["run_id"]] = (row, p.parent)
     rows = [
-        json.loads(l)
-        for l in (root / "online-index.jsonl").read_text().splitlines()
+        json.loads(line)
+        for line in (root / "online-index.jsonl").read_text().splitlines()
     ]
     selected = [
         r

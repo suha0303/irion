@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+
 from capstone_ai.mapping import FEATURES, TARGETS
 from learning import admission19 as admission
 from learning.history19.data import (

@@ -5,6 +5,8 @@ import json
 
 import numpy as np
 import pytest
+from test_wind_metadata import fixture as wind_fixture
+
 from capstone_ai.mapping import FEATURES, TARGETS
 from learning.admission19 import (
     MISSION_POLICY,
@@ -19,7 +21,6 @@ from learning.history19.pilot_connector import (
     prepare_request,
 )
 from learning.wind_metadata import KINDS
-from test_wind_metadata import fixture as wind_fixture
 
 
 def make_request(folder, *, phase="case", paired=False):

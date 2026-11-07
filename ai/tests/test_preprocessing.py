@@ -4,6 +4,7 @@ import math
 from pathlib import Path
 
 import pytest
+
 from capstone_ai.mapping import mapped
 from capstone_ai.preprocessing import LowPass, Preprocessor
 from capstone_ai.source import DirectoryTail, Lines, dump, read_json

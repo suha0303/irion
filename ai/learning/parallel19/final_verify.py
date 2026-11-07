@@ -6,7 +6,6 @@ Final labels never enter model.forward, calibration, or model/LR selection.
 
 import argparse
 import dataclasses
-import json
 import time
 from pathlib import Path
 
@@ -260,14 +259,14 @@ def predict(m, entry, root, rows, scaler, out, phase):
 
 def run(args):
     import torch
+    from safetensors.torch import load_file
+
     from capstone_ai.detection_protocol import (
         event_result,
         fit_calibration,
         point_metrics,
         score_sequence,
     )
-    from safetensors.torch import load_file
-
     from learning.run_health19.data import Run
     from learning.run_health19.scoring import Calibration
 
@@ -291,7 +290,7 @@ def run(args):
     cache = read(root / "cache.json")
     if sha(root / "cache.json") != plan[cache_key]:
         raise ValueError("Final input inventory changed")
-    selection = selection_binding(plan, request, cohort, args.entry)
+    selection_binding(plan, request, cohort, args.entry)
     selected = request["selected"]
     folder = Path(selected["folder"])
     if sha(folder / "model.safetensors") != selected["model_sha256"]:
@@ -300,7 +299,8 @@ def run(args):
         Path(plan["inputs"]) / "main/scaler.npz"
     ):
         raise ValueError("Train scaler mismatch")
-    scaler = dict(np.load(root / "scaler.npz", allow_pickle=False))
+    with np.load(root / "scaler.npz", allow_pickle=False) as archive:
+        scaler = dict(archive)
     rows = cache["runs"]
     validation = [r for r in rows if r["role"] == "normal_validation"]
     calibration = [r for r in rows if r["role"] == "normal_calibration"]

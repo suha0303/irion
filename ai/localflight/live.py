@@ -13,6 +13,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+
 from capstone_ai.mapping import FEATURES
 
 from .analysis import analyze, load_runtime

@@ -5,9 +5,10 @@ import json
 
 import numpy as np
 import pytest
+from test_preprocessing import CONFIG, META, events, run
+
 from capstone_ai import live_inference as live
 from capstone_ai.source import dump, read_json
-from test_preprocessing import CONFIG, META, events, run
 
 
 @pytest.mark.parametrize("stop_counts", [[5], [2, 2, 1]])

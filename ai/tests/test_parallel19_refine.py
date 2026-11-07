@@ -1,12 +1,10 @@
-import copy
-import json
 import subprocess
 import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
-from learning.parallel19.final_verify import events, predict, summarize
+
+from learning.parallel19.final_verify import events, predict
 from learning.parallel19.handover import identity
 from learning.parallel19.refine import candidates, finish_round, key
 
@@ -115,6 +113,7 @@ def test_final_predict_uses_only_numeric_features_and_saves_predictions(
     tmp_path, monkeypatch, task
 ):
     import torch
+
     from learning.parallel19.control import sha
     from learning.parallel19.fit import model
 

@@ -6,10 +6,11 @@ from contextlib import nullcontext
 from types import SimpleNamespace
 
 import pytest
+from test_post_training import config, fresh_config
+
 from execution.common import read, sha, write
 from learning import operator
 from learning import post_training as post
-from test_post_training import config, fresh_config
 
 
 def diagnostic_config():

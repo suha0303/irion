@@ -8,6 +8,7 @@ import hashlib
 import json
 
 import numpy as np
+
 from capstone_ai.detection import DOMAINS
 from capstone_ai.detection_protocol import score_sequence
 from capstone_ai.mapping import TARGETS

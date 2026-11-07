@@ -2,11 +2,12 @@ import json
 
 import numpy as np
 import pytest
+from test_localflight_adapt import flight
+
 from localflight import calibration
 from localflight.adapt import fit as adapt
 from localflight.analysis import analyze
 from localflight.catalog import DEFAULT_BUNDLE, digest
-from test_localflight_adapt import flight
 
 
 def make_flight(root, name, role, *, clock=None):
