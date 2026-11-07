@@ -5,13 +5,21 @@ import json
 
 import numpy as np
 import pytest
-from test_wind_metadata import fixture as wind_fixture
-
 from capstone_ai.mapping import FEATURES, TARGETS
-from learning.admission19 import MISSION_POLICY, ONLINE_UNITS, PILOT, check_protection, partition
+from learning.admission19 import (
+    MISSION_POLICY,
+    ONLINE_UNITS,
+    PILOT,
+    check_protection,
+    partition,
+)
 from learning.history19 import pilot
-from learning.history19.pilot_connector import native_mission_interval, prepare_request
+from learning.history19.pilot_connector import (
+    native_mission_interval,
+    prepare_request,
+)
 from learning.wind_metadata import KINDS
+from test_wind_metadata import fixture as wind_fixture
 
 
 def make_request(folder, *, phase="case", paired=False):
@@ -33,7 +41,9 @@ def make_request(folder, *, phase="case", paired=False):
         source_manifest_sha256=source["sha256"],
         runtime_sha256=runtime["sha256"],
     )
-    native_policy = put("native-policy", dict(schema="unit.native.policy/1", fixture_only=True))
+    native_policy = put(
+        "native-policy", dict(schema="unit.native.policy/1", fixture_only=True)
+    )
     policy = dict(
         schema="drone-ai.paired-source-clock-policy/1",
         status="FROZEN",
@@ -70,13 +80,20 @@ def make_request(folder, *, phase="case", paired=False):
             pair_id=pair_id,
             seed=seed,
             operation_sha256="d" * 64,
-            lineage=["case:" + cid, "pair:" + pair_id, "group:" + pair_id, "retry:" + cid],
+            lineage=[
+                "case:" + cid,
+                "pair:" + pair_id,
+                "group:" + pair_id,
+                "retry:" + cid,
+            ],
         )
 
     for kind in sorted(KINDS):
         for env in ("calm", "low", "strong"):
             i = len(cases)
-            cases.append(case(i, "normal_base", kind, env, "base-" + str(i), 1000 + i))
+            cases.append(
+                case(i, "normal_base", kind, env, "base-" + str(i), 1000 + i)
+            )
     for i in range(9):
         cases.append(
             case(
@@ -116,7 +133,10 @@ def make_request(folder, *, phase="case", paired=False):
     ledger = dict(
         schema="drone-ai.pilot45.ledger/1",
         task_id=pilot.TASK,
-        cases=[dict(case_id=c["case_id"], status="pending", attempts=[]) for c in cases],
+        cases=[
+            dict(case_id=c["case_id"], status="pending", attempts=[])
+            for c in cases
+        ],
     )
 
     def member(rid):
@@ -131,7 +151,10 @@ def make_request(folder, *, phase="case", paired=False):
         )
         execution = put(
             rid + "-execution",
-            [dict(state="mission", sim_time=1.0), dict(state="landing", sim_time=22.0)],
+            [
+                dict(state="mission", sim_time=1.0),
+                dict(state="landing", sim_time=22.0),
+            ],
         )
         origin = dict(
             schema=policy["native_receipt_schema"],
@@ -147,7 +170,9 @@ def make_request(folder, *, phase="case", paired=False):
             actual_source_ack_us=1000000,
             source_acknowledged=True,
         )
-        return dict(run=run, execution=execution, origin=put(rid + "-origin", origin))
+        return dict(
+            run=run, execution=execution, origin=put(rid + "-origin", origin)
+        )
 
     members = [member("dev" + str(i)) for i in range(6)]
     comparisons = []
@@ -166,7 +191,9 @@ def make_request(folder, *, phase="case", paired=False):
                         normal_run_id="dev" + str(i * 2),
                         anomaly_run_id="dev" + str(i * 2 + 1),
                         policy_id=policy["policy_id"],
-                        source_manifest_sha256=producer["source_manifest_sha256"],
+                        source_manifest_sha256=producer[
+                            "source_manifest_sha256"
+                        ],
                         runtime_sha256=producer["runtime_sha256"],
                     ),
                 ),
@@ -187,7 +214,12 @@ def make_request(folder, *, phase="case", paired=False):
     registry["entries"] += [
         dict(
             identities=["run:dev" + str(i)],
-            forbidden_uses=["pilot_input_check", "fit", "calibration", "final_test"],
+            forbidden_uses=[
+                "pilot_input_check",
+                "fit",
+                "calibration",
+                "final_test",
+            ],
         )
         for i in range(6)
     ]
@@ -195,12 +227,21 @@ def make_request(folder, *, phase="case", paired=False):
     registry["entries"] += [
         dict(
             identities=["run:" + rid],
-            forbidden_uses=["pilot_input_check", "fit", "calibration", "final_test"],
+            forbidden_uses=[
+                "pilot_input_check",
+                "fit",
+                "calibration",
+                "final_test",
+            ],
         )
-        for rid in pilot.json_file(pilot.HISTORICAL_EXCLUSIONS)["raw_attempt_ids"]
+        for rid in pilot.json_file(pilot.HISTORICAL_EXCLUSIONS)[
+            "raw_attempt_ids"
+        ]
     ]
     case_member = member(rid)
-    current = next(r for r in ledger["cases"] if r["case_id"] == chosen["case_id"])
+    current = next(
+        r for r in ledger["cases"] if r["case_id"] == chosen["case_id"]
+    )
     current.update(
         status="completed",
         attempts=[
@@ -215,7 +256,10 @@ def make_request(folder, *, phase="case", paired=False):
         ],
     )
     registry["entries"].append(
-        dict(identities=["run:" + rid], forbidden_uses=["fit", "calibration", "final_test"])
+        dict(
+            identities=["run:" + rid],
+            forbidden_uses=["fit", "calibration", "final_test"],
+        )
     )
     capsule = put(
         "capsule",
@@ -308,16 +352,23 @@ def make_request(folder, *, phase="case", paired=False):
         propulsion_selection=put("propulsion", propulsion),
     )
     integrity = {}
-    for alias, name in [("run", "run.json"), ("execution", "evaluation/execution.json")]:
+    for alias, name in [
+        ("run", "run.json"),
+        ("execution", "evaluation/execution.json"),
+    ]:
         ref = case_member[alias]
-        integrity[name] = dict(size=(folder / ref["path"]).stat().st_size, sha256=ref["sha256"])
+        integrity[name] = dict(
+            size=(folder / ref["path"]).stat().st_size, sha256=ref["sha256"]
+        )
     for alias, name in [
         ("scenario", "evaluation/scenario.json"),
         ("battery_selection", "evaluation/battery-selection.json"),
         ("propulsion_selection", "evaluation/propulsion-selection.json"),
     ]:
         ref = request["refs"][alias]
-        integrity[name] = dict(size=(folder / ref["path"]).stat().st_size, sha256=ref["sha256"])
+        integrity[name] = dict(
+            size=(folder / ref["path"]).stat().st_size, sha256=ref["sha256"]
+        )
     request["refs"]["raw_integrity"] = put("integrity", integrity)
     mission = dict(
         policy=MISSION_POLICY,
@@ -360,10 +411,14 @@ def make_request(folder, *, phase="case", paired=False):
                 quality=dict.fromkeys(FEATURES, "valid"),
                 values=dict(zip(FEATURES, x.tolist())),
                 operating_state="airborne",
-                lineage=dict(sample=dict(sample_time_us=int(t), available_time_us=int(t))),
+                lineage=dict(
+                    sample=dict(sample_time_us=int(t), available_time_us=int(t))
+                ),
             )
             f.write(json.dumps(frame) + "\n")
-    request["refs"]["canonical_frames"] = dict(path=canonical.name, sha256=pilot.sha(canonical))
+    request["refs"]["canonical_frames"] = dict(
+        path=canonical.name, sha256=pilot.sha(canonical)
+    )
     run_npz = folder / "run.npz"
     np.savez(run_npz, values=values, time_us=times)
     run_row = {**row, "path": run_npz.name, "sha256": pilot.sha(run_npz)}
@@ -386,11 +441,18 @@ def make_request(folder, *, phase="case", paired=False):
     transformed[:, 17] /= 4
     transformed[:, 18] /= 12
     at = {int(t): i for i, t in enumerate(times)}
-    X = np.array([[transformed[at[int(t) + j * 100000]] for j in range(-99, 1)] for t in origins])
+    X = np.array(
+        [
+            [transformed[at[int(t) + j * 100000]] for j in range(-99, 1)]
+            for t in origins
+        ]
+    )
     Y = np.array(
         [
             [
-                transformed[at[int(t) + j * 100000]][[FEATURES.index(n) for n in TARGETS]]
+                transformed[at[int(t) + j * 100000]][
+                    [FEATURES.index(n) for n in TARGETS]
+                ]
                 for j in range(1, 11)
             ]
             for t in origins
@@ -456,12 +518,20 @@ def result(path, capsys):
 def test_synthetic_prerequisites_never_start_real_pilot(tmp_path, capsys):
     path = make_request(tmp_path / "data", phase="prerequisites")
     code, r = result(path, capsys)
-    assert code == 0 and r["status"] == "SYNTHETIC_PREREQUISITES_CHECKED_NO_CASE_DATA"
-    assert r["actual_data_verified"] is False and r["usable_to_start_real_pilot"] is False
+    assert (
+        code == 0
+        and r["status"] == "SYNTHETIC_PREREQUISITES_CHECKED_NO_CASE_DATA"
+    )
+    assert (
+        r["actual_data_verified"] is False
+        and r["usable_to_start_real_pilot"] is False
+    )
     assert r["ledger_counts"]["planned_cases"] == 45
 
 
-def test_case_both_views_compare_to_unscaled_canonical_without_model(tmp_path, capsys):
+def test_case_both_views_compare_to_unscaled_canonical_without_model(
+    tmp_path, capsys
+):
     code, r = result(make_request(tmp_path / "data"), capsys)
     assert code == 0, r
     assert (
@@ -474,16 +544,32 @@ def test_case_both_views_compare_to_unscaled_canonical_without_model(tmp_path, c
 
 
 @pytest.mark.parametrize(
-    "damage", ["missing_policy", "null_criterion", "missing_development", "null_actual_ack"]
+    "damage",
+    [
+        "missing_policy",
+        "null_criterion",
+        "missing_development",
+        "null_actual_ack",
+    ],
 )
-def test_missing_or_null_native_evidence_stays_pending(tmp_path, capsys, damage):
+def test_missing_or_null_native_evidence_stays_pending(
+    tmp_path, capsys, damage
+):
     path = make_request(tmp_path / "data")
     if damage in {"missing_policy", "missing_development"}:
         r = json.loads(path.read_text())
-        r["refs"]["paired_policy" if damage == "missing_policy" else "development_receipt"] = None
+        r["refs"][
+            "paired_policy"
+            if damage == "missing_policy"
+            else "development_receipt"
+        ] = None
         path.write_text(json.dumps(r))
     elif damage == "null_criterion":
-        edit(path, "paired_policy", lambda d: d["limits"].update(wind_rms_mps=None))
+        edit(
+            path,
+            "paired_policy",
+            lambda d: d["limits"].update(wind_rms_mps=None),
+        )
     else:
         r = json.loads(path.read_text())
         ref = r["case_origin"]["origin"]
@@ -498,28 +584,45 @@ def test_missing_or_null_native_evidence_stays_pending(tmp_path, capsys, damage)
 
 
 @pytest.mark.parametrize(
-    "damage", ["capsule", "drop_case", "reuse_success", "unprotected_pilot", "fake_pair_pass"]
+    "damage",
+    [
+        "capsule",
+        "drop_case",
+        "reuse_success",
+        "unprotected_pilot",
+        "fake_pair_pass",
+    ],
 )
 def test_capsule_denominators_lineage_and_global_exclusion_cannot_be_bypassed(
     tmp_path, capsys, damage
 ):
     path = make_request(tmp_path / "data")
     if damage == "capsule":
-        edit(path, "capsule", lambda d: d["files"].update({pilot.CRITICAL[0]: "0" * 64}))
+        edit(
+            path,
+            "capsule",
+            lambda d: d["files"].update({pilot.CRITICAL[0]: "0" * 64}),
+        )
     elif damage == "drop_case":
         edit(path, "ledger", lambda d: d["cases"].pop())
     elif damage == "reuse_success":
 
         def mutate(d):
             a = copy.deepcopy(d["cases"][0]["attempts"][0])
-            a.update(index=2, run_id="regenerated", parent_attempt_id="pilot-raw")
+            a.update(
+                index=2, run_id="regenerated", parent_attempt_id="pilot-raw"
+            )
             d["cases"][0]["attempts"].append(a)
 
         edit(path, "ledger", mutate)
     elif damage == "unprotected_pilot":
         edit(path, "registry", lambda d: d["entries"].pop())
     elif damage == "fake_pair_pass":
-        edit(path, "development_receipt", lambda d: d["comparisons"][0].update(wind_peak_mps=0.1))
+        edit(
+            path,
+            "development_receipt",
+            lambda d: d["comparisons"][0].update(wind_peak_mps=0.1),
+        )
     code, r = result(path, capsys)
     assert code == 1 and r["status"] == "FAILED_INPUT_CHECK"
 
@@ -527,7 +630,9 @@ def test_capsule_denominators_lineage_and_global_exclusion_cannot_be_bypassed(
 def test_prior_failure_remains_in_full_denominator(tmp_path, capsys):
     path = make_request(tmp_path / "data")
     request = json.loads(path.read_text())
-    manifest = json.loads((path.parent / request["refs"]["pilot_manifest"]["path"]).read_text())
+    manifest = json.loads(
+        (path.parent / request["refs"]["pilot_manifest"]["path"]).read_text()
+    )
     case = manifest["cases"][1]
 
     def failed(d):
@@ -551,7 +656,10 @@ def test_prior_failure_remains_in_full_denominator(tmp_path, capsys):
         path,
         "registry",
         lambda d: d["entries"].append(
-            dict(identities=["run:failed-raw"], forbidden_uses=["fit", "calibration", "final_test"])
+            dict(
+                identities=["run:failed-raw"],
+                forbidden_uses=["fit", "calibration", "final_test"],
+            )
         ),
     )
     code, r = result(path, capsys)
@@ -562,8 +670,12 @@ def test_prior_failure_remains_in_full_denominator(tmp_path, capsys):
     )
 
 
-@pytest.mark.parametrize("damage", ["double_voltage", "gap", "future_available", "receipt_shift"])
-def test_no_double_transform_zero_fill_shift_or_future_input(tmp_path, capsys, damage):
+@pytest.mark.parametrize(
+    "damage", ["double_voltage", "gap", "future_available", "receipt_shift"]
+)
+def test_no_double_transform_zero_fill_shift_or_future_input(
+    tmp_path, capsys, damage
+):
     path = make_request(tmp_path / "data")
     request = json.loads(path.read_text())
     if damage == "double_voltage":
@@ -585,7 +697,9 @@ def test_no_double_transform_zero_fill_shift_or_future_input(tmp_path, capsys, d
         if damage == "gap":
             rows.pop(110)
         else:
-            rows[110]["lineage"]["sample"]["available_time_us"] = rows[110]["time_us"] + 1
+            rows[110]["lineage"]["sample"]["available_time_us"] = (
+                rows[110]["time_us"] + 1
+            )
         p.write_text("".join(json.dumps(r) + "\n" for r in rows))
         ref["sha256"] = pilot.sha(p)
     else:
@@ -606,7 +720,9 @@ def test_paired_case_never_passes_without_completed_partner(tmp_path, capsys):
 
 
 @pytest.mark.parametrize("damage", [None, "other_pair"])
-def test_pair_receipt_binds_both_real_members_and_native_comparison(tmp_path, capsys, damage):
+def test_pair_receipt_binds_both_real_members_and_native_comparison(
+    tmp_path, capsys, damage
+):
     path = make_request(tmp_path / "data", paired=True)
     request = json.loads(path.read_text())
 
@@ -673,7 +789,9 @@ def test_pair_receipt_binds_both_real_members_and_native_comparison(tmp_path, ca
             normal_run_id="pilot-raw",
             anomaly_run_id=raw_id,
             passed=True,
-            normal_origin_receipt_sha256=request["case_origin"]["origin"]["sha256"],
+            normal_origin_receipt_sha256=request["case_origin"]["origin"][
+                "sha256"
+            ],
             native_evidence=put("native-pilot-comparison", native),
             **metrics,
         ),
@@ -709,7 +827,9 @@ def test_historical77_exclusion_cannot_disappear(tmp_path, capsys):
         path,
         "registry",
         lambda d: d.update(
-            entries=[r for r in d["entries"] if "run:" + old not in r["identities"]]
+            entries=[
+                r for r in d["entries"] if "run:" + old not in r["identities"]
+            ]
         ),
     )
     code, receipt = result(path, capsys)
@@ -723,7 +843,11 @@ def test_path_connector_uses_actual_completion_and_never_repairs_false_receipts(
     source = make_request(tmp_path / "data")
     request = json.loads(source.read_text())
     if not passed:
-        edit(source, "native_completion", lambda d: d.update(passed=False, allow_pilot45=False))
+        edit(
+            source,
+            "native_completion",
+            lambda d: d.update(passed=False, allow_pilot45=False),
+        )
         request = json.loads(source.read_text())
     bundle = dict(
         schema="drone-ai.pilot45.connector/1",
@@ -744,14 +868,17 @@ def test_path_connector_uses_actual_completion_and_never_repairs_false_receipts(
     else:
         report = prepare_request(bundle_path, output)
         assert (
-            not report["actual_data_verified"] and report["status"] == "REQUEST_WRITTEN_NOT_CHECKED"
+            not report["actual_data_verified"]
+            and report["status"] == "REQUEST_WRITTEN_NOT_CHECKED"
         )
         code, receipt = result(output, capsys)
         assert code == 0 and receipt["status"].startswith("SYNTHETIC_")
 
 
 @pytest.mark.parametrize("damage", ["allow", "count", "source"])
-def test_native_completion_cannot_be_replaced_by_a_passed_projection(tmp_path, capsys, damage):
+def test_native_completion_cannot_be_replaced_by_a_passed_projection(
+    tmp_path, capsys, damage
+):
     path = make_request(tmp_path / "data")
     changes = {
         "allow": dict(allow_pilot45=None),
@@ -764,10 +891,14 @@ def test_native_completion_cannot_be_replaced_by_a_passed_projection(tmp_path, c
     assert receipt["actual_data_verified"] is False
 
 
-def test_native_pair_coverage_failure_is_not_hidden_by_zero_metrics(tmp_path, capsys):
+def test_native_pair_coverage_failure_is_not_hidden_by_zero_metrics(
+    tmp_path, capsys
+):
     path = make_request(tmp_path / "data")
     request = json.loads(path.read_text())
-    development_path = path.parent / request["refs"]["development_receipt"]["path"]
+    development_path = (
+        path.parent / request["refs"]["development_receipt"]["path"]
+    )
     development = json.loads(development_path.read_text())
     ref = development["comparisons"][0]["native_evidence"]
     native_path = path.parent / ref["path"]
@@ -776,14 +907,20 @@ def test_native_pair_coverage_failure_is_not_hidden_by_zero_metrics(tmp_path, ca
     native_path.write_text(json.dumps(native))
     ref["sha256"] = pilot.sha(native_path)
     development_path.write_text(json.dumps(development))
-    request["refs"]["development_receipt"]["sha256"] = pilot.sha(development_path)
+    request["refs"]["development_receipt"]["sha256"] = pilot.sha(
+        development_path
+    )
     path.write_text(json.dumps(request))
     code, receipt = result(path, capsys)
     assert code == 2 and "coverage gates" in receipt["reason"]
 
 
-@pytest.mark.parametrize("damage", [None, "missing_actual", "short", "late", "policy_hash"])
-def test_native_interval_preserves_actual_landing_tail_without_request_fallback(tmp_path, damage):
+@pytest.mark.parametrize(
+    "damage", [None, "missing_actual", "short", "late", "policy_hash"]
+)
+def test_native_interval_preserves_actual_landing_tail_without_request_fallback(
+    tmp_path, damage
+):
     path = make_request(tmp_path / "data")
     request = json.loads(path.read_text())
     policy_path = path.parent / request["refs"]["paired_policy"]["path"]
@@ -808,8 +945,12 @@ def test_native_interval_preserves_actual_landing_tail_without_request_fallback(
     policy_path.write_text(json.dumps(policy))
     native_path = path.parent / policy["mission_source"]
     native_path.parent.mkdir()
-    origin = json.loads((path.parent / request["case_origin"]["origin"]["path"]).read_text())
-    origin.update(actual_mission_start_us=60000000, actual_landing_start_us=540065000)
+    origin = json.loads(
+        (path.parent / request["case_origin"]["origin"]["path"]).read_text()
+    )
+    origin.update(
+        actual_mission_start_us=60000000, actual_landing_start_us=540065000
+    )
     if damage == "missing_actual":
         origin["actual_landing_start_us"] = None
         origin["requested_landing_us"] = 540000000
@@ -831,7 +972,10 @@ def test_native_interval_preserves_actual_landing_tail_without_request_fallback(
     else:
         interval = native_mission_interval(native_path, **arguments)
         assert interval["start_us"] == 60000000
-        assert interval["end_us_exclusive"] == 540065000 and interval["landing_tail_us"] == 65000
+        assert (
+            interval["end_us_exclusive"] == 540065000
+            and interval["landing_tail_us"] == 65000
+        )
         assert interval["source_sha256"] == pilot.sha(native_path)
 
 
@@ -842,14 +986,21 @@ def test_pilot_cannot_be_relabelled_for_fit_or_final():
     registry = dict(
         schema="drone-ai.global-protection/1",
         entries=[
-            dict(identities=["run:pilot"], forbidden_uses=["fit", "calibration", "final_test"])
+            dict(
+                identities=["run:pilot"],
+                forbidden_uses=["fit", "calibration", "final_test"],
+            )
         ],
     )
     with pytest.raises(ValueError):
         check_protection(
-            [dict(run_id="pilot", lineage=[], role="normal_train")], registry, usage="fit"
+            [dict(run_id="pilot", lineage=[], role="normal_train")],
+            registry,
+            usage="fit",
         )
     with pytest.raises(ValueError):
         check_protection(
-            [dict(run_id="renamed", lineage=[], cohort=PILOT)], registry, usage="final_test"
+            [dict(run_id="renamed", lineage=[], cohort=PILOT)],
+            registry,
+            usage="final_test",
         )

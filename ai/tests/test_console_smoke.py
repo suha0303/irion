@@ -46,7 +46,8 @@ def fixture(upstream):
         dict(
             runs=rows,
             hashes={
-                name: sha(dataset / name) for name in ("normal_train.npz", "normal_validation.npz")
+                name: sha(dataset / name)
+                for name in ("normal_train.npz", "normal_validation.npz")
             },
         ),
     )
@@ -59,9 +60,18 @@ def fixture(upstream):
             train_only_scaler_verified=True,
         ),
     )
-    write(evidence / "frozen-manifest.json", dict(status="DATA_FROZEN", runs=rows))
-    write(evidence / "dataset-seal.json", {p.name: sha(p) for p in dataset.iterdir()})
-    handoff = dict(training_eligible=True, scaler_scope="all_selected_normal_train", run_count=2)
+    write(
+        evidence / "frozen-manifest.json", dict(status="DATA_FROZEN", runs=rows)
+    )
+    write(
+        evidence / "dataset-seal.json",
+        {p.name: sha(p) for p in dataset.iterdir()},
+    )
+    handoff = dict(
+        training_eligible=True,
+        scaler_scope="all_selected_normal_train",
+        run_count=2,
+    )
     for name, key in (
         ("quality.json", "quality_sha256"),
         ("frozen-manifest.json", "frozen_manifest_sha256"),
@@ -74,7 +84,10 @@ def fixture(upstream):
 
 def reseal(upstream):
     dataset, evidence = upstream / "dataset", upstream / "evidence"
-    write(evidence / "dataset-seal.json", {p.name: sha(p) for p in dataset.iterdir()})
+    write(
+        evidence / "dataset-seal.json",
+        {p.name: sha(p) for p in dataset.iterdir()},
+    )
     handoff = read(evidence / "handoff.json")
     for name, key in (
         ("quality.json", "quality_sha256"),
@@ -109,30 +122,49 @@ def cpu_input(root):
     return cfg
 
 
-def test_bounded_sealed_normal_sample_without_full_role_load(tmp_path, monkeypatch):
+def test_bounded_sealed_normal_sample_without_full_role_load(
+    tmp_path, monkeypatch
+):
     upstream = tmp_path / "upstream"
     arrays = fixture(upstream)
-    before = {str(p.relative_to(upstream)): sha(p) for p in upstream.rglob("*") if p.is_file()}
+    before = {
+        str(p.relative_to(upstream)): sha(p)
+        for p in upstream.rglob("*")
+        if p.is_file()
+    }
     original = smoke.np.load
 
     def load(path, **kwargs):
-        assert Path(path).name == "scaler.npz", "whole-role np.load is forbidden in smoke sampler"
+        assert Path(path).name == "scaler.npz", (
+            "whole-role np.load is forbidden in smoke sampler"
+        )
         return original(path, **kwargs)
 
     monkeypatch.setattr(smoke.np, "load", load)
     report = smoke.sample_input(upstream, tmp_path / "sample.npz")
-    assert report["final_test_used"] is report["truth_used"] is report["scaler_fitted"] is False
+    assert (
+        report["final_test_used"]
+        is report["truth_used"]
+        is report["scaler_fitted"]
+        is False
+    )
     assert report["throughput_measured"] is False
     assert report["roles"]["normal_train"]["sampled_windows"] == 4
     assert report["roles"]["normal_train"]["source_windows"] == 7
     with original(tmp_path / "sample.npz", allow_pickle=False) as sample:
-        for prefix, role in (("train", "normal_train"), ("validation", "normal_validation")):
+        for prefix, role in (
+            ("train", "normal_train"),
+            ("validation", "normal_validation"),
+        ):
             for key in ("X", "C", "Y"):
                 np.testing.assert_array_equal(
-                    sample[prefix + "_" + key], (arrays[role][key][:4] - 0.3) / 2
+                    sample[prefix + "_" + key],
+                    (arrays[role][key][:4] - 0.3) / 2,
                 )
     assert before == {
-        str(p.relative_to(upstream)): sha(p) for p in upstream.rglob("*") if p.is_file()
+        str(p.relative_to(upstream)): sha(p)
+        for p in upstream.rglob("*")
+        if p.is_file()
     }
 
 
@@ -166,7 +198,11 @@ def test_sample_rejects_cross_split_lineage(tmp_path):
 
 @pytest.mark.parametrize(
     "field,value",
-    [("final_test_used", True), ("train_only_scaler_verified", False), ("passed", False)],
+    [
+        ("final_test_used", True),
+        ("train_only_scaler_verified", False),
+        ("passed", False),
+    ],
 )
 def test_sample_rejects_unapproved_quality(tmp_path, field, value):
     upstream = tmp_path / "upstream"
@@ -230,7 +266,9 @@ def test_changed_sources_stop_before_optimizer(tmp_path):
 def test_cpu_fresh_process_exact_save_restore_both_models(tmp_path):
     root = tmp_path / "trial"
     cfg = cpu_input(root)
-    proofs = smoke.restore_gate(root, cfg, Progress(root / "progress.json", hours=0.1))
+    proofs = smoke.restore_gate(
+        root, cfg, Progress(root / "progress.json", hours=0.1)
+    )
     assert list(proofs) == ["lstm", "transformer"]
     assert all(all(row["checks"].values()) for row in proofs.values())
     assert sum(row["optimizer_steps_executed"] for row in proofs.values()) == 16
@@ -253,7 +291,9 @@ def test_bad_child_scope_and_phase_preserves_prior_files(tmp_path):
     assert cfg == before == read(root / "smoke.json")
 
 
-def test_worker_allocation_failure_preserved_before_data_or_model(tmp_path, monkeypatch):
+def test_worker_allocation_failure_preserved_before_data_or_model(
+    tmp_path, monkeypatch
+):
     from console import profile
 
     output = tmp_path / "output"
@@ -276,7 +316,9 @@ def test_worker_allocation_failure_preserved_before_data_or_model(tmp_path, monk
         raise ValueError("allocation not verified")
 
     monkeypatch.setattr(smoke, "_verify_runtime", reject)
-    monkeypatch.setattr(smoke, "sample_input", lambda *args: calls.append("data"))
+    monkeypatch.setattr(
+        smoke, "sample_input", lambda *args: calls.append("data")
+    )
     with pytest.raises(ValueError, match="allocation not verified"):
         smoke.run(profile_file, root)
     assert calls == ["allocation"]
@@ -344,16 +386,26 @@ def legacy_fixture(upstream):
 def test_legacy_snapshot_only_admits_tiny_functional_sample(tmp_path):
     upstream = tmp_path / "historical-input"
     legacy_fixture(upstream)
-    before = {str(p.relative_to(upstream)): sha(p) for p in upstream.rglob("*") if p.is_file()}
+    before = {
+        str(p.relative_to(upstream)): sha(p)
+        for p in upstream.rglob("*")
+        if p.is_file()
+    }
     result = smoke.sample_input(upstream, tmp_path / "sample.npz")
     provenance = result["provenance"]
-    assert provenance["kind"] == "legacy_admitted_104_snapshot_functionality_only"
+    assert (
+        provenance["kind"] == "legacy_admitted_104_snapshot_functionality_only"
+    )
     assert provenance["quality_evidence_reverified"] is False
-    assert provenance["training_eligible"] is result["training_eligible"] is False
+    assert (
+        provenance["training_eligible"] is result["training_eligible"] is False
+    )
     assert "full quality evidence" in provenance["note"]
     assert provenance["original_handoff_sha256"] == "a" * 64
     assert before == {
-        str(p.relative_to(upstream)): sha(p) for p in upstream.rglob("*") if p.is_file()
+        str(p.relative_to(upstream)): sha(p)
+        for p in upstream.rglob("*")
+        if p.is_file()
     }
 
 
@@ -392,7 +444,9 @@ def test_broken_full_evidence_never_falls_back_to_legacy(tmp_path):
         smoke.sample_input(upstream, tmp_path / "sample.npz")
 
 
-def test_gpu_telemetry_closes_on_gate_failure_without_declaring_success(tmp_path, monkeypatch):
+def test_gpu_telemetry_closes_on_gate_failure_without_declaring_success(
+    tmp_path, monkeypatch
+):
     from console import profile
     from learning import telemetry
 
@@ -410,7 +464,9 @@ def test_gpu_telemetry_closes_on_gate_failure_without_declaring_success(tmp_path
         ),
     )
     calls = []
-    monkeypatch.setattr(smoke, "_verify_runtime", lambda *args: calls.append("allocation"))
+    monkeypatch.setattr(
+        smoke, "_verify_runtime", lambda *args: calls.append("allocation")
+    )
 
     def sample(upstream, destination):
         destination.write_bytes(b"mock sample, no GPU data")
@@ -473,7 +529,12 @@ def benchmark_fixture(upstream):
     write(dataset / "manifest.json", manifest)
     write(
         upstream / "frozen-manifest.json",
-        dict(status="BENCHMARK_ONLY", training_eligible=False, runs=rows, ledger_sha256="c" * 64),
+        dict(
+            status="BENCHMARK_ONLY",
+            training_eligible=False,
+            runs=rows,
+            ledger_sha256="c" * 64,
+        ),
     )
     quality = read(upstream / "quality.json")
     quality["training_admission"] = False
@@ -492,7 +553,8 @@ def benchmark_fixture(upstream):
 
 def reseal_flat(upstream):
     write(
-        upstream / "dataset-seal.json", {p.name: sha(p) for p in (upstream / "dataset").iterdir()}
+        upstream / "dataset-seal.json",
+        {p.name: sha(p) for p in (upstream / "dataset").iterdir()},
     )
     handoff = read(upstream / "handoff.json")
     for name, key in (
@@ -507,7 +569,11 @@ def reseal_flat(upstream):
 def test_fresh_three_run_flat_benchmark_handoff_is_functionality_only(tmp_path):
     upstream = tmp_path / "new-flight-test"
     benchmark_fixture(upstream)
-    before = {str(p.relative_to(upstream)): sha(p) for p in upstream.rglob("*") if p.is_file()}
+    before = {
+        str(p.relative_to(upstream)): sha(p)
+        for p in upstream.rglob("*")
+        if p.is_file()
+    }
     report = smoke.sample_input(upstream, tmp_path / "sample.npz")
     provenance = report["provenance"]
     assert provenance["kind"] == "fresh_three_run_benchmark_functionality_only"
@@ -520,7 +586,9 @@ def test_fresh_three_run_flat_benchmark_handoff_is_functionality_only(tmp_path):
     assert report["roles"]["normal_train"]["sampled_windows"] == 4
     assert "handoff.json" in report["hashes"]
     assert before == {
-        str(p.relative_to(upstream)): sha(p) for p in upstream.rglob("*") if p.is_file()
+        str(p.relative_to(upstream)): sha(p)
+        for p in upstream.rglob("*")
+        if p.is_file()
     }
 
 
@@ -556,7 +624,9 @@ def test_normal_full_handoff_does_not_inherit_benchmark_lineage_rules(tmp_path):
     frozen.update(status="DATA_FROZEN", training_eligible=True)
     write(upstream / "frozen-manifest.json", frozen)
     handoff = read(upstream / "handoff.json")
-    handoff.update(status="PRETRAIN_READY_PENDING_USER_REVIEW", training_eligible=True)
+    handoff.update(
+        status="PRETRAIN_READY_PENDING_USER_REVIEW", training_eligible=True
+    )
     write(upstream / "handoff.json", handoff)
     reseal_flat(upstream)
     with pytest.raises(ValueError, match="Missing split lineage"):

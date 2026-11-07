@@ -16,12 +16,17 @@ def readiness(monkeypatch):
         profile_id="test-profile",
         source_manifest_sha256="a" * 64,
     )
-    monkeypatch.setattr(collection, "producer_manifest", lambda: copy.deepcopy(record))
+    monkeypatch.setattr(
+        collection, "producer_manifest", lambda: copy.deepcopy(record)
+    )
     return record
 
 
 def test_current_machine_preparation_is_admitted(readiness):
-    assert collection.preparation_assertions(readiness, "test-profile") == readiness
+    assert (
+        collection.preparation_assertions(readiness, "test-profile")
+        == readiness
+    )
 
 
 @pytest.mark.parametrize(

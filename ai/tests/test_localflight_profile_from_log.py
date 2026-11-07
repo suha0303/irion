@@ -31,7 +31,10 @@ def test_voltage_estimate_is_editable_and_not_a_confirmed_measurement(tmp_path):
         assert result["questions"] == []
         saved = save_profile(tmp_path, result["profile"])
         assert saved["eligibility"]["profile_complete"]
-        assert saved["profile"]["provenance"]["fields"]["series_cells"]["status"] == "estimated"
+        assert (
+            saved["profile"]["provenance"]["fields"]["series_cells"]["status"]
+            == "estimated"
+        )
 
 
 def test_voltage_estimate_requires_consistent_unambiguous_evidence():
@@ -57,7 +60,9 @@ def test_voltage_estimate_requires_consistent_unambiguous_evidence():
     ):
         variants.append({**row, **update})
     ambiguous = voltage_audit(2.4)
-    variants.append(ambiguous)  # 28S and 29S satisfy this heuristic: do not pick one.
+    variants.append(
+        ambiguous
+    )  # 28S and 29S satisfy this heuristic: do not pick one.
     for changed in variants:
         assert "series_cells" not in suggest(changed)["profile"]
 
@@ -92,8 +97,14 @@ def test_logged_values_fill_only_known_configuration():
     result = suggest(audit())
     p = result["profile"]
     assert p["rotor_count"] == 4 and p["capacity_ah"] == 44
-    assert p["motor_channels"] == dict(front_right=1, front_left=3, rear_right=4, rear_left=2)
-    assert p["imu_instance"] == 1 and p["battery_instance"] == 0 and p["actuator_instance"] == 0
+    assert p["motor_channels"] == dict(
+        front_right=1, front_left=3, rear_right=4, rear_left=2
+    )
+    assert (
+        p["imu_instance"] == 1
+        and p["battery_instance"] == 0
+        and p["actuator_instance"] == 0
+    )
     assert p["output_min"] == 1000 and p["output_max"] == 2000
     assert "series_cells" not in p and result["health"] == "unknown"
     assert [q["field"] for q in result["questions"]] == ["series_cells"]
@@ -109,9 +120,15 @@ def test_changed_parameters_duplicate_routing_and_sensor_switch_require_confirma
     changed["selectors"]["XKF4.PI"] = [0, 1]
     result = suggest(changed)
     p = result["profile"]
-    assert not p["motor_channels"] and "capacity_ah" not in p and "output_max" not in p
+    assert (
+        not p["motor_channels"]
+        and "capacity_ah" not in p
+        and "output_max" not in p
+    )
     assert "imu_instance" not in p
-    assert next(q for q in result["questions"] if q["field"] == "imu_instance")["candidates"] == [
+    assert next(q for q in result["questions"] if q["field"] == "imu_instance")[
+        "candidates"
+    ] == [
         0,
         1,
         2,
@@ -147,7 +164,10 @@ def test_record_only_information_does_not_block_analysis_or_identity(tmp_path):
     p["id"] = ""
     p["name"] = ""
     saved = save_profile(tmp_path, p)
-    assert saved["profile"]["id"].startswith("aircraft-") and saved["profile"]["name"]
+    assert (
+        saved["profile"]["id"].startswith("aircraft-")
+        and saved["profile"]["name"]
+    )
     assert saved["eligibility"]["profile_complete"]
 
 
@@ -157,7 +177,11 @@ def test_px4_explicit_cell_count_capacity_and_changed_setting():
         sha256="b" * 64,
         autopilot="px4",
         messages=["revision"],
-        parameter_values={"BAT1_N_CELLS": [6], "BAT1_CAPACITY": [5000], "CA_ROTOR_COUNT": [4]},
+        parameter_values={
+            "BAT1_N_CELLS": [6],
+            "BAT1_CAPACITY": [5000],
+            "CA_ROTOR_COUNT": [4],
+        },
         instances={
             k: {"0": 10}
             for k in (
@@ -170,7 +194,11 @@ def test_px4_explicit_cell_count_capacity_and_changed_setting():
     )
     result = suggest(row)
     p = result["profile"]
-    assert p["series_cells"] == 6 and p["capacity_ah"] == 5 and p["imu_instance"] == 0
+    assert (
+        p["series_cells"] == 6
+        and p["capacity_ah"] == 5
+        and p["imu_instance"] == 0
+    )
     assert not p["motor_channels"] and "output_min" not in p
     row["parameter_values"]["BAT1_N_CELLS"] = [0, 6]
     assert "series_cells" not in suggest(row)["profile"]
@@ -179,9 +207,8 @@ def test_px4_explicit_cell_count_capacity_and_changed_setting():
 
 
 def test_inventory_retains_invalid_parameter_changes(monkeypatch):
-    from pymavlink import DFReader
-
     from localflight.logs import scan_bin
+    from pymavlink import DFReader
 
     class Message:
         def __init__(self, value):
@@ -207,5 +234,7 @@ def test_inventory_retains_invalid_parameter_changes(monkeypatch):
     result = scan_bin("fixture.BIN")
     assert result["parameter_values"]["BATT_CAPACITY"] == [44000, None]
     row = audit()
-    row["parameter_values"]["BATT_CAPACITY"] = result["parameter_values"]["BATT_CAPACITY"]
+    row["parameter_values"]["BATT_CAPACITY"] = result["parameter_values"][
+        "BATT_CAPACITY"
+    ]
     assert "capacity_ah" not in suggest(row)["profile"]

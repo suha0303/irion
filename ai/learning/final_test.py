@@ -48,8 +48,13 @@ def validate_manifest(manifest):
         calibration_authorized=False,
         final_test_scoring_authorized=False,
     )
-    if any(type(manifest.get(k)) is not type(v) or manifest[k] != v for k, v in fixed.items()):
-        raise ValueError("Sealed, unscaled, never-scored final dataset required")
+    if any(
+        type(manifest.get(k)) is not type(v) or manifest[k] != v
+        for k, v in fixed.items()
+    ):
+        raise ValueError(
+            "Sealed, unscaled, never-scored final dataset required"
+        )
     rows = manifest["runs"]
     if (
         len(rows) != 324
@@ -61,11 +66,18 @@ def validate_manifest(manifest):
         raise ValueError("Exact324-run final membership required")
     pairs = defaultdict(list)
     for row in rows:
-        if Path(row["run_id"]).name != row["run_id"] or row["run_id"] in {".", ".."}:
+        if Path(row["run_id"]).name != row["run_id"] or row["run_id"] in {
+            ".",
+            "..",
+        }:
             raise ValueError("Unsafe final run identifier")
         if row.get("pair_id"):
             pairs[row["pair_id"]].append(row)
-        if row["role"] != ("anomaly_test" if row["final_cohort"] == "anomaly" else "normal_test"):
+        if row["role"] != (
+            "anomaly_test"
+            if row["final_cohort"] == "anomaly"
+            else "normal_test"
+        ):
             raise ValueError("Final cohort/role mismatch")
     if len(pairs) != 108:
         raise ValueError("Exactly108 normal/anomaly pairs required")
@@ -117,8 +129,12 @@ def config_check(cfg):
         evaluation_hours=12,
         queue_hours=24,
     )
-    if any(type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()):
-        raise ValueError("One fixed18-model final evaluation without fitting or analysis required")
+    if any(
+        type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()
+    ):
+        raise ValueError(
+            "One fixed18-model final evaluation without fitting or analysis required"
+        )
     from execution.evaluate import final_protocol
 
     if cfg["protocol"] != final_protocol(cfg["source_protocol"]):
@@ -141,18 +157,32 @@ def checked(root, *, full=False):
         raise ValueError("Final authorization binding changed")
     verify(root / "input", read(root / "input/inventory.json"))
     profile = runtime_profile(root, required=True)
-    fixed = dict(partition="p02", node="DIS01", nodes=1, ntasks=1, gpus=1, cpus=10, memory_gib=64)
-    if profile["slurm"] != fixed or sha(root / "server-profile.json") != cfg["profile_sha256"]:
-        raise ValueError("Only selected p02/DIS01 single-GPU profile allowed")
-    if Path(profile["output_root"]) != root or Path(profile["dataset_root"]) != Path(
-        cfg["dataset"]
+    fixed = dict(
+        partition="p02",
+        node="DIS01",
+        nodes=1,
+        ntasks=1,
+        gpus=1,
+        cpus=10,
+        memory_gib=64,
+    )
+    if (
+        profile["slurm"] != fixed
+        or sha(root / "server-profile.json") != cfg["profile_sha256"]
     ):
+        raise ValueError("Only selected p02/DIS01 single-GPU profile allowed")
+    if Path(profile["output_root"]) != root or Path(
+        profile["dataset_root"]
+    ) != Path(cfg["dataset"]):
         raise ValueError("Selected profile paths differ")
     source = Path(cfg["source_evaluation"])
     verify(source, cfg["source_files"])
     frozen = read(root / "input/dataset/provenance/sealed-manifest.json")
     validate_manifest(frozen)
-    if sha(root / "input/dataset/provenance/sealed-manifest.json") != cfg["final_manifest_sha256"]:
+    if (
+        sha(root / "input/dataset/provenance/sealed-manifest.json")
+        != cfg["final_manifest_sha256"]
+    ):
         raise ValueError("Final dataset seal changed")
     if full:
         verify(root / "input/dataset", cfg["dataset_files"])
@@ -163,11 +193,14 @@ def checked(root, *, full=False):
         if sha(folder / "integrity.json") != cfg["bundle_integrities"][name]:
             raise ValueError("Frozen model integrity changed")
         if sha(folder / "scaler.npz") != cfg["common_scaler_sha256"]:
-            raise ValueError("Final inference must use the common training scaler")
+            raise ValueError(
+                "Final inference must use the common training scaler"
+            )
         cal = root / "compute/calibration" / name / "calibration.json"
         if (
             sha(cal) != cfg["calibration_hashes"][name]
-            or read(cal)["bundle_integrity_sha256"] != cfg["bundle_integrities"][name]
+            or read(cal)["bundle_integrity_sha256"]
+            != cfg["bundle_integrities"][name]
         ):
             raise ValueError("Frozen normal-only calibration changed")
     return root, cfg
@@ -181,11 +214,17 @@ def prepare(args):
         raise ValueError("Explicit final-test approval required")
     root, source, data = map(absolute_path, (args.root, args.source, args.data))
     if root.exists() or any(
-        root == p or root in p.parents or p in root.parents for p in (source, data)
+        root == p or root in p.parents or p in root.parents
+        for p in (source, data)
     ):
-        raise ValueError("New separate output required; preserve every existing input")
+        raise ValueError(
+            "New separate output required; preserve every existing input"
+        )
     completion = read(source / "completion.json")
-    if completion["status"] != "REPORT_READY_STOPPED" or completion["final_test_used"] is not False:
+    if (
+        completion["status"] != "REPORT_READY_STOPPED"
+        or completion["final_test_used"] is not False
+    ):
         raise ValueError("Completed development calibration source required")
     for key in ("calibration_release", "evaluation_release"):
         operator.require_success(completion[key])
@@ -193,8 +232,10 @@ def prepare(args):
     report = read(source / "evaluation/report.json")
     seal = read(source / "compute/result-seal.json")
     if (
-        sha(source / "compute/result-seal.json") != completion["compute_seal_sha256"]
-        or sha(source / "evaluation/report.json") != completion["evaluation_report_sha256"]
+        sha(source / "compute/result-seal.json")
+        != completion["compute_seal_sha256"]
+        or sha(source / "evaluation/report.json")
+        != completion["evaluation_report_sha256"]
         or protocol_hash(source_protocol) != report["protocol_sha256"]
         or seal["models"] != MODELS
         or seal["final_test_used"] is not False
@@ -212,19 +253,24 @@ def prepare(args):
         raise ValueError("Final manifest seal mismatch")
     protected_path = data / "dataset/provenance/final-protection.json"
     if sha(protected_path) != frozen["protection"]["sha256"]:
-        raise ValueError("Frozen train/development protection inventory changed")
+        raise ValueError(
+            "Frozen train/development protection inventory changed"
+        )
     protected = read(protected_path)
     for field, values in (
         ("seeds", {r["seed"] for r in frozen["runs"]}),
         ("group_ids", {r["group_id"] for r in frozen["runs"]}),
         (
             "raw_ids",
-            {r["run_id"] for r in frozen["runs"]} | {r["raw_flight_id"] for r in frozen["runs"]},
+            {r["run_id"] for r in frozen["runs"]}
+            | {r["raw_flight_id"] for r in frozen["runs"]},
         ),
         ("raw_sha256", {r["raw_sha256"] for r in frozen["runs"]}),
     ):
         if values & set(protected[field]):
-            raise ValueError("Final data overlap the frozen train/development inventory")
+            raise ValueError(
+                "Final data overlap the frozen train/development inventory"
+            )
     profile = load(args.profile)
     if (
         Path(profile["output_root"]) != root
@@ -262,37 +308,58 @@ def prepare(args):
         entries["integrity.json"] = sha(folder / "integrity.json")
         for filename, digest in entries.items():
             rel = f"models/{name}/{filename}"
-            if seal["files"].get(rel) != digest or sha(child(folder, filename)) != digest:
-                raise ValueError("Model export differs from completed development seal")
+            if (
+                seal["files"].get(rel) != digest
+                or sha(child(folder, filename)) != digest
+            ):
+                raise ValueError(
+                    "Model export differs from completed development seal"
+                )
             target = child(root / "compute", rel)
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(child(folder, filename), target)
         rel = f"calibration/{name}/calibration.json"
         calibration = child(source / "compute", rel)
         if sha(calibration) != seal["files"].get(rel):
-            raise ValueError("Calibration differs from completed development seal")
+            raise ValueError(
+                "Calibration differs from completed development seal"
+            )
         target = child(root / "compute", rel)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(calibration, target)
         bundles[name] = entries["integrity.json"]
         calibrations[name] = sha(target)
-    common_preprocessing = read(root / "compute/models" / MODELS[0] / "preprocessing.json")
+    common_preprocessing = read(
+        root / "compute/models" / MODELS[0] / "preprocessing.json"
+    )
     if any(
-        read(root / "compute/models" / name / "preprocessing.json") != common_preprocessing
+        read(root / "compute/models" / name / "preprocessing.json")
+        != common_preprocessing
         for name in MODELS
     ):
-        raise ValueError("Every model must use the same frozen preprocessing contract")
+        raise ValueError(
+            "Every model must use the same frozen preprocessing contract"
+        )
     for row in frozen["runs"]:
-        summary = read(root / "input/dataset/canonical" / row["run_id"] / "summary.json")
-        if summary["config"] != common_preprocessing or summary["run_id"] != row["run_id"]:
-            raise ValueError("Final canonical preprocessing differs from the trained models")
+        summary = read(
+            root / "input/dataset/canonical" / row["run_id"] / "summary.json"
+        )
+        if (
+            summary["config"] != common_preprocessing
+            or summary["run_id"] != row["run_id"]
+        ):
+            raise ValueError(
+                "Final canonical preprocessing differs from the trained models"
+            )
     dataset_files = {
         n.removeprefix("dataset/"): h
         for n, h in transfer["files"].items()
         if n.startswith("dataset/")
     }
     truth_files = {
-        n.removeprefix("truth/"): h for n, h in transfer["files"].items() if n.startswith("truth/")
+        n.removeprefix("truth/"): h
+        for n, h in transfer["files"].items()
+        if n.startswith("truth/")
     }
     cfg = dict(
         schema="drone-ai.final-test/1",
@@ -325,10 +392,14 @@ def prepare(args):
         dataset=str(root / "input/dataset"),
         dataset_files=dataset_files,
         truth_files=truth_files,
-        final_manifest_sha256=sha(root / "input/dataset/provenance/sealed-manifest.json"),
+        final_manifest_sha256=sha(
+            root / "input/dataset/provenance/sealed-manifest.json"
+        ),
         bundle_integrities=bundles,
         calibration_hashes=calibrations,
-        common_scaler_sha256=sha(root / "compute/models" / MODELS[0] / "scaler.npz"),
+        common_scaler_sha256=sha(
+            root / "compute/models" / MODELS[0] / "scaler.npz"
+        ),
         profile_sha256=sha(root / "server-profile.json"),
         reports_only=True,
     )
@@ -336,8 +407,12 @@ def prepare(args):
     inventory = {n: h for n, h in runtime_inventory.items()}
     inventory.update({"config.json": sha(root / "input/config.json")})
     # Bulk canonical data are verified once in each allocated phase, not on every UI read.
-    inventory["dataset/manifest.json"] = sha(root / "input/dataset/manifest.json")
-    inventory["dataset/provenance/sealed-manifest.json"] = cfg["final_manifest_sha256"]
+    inventory["dataset/manifest.json"] = sha(
+        root / "input/dataset/manifest.json"
+    )
+    inventory["dataset/provenance/sealed-manifest.json"] = cfg[
+        "final_manifest_sha256"
+    ]
     write(root / "input/inventory.json", inventory)
     write(
         root / "authorization.json",
@@ -377,18 +452,24 @@ def inference_seal(root, cfg):
         or seal.get("config_sha256") != sha(root / "input/config.json")
         or seal.get("calibration_hashes") != cfg["calibration_hashes"]
     ):
-        raise ValueError("Complete final inference seal required before evaluator truth join")
+        raise ValueError(
+            "Complete final inference seal required before evaluator truth join"
+        )
     return seal
 
 
 def submit(root, phase, cfg):
     if phase not in {"infer", "evaluate"}:
-        raise ValueError("Final inference and evaluation only; no training/calibration")
+        raise ValueError(
+            "Final inference and evaluation only; no training/calibration"
+        )
     checked(root)
     with SUBMIT_LOCK.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if operator.own_queue():
-            raise ValueError("Own pending/running job exists; no concurrent submission")
+            raise ValueError(
+                "Own pending/running job exists; no concurrent submission"
+            )
         if phase == "evaluate":
             operator.require_success(read(root / "release.json"))
             inference_seal(root, cfg)
@@ -397,7 +478,9 @@ def submit(root, phase, cfg):
         script = root / (phase + "-job.sh")
         script.write_text(
             "#!/bin/bash\nset -euo pipefail\nexport PYTHONPATH="
-            + shlex.quote(str(root / "input/ai") + ":" + str(root / "input/ai/src"))
+            + shlex.quote(
+                str(root / "input/ai") + ":" + str(root / "input/ai/src")
+            )
             + "\nexport DRONE_AI_PROFILE="
             + shlex.quote(str(root / "server-profile.json"))
             + "\nexport PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
@@ -415,7 +498,9 @@ def submit(root, phase, cfg):
             )
             + "\n"
         )
-        hours = cfg["wall_hours"] if phase == "infer" else cfg["evaluation_hours"]
+        hours = (
+            cfg["wall_hours"] if phase == "infer" else cfg["evaluation_hours"]
+        )
         argv = [
             "sbatch",
             "--parsable",
@@ -441,7 +526,12 @@ def submit(root, phase, cfg):
         identifier = operator.command(argv).split(";")[0]
         if not identifier.isdigit():
             raise ValueError("Unknown submission outcome; no retry")
-        record = dict(job_id=identifier, uid=os.getuid(), phase=phase, submitted=time.time())
+        record = dict(
+            job_id=identifier,
+            uid=os.getuid(),
+            phase=phase,
+            submitted=time.time(),
+        )
         write(root / (phase + "-submission.json"), record)
         return record
 
@@ -451,7 +541,11 @@ def wait_files(root, phase):
     paths = (
         ["compute/result-seal.json"]
         if phase == "infer"
-        else ["evaluation/report.json", "evaluation/metrics.json", "evaluation/evidence.json"]
+        else [
+            "evaluation/report.json",
+            "evaluation/metrics.json",
+            "evaluation/evidence.json",
+        ]
     )
     while True:
         if all((root / n).is_file() for n in paths):
@@ -487,11 +581,19 @@ def control(root):
             record = submit(root, phase, cfg)
             budget = {
                 **cfg,
-                "wall_hours": cfg["wall_hours"] if phase == "infer" else cfg["evaluation_hours"],
+                "wall_hours": cfg["wall_hours"]
+                if phase == "infer"
+                else cfg["evaluation_hours"],
             }
             release = operator.wait_release(root, record, state, budget)
             write(
-                root / ("release.json" if phase == "infer" else "evaluation-release.json"), release
+                root
+                / (
+                    "release.json"
+                    if phase == "infer"
+                    else "evaluation-release.json"
+                ),
+                release,
             )
             operator.require_success(release)
             state.update(allocation_released=True)
@@ -500,7 +602,8 @@ def control(root):
         report = read(root / "evaluation/report.json")
         if (
             sha(root / "evaluation/metrics.json") != report["metrics_sha256"]
-            or sha(root / "evaluation/evidence.json") != report["evidence_sha256"]
+            or sha(root / "evaluation/evidence.json")
+            != report["evidence_sha256"]
         ):
             raise ValueError("Final evaluation result binding changed")
         checked(root)
@@ -557,7 +660,8 @@ def start(root):
     root, _ = checked(root)
     if (
         os.environ.get("SLURM_JOB_ID")
-        or Path(sys.executable).resolve() != Path(python_for(root, required=True)).resolve()
+        or Path(sys.executable).resolve()
+        != Path(python_for(root, required=True)).resolve()
     ):
         raise ValueError("Start with selected server Python on login node")
     with (root / "start.claim").open("x") as f:
@@ -584,7 +688,9 @@ def start(root):
         + shlex.quote(str(root / "controller.log"))
         + " 2>&1"
     )
-    subprocess.run(["tmux", "new-session", "-d", "-s", name, command], check=True)
+    subprocess.run(
+        ["tmux", "new-session", "-d", "-s", name, command], check=True
+    )
     print("Finite final evaluation handed to server tmux: " + name)
 
 
@@ -595,17 +701,29 @@ def worker(root, phase):
     from .training import backend, project_lock
 
     root, cfg = checked(root, full=True)
-    path = root / ("compute/progress.json" if phase == "infer" else "evaluation-progress.json")
+    path = root / (
+        "compute/progress.json"
+        if phase == "infer"
+        else "evaluation-progress.json"
+    )
     hours = cfg["wall_hours"] if phase == "infer" else cfg["evaluation_hours"]
     progress = Progress(path, hours=hours - 0.1)
-    progress.update(final_test_used=True, training_authorized=False, calibration_authorized=False)
+    progress.update(
+        final_test_used=True,
+        training_authorized=False,
+        calibration_authorized=False,
+    )
     signal.signal(signal.SIGTERM, stop_signal)
     signal.signal(signal.SIGINT, stop_signal)
     telemetry = None
     try:
-        runtime_out = root / ("compute/runtime" if phase == "infer" else "evaluation-runtime")
+        runtime_out = root / (
+            "compute/runtime" if phase == "infer" else "evaluation-runtime"
+        )
         runtime_out.mkdir(exist_ok=False)
-        environment = check(root / "input/ai", runtime_out, phase, job_prefix="drone-ai-final-")
+        environment = check(
+            root / "input/ai", runtime_out, phase, job_prefix="drone-ai-final-"
+        )
         memory = memory_snapshot()
         write(
             runtime_out / "memory-admission.json",
@@ -616,7 +734,9 @@ def worker(root, phase):
             or memory["errors"]
             or memory["available_bytes"] < 16 * 1024**3
         ):
-            raise MemoryError("Final evaluation allocation/RAM admission failed")
+            raise MemoryError(
+                "Final evaluation allocation/RAM admission failed"
+            )
         if phase == "infer":
             from capstone_ai.training import Predictor
 
@@ -626,14 +746,22 @@ def worker(root, phase):
             telemetry = Telemetry(root / "compute")
             telemetry.start()
             rows = read(Path(cfg["dataset"]) / "manifest.json")["runs"]
-            with project_lock("cuda"), ParallelDevelopment(8, progress) as executor:
+            with (
+                project_lock("cuda"),
+                ParallelDevelopment(8, progress) as executor,
+            ):
                 for index, name in enumerate(MODELS):
                     progress.update(
-                        stage="final_inference", model=name, models_completed=index, models_total=18
+                        stage="final_inference",
+                        model=name,
+                        models_completed=index,
+                        models_total=18,
                     )
                     bundle = root / "compute/models" / name
                     predictor = Predictor(bundle, device="cuda")
-                    calibration = read(root / "compute/calibration" / name / "calibration.json")
+                    calibration = read(
+                        root / "compute/calibration" / name / "calibration.json"
+                    )
                     with backend("cuda"):
                         executor.run(
                             cfg["dataset"],
@@ -655,7 +783,8 @@ def worker(root, phase):
             files = {
                 str(p.relative_to(out)): sha(p)
                 for p in out.rglob("*")
-                if p.is_file() and p.name not in {"progress.json", "result-seal.json"}
+                if p.is_file()
+                and p.name not in {"progress.json", "result-seal.json"}
             }
             write(
                 out / "result-seal.json",
@@ -676,7 +805,10 @@ def worker(root, phase):
                     next_round_authorized=False,
                 ),
             )
-            progress.update(status="FINAL_INFERENCE_COMPLETE_PENDING_RELEASE", stage="stopped")
+            progress.update(
+                status="FINAL_INFERENCE_COMPLETE_PENDING_RELEASE",
+                stage="stopped",
+            )
         else:
             from execution.evaluate import evaluate
 
@@ -732,10 +864,14 @@ def worker(root, phase):
                             m["normal_episodes_per_hour"]["union"],
                         ]
                     )
-            progress.update(status="EVALUATION_COMPLETE_PENDING_RELEASE", stage="stopped")
+            progress.update(
+                status="EVALUATION_COMPLETE_PENDING_RELEASE", stage="stopped"
+            )
     except BaseException as exc:
         progress.update(
-            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}", automatic_retry=False
+            status="FAILED_STOPPED",
+            reason=f"{type(exc).__name__}: {exc}",
+            automatic_retry=False,
         )
         raise
     finally:

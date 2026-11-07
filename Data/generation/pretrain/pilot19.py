@@ -9,7 +9,17 @@ from pathlib import Path
 import numpy as np
 
 from . import ai19
-from .common import ROOT, STORE, Budget, collector, package_imports, read, sha, verify, write
+from .common import (
+    ROOT,
+    STORE,
+    Budget,
+    collector,
+    package_imports,
+    read,
+    sha,
+    verify,
+    write,
+)
 
 COHORT = "pilot_development_reference"
 SHORT_COHORT = "short_cycle_development_reference"
@@ -29,7 +39,10 @@ def source_evidence(raw, binding, scenario):
         "evaluation/truth.jsonl",
     ):
         path = ai19.no_links(raw / name)
-        if path.stat().st_size != integrity[name]["size"] or sha(path) != integrity[name]["sha256"]:
+        if (
+            path.stat().st_size != integrity[name]["size"]
+            or sha(path) != integrity[name]["sha256"]
+        ):
             raise ValueError("Pilot source evidence changed: " + name)
     propulsion_health.verify_selection(
         propulsion,
@@ -42,7 +55,10 @@ def source_evidence(raw, binding, scenario):
     transitions = {}
     active = {
         system: selected
-        for system, selected in (("battery", battery), ("propulsion", propulsion))
+        for system, selected in (
+            ("battery", battery),
+            ("propulsion", propulsion),
+        )
         if not selected["fixed_for_flight"]
     }
     endpoints = {}
@@ -61,7 +77,9 @@ def source_evidence(raw, binding, scenario):
         schedule = scenario["fault_schedule"]
         for system in active:
             if system not in endpoints or not schedule.get("acknowledged"):
-                raise ValueError("Actual dynamic endpoint/acknowledgement missing")
+                raise ValueError(
+                    "Actual dynamic endpoint/acknowledgement missing"
+                )
             transitions[system] = dict(
                 actual_onset_us=schedule["applied_time_us"],
                 actual_endpoint_us=endpoints[system],
@@ -125,7 +143,9 @@ def prepare_one(
 
     if short_cycle and final16:
         raise ValueError("Separate no-fit scopes required")
-    cohort = FINAL16_COHORT if final16 else SHORT_COHORT if short_cycle else COHORT
+    cohort = (
+        FINAL16_COHORT if final16 else SHORT_COHORT if short_cycle else COHORT
+    )
     usage = (
         "final16_input_check"
         if final16
@@ -141,7 +161,9 @@ def prepare_one(
     output = ai19.no_links(output)
     ai19.external(output)
     if output.exists():
-        raise ValueError("Preserve prior processing attempts; use a new attempt folder")
+        raise ValueError(
+            "Preserve prior processing attempts; use a new attempt folder"
+        )
     binding = ai19.producer_binding()
     expected = read(expected_path)
     check_producer(binding, expected)
@@ -161,7 +183,10 @@ def prepare_one(
     )
     check_source(row, binding)
     wind = (
-        describe(scenario, wind_clock=read(policy_bundle["paired_policy"])["wind_model_clock"])
+        describe(
+            scenario,
+            wind_clock=read(policy_bundle["paired_policy"])["wind_model_clock"],
+        )
         if policy_bundle
         else describe(scenario)
     )
@@ -203,13 +228,17 @@ def prepare_one(
     archive_cache = Path(archive_cache)
     token = archive_cache.parent.name + "-" + raw.name
     archive_path = (
-        STORE / ("archives/final16" if final16 else "archives/pilot45") / (token + ".tar.gz")
+        STORE
+        / ("archives/final16" if final16 else "archives/pilot45")
+        / (token + ".tar.gz")
     )
     if archive_cache.exists():
         cached = read(archive_cache)
-        if cached["raw_integrity_sha256"] != sha(raw / "integrity.json") or cached["archive"][
-            "sha256"
-        ] != sha(Path(cached["archive"]["archive"])):
+        if cached["raw_integrity_sha256"] != sha(
+            raw / "integrity.json"
+        ) or cached["archive"]["sha256"] != sha(
+            Path(cached["archive"]["archive"])
+        ):
             raise ValueError("Preserved archive cache changed")
         archived = cached["archive"]
     else:
@@ -219,16 +248,29 @@ def prepare_one(
             raw,
             archive_path,
             output / "archive-evidence",
-            dict(archive_wall_s=14400, archive_verify_wall_s=14400, byte_stall_s=3600),
+            dict(
+                archive_wall_s=14400,
+                archive_verify_wall_s=14400,
+                byte_stall_s=3600,
+            ),
             lambda: None,
         )
         write(
-            archive_cache, dict(raw_integrity_sha256=sha(raw / "integrity.json"), archive=archived)
+            archive_cache,
+            dict(
+                raw_integrity_sha256=sha(raw / "integrity.json"),
+                archive=archived,
+            ),
         )
     package_imports()
     from .archive import extract_consumer
 
-    consumer = STORE / ("consumer/final16" if final16 else "consumer/pilot45") / token / output.name
+    consumer = (
+        STORE
+        / ("consumer/final16" if final16 else "consumer/pilot45")
+        / token
+        / output.name
+    )
     consumer.parent.mkdir(parents=True, exist_ok=True)
     export = dict(
         path=archived["archive"],
@@ -294,7 +336,9 @@ def prepare_one(
     if physical is not None:
         np.savez(output / "run.npz", **physical)
         item = dict(
-            row, health=row["health_eligibility"], **ai19.reference(output / "run.npz", output)
+            row,
+            health=row["health_eligibility"],
+            **ai19.reference(output / "run.npz", output),
         )
         manifest = dict(
             schema="drone-ai.run-health19.dataset/1",
@@ -320,7 +364,12 @@ def prepare_one(
             post_initial100_seconds=max(0, len(physical["time_us"]) - 100) / 10,
         )
     verify(helpers)
-    verify({str(ROOT / "simulation" / p): h for p, h in binding["source_hashes"].items()})
+    verify(
+        {
+            str(ROOT / "simulation" / p): h
+            for p, h in binding["source_hashes"].items()
+        }
+    )
     if "torch" in sys.modules:
         raise ValueError("Data preparation must not import torch")
     result = dict(
@@ -338,13 +387,24 @@ def prepare_one(
         training_started=False,
         inference_started=False,
         elapsed_s=time.monotonic() - started,
-        peak_rss_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
-        output_bytes=sum(p.stat().st_size for p in output.rglob("*") if p.is_file()),
-        consumer_bytes=sum(p.stat().st_size for p in consumer.rglob("*") if p.is_file()),
+        peak_rss_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        * 1024,
+        output_bytes=sum(
+            p.stat().st_size for p in output.rglob("*") if p.is_file()
+        ),
+        consumer_bytes=sum(
+            p.stat().st_size for p in consumer.rglob("*") if p.is_file()
+        ),
     )
-    result["files"] = {str(p.relative_to(output)): sha(p) for p in output.rglob("*") if p.is_file()}
+    result["files"] = {
+        str(p.relative_to(output)): sha(p)
+        for p in output.rglob("*")
+        if p.is_file()
+    }
     write(output / "receipt.json", result)
-    write(output / "seal.json", dict(receipt_sha256=sha(output / "receipt.json")))
+    write(
+        output / "seal.json", dict(receipt_sha256=sha(output / "receipt.json"))
+    )
     return result
 
 
@@ -359,7 +419,9 @@ def audit_one(output, expected_path, *, short_cycle=False, final16=False):
     receipt = read(output / "receipt.json")
     if short_cycle and final16:
         raise ValueError("Separate no-fit scopes required")
-    cohort = FINAL16_COHORT if final16 else SHORT_COHORT if short_cycle else COHORT
+    cohort = (
+        FINAL16_COHORT if final16 else SHORT_COHORT if short_cycle else COHORT
+    )
     usage = (
         "final16_input_check"
         if final16
@@ -367,9 +429,17 @@ def audit_one(output, expected_path, *, short_cycle=False, final16=False):
         if short_cycle
         else "pilot_input_check"
     )
-    if receipt["run"].get("cohort") != cohort or receipt["run"].get("purpose") != cohort:
-        raise ValueError("Explicit matching no-fit purpose/cohort required for this audit")
-    if sha(output / "receipt.json") != read(output / "seal.json")["receipt_sha256"]:
+    if (
+        receipt["run"].get("cohort") != cohort
+        or receipt["run"].get("purpose") != cohort
+    ):
+        raise ValueError(
+            "Explicit matching no-fit purpose/cohort required for this audit"
+        )
+    if (
+        sha(output / "receipt.json")
+        != read(output / "seal.json")["receipt_sha256"]
+    ):
         raise ValueError("Per-run receipt changed")
     verify({str(output / p): h for p, h in receipt["files"].items()})
     expected = read(expected_path)
@@ -379,7 +449,11 @@ def audit_one(output, expected_path, *, short_cycle=False, final16=False):
     with (output / "frames.jsonl").open() as stream:
         for line in stream:
             frame = json.loads(line)
-            if mission["start_us"] <= frame["time_us"] < mission["end_us_exclusive"]:
+            if (
+                mission["start_us"]
+                <= frame["time_us"]
+                < mission["end_us_exclusive"]
+            ):
                 if frame["time_us"] in frames:
                     raise ValueError("Repeated mission frame")
                 frames[frame["time_us"]] = frame
@@ -395,7 +469,10 @@ def audit_one(output, expected_path, *, short_cycle=False, final16=False):
             times = sorted(frames)
             if a["time_us"].tolist() != times:
                 raise ValueError("Physical view lost mission/tail frames")
-            values = [[frames[t]["values"][n] for n in mapping.FEATURES] for t in times]
+            values = [
+                [frames[t]["values"][n] for n in mapping.FEATURES]
+                for t in times
+            ]
             np.testing.assert_allclose(a["values"], values, rtol=0, atol=1e-12)
     if receipt["online"]["available"]:
         inspect_run(
@@ -408,10 +485,19 @@ def audit_one(output, expected_path, *, short_cycle=False, final16=False):
         with np.load(output / "online.npz", allow_pickle=False) as a:
             origins, x, y = a["origin_us"], a["X"], a["Y"]
             for i, origin in enumerate(origins):
-                history = [frames[int(origin) - 9900000 + j * 100000] for j in range(100)]
-                future = [frames[int(origin) + j * 100000] for j in range(1, 11)]
+                history = [
+                    frames[int(origin) - 9900000 + j * 100000]
+                    for j in range(100)
+                ]
+                future = [
+                    frames[int(origin) + j * 100000] for j in range(1, 11)
+                ]
                 expected_x = feature_transform(
-                    [[f["values"][n] for n in mapping.FEATURES] for f in history], config
+                    [
+                        [f["values"][n] for n in mapping.FEATURES]
+                        for f in history
+                    ],
+                    config,
                 )
                 expected_y = target_transform(
                     [[f["values"][n] for n in mapping.TARGETS] for f in future]

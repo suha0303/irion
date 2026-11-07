@@ -24,7 +24,9 @@ def data():
     ]
     return dict(
         config=dict(models=[*names, "persistence", "ridge_forecast"]),
-        controller=dict(status="RUNNING", stage="infer", started=100, job_id="123", pid=44),
+        controller=dict(
+            status="RUNNING", stage="infer", started=100, job_id="123", pid=44
+        ),
         inference={},
         evaluation={},
         completion={},
@@ -64,7 +66,9 @@ def test_completed_current_model_is_not_double_counted():
     )
     text = screen.render(value, now=200)
     assert "324/5,832" in text and "648/5,832" not in text
-    value["inference"].update(model=value["config"]["models"][1], done=100, cpu_pending=3)
+    value["inference"].update(
+        model=value["config"]["models"][1], done=100, cpu_pending=3
+    )
     text = screen.render(value, now=200)
     assert "424/5,832" in text
     assert "CPU 미완료 3" in text
@@ -75,7 +79,10 @@ def test_model_switch_does_not_count_previous_model_done_value():
     value = data()
     value["scheduler"] = {"state": "RUNNING"}
     value["inference"] = dict(
-        models_completed=1, model=value["config"]["models"][1], done=324, stage="final_inference"
+        models_completed=1,
+        model=value["config"]["models"][1],
+        done=324,
+        stage="final_inference",
     )
     assert "324/5,832" in screen.render(value, now=200)
 
@@ -88,14 +95,22 @@ def test_live_scheduler_overrides_stale_controller_pending():
 
 
 @pytest.mark.parametrize(
-    "release", [dict(released=False), dict(released=True, slurm_state="FAILED", exit_code="1:0")]
+    "release",
+    [
+        dict(released=False),
+        dict(released=True, slurm_state="FAILED", exit_code="1:0"),
+    ],
 )
-def test_finished_evaluation_is_not_final_completion_without_successful_releases(release):
+def test_finished_evaluation_is_not_final_completion_without_successful_releases(
+    release,
+):
     value = data()
     value["controller"]["stage"] = "evaluate"
     value["inference"]["models_completed"] = 18
     value["evaluation"] = dict(done=324, total=324, stage="stopped")
-    value["completion"] = dict(status="REPORT_READY_STOPPED", analysis_performed=False)
+    value["completion"] = dict(
+        status="REPORT_READY_STOPPED", analysis_performed=False
+    )
     value["infer_release"] = copy.deepcopy(release)
     value["eval_release"] = copy.deepcopy(release)
     text = screen.render(value, now=200)
@@ -107,15 +122,23 @@ def test_both_successful_releases_are_shown_without_reading_performance_results(
     value = data()
     value["inference"]["models_completed"] = 18
     value["controller"].update(status="REPORT_READY_STOPPED", stage="stopped")
-    value["completion"] = dict(status="REPORT_READY_STOPPED", analysis_performed=False)
+    value["completion"] = dict(
+        status="REPORT_READY_STOPPED", analysis_performed=False
+    )
     for key in ["infer_release", "eval_release"]:
-        value[key] = dict(released=True, slurm_state="COMPLETED", exit_code="0:0")
+        value[key] = dict(
+            released=True, slurm_state="COMPLETED", exit_code="0:0"
+        )
     text = screen.render(value, now=200)
     assert "전체 완료 확인 YES" in text
     assert "완료 · 반납·정지 확인" in text
     source = SCRIPT.read_text()
     assert "metrics.json" not in source and "model-results.csv" not in source
-    assert "scancel" not in source and "sbatch" not in source and "os.kill" not in source
+    assert (
+        "scancel" not in source
+        and "sbatch" not in source
+        and "os.kill" not in source
+    )
 
 
 def test_gpu_old_sample_and_corrupt_progress_are_explicit():

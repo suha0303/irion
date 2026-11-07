@@ -50,7 +50,11 @@ def owned(layout):
         assert child.stdout.readline().strip() == "ready"
         write(
             run / "run.json",
-            dict(run_id=run.name, instance=0, owned_process_groups=dict(px4=child.pid)),
+            dict(
+                run_id=run.name,
+                instance=0,
+                owned_process_groups=dict(px4=child.pid),
+            ),
         )
         receipt = task / "collection/execution/case/socket-claim.json"
         cleanup.claim(run, 0, receipt)
@@ -76,9 +80,15 @@ def test_live_owner_preserved_then_forced_exit_cleaned(layout, owned):
     assert path.exists()
     child.kill()
     child.wait(timeout=5)
-    assert cleanup.release(data, "x500-pretrain-fixture.service") == "removed_owned_stale_socket"
+    assert (
+        cleanup.release(data, "x500-pretrain-fixture.service")
+        == "removed_owned_stale_socket"
+    )
     assert not path.exists()
-    assert cleanup.release(data, "x500-pretrain-fixture.service") == "already_removed"
+    assert (
+        cleanup.release(data, "x500-pretrain-fixture.service")
+        == "already_removed"
+    )
 
 
 @pytest.mark.parametrize("replacement", ["socket", "file", "symlink"])
@@ -116,7 +126,8 @@ def test_stop_hook_keeps_old_state_and_records_oom(layout, owned, monkeypatch):
     child.kill()
     child.wait(timeout=5)
     write(
-        task / "operator/state.json", dict(status="RUNNING", stage="collection", done=7, total=50)
+        task / "operator/state.json",
+        dict(status="RUNNING", stage="collection", done=7, total=50),
     )
     before = (task / "operator/state.json").read_bytes()
     unknown = sockets / "px4-sock-1"
@@ -147,7 +158,9 @@ def test_locked_project_preserves_socket_and_state(layout, owned):
     assert (task / "operator/state.json").read_bytes() == before
 
 
-def test_bound_socket_preserved_even_if_owner_check_says_dead(layout, owned, monkeypatch):
+def test_bound_socket_preserved_even_if_owner_check_says_dead(
+    layout, owned, monkeypatch
+):
     _, path, receipt = owned
     monkeypatch.setattr(cleanup, "process", lambda pid: None)
     with pytest.raises(ValueError, match="still bound"):
@@ -162,7 +175,11 @@ def test_claim_tolerates_closed_enumeration_fd(layout, monkeypatch):
     monkeypatch.chdir(run / "px4")
     write(
         run / "run.json",
-        dict(run_id=run.name, instance=0, owned_process_groups=dict(px4=os.getpid())),
+        dict(
+            run_id=run.name,
+            instance=0,
+            owned_process_groups=dict(px4=os.getpid()),
+        ),
     )
     with socket.socket(socket.AF_UNIX) as sock:
         sock.bind(str(sockets / "px4-sock-0"))

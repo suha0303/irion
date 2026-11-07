@@ -13,7 +13,6 @@ import shutil
 from pathlib import Path
 
 import numpy as np
-
 from capstone_ai.mapping import FEATURES, RATES
 from learning.history19.preprocessing import LowPass
 
@@ -46,8 +45,12 @@ def bin_values(message, profile):
     if kind == "RATE":
         out = {}
         for axis, field in zip("pqr", ("R", "P", "Y")):
-            out["body_rate_" + axis] = value(field, {"deg/s": math.pi / 180, "rad/s": 1})
-            out["rate_target_" + axis] = value(field + "Des", {"deg/s": math.pi / 180, "rad/s": 1})
+            out["body_rate_" + axis] = value(
+                field, {"deg/s": math.pi / 180, "rad/s": 1}
+            )
+            out["rate_target_" + axis] = value(
+                field + "Des", {"deg/s": math.pi / 180, "rad/s": 1}
+            )
         return out
     if kind == "ATT":
         return {
@@ -56,13 +59,18 @@ def bin_values(message, profile):
         }
     if kind == "IMU" and row.get("I") == profile["imu_instance"]:
         return {
-            "specific_force_" + axis: value("Acc" + axis.upper(), {"m/s/s": 1, "m/s^2": 1})
+            "specific_force_" + axis: value(
+                "Acc" + axis.upper(), {"m/s/s": 1, "m/s^2": 1}
+            )
             if row.get("AH") == 1
             else None
             for axis in "xyz"
         }
     if kind == "BAT" and row.get("Instance") == profile["battery_instance"]:
-        return dict(pack_voltage=value("Volt", {"V": 1}), pack_current=value("Curr", {"A": 1}))
+        return dict(
+            pack_voltage=value("Volt", {"V": 1}),
+            pack_current=value("Curr", {"A": 1}),
+        )
     if kind == "CTUN":
         return dict(
             climb_rate=value("CRt", {"cm/s": 0.01, "m/s": 1}),
@@ -75,7 +83,8 @@ def bin_values(message, profile):
             out["motor_request_" + position] = (
                 None
                 if raw is None
-                else (raw - profile["output_min"]) / (profile["output_max"] - profile["output_min"])
+                else (raw - profile["output_min"])
+                / (profile["output_max"] - profile["output_min"])
             )
         return out
     return {}
@@ -85,12 +94,16 @@ def bin_events(path, profile, maps=None):
     from .bin_reader import open_bin
 
     warnings = io.StringIO()
-    with contextlib.redirect_stdout(warnings), contextlib.redirect_stderr(warnings):
+    with (
+        contextlib.redirect_stdout(warnings),
+        contextlib.redirect_stderr(warnings),
+    ):
         reader = open_bin(path)
     if warnings.getvalue():
         reader.close()
         raise ValueError(
-            "Parser initialization warning has no reliable boundary: " + warnings.getvalue()[:1000]
+            "Parser initialization warning has no reliable boundary: "
+            + warnings.getvalue()[:1000]
         )
     streams = {}
     previous = {}
@@ -100,7 +113,10 @@ def bin_events(path, profile, maps=None):
         while True:
             offset = reader.offset
             try:
-                with contextlib.redirect_stdout(warnings), contextlib.redirect_stderr(warnings):
+                with (
+                    contextlib.redirect_stdout(warnings),
+                    contextlib.redirect_stderr(warnings),
+                ):
                     m = reader.recv_msg()
             except (TypeError, ValueError, IndexError) as error:
                 # A corrupt BIN can make DFReader raise before emitting its warning.
@@ -113,12 +129,21 @@ def bin_events(path, profile, maps=None):
                 break
             if warnings.getvalue():
                 boundary = dict(
-                    reason="parser_warning", byte_offset=offset, detail=warnings.getvalue()[:1000]
+                    reason="parser_warning",
+                    byte_offset=offset,
+                    detail=warnings.getvalue()[:1000],
                 )
                 break
             if m is None:
                 break
-            if m.get_type() not in {"RATE", "ATT", "IMU", "BAT", "CTUN", "RCOU"}:
+            if m.get_type() not in {
+                "RATE",
+                "ATT",
+                "IMU",
+                "BAT",
+                "CTUN",
+                "RCOU",
+            }:
                 continue
             stamp = getattr(m, "TimeUS", None)
             values = bin_values(m, profile)
@@ -141,7 +166,9 @@ def bin_events(path, profile, maps=None):
             streams.setdefault(key, []).append((int(stamp), int(stamp), values))
             count += 1
             if count > 500000:
-                raise ValueError("More than 500000 source records; use a shorter log")
+                raise ValueError(
+                    "More than 500000 source records; use a shorter log"
+                )
     finally:
         reader.close()
     events, report = split_streams(streams, maps or {})
@@ -149,9 +176,8 @@ def bin_events(path, profile, maps=None):
 
 
 def px4_events(path, profile, maps=None):
-    from pyulog import ULog
-
     from capstone_ai.mapping import mapped
+    from pyulog import ULog
 
     ulog = ULog(str(path), message_name_filter_list=list(PX4_REQUIRED))
     streams = {}
@@ -187,9 +213,9 @@ def px4_events(path, profile, maps=None):
                     if key not in fields:
                         raise ValueError(f"Missing motor channel {key}")
                     raw_value = float(fields[key][i])
-                    out["motor_request_" + pos] = (raw_value - profile["output_min"]) / (
-                        profile["output_max"] - profile["output_min"]
-                    )
+                    out["motor_request_" + pos] = (
+                        raw_value - profile["output_min"]
+                    ) / (profile["output_max"] - profile["output_min"])
             else:
                 arrays = {
                     "vehicle_attitude": ("q", 4),
@@ -198,7 +224,9 @@ def px4_events(path, profile, maps=None):
                 }
                 if topic in arrays:
                     key, n = arrays[topic]
-                    raw[key] = [float(fields[f"{key}[{j}]"][i]) for j in range(n)]
+                    raw[key] = [
+                        float(fields[f"{key}[{j}]"][i]) for j in range(n)
+                    ]
                 else:
                     raw = {
                         k: float(a[i])
@@ -206,34 +234,56 @@ def px4_events(path, profile, maps=None):
                         if np.issubdtype(a.dtype, np.number)
                     }
                 output = mapped(
-                    dict(topic=topic, fields=raw, field_quality={k: "valid" for k in raw}), {}
+                    dict(
+                        topic=topic,
+                        fields=raw,
+                        field_quality={k: "valid" for k in raw},
+                    ),
+                    {},
                 )
-                out = {k: v if q == "valid" else None for k, (v, q) in output.items()}
+                out = {
+                    k: v if q == "valid" else None
+                    for k, (v, q) in output.items()
+                }
             if out:
                 streams.setdefault(f"{topic}:{data.multi_id}", []).append(
                     (int(stamp), int(sample), out)
                 )
                 count += 1
             if count > 500000:
-                raise ValueError("More than 500000 source records; use a shorter log")
+                raise ValueError(
+                    "More than 500000 source records; use a shorter log"
+                )
     events, report = split_streams(streams, maps or {})
     # Dropout metadata is a hard boundary even if held samples look sufficiently fresh.
     for dropout in ulog.dropouts:
-        events.append((int(dropout.timestamp), int(dropout.timestamp), {"__reset__": True}))
+        events.append(
+            (
+                int(dropout.timestamp),
+                int(dropout.timestamp),
+                {"__reset__": True},
+            )
+        )
         end = int(dropout.timestamp) + int(dropout.duration) * 1000
         events.append((end, end, {"__reset__": True}))
         events = [e for e in events if not int(dropout.timestamp) < e[0] < end]
-    return sorted(events, key=lambda e: e[0]), dict(streams=report, dropouts=len(ulog.dropouts))
+    return sorted(events, key=lambda e: e[0]), dict(
+        streams=report, dropouts=len(ulog.dropouts)
+    )
 
 
-def causal_frames(events, start_us, end_us, *, fast_max_age_ms=200, battery_max_age_ms=350):
+def causal_frames(
+    events, start_us, end_us, *, fast_max_age_ms=200, battery_max_age_ms=350
+):
     if (
         type(start_us) is not int
         or type(end_us) is not int
         or start_us < 0
         or not 11_000_000 <= end_us - start_us <= 7_200_000_000
     ):
-        raise ValueError("Select an explicit inspection interval of 11..7200 seconds")
+        raise ValueError(
+            "Select an explicit inspection interval of 11..7200 seconds"
+        )
     for age in (fast_max_age_ms, battery_max_age_ms):
         if type(age) is not int or not 20 <= age <= 2000:
             raise ValueError("Sample hold limits must be integer 20..2000 ms")
@@ -255,7 +305,12 @@ def causal_frames(events, start_us, end_us, *, fast_max_age_ms=200, battery_max_
             if any(
                 name in latest
                 and sample - latest[name][1]
-                > (battery_max_age_ms if name.startswith("pack_") else fast_max_age_ms) * 1000
+                > (
+                    battery_max_age_ms
+                    if name.startswith("pack_")
+                    else fast_max_age_ms
+                )
+                * 1000
                 for name in updates
             ):
                 latest.clear()
@@ -263,10 +318,16 @@ def causal_frames(events, start_us, end_us, *, fast_max_age_ms=200, battery_max_
                 boundaries.add(len(values))
             for name, raw in updates.items():
                 if name in previous_sample and sample < previous_sample[name]:
-                    raise ValueError("Source clock reversal; split the log first")
+                    raise ValueError(
+                        "Source clock reversal; split the log first"
+                    )
                 previous_sample[name] = sample
                 value = _finite(raw)
-                if name.startswith("motor_request") and value is not None and not 0 <= value <= 1:
+                if (
+                    name.startswith("motor_request")
+                    and value is not None
+                    and not 0 <= value <= 1
+                ):
                     value = None
                 if name == "pack_voltage" and value is not None and value <= 0:
                     value = None
@@ -275,7 +336,11 @@ def causal_frames(events, start_us, end_us, *, fast_max_age_ms=200, battery_max_
                     or name.startswith("specific_force_")
                     or name in {"climb_rate", "pack_voltage", "pack_current"}
                 )
-                limit = (battery_max_age_ms if name.startswith("pack_") else fast_max_age_ms) * 1000
+                limit = (
+                    battery_max_age_ms
+                    if name.startswith("pack_")
+                    else fast_max_age_ms
+                ) * 1000
                 old = latest.get(name)
                 if old is not None and sample - old[1] > limit:
                     boundaries.add(len(values))
@@ -296,7 +361,11 @@ def causal_frames(events, start_us, end_us, *, fast_max_age_ms=200, battery_max_
             if name not in latest:
                 return None
             v, sample = latest[name]
-            limit = (battery_max_age_ms if name.startswith("pack_") else fast_max_age_ms) * 1000
+            limit = (
+                battery_max_age_ms
+                if name.startswith("pack_")
+                else fast_max_age_ms
+            ) * 1000
             if v is None or t - sample > limit:
                 return None
             return filters[name].at(t)[1] if name in filters else v
@@ -304,14 +373,26 @@ def causal_frames(events, start_us, end_us, *, fast_max_age_ms=200, battery_max_
         row = []
         for name in FEATURES:
             if "error" in name:
-                measured = "climb_rate" if name == "climb_rate_error" else "body_rate_" + name[-1]
-                target = "climb_target" if name == "climb_rate_error" else "rate_target_" + name[-1]
+                measured = (
+                    "climb_rate"
+                    if name == "climb_rate_error"
+                    else "body_rate_" + name[-1]
+                )
+                target = (
+                    "climb_target"
+                    if name == "climb_rate_error"
+                    else "rate_target_" + name[-1]
+                )
                 a, b = at(measured), at(target)
                 value = None if a is None or b is None else b - a
             else:
                 value = at(name)
             row.append(value)
-        missing = [name for name, v in zip(FEATURES, row) if v is None or not math.isfinite(v)]
+        missing = [
+            name
+            for name, v in zip(FEATURES, row)
+            if v is None or not math.isfinite(v)
+        ]
         invalid.append(missing)
         values.append([np.nan if v is None else v for v in row])
         times.append(t)
@@ -393,13 +474,23 @@ def prepare(
     if not e["model_structure_compatible"] or (
         not e["timeline_ready"] if preview else not e["profile_complete"]
     ):
-        missing = e["timeline_missing_fields"] if preview else e["log_missing_fields"]
+        missing = (
+            e["timeline_missing_fields"] if preview else e["log_missing_fields"]
+        )
         raise ValueError("분석에 필요한 입력 설정: " + ", ".join(missing))
     if any(
-        profile.get(k) is None for k in ("imu_instance", "battery_instance", "actuator_instance")
+        profile.get(k) is None
+        for k in ("imu_instance", "battery_instance", "actuator_instance")
     ):
-        raise ValueError("Explicit IMU, battery and actuator instances required")
-    if role not in {"adaptation", "development", "evaluation", "calibration"} or health not in {
+        raise ValueError(
+            "Explicit IMU, battery and actuator instances required"
+        )
+    if role not in {
+        "adaptation",
+        "development",
+        "evaluation",
+        "calibration",
+    } or health not in {
         "unknown",
         "confirmed_normal",
         "abnormal",
@@ -410,24 +501,33 @@ def prepare(
     if not preview and not interval_evidence.strip():
         raise ValueError("Reviewed airborne interval evidence required")
     audit = inspect_log(path)
-    if expected_source_sha256 is not None and audit["sha256"] != expected_source_sha256:
+    if (
+        expected_source_sha256 is not None
+        and audit["sha256"] != expected_source_sha256
+    ):
         raise ValueError("Source log changed after the segment preview")
     if audit["autopilot"] != profile["autopilot"]:
         raise ValueError("Autopilot mismatch")
     if profile["autopilot"] == "px4" and audit["parser_warnings"]:
         raise ValueError(
-            "ULog parser warning cannot be located safely: " + audit["parser_warnings"][:1000]
+            "ULog parser warning cannot be located safely: "
+            + audit["parser_warnings"][:1000]
         )
     maps = clock_maps(clock_corrections)
     # A logged topic inventory alone is not the mapping check. Field units, instances,
     # validity, chronology and the declared actuator map are checked while decoding.
     messages = io.StringIO()
-    with contextlib.redirect_stdout(messages), contextlib.redirect_stderr(messages):
-        events, decode = (bin_events if profile["autopilot"] == "ardupilot" else px4_events)(
-            path, profile, maps
-        )
+    with (
+        contextlib.redirect_stdout(messages),
+        contextlib.redirect_stderr(messages),
+    ):
+        events, decode = (
+            bin_events if profile["autopilot"] == "ardupilot" else px4_events
+        )(path, profile, maps)
     if messages.getvalue():
-        raise ValueError("Parser warnings during preparation: " + messages.getvalue()[:1000])
+        raise ValueError(
+            "Parser warnings during preparation: " + messages.getvalue()[:1000]
+        )
     values, times, timing = causal_frames(
         events,
         start_us,
@@ -439,7 +539,9 @@ def prepare(
         clock_corrections=maps,
         decoding=decode,
         parser_warnings=audit["parser_warnings"],
-        mode="offline_clock_reconstruction" if maps else "onboard_clock_causal_replay",
+        mode="offline_clock_reconstruction"
+        if maps
+        else "onboard_clock_causal_replay",
     )
     if digest(path) != audit["sha256"]:
         raise ValueError("Raw log changed")
@@ -461,11 +563,15 @@ def prepare(
     if (
         not isinstance(chosen, list)
         or not chosen
-        or any(type(i) is not int or i < 0 or i >= len(candidates) for i in chosen)
+        or any(
+            type(i) is not int or i < 0 or i >= len(candidates) for i in chosen
+        )
         or chosen != sorted(set(chosen))
         or any(not candidates[i]["usable"] for i in chosen)
     ):
-        raise ValueError("Select ordered, distinct preserved segments of at least 11 seconds")
+        raise ValueError(
+            "Select ordered, distinct preserved segments of at least 11 seconds"
+        )
     arrays, time_arrays, segments = [], [], []
     cursor = 0
     for index in chosen:
@@ -473,12 +579,18 @@ def prepare(
         arrays.append(values[s["start_index"] : s["end_index"]])
         time_arrays.append(times[s["start_index"] : s["end_index"]])
         segments.append(
-            dict(start_index=cursor, end_index=cursor + s["frames"], candidate_index=index)
+            dict(
+                start_index=cursor,
+                end_index=cursor + s["frames"],
+                candidate_index=index,
+            )
         )
         cursor += s["frames"]
     values, times = np.concatenate(arrays), np.concatenate(time_arrays)
     if len(times) > 10000:
-        raise ValueError("Select at most 1000 seconds of retained segments per flight package")
+        raise ValueError(
+            "Select at most 1000 seconds of retained segments per flight package"
+        )
     timing.update(
         selected_segments=chosen,
         retained_frames=len(times),
@@ -497,7 +609,9 @@ def prepare(
         feature_order=FEATURES,
         units="physical_pack_V_A",
         profile=profile,
-        origin="px4_real" if profile["autopilot"] == "px4" else "ardupilot_real",
+        origin="px4_real"
+        if profile["autopilot"] == "px4"
+        else "ardupilot_real",
         role=role,
         health=health,
         health_evidence=health_evidence,
@@ -509,7 +623,9 @@ def prepare(
         mapping_scope="Declared channel/instance map, onboard units and causal input checks; not real-aircraft model validation",
         source_path=source_name,
         source_sha256=audit["sha256"],
-        interval=dict(start_us=start_us, end_us=end_us, evidence=interval_evidence),
+        interval=dict(
+            start_us=start_us, end_us=end_us, evidence=interval_evidence
+        ),
         file=dict(path="frames.npz", sha256=digest(out / "frames.npz")),
     )
     from .run_summary import source_context

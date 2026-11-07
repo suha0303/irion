@@ -24,7 +24,9 @@ def validate_split(rows):
 
     for r in rows:
         keys = ["run:" + r["run_id"]]
-        keys.extend("run:" + attempt for attempt in r.get("previous_attempts", []))
+        keys.extend(
+            "run:" + attempt for attempt in r.get("previous_attempts", [])
+        )
         for field in [
             "paired_case_id",
             "parent_attempt_id",
@@ -33,7 +35,10 @@ def validate_split(rows):
             "continuation_id",
         ]:
             if r.get(field):
-                keys.append(("run:" if field == "parent_attempt_id" else field + ":") + r[field])
+                keys.append(
+                    ("run:" if field == "parent_attempt_id" else field + ":")
+                    + r[field]
+                )
         for k in keys[1:]:
             union(keys[0], k)
         if (
@@ -71,7 +76,10 @@ def verify_input(path, selection):
         ("integrity_sha256", "integrity.json"),
         ("source_lock_sha256", "reference/source_lock.json"),
     ]:
-        if selection.get(field) and sha(path / reference_name) != selection[field]:
+        if (
+            selection.get(field)
+            and sha(path / reference_name) != selection[field]
+        ):
             raise ValueError("handoff hash mismatch: " + reference_name)
     for name, entry in integrity.items():
         file = (path / name).resolve()
@@ -138,25 +146,58 @@ def build(config_path, out):
             "configuration_sha256": sha(config_path),
         },
     )
-    arrays: dict[str, list[tuple]] = {s: [] for s in ["train", "validation", "calibration", "test"]}
+    arrays: dict[str, list[tuple]] = {
+        s: [] for s in ["train", "validation", "calibration", "test"]
+    }
     train_frames = []
     preprocess = read_json(cfg["preprocessing"])
     for row in rows:
         folder = out / "canonical" / row["run_id"]
         report = process(row["path"], folder, preprocess)
-        if not report["closed"] or report["valid_frames"] == 0 or report["windows"] == 0:
-            raise ValueError("incomplete or unusable selected run: " + row["run_id"])
-        frames = [json.loads(s) for s in (folder / "frames.jsonl").read_text().splitlines()]
-        windows = [json.loads(s) for s in (folder / "windows.jsonl").read_text().splitlines()]
-        lookup = {(f["clock_id"], f["segment_id"], f["time_us"]): f for f in frames}
+        if (
+            not report["closed"]
+            or report["valid_frames"] == 0
+            or report["windows"] == 0
+        ):
+            raise ValueError(
+                "incomplete or unusable selected run: " + row["run_id"]
+            )
+        frames = [
+            json.loads(s)
+            for s in (folder / "frames.jsonl").read_text().splitlines()
+        ]
+        windows = [
+            json.loads(s)
+            for s in (folder / "windows.jsonl").read_text().splitlines()
+        ]
+        lookup = {
+            (f["clock_id"], f["segment_id"], f["time_us"]): f for f in frames
+        }
         accepted = 0
         for w in windows:
-            target = [lookup.get((w["clock_id"], w["segment_id"], t)) for t in w["target_times_us"]]
-            if any(f is None or any(f["quality"][n] != "valid" for n in TARGETS) for f in target):
+            target = [
+                lookup.get((w["clock_id"], w["segment_id"], t))
+                for t in w["target_times_us"]
+            ]
+            if any(
+                f is None or any(f["quality"][n] != "valid" for n in TARGETS)
+                for f in target
+            ):
                 continue
-            target_values = [[f["values"][n] for n in TARGETS] for f in target if f is not None]
+            target_values = [
+                [f["values"][n] for n in TARGETS]
+                for f in target
+                if f is not None
+            ]
             arrays[row["split"]].append(
-                (w["X"], w["C"], target_values, row["run_id"], w["origin_us"], w["segment_id"])
+                (
+                    w["X"],
+                    w["C"],
+                    target_values,
+                    row["run_id"],
+                    w["origin_us"],
+                    w["segment_id"],
+                )
             )
             accepted += 1
         if row["split"] == "train":

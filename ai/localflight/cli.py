@@ -22,11 +22,18 @@ def execute(request):
         if action == "calibration_list":
             return calibration.list_calibrations(root)
         if action == "calibration_select":
-            return calibration.select(root, request["id"], request.get("enabled", True))
+            return calibration.select(
+                root, request["id"], request.get("enabled", True)
+            )
         if action == "calibration_fit":
             metadata = load(request["manifests"][0], normal=True)[0]
             adapted = (
-                active_folder(root, metadata["profile"], request["model_id"], bundle=bundle)
+                active_folder(
+                    root,
+                    metadata["profile"],
+                    request["model_id"],
+                    bundle=bundle,
+                )
                 if request.get("use_active")
                 else None
             )
@@ -53,7 +60,9 @@ def execute(request):
 
         return validate(request)
     if action == "catalog":
-        return dict(models=Catalog(bundle).list(), device="cpu", external_server=False)
+        return dict(
+            models=Catalog(bundle).list(), device="cpu", external_server=False
+        )
     if action == "inspect":
         return inspect_log(request["path"])
     if action == "profiles":
@@ -79,7 +88,11 @@ def execute(request):
 
         if not 1 <= len(request["models"]) <= 2:
             raise ValueError("Select one or two models")
-        manifests = request["manifests"] if "manifests" in request else [request["manifest"]]
+        manifests = (
+            request["manifests"]
+            if "manifests" in request
+            else [request["manifest"]]
+        )
         return analyze_run(
             request["models"],
             manifests,
@@ -130,7 +143,9 @@ def execute(request):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["catalog", "inspect", "benchmark", "worker"])
+    parser.add_argument(
+        "action", choices=["catalog", "inspect", "benchmark", "worker"]
+    )
     parser.add_argument("--path", type=Path)
     parser.add_argument("--bundle", type=Path, default=DEFAULT_BUNDLE)
     parser.add_argument("--output", type=Path)
@@ -146,7 +161,10 @@ def main(argv=None):
             if args.path:
                 request["path"] = str(args.path)
         result = execute(request)
-        encoded = json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+        encoded = (
+            json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False)
+            + "\n"
+        )
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             with args.output.open("x", encoding="utf-8") as f:
@@ -154,7 +172,10 @@ def main(argv=None):
         print(encoded, end="")
         return 0
     except (ValueError, KeyError, OSError) as error:
-        print(json.dumps({"error": str(error)}, ensure_ascii=False), file=sys.stderr)
+        print(
+            json.dumps({"error": str(error)}, ensure_ascii=False),
+            file=sys.stderr,
+        )
         return 2
 
 

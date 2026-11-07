@@ -4,7 +4,17 @@ import math
 
 BOUNDED = "bounded-latent-ou-c2-enu-v1"
 RANDOM_BOUNDED = "random-continuous-v6-bounded-wind"
-KINDS = {"hover", "altitude", "line", "ellipse", "figure8", "lissajous", "yaw", "mixed", "random"}
+KINDS = {
+    "hover",
+    "altitude",
+    "line",
+    "ellipse",
+    "figure8",
+    "lissajous",
+    "yaw",
+    "mixed",
+    "random",
+}
 ENVIRONMENT_BOUND = dict(calm=0.0, low=2.5, strong=5.0)
 FIXED_RANDOM = {"random-continuous-v3", "random-continuous-v4-wind5"}
 
@@ -25,7 +35,10 @@ def describe(scenario, *, wind_clock=None):
     kind = path.get("kind")
     if kind not in KINDS or params.get("mission") != kind:
         raise ValueError("Explicit path kind and executed mission must agree")
-    profile, model = scenario.get("wind_profile"), scenario.get("wind_model", {})
+    profile, model = (
+        scenario.get("wind_profile"),
+        scenario.get("wind_model", {}),
+    )
     if profile is not None:
         environment = profile.get("environment")
         if (
@@ -36,18 +49,27 @@ def describe(scenario, *, wind_clock=None):
             or scenario.get("wind_support_status") != "bounded_current"
             or environment not in ENVIRONMENT_BOUND
         ):
-            raise ValueError("Explicit matching bounded wind profile/model/environment required")
+            raise ValueError(
+                "Explicit matching bounded wind profile/model/environment required"
+            )
         if (
             any(params.get(k) != 0 for k in ("wind_e", "wind_n", "gust_sigma"))
             or model.get("axes") != ["east", "north", "up"]
-            or model.get("clock") != (wind_clock or "absolute_native_simulation_boot_seconds")
+            or model.get("clock")
+            != (wind_clock or "absolute_native_simulation_boot_seconds")
             or not finite(profile.get("direction_deg"))
             or not finite(profile.get("variation"))
             or not 0.5 <= profile["variation"] <= 1.5
         ):
-            raise ValueError("Bounded ENU clock/profile must not mix legacy wind parameters")
+            raise ValueError(
+                "Bounded ENU clock/profile must not mix legacy wind parameters"
+            )
         bounds = model.get("generator_speed_bounds_mps", [])
-        if not isinstance(bounds, list) or len(bounds) != 2 or not all(finite(x) for x in bounds):
+        if (
+            not isinstance(bounds, list)
+            or len(bounds) != 2
+            or not all(finite(x) for x in bounds)
+        ):
             raise ValueError("Finite declared generator speed bounds required")
         lower, upper = bounds
         valid = (
@@ -57,10 +79,18 @@ def describe(scenario, *, wind_clock=None):
             if environment == "low"
             else 2.5 < lower <= upper <= 5
         )
-        if not valid or model.get("environment_speed_bound_mps") != ENVIRONMENT_BOUND[environment]:
-            raise ValueError("Declared speed bounds contradict instantaneous wind environment")
+        if (
+            not valid
+            or model.get("environment_speed_bound_mps")
+            != ENVIRONMENT_BOUND[environment]
+        ):
+            raise ValueError(
+                "Declared speed bounds contradict instantaneous wind environment"
+            )
         if kind == "random" and path.get("revision") != RANDOM_BOUNDED:
-            raise ValueError("Bounded random requires v6; do not reinterpret old v3/v4/v5 paths")
+            raise ValueError(
+                "Bounded random requires v6; do not reinterpret old v3/v4/v5 paths"
+            )
         return dict(
             wind_mode="bounded_profile",
             wind_revision=BOUNDED,
@@ -84,7 +114,9 @@ def describe(scenario, *, wind_clock=None):
             "No bounded profile: only explicitly marked fixed-wind regression accepted"
         )
     if kind == "random" and path.get("revision") not in FIXED_RANDOM:
-        raise ValueError("Fixed regression retains explicit v3/v4 path semantics")
+        raise ValueError(
+            "Fixed regression retains explicit v3/v4 path semantics"
+        )
     return dict(
         wind_mode="legacy_fixed_regression",
         wind_revision=model["revision"],

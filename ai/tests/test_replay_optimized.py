@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
-
 from capstone_ai.dataset import feature_transform
 from capstone_ai.detection import DetectionLedger
 from capstone_ai.detection_replay import records, replay
@@ -28,7 +27,10 @@ class FixturePredictor:
         self.model = model
         self.calls = []
         self.scaler = dict(
-            x_mean=np.zeros(19), x_scale=np.ones(19), c_mean=np.zeros(6), c_scale=np.ones(6)
+            x_mean=np.zeros(19),
+            x_scale=np.ones(19),
+            c_mean=np.zeros(6),
+            c_scale=np.ones(6),
         )
 
     def predict_scaled(self, x, c):
@@ -38,7 +40,8 @@ class FixturePredictor:
             return np.repeat(values[:, None, :], 10, axis=1)
         with torch.no_grad():
             return self.model(
-                torch.as_tensor(x, dtype=torch.float32), torch.as_tensor(c, dtype=torch.float32)
+                torch.as_tensor(x, dtype=torch.float32),
+                torch.as_tensor(c, dtype=torch.float32),
             ).numpy()
 
     def physical(self, value):
@@ -68,7 +71,9 @@ def case(tmp_path, windows_per_segment=8):
                     segment_id=segment,
                     time_us=t,
                     values=dict.fromkeys(TARGETS, 2.0),
-                    quality=dict.fromkeys(TARGETS, "invalid" if i == 25 else "valid"),
+                    quality=dict.fromkeys(
+                        TARGETS, "invalid" if i == 25 else "valid"
+                    ),
                     operating_state="airborne",
                     warmup=False,
                 )
@@ -86,13 +91,20 @@ def case(tmp_path, windows_per_segment=8):
     # Canonical window storage order need not equal issuance order.
     rng.shuffle(windows)
     for name, values in (("frames.jsonl", frames), ("windows.jsonl", windows)):
-        (canonical / name).write_text("".join(json.dumps(v) + "\n" for v in values))
-    dump(canonical / "summary.json", dict(config={}, exclusions={}, output_hashes={}))
+        (canonical / name).write_text(
+            "".join(json.dumps(v) + "\n" for v in values)
+        )
+    dump(
+        canonical / "summary.json",
+        dict(config={}, exclusions={}, output_hashes={}),
+    )
     return canonical, bundle, frames, windows
 
 
 def sequential_reference(predictor, frames, windows):
-    windows = {(w["clock_id"], w["segment_id"], w["origin_us"]): w for w in windows}
+    windows = {
+        (w["clock_id"], w["segment_id"], w["origin_us"]): w for w in windows
+    }
     ledger = reference.DetectionLedger(np.ones((10, 4)), [1, 1])
     previous, last = None, None
     for frame in frames:
@@ -123,7 +135,9 @@ def test_sequential_replay_matches_prior_causal_decisions_and_syncs_only_at_seal
     canonical, bundle, frames, windows = case(tmp_path)
     expected = sequential_reference(FixturePredictor(bundle), frames, windows)
     synced = []
-    monkeypatch.setattr("capstone_ai.detection_replay.os.fsync", lambda fd: synced.append(fd))
+    monkeypatch.setattr(
+        "capstone_ai.detection_replay.os.fsync", lambda fd: synced.append(fd)
+    )
     predictor = FixturePredictor(bundle)
     out = tmp_path / "result"
     replay(
@@ -135,10 +149,13 @@ def test_sequential_replay_matches_prior_causal_decisions_and_syncs_only_at_seal
     )
     assert records(out / "decisions.jsonl") == list(expected.decisions.values())
     forecast_fields = set(next(iter(expected.forecasts.values())))
-    assert [{k: f[k] for k in forecast_fields} for f in records(out / "forecasts.jsonl")] == list(
-        expected.forecasts.values()
-    )
-    assert len(synced) == 5  # two streams, summary, seal, directory; independent of origin count
+    assert [
+        {k: f[k] for k in forecast_fields}
+        for f in records(out / "forecasts.jsonl")
+    ] == list(expected.forecasts.values())
+    assert (
+        len(synced) == 5
+    )  # two streams, summary, seal, directory; independent of origin count
     assert predictor.calls == [1] * len(windows)
     seal = read_json(out / "seal.json")
     assert seal["files"]["summary.json"] == sha(out / "summary.json")
@@ -146,12 +163,20 @@ def test_sequential_replay_matches_prior_causal_decisions_and_syncs_only_at_seal
 
 @pytest.mark.parametrize("name", [None, "lstm", "transformer"])
 @pytest.mark.parametrize("batch_size", [4, 256])
-def test_batched_inputs_keep_forecasts_and_discrete_decisions(tmp_path, name, batch_size):
+def test_batched_inputs_keep_forecasts_and_discrete_decisions(
+    tmp_path, name, batch_size
+):
     torch.manual_seed(1)
     torch.set_num_threads(1)
-    model = None if name is None else make_model(ModelSpec(name, hidden=64, layers=2)).eval()
+    model = (
+        None
+        if name is None
+        else make_model(ModelSpec(name, hidden=64, layers=2)).eval()
+    )
     canonical, bundle, frames, windows = case(tmp_path)
-    expected = sequential_reference(FixturePredictor(bundle, model), frames, windows)
+    expected = sequential_reference(
+        FixturePredictor(bundle, model), frames, windows
+    )
     predictor = FixturePredictor(bundle, model)
     out = tmp_path / "result"
     summary = replay(
@@ -163,7 +188,8 @@ def test_batched_inputs_keep_forecasts_and_discrete_decisions(tmp_path, name, ba
         prediction_batch_size=batch_size,
     )
     assert predictor.calls == [
-        min(batch_size, len(windows) - i) for i in range(0, len(windows), batch_size)
+        min(batch_size, len(windows) - i)
+        for i in range(0, len(windows), batch_size)
     ]
     assert summary["compute_seconds_p50_p95_p99"] is None
     assert summary["prediction_batches"] == len(predictor.calls)
@@ -184,22 +210,38 @@ def test_batched_inputs_keep_forecasts_and_discrete_decisions(tmp_path, name, ba
             assert new[field] == old[field]
         for domain in ("propulsion", "battery"):
             for field in ("state", "alarm_active", "episode_start"):
-                assert new["domains"][domain][field] == old["domains"][domain][field]
+                assert (
+                    new["domains"][domain][field]
+                    == old["domains"][domain][field]
+                )
         if new["scores"] is not None:
-            np.testing.assert_allclose(new["scores"], old["scores"], rtol=2e-5, atol=2e-6)
-    for new, old in zip(records(out / "forecasts.jsonl"), expected.forecasts.values()):
-        np.testing.assert_allclose(new["prediction"], old["prediction"], rtol=2e-5, atol=2e-6)
+            np.testing.assert_allclose(
+                new["scores"], old["scores"], rtol=2e-5, atol=2e-6
+            )
+    for new, old in zip(
+        records(out / "forecasts.jsonl"), expected.forecasts.values()
+    ):
+        np.testing.assert_allclose(
+            new["prediction"], old["prediction"], rtol=2e-5, atol=2e-6
+        )
         assert new["issued_time_us"] < new["target_times_us"][0]
-        assert new["compute_seconds_scope"] == "batch_forward_amortized_per_forecast"
+        assert (
+            new["compute_seconds_scope"]
+            == "batch_forward_amortized_per_forecast"
+        )
 
 
-def test_pending_queue_preserves_duplicate_snapshot_and_does_not_scan_finished(tmp_path):
+def test_pending_queue_preserves_duplicate_snapshot_and_does_not_scan_finished(
+    tmp_path,
+):
     ledger = DetectionLedger(np.ones((10, 4)), [1, 1])
     key = ledger.issue("run", "clock", 0, 0, 0, np.zeros((10, 4)))
     ledger.issue("run", "clock", 0, 0, 0, np.zeros((10, 4)))
     assert list(ledger.pending) == [key]
     snapshot = ledger.snapshot()
-    assert snapshot.advance(1_000_000, closed=True) == ledger.advance(1_000_000, closed=True)
+    assert snapshot.advance(1_000_000, closed=True) == ledger.advance(
+        1_000_000, closed=True
+    )
     assert ledger.advance(2_000_000, closed=True) == []
     ledger.issue("run", "clock", 0, 0, 0, np.zeros((10, 4)))
     assert not ledger.pending

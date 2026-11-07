@@ -14,10 +14,14 @@ def test_runtime_drift_blocks_service_before_submission(tmp_path, monkeypatch):
     task = home / "tasks" / "changed-runtime"
     runtime = common.runtime_identity()
     runtime["sha256"] = "0" * 64
-    common.write(task / "config.json", dict(source_sha256={}, python_runtime=runtime))
+    common.write(
+        task / "config.json", dict(source_sha256={}, python_runtime=runtime)
+    )
     (task / "config.sha256").write_text(common.sha(task / "config.json"))
     monkeypatch.setattr(cli, "HOME", home)
-    monkeypatch.setattr(cli.subprocess, "run", lambda *a, **k: pytest.fail("must not submit"))
+    monkeypatch.setattr(
+        cli.subprocess, "run", lambda *a, **k: pytest.fail("must not submit")
+    )
     with pytest.raises(ValueError, match="Python runtime changed"):
         cli.start(task)
     assert not (task / "operator/memory-policy.json").exists()
@@ -28,7 +32,9 @@ def test_new_task_pins_actual_runtime_without_execution(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setattr(cli, "HOME", home)
-    args = cli.parser().parse_args(["init", "--name", "runtime-pin", "--mode", "collect"])
+    args = cli.parser().parse_args(
+        ["init", "--name", "runtime-pin", "--mode", "collect"]
+    )
     task = cli.create(args)
     config = common.read(task / "config.json")
     runtime = common.runtime_identity()
@@ -43,7 +49,8 @@ def test_new_task_pins_actual_runtime_without_execution(tmp_path, monkeypatch):
 
 def test_four_real_preprocessors_match_verified_fixture(tmp_path, monkeypatch):
     fixture = common.load(
-        "runtime_raw_fixture", common.ROOT / "ai/tests/test_pretrain_streaming.py"
+        "runtime_raw_fixture",
+        common.ROOT / "ai/tests/test_pretrain_streaming.py",
     )
     data = fixture.setup_run(tmp_path, monkeypatch)
     reference = common.read(data.canonical / "summary.json")
@@ -63,7 +70,15 @@ def test_four_real_preprocessors_match_verified_fixture(tmp_path, monkeypatch):
 
     def execute(path):
         result = subprocess.run(
-            [str(common.PYTHON), "-B", "-X", "faulthandler", "-m", "pretrain.worker", str(path)],
+            [
+                str(common.PYTHON),
+                "-B",
+                "-X",
+                "faulthandler",
+                "-m",
+                "pretrain.worker",
+                str(path),
+            ],
             env={
                 **os.environ,
                 "PYTHONPATH": common.pythonpath(),
@@ -82,6 +97,15 @@ def test_four_real_preprocessors_match_verified_fixture(tmp_path, monkeypatch):
         results = list(pool.map(execute, requests))
     assert all(r["status"] == "COMPLETE" for r in results)
     assert (
-        common.overlap([dict(started=r["started"], finished=r["finished"]) for r in results]) == 4
+        common.overlap(
+            [
+                dict(started=r["started"], finished=r["finished"])
+                for r in results
+            ]
+        )
+        == 4
     )
-    assert all(r["result"]["output_hashes"] == reference["output_hashes"] for r in results)
+    assert all(
+        r["result"]["output_hashes"] == reference["output_hashes"]
+        for r in results
+    )

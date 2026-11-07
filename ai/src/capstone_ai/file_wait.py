@@ -14,7 +14,9 @@ class FileWaiter:
             raise OSError(ctypes.get_errno(), "inotify_init1")
         for name in ["streams.jsonl", "watermarks.jsonl"]:
             path = Path(run) / "observations" / name
-            watch = libc.inotify_add_watch(self.fd, os.fsencode(path), 0x2 | 0x8 | 0x400 | 0x800)
+            watch = libc.inotify_add_watch(
+                self.fd, os.fsencode(path), 0x2 | 0x8 | 0x400 | 0x800
+            )
             if watch < 0:
                 self.close()
                 raise OSError(ctypes.get_errno(), "inotify_add_watch")

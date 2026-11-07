@@ -6,12 +6,17 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
-
 from capstone_ai.dataset import feature_transform
 from capstone_ai.mapping import FEATURES, TARGETS
 from execution.common import child
 from execution.prepare import npz_headers
-from learning.admission19 import ONLINE_UNITS, check_producer, check_protection, validate_lineages
+
+from learning.admission19 import (
+    ONLINE_UNITS,
+    check_producer,
+    check_protection,
+    validate_lineages,
+)
 from learning.history19.data import ARRAYS
 from learning.history19.pilot import ROOT, json_file, regular, sha
 from learning.run_health19.data import Scaler, iter_manifests
@@ -56,13 +61,21 @@ ROW_FIELDS = {
 def _reader_row(row):
     value = {k: v for k, v in row.items() if k in ROW_FIELDS}
     if len(json.dumps(value)) > 16384:
-        raise ValueError("Model row exceeds16KiB; keep archive inventories in the case capsule")
+        raise ValueError(
+            "Model row exceeds16KiB; keep archive inventories in the case capsule"
+        )
     return value
 
 
 def _file_identity(path):
     info = path.stat()
-    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns
+    return (
+        info.st_dev,
+        info.st_ino,
+        info.st_size,
+        info.st_mtime_ns,
+        info.st_ctime_ns,
+    )
 
 
 def _input_path(record, key):
@@ -78,11 +91,15 @@ def _input_path(record, key):
         or ref["sha256"] != digest
         or _file_identity(path) != identity
     ):
-        raise ValueError("Admitted case input changed during aggregation: " + str(path))
+        raise ValueError(
+            "Admitted case input changed during aggregation: " + str(path)
+        )
     return path
 
 
-def _progress(root, stage, done, total, callback=None, *, status="running", **details):
+def _progress(
+    root, stage, done, total, callback=None, *, status="running", **details
+):
     import os
     import time
 
@@ -123,22 +140,40 @@ def _ledger(ref, case, producer, all_raw_ids, policy_bundle):
     failures, rejected, original_groups = 0, 0, None
     for i, a in enumerate(attempts, 1):
         if (
-            not {"index", "run_id", "seed", "parent_attempt_id", "status", "lineage"} <= set(a)
+            not {
+                "index",
+                "run_id",
+                "seed",
+                "parent_attempt_id",
+                "status",
+                "lineage",
+            }
+            <= set(a)
             or type(a.get("index")) is not int
             or a["index"] != i
             or not isinstance(a.get("run_id"), str)
             or not a["run_id"]
             or a["run_id"] in all_raw_ids
             or a.get("seed") != case["seed"]
-            or a.get("parent_attempt_id") != (attempts[i - 2]["run_id"] if i > 1 else None)
-            or a.get("status") not in {"completed", "failed", "stopped", "quality_rejected"}
+            or a.get("parent_attempt_id")
+            != (attempts[i - 2]["run_id"] if i > 1 else None)
+            or a.get("status")
+            not in {"completed", "failed", "stopped", "quality_rejected"}
             or not a.get("lineage")
         ):
-            raise ValueError("Original attempt/index/seed/parent/lineage changed")
+            raise ValueError(
+                "Original attempt/index/seed/parent/lineage changed"
+            )
         all_raw_ids.add(a["run_id"])
-        groups = {x for x in a["lineage"] if x.startswith(("pair:", "group:", "retry:"))}
+        groups = {
+            x
+            for x in a["lineage"]
+            if x.startswith(("pair:", "group:", "retry:"))
+        }
         if original_groups is not None and groups != original_groups:
-            raise ValueError("Retry changed its original paired/group/family identities")
+            raise ValueError(
+                "Retry changed its original paired/group/family identities"
+            )
         original_groups = groups
         for field, prefix in (
             ("paired_case_id", "pair:"),
@@ -146,9 +181,12 @@ def _ledger(ref, case, producer, all_raw_ids, policy_bundle):
             ("retry_family_id", "retry:"),
         ):
             if field in case and not any(
-                x.startswith(prefix) and x.rsplit(":", 1)[-1] == case[field] for x in groups
+                x.startswith(prefix) and x.rsplit(":", 1)[-1] == case[field]
+                for x in groups
             ):
-                raise ValueError("Attempt lineage differs from immutable source case groups")
+                raise ValueError(
+                    "Attempt lineage differs from immutable source case groups"
+                )
         if a["status"] in {"failed", "stopped"} and not a.get("failure_reason"):
             raise ValueError("Physical failure must retain its reason")
         quality = a.get("quality_rejection")
@@ -156,17 +194,28 @@ def _ledger(ref, case, producer, all_raw_ids, policy_bundle):
             from .rejection import verify_quality_rejection
 
             if not isinstance(quality, dict):
-                raise ValueError("Explicit independent quality rejection receipt required")
-            verify_quality_rejection(quality, a, producer, policy_bundle, case_id=case["case_id"])
-            if a["status"] == "quality_rejected" and a.get("physical_status") != "completed":
-                raise ValueError("Physical COMPLETED cannot be disguised as quality failure")
+                raise ValueError(
+                    "Explicit independent quality rejection receipt required"
+                )
+            verify_quality_rejection(
+                quality, a, producer, policy_bundle, case_id=case["case_id"]
+            )
+            if (
+                a["status"] == "quality_rejected"
+                and a.get("physical_status") != "completed"
+            ):
+                raise ValueError(
+                    "Physical COMPLETED cannot be disguised as quality failure"
+                )
             rejected += 1
         elif a["run_id"] in recovery_rejected and a["status"] == "completed":
             # Physical completion is preserved; the bound original input rejection
             # and explicit user authority permit only this selected replacement.
             rejected += 1
         elif a["status"] == "completed" and i < len(attempts):
-            raise ValueError("A valid completed raw cannot be blindly regenerated")
+            raise ValueError(
+                "A valid completed raw cannot be blindly regenerated"
+            )
         failures += a["status"] == "failed"
     return value, dict(
         physical_attempts=len(attempts),
@@ -188,7 +237,9 @@ def _records(index_path, scope, producer, protection, policy_bundle):
     with regular(index_path).open() as stream:
         for line in stream:
             if len(line) > 65536:
-                raise ValueError("Collection index entry exceeds64KiB; use per-case references")
+                raise ValueError(
+                    "Collection index entry exceeds64KiB; use per-case references"
+                )
             record = json.loads(line)
             cid = case_key(record["case_id"])
             if (
@@ -201,16 +252,26 @@ def _records(index_path, scope, producer, protection, policy_bundle):
             if len(seen) > 1674:
                 raise ValueError("Index exceeds approved logical case count")
             case = plans["cases"][cid]
-            ledger, counts = _ledger(record["case_ledger"], case, producer, raw_ids, policy_bundle)
+            ledger, counts = _ledger(
+                record["case_ledger"], case, producer, raw_ids, policy_bundle
+            )
             if cid not in expected_ids:
                 continue
             totals.update(counts)
-            if record.get("status") not in {"accepted", "failed", "unavailable"}:
-                raise ValueError("Every logical case needs accepted/failed/unavailable status")
+            if record.get("status") not in {
+                "accepted",
+                "failed",
+                "unavailable",
+            }:
+                raise ValueError(
+                    "Every logical case needs accepted/failed/unavailable status"
+                )
             totals[record["status"]] += 1
             if record["status"] != "accepted":
                 if not record.get("failure_reason"):
-                    raise ValueError("Failed/unavailable case reason cannot be dropped")
+                    raise ValueError(
+                        "Failed/unavailable case reason cannot be dropped"
+                    )
                 continue
             audit_path = bound(record["audit"])
             audit = json_file(audit_path)
@@ -221,7 +282,8 @@ def _records(index_path, scope, producer, protection, policy_bundle):
                 or audit.get("task_id") != TASK
                 or audit.get("actual_data_verified") is not (not fixture)
                 or audit.get("fixture_only") is not fixture
-                or audit.get("policy_sha256") != sha(regular(policy_bundle["paired_policy"]))
+                or audit.get("policy_sha256")
+                != sha(regular(policy_bundle["paired_policy"]))
             ):
                 raise ValueError("Actual scoped case audit receipt required")
             check_producer(audit["producer"], producer)
@@ -239,9 +301,15 @@ def _records(index_path, scope, producer, protection, policy_bundle):
                 )
             export = Path(record["export_root"]).absolute()
             if set(audit.get("input_refs", {})) != {
-                "canonical", "online_manifest", "whole_manifest", "online_array", "whole_array"
+                "canonical",
+                "online_manifest",
+                "whole_manifest",
+                "online_array",
+                "whole_array",
             }:
-                raise ValueError("Complete previously audited input references required")
+                raise ValueError(
+                    "Complete previously audited input references required"
+                )
             input_paths = {}
             for key, ref in audit["input_refs"].items():
                 path = bound(ref)
@@ -257,13 +325,19 @@ def _records(index_path, scope, producer, protection, policy_bundle):
                     )[key]
                 ):
                     raise ValueError("Case audit belongs to another export")
-            if row["origin"] != ("synthetic_unit_fixture" if fixture else "px4_sitl"):
-                raise ValueError("Fixture cannot substitute actual collection data")
+            if row["origin"] != (
+                "synthetic_unit_fixture" if fixture else "px4_sitl"
+            ):
+                raise ValueError(
+                    "Fixture cannot substitute actual collection data"
+                )
             if (
                 case["category"] in {"paired_normal", "anomaly"}
                 and record.get("pair_evidence") is None
             ):
-                raise ValueError("Paired case needs preserved official native pair evidence")
+                raise ValueError(
+                    "Paired case needs preserved official native pair evidence"
+                )
             rows.append(row)
             # Keep bounded reader metadata, never archive inventories or whole raw receipts.
             audit = {
@@ -283,17 +357,27 @@ def _records(index_path, scope, producer, protection, policy_bundle):
             }
             selected.append(
                 dict(
-                    record=record, row=row, audit=audit, audit_path=audit_path,
-                    export=export, input_paths=input_paths,
+                    record=record,
+                    row=row,
+                    audit=audit,
+                    audit_path=audit_path,
+                    export=export,
+                    input_paths=input_paths,
                 )
             )
     if not expected_ids <= seen:
-        raise ValueError("All planned logical cases, including failures, must remain in index")
+        raise ValueError(
+            "All planned logical cases, including failures, must remain in index"
+        )
     validate_lineages(rows)
     identities = {"run:" + rid for rid in raw_ids} | {
         key
         for row in rows
-        for key in ["case:" + row["case_id"], "run:" + row["run_id"], *row["lineage"]]
+        for key in [
+            "case:" + row["case_id"],
+            "run:" + row["run_id"],
+            *row["lineage"],
+        ]
     }
     registry = read_protection(protection, identities)
     check_protection(rows, registry, usage="input_check")
@@ -311,16 +395,22 @@ def _pairs(records, producer, policy_bundle):
     for record in records:
         ref = record["record"].get("pair_evidence")
         if ref is not None:
-            groups.setdefault(record["row"]["paired_case_id"], []).append((record, ref))
+            groups.setdefault(record["row"]["paired_case_id"], []).append(
+                (record, ref)
+            )
     seen_reports = set()
     for pair in groups.values():
         if len(pair) != 2 or pair[0][1]["sha256"] != pair[1][1]["sha256"]:
-            raise ValueError("Both members must bind one original official pair report")
+            raise ValueError(
+                "Both members must bind one original official pair report"
+            )
         bound(pair[1][1])
         path = bound(pair[0][1])
         digest = sha(path)
         if digest in seen_reports:
-            raise ValueError("Native report cannot stand in for independent pairs")
+            raise ValueError(
+                "Native report cannot stand in for independent pairs"
+            )
         seen_reports.add(digest)
         report = json_file(path)
         if (
@@ -330,8 +420,10 @@ def _pairs(records, producer, policy_bundle):
             or report.get("original_interval_us") != [0, 480000000]
             or report.get("source_sha256") != producer["source_manifest_sha256"]
             or report.get("runtime_sha256") != producer["runtime_sha256"]
-            or report.get("policy", {}).get("policy_sha256") != policy["native_policy_sha256"]
-            or report.get("policy", {}).get("revision") != policy["native_adapter"]
+            or report.get("policy", {}).get("policy_sha256")
+            != policy["native_policy_sha256"]
+            or report.get("policy", {}).get("revision")
+            != policy["native_adapter"]
             or report.get("interpolation_used") is not False
             or report.get("wind", {}).get("samples") != 480001
             or report["wind"].get("expected_samples") != 480001
@@ -339,7 +431,9 @@ def _pairs(records, producer, policy_bundle):
             or report.get("reference", {}).get("rows") != 4801
             or report["reference"].get("missing_rows") != 0
         ):
-            raise ValueError("Original full480 official pair scope/coverage differs")
+            raise ValueError(
+                "Original full480 official pair scope/coverage differs"
+            )
         for container, key, limit in (
             ("wind", "max_vector_difference_mps", 2e-9),
             ("wind", "rms_vector_difference_mps", 2e-9),
@@ -348,7 +442,11 @@ def _pairs(records, producer, policy_bundle):
             ("reference", "max_circular_yaw_difference_rad", 1e-8),
         ):
             value = report[container].get(key)
-            if type(value) not in (int, float) or not np.isfinite(value) or not 0 <= value <= limit:
+            if (
+                type(value) not in (int, float)
+                or not np.isfinite(value)
+                or not 0 <= value <= limit
+            ):
                 raise ValueError("Preserved native pair criterion failed")
         checks = report.get("wind_function_checks", [])
         if len(checks) != 2 or any(
@@ -359,13 +457,21 @@ def _pairs(records, producer, policy_bundle):
         ):
             raise ValueError("Official full applied-wind oracle proof missing")
         for member, _ in pair:
-            role = "anomaly" if member["row"]["role"] == "anomaly_test" else "normal"
+            role = (
+                "anomaly"
+                if member["row"]["role"] == "anomaly_test"
+                else "normal"
+            )
             if (
                 Path(report[role + "_run"]).name != member["row"]["run_id"]
-                or report["native_consumption"][role] != member["audit"]["native_check"]
-                or report["origins"][role] != member["row"]["mission_interval"]["start_us"]
+                or report["native_consumption"][role]
+                != member["audit"]["native_check"]
+                or report["origins"][role]
+                != member["row"]["mission_interval"]["start_us"]
             ):
-                raise ValueError("Pair report differs from preserved physical case receipts")
+                raise ValueError(
+                    "Pair report differs from preserved physical case receipts"
+                )
     return len(groups)
 
 
@@ -377,18 +483,27 @@ def _new_root(output):
     return path
 
 
-def _compile(records, output, *, scope, producer, registry, fixture_only, progress=None):
+def _compile(
+    records, output, *, scope, producer, registry, fixture_only, progress=None
+):
     """Low-level bounded writer; production entry below enforces the complete frozen scope."""
     root = _new_root(output)
     records = sorted(records, key=lambda r: r["row"]["run_id"])
     import re
 
-    if any(not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", r["row"]["run_id"]) for r in records):
-        raise ValueError("Safe original run identifiers required for dataset filenames")
+    if any(
+        not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", r["row"]["run_id"])
+        for r in records
+    ):
+        raise ValueError(
+            "Safe original run identifiers required for dataset filenames"
+        )
     train = [r for r in records if r["row"]["role"] == "normal_train"]
     validation = [r for r in records if r["row"]["role"] == "normal_validation"]
     if not train or not validation:
-        raise ValueError("Independent train and validation required; no scaler from other roles")
+        raise ValueError(
+            "Independent train and validation required; no scaler from other roles"
+        )
     train_ids = sorted(r["row"]["run_id"] for r in train)
     if len(train_ids) != len(set(train_ids)):
         raise ValueError("Duplicate physical train run")
@@ -397,32 +512,51 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
     moments = Moments()
     nframes = sum(grid(r["row"])[2] for r in train)
     max_run = max(len(r["row"]["run_id"]) for r in train)
-    max_clock = max(len(r["row"]["mission_interval"]["clock_id"]) for r in train)
+    max_clock = max(
+        len(r["row"]["mission_interval"]["clock_id"]) for r in train
+    )
 
     def frames(field):
         for run_index, record in enumerate(train, 1):
             row = record["row"]
             if field == "values":
-                for block, _, _ in canonical_blocks(record["export"] / "frames.jsonl", row):
+                for block, _, _ in canonical_blocks(
+                    record["export"] / "frames.jsonl", row
+                ):
                     values = feature_transform(block, config)
                     moments.add(values)
                     yield values
                 _progress(
-                    root, "train_statistics", run_index, len(train), progress, scaler_scope=scope
+                    root,
+                    "train_statistics",
+                    run_index,
+                    len(train),
+                    progress,
+                    scaler_scope=scope,
                 )
             else:
                 first, _, size = grid(row)
                 for offset in range(0, size, 8192):
                     count = min(8192, size - offset)
                     if field == "time_us":
-                        yield first + np.arange(offset, offset + count, dtype=np.int64) * 100000
+                        yield (
+                            first
+                            + np.arange(offset, offset + count, dtype=np.int64)
+                            * 100000
+                        )
                     elif field == "segment_id":
-                        yield np.full(count, record["audit"]["segment_id"], dtype=np.int64)
+                        yield np.full(
+                            count, record["audit"]["segment_id"], dtype=np.int64
+                        )
                     elif field == "run_id":
-                        yield np.full(count, row["run_id"], dtype=f"<U{max_run}")
+                        yield np.full(
+                            count, row["run_id"], dtype=f"<U{max_run}"
+                        )
                     else:
                         yield np.full(
-                            count, row["mission_interval"]["clock_id"], dtype=f"<U{max_clock}"
+                            count,
+                            row["mission_interval"]["clock_id"],
+                            dtype=f"<U{max_clock}",
                         )
 
     frame_specs = {"values": ((nframes, 19), "<f8", frames("values"))}
@@ -437,7 +571,10 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
     mean, scale = moments.finish()
     target_indices = [FEATURES.index(k) for k in TARGETS]
     scaler = dict(
-        x_mean=mean, x_scale=scale, y_mean=mean[target_indices], y_scale=scale[target_indices]
+        x_mean=mean,
+        x_scale=scale,
+        y_mean=mean[target_indices],
+        y_scale=scale[target_indices],
     )
     np.savez(root / "scaler.npz", **scaler)
     provenance = dict(
@@ -451,7 +588,10 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
     write_new(
         root / "whole-scaler.json",
         dict(
-            mean=mean.tolist(), scale=scale.tolist(), fit_run_ids=train_ids, provenance=provenance
+            mean=mean.tolist(),
+            scale=scale.tolist(),
+            fit_run_ids=train_ids,
+            provenance=provenance,
         ),
     )
     write_new(root / "scaler-provenance.json", provenance)
@@ -462,7 +602,10 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
             ("scaler", "scaler.npz"),
         )
     }
-    for role, selected in (("normal_train", train), ("normal_validation", validation)):
+    for role, selected in (
+        ("normal_train", train),
+        ("normal_validation", validation),
+    ):
         # _records already bound these immutable case inputs in this invocation.
         sources = [_input_path(r, "online_array") for r in selected]
         headers = [npz_headers(p) for p in sources]
@@ -487,12 +630,20 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
                     for _, a in array_blocks(source, key):
                         yield a
                     _progress(
-                        root, "copy_online", run_index, len(sources), progress, role=role, array=key
+                        root,
+                        "copy_online",
+                        run_index,
+                        len(sources),
+                        progress,
+                        role=role,
+                        array=key,
                     )
 
             specs[key] = (shape, dtype, blocks())
         write_npz(root / (role + ".npz"), specs)
-        files[role] = dict(path=role + ".npz", sha256=sha(root / (role + ".npz")))
+        files[role] = dict(
+            path=role + ".npz", sha256=sha(root / (role + ".npz"))
+        )
     manifest = dict(
         schema="drone-ai.history19.dataset/1",
         fixture_only=fixture_only,
@@ -509,7 +660,9 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
         scaler_scope="normal_train_unique_valid_frames",
         scaler_fit_run_ids=train_ids,
         runs=[
-            r["row"] for r in records if r["row"]["role"] in {"normal_train", "normal_validation"}
+            r["row"]
+            for r in records
+            if r["row"]["role"] in {"normal_train", "normal_validation"}
         ],
         files=files,
         collection_scope=scope,
@@ -548,7 +701,9 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
         copied_sha = sha(target)
         if copied_sha != record["audit"]["input_refs"]["whole_array"]["sha256"]:
             raise ValueError("Whole-run copy differs")
-        original = _reader_row(json_file(record["export"] / "run.json")["runs"][0])
+        original = _reader_row(
+            json_file(record["export"] / "run.json")["runs"][0]
+        )
         whole_rows.append(dict(original, path=relative, sha256=copied_sha))
         if len(whole_rows) == 64:
             flush_shard()
@@ -559,7 +714,9 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
         dict(
             schema="drone-ai.run-health19.index/1",
             manifests=shards,
-            scaler=dict(path="whole-scaler.json", sha256=sha(root / "whole-scaler.json")),
+            scaler=dict(
+                path="whole-scaler.json", sha256=sha(root / "whole-scaler.json")
+            ),
             collection_scope=scope,
         ),
     )
@@ -572,7 +729,9 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
                         case_id=case_key(record["row"]["case_id"]),
                         role=record["row"]["role"],
                         cohort=record["row"].get("cohort"),
-                        manifest=record["audit"]["input_refs"]["online_manifest"],
+                        manifest=record["audit"]["input_refs"][
+                            "online_manifest"
+                        ],
                     )
                 )
                 + "\n"
@@ -580,7 +739,16 @@ def _compile(records, output, *, scope, producer, registry, fixture_only, progre
     return root, provenance
 
 
-def aggregate(index_path, output, *, scope, producer, protection, policy_bundle, progress=None):
+def aggregate(
+    index_path,
+    output,
+    *,
+    scope,
+    producer,
+    protection,
+    policy_bundle,
+    progress=None,
+):
     records, registry, counts, policy = _records(
         index_path, scope, producer, protection, policy_bundle
     )
@@ -627,10 +795,22 @@ def aggregate(index_path, output, *, scope, producer, protection, policy_bundle,
             registry=registry,
             progress=progress,
         )
-        result.update(index=reference(index_path), authorization_sha256=AUTH_SHA256, counts=counts)
+        result.update(
+            index=reference(index_path),
+            authorization_sha256=AUTH_SHA256,
+            counts=counts,
+        )
         independent = write_new(root / "independent-audit.json", result)
     except Exception as error:
-        _progress(output, "error", 0, len(records), progress, status="failed", reason=str(error))
+        _progress(
+            output,
+            "error",
+            0,
+            len(records),
+            progress,
+            status="failed",
+            reason=str(error),
+        )
         raise
     result.update(
         counts=counts,
@@ -640,7 +820,12 @@ def aggregate(index_path, output, *, scope, producer, protection, policy_bundle,
     )
     receipt = write_new(root / "aggregate-receipt.json", result)
     _progress(
-        root, "aggregate_inputs_audited", len(records), len(records), progress, status="complete"
+        root,
+        "aggregate_inputs_audited",
+        len(records),
+        len(records),
+        progress,
+        status="complete",
     )
     return dict(result, receipt=receipt)
 
@@ -678,25 +863,32 @@ def _compare_packed(path, key, expected):
                 try:
                     _, remainder = next(packed)
                 except StopIteration:
-                    raise ValueError("Packed member lost canonical/source rows") from None
+                    raise ValueError(
+                        "Packed member lost canonical/source rows"
+                    ) from None
             n = min(len(remainder), len(values) - offset)
             if not np.array_equal(remainder[:n], values[offset : offset + n]):
                 raise ValueError(
                     "Packed member differs from original canonical/source values or identity"
                 )
             remainder, offset = remainder[n:], offset + n
-    if (remainder is not None and len(remainder)) or next(packed, None) is not None:
+    if (remainder is not None and len(remainder)) or next(
+        packed, None
+    ) is not None:
         raise ValueError("Packed member has excess source rows")
 
 
-def _audit_compiled(records, dataset_root, *, scope, producer, registry, progress=None):
+def _audit_compiled(
+    records, dataset_root, *, scope, producer, registry, progress=None
+):
     """Separate two-pass long-double canonical statistics and source-to-packed row comparison."""
     root = Path(dataset_root)
     manifest = json_file(root / "history19-manifest.json")
     if manifest.get("collection_scope") != scope:
         raise ValueError("MAIN540 and LR81 scaler scopes cannot be mixed")
     train = sorted(
-        (r for r in records if r["row"]["role"] == "normal_train"), key=lambda r: r["row"]["run_id"]
+        (r for r in records if r["row"]["role"] == "normal_train"),
+        key=lambda r: r["row"]["run_id"],
     )
     train_ids = sorted(r["row"]["run_id"] for r in train)
     if manifest["scaler_fit_run_ids"] != train_ids:
@@ -704,51 +896,89 @@ def _audit_compiled(records, dataset_root, *, scope, producer, registry, progres
     # _records verified the successful per-case audit and every bound input hash.
     # Reuse that unchanged-input proof; below we independently check the newly
     # compiled arrays and train-only scalers, rather than rebuilding case views.
-    _progress(root, "reuse_verified_case_inputs", len(records), len(records), progress)
+    _progress(
+        root, "reuse_verified_case_inputs", len(records), len(records), progress
+    )
     with np.load(root / "scaler.npz", allow_pickle=False) as a:
         scaler = dict(a)
     config = json_file(ROOT / "ai/learning/history19/preprocessing.json")
     count, total = 0, np.zeros(19, dtype=np.longdouble)
     for run_index, record in enumerate(train, 1):
-        for values, _, segment in canonical_blocks(record["export"] / "frames.jsonl", record["row"]):
+        for values, _, segment in canonical_blocks(
+            record["export"] / "frames.jsonl", record["row"]
+        ):
             if segment != record["audit"]["segment_id"]:
-                raise ValueError("Canonical mission segment differs from admitted case audit")
+                raise ValueError(
+                    "Canonical mission segment differs from admitted case audit"
+                )
             block = feature_transform(values, config).astype(np.longdouble)
             total += block.sum(0)
             count += len(block)
         _progress(
-            root, "verify_statistics_mean", run_index, len(train), progress, scaler_scope=scope
+            root,
+            "verify_statistics_mean",
+            run_index,
+            len(train),
+            progress,
+            scaler_scope=scope,
         )
     center = total / count
     squares = np.zeros(19, dtype=np.longdouble)
     for run_index, record in enumerate(train, 1):
-        for values, _, _ in canonical_blocks(record["export"] / "frames.jsonl", record["row"]):
+        for values, _, _ in canonical_blocks(
+            record["export"] / "frames.jsonl", record["row"]
+        ):
             squares += (
-                (feature_transform(values, config).astype(np.longdouble) - center) ** 2
+                (
+                    feature_transform(values, config).astype(np.longdouble)
+                    - center
+                )
+                ** 2
             ).sum(0)
         _progress(
-            root, "verify_statistics_scale", run_index, len(train), progress, scaler_scope=scope
+            root,
+            "verify_statistics_scale",
+            run_index,
+            len(train),
+            progress,
+            scaler_scope=scope,
         )
     scale = np.maximum(np.sqrt(squares / count), 1e-5)
-    if not np.allclose(scaler["x_mean"], center, atol=1e-10, rtol=1e-10) or not np.allclose(
-        scaler["x_scale"], scale, atol=1e-10, rtol=1e-10
-    ):
-        raise ValueError("Scaler differs from independent unique mission canonical statistics")
+    if not np.allclose(
+        scaler["x_mean"], center, atol=1e-10, rtol=1e-10
+    ) or not np.allclose(scaler["x_scale"], scale, atol=1e-10, rtol=1e-10):
+        raise ValueError(
+            "Scaler differs from independent unique mission canonical statistics"
+        )
     indices = [FEATURES.index(k) for k in TARGETS]
     if any(
-        not np.array_equal(scaler["y_" + k], scaler["x_" + k][indices]) for k in ("mean", "scale")
+        not np.array_equal(scaler["y_" + k], scaler["x_" + k][indices])
+        for k in ("mean", "scale")
     ):
-        raise ValueError("Y scaler cannot be independently refitted or use future targets")
+        raise ValueError(
+            "Y scaler cannot be independently refitted or use future targets"
+        )
     frame_fields = ("values", "run_id", "clock_id", "segment_id", "time_us")
     frame_path = root / "normal_train_frames.npz"
     frame_headers = npz_headers(frame_path)
     if set(frame_headers) != set(frame_fields):
-        raise ValueError("Train scaler requires19-column frames and identity only")
+        raise ValueError(
+            "Train scaler requires19-column frames and identity only"
+        )
     for field in frame_fields:
         shape = frame_headers[field]["shape"]
         dtype = np.dtype(frame_headers[field]["descr"])
-        expected_kind = "f" if field == "values" else "US" if field in {"run_id", "clock_id"} else "iu"
-        if tuple(shape) != ((count, 19) if field == "values" else (count,)) or dtype.kind not in expected_kind:
+        expected_kind = (
+            "f"
+            if field == "values"
+            else "US"
+            if field in {"run_id", "clock_id"}
+            else "iu"
+        )
+        if (
+            tuple(shape) != ((count, 19) if field == "values" else (count,))
+            or dtype.kind not in expected_kind
+        ):
             raise ValueError("Train frame dtype/identity mismatch")
 
     for field in frame_fields:
@@ -757,7 +987,9 @@ def _audit_compiled(records, dataset_root, *, scope, producer, registry, progres
             for record in train:
                 row = record["row"]
                 if field == "values":
-                    for values, _, _ in canonical_blocks(record["export"] / "frames.jsonl", row):
+                    for values, _, _ in canonical_blocks(
+                        record["export"] / "frames.jsonl", row
+                    ):
                         yield feature_transform(values, config)
                     continue
                 # The canonical passes above already established the complete
@@ -767,9 +999,15 @@ def _audit_compiled(records, dataset_root, *, scope, producer, registry, progres
                 for offset in range(0, size, 8192):
                     n = min(8192, size - offset)
                     if field == "time_us":
-                        yield first + np.arange(offset, offset + n, dtype=np.int64) * 100000
+                        yield (
+                            first
+                            + np.arange(offset, offset + n, dtype=np.int64)
+                            * 100000
+                        )
                     elif field == "segment_id":
-                        yield np.full(n, record["audit"]["segment_id"], dtype=np.int64)
+                        yield np.full(
+                            n, record["audit"]["segment_id"], dtype=np.int64
+                        )
                     else:
                         yield np.full(
                             n,
@@ -785,11 +1023,14 @@ def _audit_compiled(records, dataset_root, *, scope, producer, registry, progres
         or not np.array_equal(shared.mean, scaler["x_mean"])
         or not np.array_equal(shared.scale, scaler["x_scale"])
     ):
-        raise ValueError("Both model representations must share exactly the same scaler")
+        raise ValueError(
+            "Both model representations must share exactly the same scaler"
+        )
     # Compare every packed source row; hashes/headers alone are not a coverage test.
     for role in ("normal_train", "normal_validation"):
         selected = sorted(
-            (r for r in records if r["row"]["role"] == role), key=lambda r: r["row"]["run_id"]
+            (r for r in records if r["row"]["role"] == role),
+            key=lambda r: r["row"]["run_id"],
         )
         for key in sorted(ARRAYS):
 
@@ -812,7 +1053,9 @@ def _audit_compiled(records, dataset_root, *, scope, producer, registry, progres
             )
     seen = 0
     for run in iter_manifests(
-        whole_manifest_paths(root), expected_producer=producer, protection=registry
+        whole_manifest_paths(root),
+        expected_producer=producer,
+        protection=registry,
     ):
         seen += 1
         del run
@@ -832,8 +1075,12 @@ def _audit_compiled(records, dataset_root, *, scope, producer, registry, progres
         fit_run_ids=train_ids,
         scaler_fit_roles=["normal_train"],
         canonical_scaler_tolerance=dict(atol=1e-10, rtol=1e-10),
-        fixture_only=all(r["row"]["origin"] == "synthetic_unit_fixture" for r in records),
-        actual_data_verified=all(r["row"]["origin"] == "px4_sitl" for r in records),
+        fixture_only=all(
+            r["row"]["origin"] == "synthetic_unit_fixture" for r in records
+        ),
+        actual_data_verified=all(
+            r["row"]["origin"] == "px4_sitl" for r in records
+        ),
         eligible_for_fit=False,
         authorizes_training=False,
         model_forward_steps=0,
@@ -853,15 +1100,26 @@ def audit_aggregate(
     output=None,
     progress=None,
 ):
-    records, registry, counts, _ = _records(index_path, scope, producer, protection, policy_bundle)
+    records, registry, counts, _ = _records(
+        index_path, scope, producer, protection, policy_bundle
+    )
     if counts.get("accepted", 0) != counts["planned_cases"]:
         raise ValueError("Incomplete collection cannot pass aggregate quality")
     pairs = _pairs(records, producer, policy_bundle)
     if pairs != (324 if scope == "main" else 0):
         raise ValueError("Complete frozen native pair denominator required")
     result = _audit_compiled(
-        records, dataset_root, scope=scope, producer=producer, registry=registry, progress=progress
+        records,
+        dataset_root,
+        scope=scope,
+        producer=producer,
+        registry=registry,
+        progress=progress,
     )
-    result.update(index=reference(index_path), authorization_sha256=AUTH_SHA256, counts=counts)
+    result.update(
+        index=reference(index_path),
+        authorization_sha256=AUTH_SHA256,
+        counts=counts,
+    )
     receipt = write_new(output, result) if output is not None else None
     return dict(result, receipt=receipt)

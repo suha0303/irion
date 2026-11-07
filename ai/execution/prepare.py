@@ -14,17 +14,23 @@ from .common import COUNTS, HANDOFF, HOME, MODELS, ROOT, child, read, sha, write
 def npz_headers(path):
     result = {}
     with zipfile.ZipFile(path) as archive:
-        if len({i.filename for i in archive.infolist()}) != len(archive.infolist()):
+        if len({i.filename for i in archive.infolist()}) != len(
+            archive.infolist()
+        ):
             raise ValueError("Duplicate NPZ member")
         for info in archive.infolist():
-            if not info.filename.endswith(".npy") or Path(info.filename).name != info.filename:
+            if (
+                not info.filename.endswith(".npy")
+                or Path(info.filename).name != info.filename
+            ):
                 raise ValueError("Unexpected NPZ member")
             with archive.open(info) as stream:
                 magic = stream.read(8)
                 if magic[:6] != b"\x93NUMPY" or magic[6] not in (1, 2, 3):
                     raise ValueError("Unsupported NPY header")
                 size = struct.unpack(
-                    "<H" if magic[6] == 1 else "<I", stream.read(2 if magic[6] == 1 else 4)
+                    "<H" if magic[6] == 1 else "<I",
+                    stream.read(2 if magic[6] == 1 else 4),
                 )[0]
                 if size > 65536:
                     raise ValueError("Oversized NPY header")
@@ -91,13 +97,19 @@ def admission(handoff=HANDOFF):
     frozen = read(parent / "frozen-manifest.json")
     if frozen.get("status") != "DATA_FROZEN" or rows != frozen["runs"]:
         raise ValueError("Frozen membership differs from prepared dataset")
-    if Counter(r["role"] for r in rows) != COUNTS or len({r["run_id"] for r in rows}) != 104:
-        raise ValueError("Expected63/9/9/11/12 split, unique104 runs, no final test")
+    if (
+        Counter(r["role"] for r in rows) != COUNTS
+        or len({r["run_id"] for r in rows}) != 104
+    ):
+        raise ValueError(
+            "Expected63/9/9/11/12 split, unique104 runs, no final test"
+        )
     partitions = {}
     for row in rows:
         part = (
             row["role"]
-            if row["role"] in {"normal_train", "normal_validation", "normal_calibration"}
+            if row["role"]
+            in {"normal_train", "normal_validation", "normal_calibration"}
             else "development"
         )
         for key in [
@@ -112,7 +124,10 @@ def admission(handoff=HANDOFF):
     headers = {}
     for role in ("normal_train", "normal_validation", "normal_calibration"):
         path = dataset / (role + ".npz")
-        if sha(path) != seal[path.name] or manifest["hashes"][path.name] != seal[path.name]:
+        if (
+            sha(path) != seal[path.name]
+            or manifest["hashes"][path.name] != seal[path.name]
+        ):
             raise ValueError("Fit archive changed")
         headers[role] = npz_headers(path)
         n = headers[role]["X"]["shape"][0]
@@ -124,7 +139,9 @@ def admission(handoff=HANDOFF):
         ):
             raise ValueError("Forecast dimensions mismatch")
         with np.load(path, allow_pickle=False) as data:
-            if set(data["run_id"]) != {r["run_id"] for r in rows if r["role"] == role}:
+            if set(data["run_id"]) != {
+                r["run_id"] for r in rows if r["role"] == role
+            }:
                 raise ValueError("Array run membership mismatch")
     if sha(dataset / "scaler.npz") != seal["scaler.npz"]:
         raise ValueError("Scaler changed")
@@ -177,7 +194,11 @@ def create():
     config["source_sha256"] = source
     # Only normal fit arrays plus23 development canonical runs travel to the server.
     selected = {k: v for k, v in seal.items() if "/" not in k}
-    dev = {r["run_id"] for r in rows if r["role"] in {"normal_dev_eval", "anomaly_dev"}}
+    dev = {
+        r["run_id"]
+        for r in rows
+        if r["role"] in {"normal_dev_eval", "anomaly_dev"}
+    }
     selected.update(
         {
             k: v
@@ -217,11 +238,15 @@ def stage(config, destination, progress):
                 raise ValueError("Snapshot hash mismatch: " + name)
             inventory[name] = expected
             done += 1
-            progress.update(stage="snapshot", done=done, total=total, model=None)
+            progress.update(
+                stage="snapshot", done=done, total=total, model=None
+            )
     package_preprocess = (
         "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
     )
-    shutil.copyfile(destination / package_preprocess, destination / "preprocessing.json")
+    shutil.copyfile(
+        destination / package_preprocess, destination / "preprocessing.json"
+    )
     inventory["preprocessing.json"] = sha(destination / "preprocessing.json")
     write(destination / "config.json", config)
     inventory["config.json"] = sha(destination / "config.json")

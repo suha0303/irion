@@ -12,7 +12,10 @@ from capstone_sim import collection_config
 
 class SixteenPorts(unittest.TestCase):
     def test_actual_start_commands_separate_gcs_and_control(self):
-        upstream = collection_config.ROOT / "vendor/PX4-Autopilot/build/px4_sitl_default/etc"
+        upstream = (
+            collection_config.ROOT
+            / "vendor/PX4-Autopilot/build/px4_sitl_default/etc"
+        )
         relative = "init.d-posix/px4-rc.mavlink"
         before = hashlib.sha256((upstream / relative).read_bytes()).hexdigest()
         with tempfile.TemporaryDirectory() as temp:
@@ -43,7 +46,9 @@ class SixteenPorts(unittest.TestCase):
                 pairs = [
                     (
                         int(args[args.index("-u") + 1]),
-                        int(args[args.index("-o") + 1]) if "-o" in args else 14550,
+                        int(args[args.index("-o") + 1])
+                        if "-o" in args
+                        else 14550,
                     )
                     for args in starts
                 ]
@@ -58,10 +63,16 @@ class SixteenPorts(unittest.TestCase):
             for src, dst in commands:
                 if 18570 <= src < 18586:
                     self.assertNotIn(dst, range(14540, 14556))
-        self.assertEqual(before, hashlib.sha256((upstream / relative).read_bytes()).hexdigest())
+        self.assertEqual(
+            before,
+            hashlib.sha256((upstream / relative).read_bytes()).hexdigest(),
+        )
 
     def test_unique_private_ports_and_unchanged_vendor(self):
-        upstream = collection_config.ROOT / "vendor/PX4-Autopilot/build/px4_sitl_default/etc"
+        upstream = (
+            collection_config.ROOT
+            / "vendor/PX4-Autopilot/build/px4_sitl_default/etc"
+        )
         relative = "init.d-posix/px4-rc.mavlink"
         before = hashlib.sha256((upstream / relative).read_bytes()).hexdigest()
         with tempfile.TemporaryDirectory() as temp:
@@ -84,7 +95,10 @@ class SixteenPorts(unittest.TestCase):
                 )
                 ports.append(int(result.stdout))
             self.assertEqual(ports, list(range(14540, 14556)))
-        self.assertEqual(before, hashlib.sha256((upstream / relative).read_bytes()).hexdigest())
+        self.assertEqual(
+            before,
+            hashlib.sha256((upstream / relative).read_bytes()).hexdigest(),
+        )
 
 
 if __name__ == "__main__":

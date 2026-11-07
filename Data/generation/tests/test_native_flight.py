@@ -6,7 +6,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 from pretrain import common, native_flight, pilot45
 
 
@@ -16,7 +15,10 @@ def test_actual_sim_launcher_imports_runtime_while_data_lacks_pymavlink():
     assert result["status"] == "PASSED_NO_FLIGHT"
     assert result["probe"]["run_flight_imported"] is True
     assert result["probe"]["flight_started"] is False
-    assert Path(result["probe"]["executable"]) == common.ROOT / "simulation/.venv/bin/python"
+    assert (
+        Path(result["probe"]["executable"])
+        == common.ROOT / "simulation/.venv/bin/python"
+    )
 
 
 def test_native_argv_keeps_parent_operation_and_health_selection():
@@ -25,9 +27,14 @@ def test_native_argv_keeps_parent_operation_and_health_selection():
     assert args[:2] == [str(common.ROOT / "simulation/capstone-sim"), "run"]
     assert "_case" not in args and str(common.PYTHON) not in args
     assert args[args.index("--parent-attempt-id") + 1] == "failed-raw"
-    assert json.loads(args[args.index("--operation-variation") + 1]) == case["operation_variation"]
+    assert (
+        json.loads(args[args.index("--operation-variation") + 1])
+        == case["operation_variation"]
+    )
     assert args[args.index("--battery-stage") + 1] == "rpt_16"
-    assert args[args.index("--fault-after-mission-s") + 1] == str(case["fault_after_mission_s"])
+    assert args[args.index("--fault-after-mission-s") + 1] == str(
+        case["fault_after_mission_s"]
+    )
     with pytest.raises(ValueError):
         native_flight.command(case, paired_options={"invented_kwarg": True})
 
@@ -51,7 +58,9 @@ def test_paired_cli_resolves_current_case_id_and_keeps_only_pair_members_equal()
     assert selected(cases[-2]) == selected(cases[-1])
 
 
-def test_child_collects_json_after_real_other_interpreter_exits(monkeypatch, tmp_path):
+def test_child_collects_json_after_real_other_interpreter_exits(
+    monkeypatch, tmp_path
+):
     # A real process using Sim Python emits a result and separate stderr. Native
     # flight itself is a fixture so this test never launches PX4/Gazebo.
     raw = tmp_path / "simulation/runs/fixture"
@@ -62,7 +71,10 @@ def test_child_collects_json_after_real_other_interpreter_exits(monkeypatch, tmp
     case = pilot45.build_cases(1)[0]
     common.write(task / "config.json", dict(source_sha256={}))
     common.write(task / "operator/state.json", {})
-    common.write(request, dict(action="flight", task=str(task), case=case, receipt=str(receipt)))
+    common.write(
+        request,
+        dict(action="flight", task=str(task), case=case, receipt=str(receipt)),
+    )
     program = (
         "import json,sys;print('fixture stderr',file=sys.stderr);print(json.dumps("
         + repr(dict(run=str(raw), status="completed"))
@@ -71,7 +83,12 @@ def test_child_collects_json_after_real_other_interpreter_exits(monkeypatch, tmp
     monkeypatch.setattr(
         native_flight,
         "command",
-        lambda *args: [str(common.ROOT / "simulation/.venv/bin/python"), "-B", "-c", program],
+        lambda *args: [
+            str(common.ROOT / "simulation/.venv/bin/python"),
+            "-B",
+            "-c",
+            program,
+        ],
     )
     monkeypatch.setattr(native_flight, "ROOT", tmp_path)
     monkeypatch.setattr(pilot45, "ROOT", tmp_path)
@@ -79,21 +96,29 @@ def test_child_collects_json_after_real_other_interpreter_exits(monkeypatch, tmp
         pilot45,
         "resources",
         lambda *args: dict(
-            available_bytes=2_000_000_000, disk_free_bytes=100_000_000_000, owned_tree_rss_bytes=1
+            available_bytes=2_000_000_000,
+            disk_free_bytes=100_000_000_000,
+            owned_tree_rss_bytes=1,
         ),
     )
-    progress = SimpleNamespace(matches={}, sample=lambda: {}, terminal_evidence=lambda: {})
+    progress = SimpleNamespace(
+        matches={}, sample=lambda: {}, terminal_evidence=lambda: {}
+    )
     monkeypatch.setattr(
         pilot45,
         "collector",
-        lambda: SimpleNamespace(MissionProgress=lambda *args, **kwargs: progress),
+        lambda: SimpleNamespace(
+            MissionProgress=lambda *args, **kwargs: progress
+        ),
     )
     log = task / "case/flight-02.log"
     result = pilot45.child(task, request, log)
     assert result["exit_code"] == 0
     assert common.read(receipt) == dict(run=str(raw), status="completed")
     assert log.read_text().strip() == "fixture stderr"
-    assert json.loads(Path(result["stdout_path"]).read_text())["run"] == str(raw)
+    assert json.loads(Path(result["stdout_path"]).read_text())["run"] == str(
+        raw
+    )
 
 
 def test_invalid_stdout_is_preserved_instead_of_fabricating_result(tmp_path):

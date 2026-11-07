@@ -3,7 +3,18 @@
 import shutil
 from pathlib import Path
 
-from .common import HOME, PACKAGE, ROOT, STORE, external, identity, read, sha, verify, write
+from .common import (
+    HOME,
+    PACKAGE,
+    ROOT,
+    STORE,
+    external,
+    identity,
+    read,
+    sha,
+    verify,
+    write,
+)
 
 
 def inputs(source):
@@ -11,7 +22,13 @@ def inputs(source):
     if source.parent != (HOME / "tasks").resolve():
         raise ValueError("Registered task required")
     config = read(source / "config.json")
-    verify({str(source / "config.json"): (source / "config.sha256").read_text().strip()})
+    verify(
+        {
+            str(source / "config.json"): (source / "config.sha256")
+            .read_text()
+            .strip()
+        }
+    )
     state = read(source / "operator/state.json")
     if (
         config["mode"] != "resume_preprocess"
@@ -19,14 +36,18 @@ def inputs(source):
         or state.get("stage") != "prepared-preprocess"
     ):
         raise ValueError("Stopped preprocessing failure required")
-    if state.get("pid_start_ticks") and identity(state["pid"]) == state["pid_start_ticks"]:
+    if (
+        state.get("pid_start_ticks")
+        and identity(state["pid"]) == state["pid_start_ticks"]
+    ):
         raise ValueError("Previous worker still running")
     # Workflow changes are allowed; preprocessing implementation/package must match.
     verify(
         {
             p: h
             for p, h in config["source_sha256"].items()
-            if Path(p).is_relative_to(PACKAGE) or p == str(ROOT / "Data/generation/pretrain/worker.py")
+            if Path(p).is_relative_to(PACKAGE)
+            or p == str(ROOT / "Data/generation/pretrain/worker.py")
         }
     )
     from x500_storage import guard, task_root
@@ -55,7 +76,9 @@ def inputs(source):
         or failed[0]["run_id"] in completed
         or set(rows) != set(completed) | {failed[0]["run_id"]}
     ):
-        raise ValueError("Exactly one failed run and complete extraction required")
+        raise ValueError(
+            "Exactly one failed run and complete extraction required"
+        )
     evidence = [
         source / n
         for n in (
@@ -75,14 +98,22 @@ def inputs(source):
             record["status"] != "COMPLETE"
             or record["action"] != "preprocess"
             or summary["output_hashes"] != record["result"]["output_hashes"]
-            or set(summary["output_hashes"]) != {"frames", "windows", "exclusions"}
+            or set(summary["output_hashes"])
+            != {"frames", "windows", "exclusions"}
             or summary["input_hashes"] != rows[rid]["files"]
             or summary["config"] != read(PACKAGE / "preprocessing.json")
             or not summary["closed"]
         ):
-            raise ValueError("Successful result identity/config mismatch: " + rid)
+            raise ValueError(
+                "Successful result identity/config mismatch: " + rid
+            )
         evidence.append(summary_path)
-        for name in ("summary.json", "frames.jsonl", "windows.jsonl", "exclusions.jsonl"):
+        for name in (
+            "summary.json",
+            "frames.jsonl",
+            "windows.jsonl",
+            "exclusions.jsonl",
+        ):
             p = summary_path.parent / name
             if not p.is_file() or any(q.is_symlink() for q in (p, *p.parents)):
                 raise ValueError("Missing/linked completed result: " + str(p))
@@ -95,7 +126,9 @@ def create_partial(source, name):
     source = Path(source).resolve()
     root, frozen, completed, failed, evidence = inputs(source)
     original = read(source / "config.json")
-    args = cli.parser().parse_args(["init", "--name", name, "--mode", "collect"])
+    args = cli.parser().parse_args(
+        ["init", "--name", name, "--mode", "collect"]
+    )
     from x500_storage import task_root
 
     args.storage_root = task_root(original)
@@ -149,16 +182,25 @@ def finish_partial(runner):
         frozen["collection_profile"],
         case_sets=frozen.get("collection_set_case_ids"),
     )
-    root = external(STORE / "processed/pretrain" / runner.task.name / "prepared")
+    root = external(
+        STORE / "processed/pretrain" / runner.task.name / "prepared"
+    )
     root.mkdir(parents=True, exist_ok=False)
     write(root / "frozen-manifest.json", frozen)
     shutil.copy2(source / "cases.json", runner.task / "cases.json")
     runner.finish(
-        "validate-existing-results", dict(passed=True, reused=len(completed), retry_run=failed)
+        "validate-existing-results",
+        dict(passed=True, reused=len(completed), retry_run=failed),
     )
     row = next(r for r in frozen["runs"] if r["run_id"] == failed)
     # Existing extracted inputs are hash-checked by the worker; no extraction or freeze repeats.
-    runner.batch("prepared-preprocess-one", "preprocess", [row], 1, root / "canonical-work")
+    runner.batch(
+        "prepared-preprocess-one",
+        "preprocess",
+        [row],
+        1,
+        root / "canonical-work",
+    )
     sources = {rid: old / "canonical-work" / rid for rid in completed}
     write(
         root / "reuse-evidence.json",
@@ -171,6 +213,10 @@ def finish_partial(runner):
         ),
     )
     result = runner.finalize_prepared(
-        frozen, root, "prepared", runner.config["workers"], canonical_sources=sources
+        frozen,
+        root,
+        "prepared",
+        runner.config["workers"],
+        canonical_sources=sources,
     )
     runner.update(result=str(result / "handoff.json"))

@@ -22,7 +22,10 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
     (root / "runs" / ("b" * 32) / "old.txt").write_text("protected")
     task = root / "task"
     task.mkdir()
-    common.write(task / "config.json", dict(mode="collect", storage_profile="stream_compact"))
+    common.write(
+        task / "config.json",
+        dict(mode="collect", storage_profile="stream_compact"),
+    )
     monkeypatch.setattr(streaming, "ROOT", root)
     monkeypatch.setattr(streaming, "STORE", store)
     monkeypatch.setattr(streaming, "external", lambda p: Path(p))
@@ -42,7 +45,9 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
     pipeline = streaming.Pipeline(runner)
     rid, label = "a" * 32, "stream-001-001"
     raw = root / "runs" / rid
-    fixture = common.load("stream_raw_fixture", common.ROOT / "ai/tests/test_preprocessing.py")
+    fixture = common.load(
+        "stream_raw_fixture", common.ROOT / "ai/tests/test_preprocessing.py"
+    )
     meta = copy.deepcopy(fixture.META)
     meta["run_id"] = rid
     meta["vehicle"].update(
@@ -52,12 +57,19 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
         profile_revision="vtc6-4s4p",
     )
     common.write(raw / "observations/metadata.json", meta)
-    common.write(raw / "run.json", dict(run_id=rid, origin="synthetic_fixture", status="completed"))
-    common.write(raw / "reference/source_lock.json", dict(synthetic_fixture=True))
+    common.write(
+        raw / "run.json",
+        dict(run_id=rid, origin="synthetic_fixture", status="completed"),
+    )
+    common.write(
+        raw / "reference/source_lock.json", dict(synthetic_fixture=True)
+    )
     events = list(fixture.events(72))
     for event in events:
         event["run_id"] = rid
-    (raw / "observations/streams.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
+    (raw / "observations/streams.jsonl").write_text(
+        "".join(json.dumps(e) + "\n" for e in events)
+    )
     common.write(
         raw / "observations/watermarks.jsonl",
         dict(
@@ -72,8 +84,14 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
     marks = raw / "observations/watermarks.jsonl"
     marks.write_text(json.dumps(common.read(marks)) + "\n")
     (raw / "observations/diagnostics.jsonl").touch()
-    files = {str(p.relative_to(raw)): common.sha(p) for p in raw.rglob("*") if p.is_file()}
-    common.write(raw / "evaluation/scenario.json", dict(name="hover_normal", seed=17))
+    files = {
+        str(p.relative_to(raw)): common.sha(p)
+        for p in raw.rglob("*")
+        if p.is_file()
+    }
+    common.write(
+        raw / "evaluation/scenario.json", dict(name="hover_normal", seed=17)
+    )
     (raw / "evaluation/events.jsonl").write_text("")
     archive = store / "archives" / label / (rid + ".tar.gz")
     archive.parent.mkdir(parents=True)
@@ -83,9 +101,13 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
             if p.is_file():
                 name = str(p.relative_to(raw))
                 tar.add(p, arcname=name)
-                members[name] = dict(kind="file", bytes=p.stat().st_size, sha256=common.sha(p))
+                members[name] = dict(
+                    kind="file", bytes=p.stat().st_size, sha256=common.sha(p)
+                )
     folder = task / label
-    common.write(folder / "plan.json", dict(external_output=str(archive.parent)))
+    common.write(
+        folder / "plan.json", dict(external_output=str(archive.parent))
+    )
     chunk = pipeline.root / label
     consumer = store / "consumer/pretrain" / task.name / label / rid
     for name in files:
@@ -112,7 +134,12 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
             action="preprocess",
             row=row,
             out=str(canonical),
-            status=str(task / "units" / (label + "-preprocess") / (rid + ".status.json")),
+            status=str(
+                task
+                / "units"
+                / (label + "-preprocess")
+                / (rid + ".status.json")
+            ),
         ),
     )
     # Match production isolation: every CPU unit has its own interpreter.
@@ -143,7 +170,13 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
     (chunk / "audit").mkdir()
     common.write(tmp_path / "audit-request.json", request)
     run = subprocess.run(
-        [str(common.PYTHON), "-B", "-m", "pretrain.worker", str(tmp_path / "audit-request.json")],
+        [
+            str(common.PYTHON),
+            "-B",
+            "-m",
+            "pretrain.worker",
+            str(tmp_path / "audit-request.json"),
+        ],
         env={**os.environ, "PYTHONPATH": common.pythonpath()},
         capture_output=True,
         text=True,
@@ -174,14 +207,23 @@ def test_verified_capsule_retires_only_new_success_and_restores_identical_data(
     failed.mkdir(parents=True)
     (failed / "evidence.txt").write_text("failed evidence")
     row = f.pipeline.capsule(f.row, f.chunk, f.label, f.folder)
-    assert not f.raw.exists() and not f.archive.exists() and not f.consumer.exists()
+    assert (
+        not f.raw.exists()
+        and not f.archive.exists()
+        and not f.consumer.exists()
+    )
     assert not f.canonical.exists() and failed.exists()
-    assert (streaming.ROOT / "runs" / ("b" * 32) / "old.txt").read_text() == "protected"
+    assert (
+        streaming.ROOT / "runs" / ("b" * 32) / "old.txt"
+    ).read_text() == "protected"
     receipt = common.read(row["compact_source"]["receipt"])
     restore = tmp_path / "restored"
     restore.mkdir()
     storage.verify_bundle(
-        receipt["artifact"]["path"], receipt["artifact"]["members"], common.Budget(), restore
+        receipt["artifact"]["path"],
+        receipt["artifact"]["members"],
+        common.Budget(),
+        restore,
     )
     assert (restore / "canonical/frames.jsonl").read_bytes() == original
     assert (restore / "audit/numeric.npz").exists()
@@ -205,14 +247,18 @@ def test_capsule_corruption_never_deletes_originals(tmp_path, monkeypatch):
     assert f.raw.exists() and f.archive.exists() and f.consumer.exists()
 
 
-def test_px4_internal_links_are_not_followed_or_deleted_outside_owned_run(tmp_path, monkeypatch):
+def test_px4_internal_links_are_not_followed_or_deleted_outside_owned_run(
+    tmp_path, monkeypatch
+):
     f = setup_run(tmp_path, monkeypatch)
     external = tmp_path / "vendor/test_data"
     external.mkdir(parents=True)
     (external / "protected.txt").write_text("vendor untouched")
     (f.raw / "px4").mkdir()
     (f.raw / "reference/px4_etc").mkdir()
-    (f.raw / "px4/etc").symlink_to(f.raw / "reference/px4_etc", target_is_directory=True)
+    (f.raw / "px4/etc").symlink_to(
+        f.raw / "reference/px4_etc", target_is_directory=True
+    )
     (f.raw / "px4/test_data").symlink_to(external, target_is_directory=True)
     (f.raw / "px4/dangling").symlink_to(tmp_path / "absent")
     stamp = streaming.tree_stamp(f.raw)
@@ -242,7 +288,9 @@ def test_changed_internal_link_blocks_retirement(tmp_path):
     assert link.is_symlink() and owned.exists()
 
 
-def test_changed_canonical_after_audit_never_deletes_originals(tmp_path, monkeypatch):
+def test_changed_canonical_after_audit_never_deletes_originals(
+    tmp_path, monkeypatch
+):
     f = setup_run(tmp_path, monkeypatch)
     with (f.canonical / "frames.jsonl").open("a") as s:
         s.write("{}\n")
@@ -251,16 +299,26 @@ def test_changed_canonical_after_audit_never_deletes_originals(tmp_path, monkeyp
     assert f.raw.exists() and f.archive.exists()
 
 
-def test_final_package_replaces_working_dataset_and_remains_restorable(tmp_path, monkeypatch):
+def test_final_package_replaces_working_dataset_and_remains_restorable(
+    tmp_path, monkeypatch
+):
     f = setup_run(tmp_path, monkeypatch)
     row = f.pipeline.capsule(f.row, f.chunk, f.label, f.folder)
-    prepared = streaming.STORE / "processed/pretrain" / f.runner.task.name / "prepared"
+    prepared = (
+        streaming.STORE / "processed/pretrain" / f.runner.task.name / "prepared"
+    )
     dataset = prepared / "dataset"
     dataset.mkdir(parents=True)
     common.write(dataset / "manifest.json", dict(runs=[row]))
     (dataset / "normal_train.npz").write_bytes(b"lossless-array-fixture")
-    common.write(prepared / "dataset-seal.json", {p.name: common.sha(p) for p in dataset.iterdir()})
-    common.write(prepared / "quality.json", dict(passed=True, train_only_scaler_verified=True))
+    common.write(
+        prepared / "dataset-seal.json",
+        {p.name: common.sha(p) for p in dataset.iterdir()},
+    )
+    common.write(
+        prepared / "quality.json",
+        dict(passed=True, train_only_scaler_verified=True),
+    )
     common.write(prepared / "frozen-manifest.json", dict(runs=[row]))
     common.write(
         prepared / "handoff.json",
@@ -269,7 +327,9 @@ def test_final_package_replaces_working_dataset_and_remains_restorable(tmp_path,
             dataset=str(dataset),
             dataset_seal_sha256=common.sha(prepared / "dataset-seal.json"),
             quality_sha256=common.sha(prepared / "quality.json"),
-            frozen_manifest_sha256=common.sha(prepared / "frozen-manifest.json"),
+            frozen_manifest_sha256=common.sha(
+                prepared / "frozen-manifest.json"
+            ),
         ),
     )
     audit = prepared / "audit-work" / row["run_id"]
@@ -288,7 +348,9 @@ def test_final_package_replaces_working_dataset_and_remains_restorable(tmp_path,
     assert common.read(prepared / "handoff.json")["training_eligible"] is False
     assert f.runner.state["dataset_requires_restore"] is True
     restored = storage.restore(portable, tmp_path / "restored-final")
-    assert (restored / "dataset/normal_train.npz").read_bytes() == b"lossless-array-fixture"
+    assert (
+        restored / "dataset/normal_train.npz"
+    ).read_bytes() == b"lossless-array-fixture"
 
 
 def test_replacement_and_symlink_cleanup_targets_are_preserved(tmp_path):
@@ -316,15 +378,22 @@ def test_missing_runs_never_reach_global_assembly(tmp_path, monkeypatch):
     import pretrain.collection as collection
 
     fake = SimpleNamespace(
-        task=tmp_path, config=dict(flight_workers=2, collection_profile="diverse104"), state={}
+        task=tmp_path,
+        config=dict(flight_workers=2, collection_profile="diverse104"),
+        state={},
     )
-    common.write(tmp_path / "planned.json", dict(sets=[[dict(case_id=str(i)) for i in range(5)]]))
+    common.write(
+        tmp_path / "planned.json",
+        dict(sets=[[dict(case_id=str(i)) for i in range(5)]]),
+    )
     fake.config["planned_cases"] = str(tmp_path / "planned.json")
     fake.update = lambda **kw: None
     fake.begin = lambda *a, **kw: None
     fake.finish = lambda *a, **kw: None
     calls = []
-    fake.flight = lambda phase, count, rows, label: calls.append([r["case_id"] for r in rows])
+    fake.flight = lambda phase, count, rows, label: calls.append(
+        [r["case_id"] for r in rows]
+    )
 
     class Pipeline:
         def __init__(self, r):
@@ -333,14 +402,18 @@ def test_missing_runs_never_reach_global_assembly(tmp_path, monkeypatch):
     monkeypatch.setattr(streaming, "Pipeline", Pipeline)
     monkeypatch.setattr(streaming, "fragment_freeze", lambda *a: (None, []))
     monkeypatch.setattr(
-        collection, "combine_frozen", lambda *a: pytest.fail("incomplete dataset admitted")
+        collection,
+        "combine_frozen",
+        lambda *a: pytest.fail("incomplete dataset admitted"),
     )
     with pytest.raises(RuntimeError, match="incomplete"):
         streaming.run(fake)
     assert calls == [["0", "1"], ["2", "3"], ["4"]]
 
 
-def test_fragment_freeze_checks_real_identity_but_never_admits_partial_split(tmp_path, monkeypatch):
+def test_fragment_freeze_checks_real_identity_but_never_admits_partial_split(
+    tmp_path, monkeypatch
+):
     from pretrain import collection
 
     common.package_imports()
@@ -352,11 +425,17 @@ def test_fragment_freeze_checks_real_identity_but_never_admits_partial_split(tmp
     monkeypatch.setattr(streaming, "STORE", store)
     base = tmp_path / "resources"
     base.mkdir()
-    shutil.copy2(common.RESOURCES / "collection-plan.json", base / "collection-plan.json")
+    shutil.copy2(
+        common.RESOURCES / "collection-plan.json", base / "collection-plan.json"
+    )
     plan = common.read(base / "collection-plan.json")
-    common.write(base / "collection-plan.json", dict(plan, storage_root=str(store)))
+    common.write(
+        base / "collection-plan.json", dict(plan, storage_root=str(store))
+    )
     (base / "admission").mkdir(parents=True)
-    shutil.copy2(common.RESOURCES / "admission/freeze.py", base / "admission/freeze.py")
+    shutil.copy2(
+        common.RESOURCES / "admission/freeze.py", base / "admission/freeze.py"
+    )
     common.write(
         base / "protected-inventory.json",
         dict(
@@ -368,7 +447,10 @@ def test_fragment_freeze_checks_real_identity_but_never_admits_partial_split(tmp
     )
     monkeypatch.setattr(streaming, "RESOURCES", base)
     monkeypatch.setattr(streaming, "ADMISSION", base / "admission")
-    source = dict(local_sources=dict(px4="a", plugin="b", profile="c"), runtime_binary_sha256={})
+    source = dict(
+        local_sources=dict(px4="a", plugin="b", profile="c"),
+        runtime_binary_sha256={},
+    )
     revision = dict(
         battery_profile="VTC6_4S4P",
         producer_lock_hash_format="sorted-json-v1",
@@ -412,7 +494,11 @@ def test_fragment_freeze_checks_real_identity_but_never_admits_partial_split(tmp
         for name in values:
             tar.add(raw / name, arcname=name)
     members = {
-        name: dict(kind="file", bytes=(raw / name).stat().st_size, sha256=common.sha(raw / name))
+        name: dict(
+            kind="file",
+            bytes=(raw / name).stat().st_size,
+            sha256=common.sha(raw / name),
+        )
         for name in values
     }
     record = dict(

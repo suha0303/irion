@@ -18,21 +18,43 @@ DEFAULT_PLAN = PLANS / "lr108-20261107-01"
 
 REPORT = ROOT / "docs/data/reports/training19-preparation-20261107/attempt-01"
 
-KINDS = ("hover", "altitude", "line", "ellipse", "figure8", "lissajous", "yaw", "mixed", "random")
+KINDS = (
+    "hover",
+    "altitude",
+    "line",
+    "ellipse",
+    "figure8",
+    "lissajous",
+    "yaw",
+    "mixed",
+    "random",
+)
 
 ENVIRONMENTS = ("calm", "low", "strong")
 
 
 def cases(seed):
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
-    from capstone_sim import bounded_wind, flight_program, normal_variation, random_flight
+    from capstone_sim import (
+        bounded_wind,
+        flight_program,
+        normal_variation,
+        random_flight,
+    )
 
     rows = []
-    for role, repetitions, shift in (("normal_train", 3, 0), ("normal_validation", 1, 3)):
+    for role, repetitions, shift in (
+        ("normal_train", 3, 0),
+        ("normal_validation", 1, 3),
+    ):
         for repeat in range(repetitions):
             for mi, kind in enumerate(KINDS):
                 for ei, environment in enumerate(ENVIRONMENTS):
-                    value = (seed + 1000003 * (repeat + shift) + 1009 * (3 * mi + ei + 1)) % 2**32
+                    value = (
+                        seed
+                        + 1000003 * (repeat + shift)
+                        + 1009 * (3 * mi + ei + 1)
+                    ) % 2**32
                     spec = normal_variation.sample("hover_normal", value)
                     spec.update(
                         soc=0.9,
@@ -41,7 +63,9 @@ def cases(seed):
                         wind_e=0.0,
                         wind_n=0.0,
                         gust_sigma=0.0,
-                        wind_profile=bounded_wind.profile(environment, value % 360, 1.0),
+                        wind_profile=bounded_wind.profile(
+                            environment, value % 360, 1.0
+                        ),
                     )
                     mode = kind if kind in {"mixed", "random"} else "basic"
                     operation = flight_program.build(
@@ -49,7 +73,9 @@ def cases(seed):
                         mode,
                         value,
                         480,
-                        flight_program.BASIC.index(kind) if mode == "basic" else 0,
+                        flight_program.BASIC.index(kind)
+                        if mode == "basic"
+                        else 0,
                         random_revision=random_flight.BOUNDED_REVISION,
                     )
                     cid = f"lr-{role}-{mi:02}-{ei}-{repeat}"
@@ -81,21 +107,39 @@ def cases(seed):
 
 def validate(manifest):
     rows = manifest["cases"]
-    if manifest.get("purpose") != LR_PURPOSE or rows != cases(manifest["seed_base"]):
-        raise ValueError("Only the exact new LR108 normal81/27 plan is supported")
-    if Counter(c["role"] for c in rows) != dict(normal_train=81, normal_validation=27):
+    if manifest.get("purpose") != LR_PURPOSE or rows != cases(
+        manifest["seed_base"]
+    ):
+        raise ValueError(
+            "Only the exact new LR108 normal81/27 plan is supported"
+        )
+    if Counter(c["role"] for c in rows) != dict(
+        normal_train=81, normal_validation=27
+    ):
         raise ValueError("LR split must be81/27")
     if any(
         len({c[k] for c in rows}) != 108
-        for k in ("case_id", "seed", "group_id", "retry_family_id", "paired_case_id")
+        for k in (
+            "case_id",
+            "seed",
+            "group_id",
+            "retry_family_id",
+            "paired_case_id",
+        )
     ):
         raise ValueError("Every LR flight has independent planned identities")
     return rows
 
 
 def prior_seeds():
-    values = {(r.get("scenario"), r.get("seed")) for r in pilot45.protection()["records"]}
-    for p in [*(HOME / "tasks").glob("*/manifest.json"), *PLANS.glob("*/manifest.json")]:
+    values = {
+        (r.get("scenario"), r.get("seed"))
+        for r in pilot45.protection()["records"]
+    }
+    for p in [
+        *(HOME / "tasks").glob("*/manifest.json"),
+        *PLANS.glob("*/manifest.json"),
+    ]:
         value = read(p)
         for row in value.get("cases", []):
             values.add((row.get("scenario"), row.get("seed")))
@@ -111,7 +155,13 @@ def prepare_plan(path=DEFAULT_PLAN, seed=None):
     if path.exists():
         value = read(path / "manifest.json")
         validate(value)
-        verify({str(path / "manifest.json"): (path / "manifest.sha256").read_text().strip()})
+        verify(
+            {
+                str(path / "manifest.json"): (path / "manifest.sha256")
+                .read_text()
+                .strip()
+            }
+        )
         return path
     PLANS.mkdir(parents=True, exist_ok=True)
     with (PLANS / "planning.lock").open("a") as lock:
@@ -123,7 +173,9 @@ def prepare_plan(path=DEFAULT_PLAN, seed=None):
             if not any((c["scenario"], c["seed"]) in prior for c in rows):
                 break
             if seed is not None:
-                raise ValueError("Explicit seed collides with previous data/plans")
+                raise ValueError(
+                    "Explicit seed collides with previous data/plans"
+                )
         else:
             raise ValueError("Unique LR seed allocation exhausted")
         path.mkdir()
@@ -154,7 +206,9 @@ def prepare_plan(path=DEFAULT_PLAN, seed=None):
         )
         validate(manifest)
         write(path / "manifest.json", manifest)
-        (path / "manifest.sha256").write_text(sha(path / "manifest.json") + "\n")
+        (path / "manifest.sha256").write_text(
+            sha(path / "manifest.json") + "\n"
+        )
         write(
             path / "authorization.json",
             dict(
@@ -173,7 +227,9 @@ def menu_lr():
     print("LR용108런: 정상train81 + validation27 /9기동×3바람 /각480초 /19입력")
     print("비행16·요청RTF2·비비행합계4 /예비자료 연결 없음 /학습 실행 없음")
     print("계획:", plan / "manifest.json")
-    print("구성 준비됨 · LR 독립 native 경계·bounded 입력 합산 인수 대기 · 수집/학습 시작 안 함")
+    print(
+        "구성 준비됨 · LR 독립 native 경계·bounded 입력 합산 인수 대기 · 수집/학습 시작 안 함"
+    )
 
 
 def create_task(plan=DEFAULT_PLAN):
@@ -194,12 +250,18 @@ def main(argv=None):
         from . import training19_main
 
         if not training19_main.AUTH.exists():
-            print("본학습용: 사용자 최종 승인 대기. manifest/수집 작업은 생성하지 않았습니다.")
+            print(
+                "본학습용: 사용자 최종 승인 대기. manifest/수집 작업은 생성하지 않았습니다."
+            )
             print(REPORT / "MAIN_PROPOSAL.md")
         else:
             path = training19_main.prepare()
-            print("승인된 본학습세트1674런: train540/validation81/calibration81/개발243/최종729")
-            print("LR108 같은역할 포함 · 추가1566런 · 예비연결없음 · 수집/학습 시작 안 함")
+            print(
+                "승인된 본학습세트1674런: train540/validation81/calibration81/개발243/최종729"
+            )
+            print(
+                "LR108 같은역할 포함 · 추가1566런 · 예비연결없음 · 수집/학습 시작 안 함"
+            )
             print(path / "manifest.json")
 
 

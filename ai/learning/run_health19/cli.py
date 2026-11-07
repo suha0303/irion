@@ -10,15 +10,28 @@ from .data import iter_manifests
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    inspect = commands.add_parser("validate", help="Read-only check of a new full-run manifest")
-    inspect.add_argument("--manifest", required=True, type=Path, action="append")
-    inspect.add_argument(
-        "--producer-binding", type=Path, help="Externally frozen expected producer JSON"
+    inspect = commands.add_parser(
+        "validate", help="Read-only check of a new full-run manifest"
     )
-    inspect.add_argument("--protection", type=Path, help="Frozen global identity exclusions")
+    inspect.add_argument(
+        "--manifest", required=True, type=Path, action="append"
+    )
+    inspect.add_argument(
+        "--producer-binding",
+        type=Path,
+        help="Externally frozen expected producer JSON",
+    )
+    inspect.add_argument(
+        "--protection", type=Path, help="Frozen global identity exclusions"
+    )
     inspect.add_argument(
         "--usage",
-        choices=("input_check", "pilot_input_check", "short_cycle_input_check", "final_test"),
+        choices=(
+            "input_check",
+            "pilot_input_check",
+            "short_cycle_input_check",
+            "final_test",
+        ),
         default="input_check",
     )
     check = commands.add_parser(
@@ -26,13 +39,17 @@ def main(argv=None):
     )
     check.add_argument("--request", type=Path, required=True)
     check.add_argument("--output", type=Path)
-    short = commands.add_parser("check-short-input", help="Explicit180s no-fit short-cycle gate")
+    short = commands.add_parser(
+        "check-short-input", help="Explicit180s no-fit short-cycle gate"
+    )
     short.add_argument("--request", type=Path, required=True)
     short.add_argument("--output", type=Path)
     smoke = commands.add_parser(
         "smoke", help="Synthetic normal-only bounded CPU train/restore test"
     )
-    smoke.add_argument("--model", choices=("lstm", "transformer"), required=True)
+    smoke.add_argument(
+        "--model", choices=("lstm", "transformer"), required=True
+    )
     smoke.add_argument("--hidden", type=int, choices=(64, 128), default=64)
     smoke.add_argument("--layers", type=int, choices=(2, 4), default=2)
     smoke.add_argument("--output", required=True, type=Path)
@@ -48,11 +65,20 @@ def main(argv=None):
 
         return check_input(args.request, args.output)
     if args.command == "validate":
-        expected = json.loads(args.producer_binding.read_text()) if args.producer_binding else None
+        expected = (
+            json.loads(args.producer_binding.read_text())
+            if args.producer_binding
+            else None
+        )
         count, frames = 0, 0
-        protection = json.loads(args.protection.read_text()) if args.protection else None
+        protection = (
+            json.loads(args.protection.read_text()) if args.protection else None
+        )
         for run in iter_manifests(
-            args.manifest, expected_producer=expected, protection=protection, usage=args.usage
+            args.manifest,
+            expected_producer=expected,
+            protection=protection,
+            usage=args.usage,
         ):
             count += 1
             frames += len(run.values)

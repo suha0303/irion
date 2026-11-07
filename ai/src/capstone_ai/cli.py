@@ -28,7 +28,10 @@ def output(engine, tail, out, mode, evidence):
         tmp = p.with_suffix(".tmp")
         with tmp.open("w") as f:
             for row in rows:
-                f.write(json.dumps(row, allow_nan=False, separators=(",", ":")) + "\n")
+                f.write(
+                    json.dumps(row, allow_nan=False, separators=(",", ":"))
+                    + "\n"
+                )
         tmp.replace(p)
     files = [
         "run.json",
@@ -47,23 +50,33 @@ def output(engine, tail, out, mode, evidence):
         "closed": tail.closed,
         "frames": len(engine.frames),
         "valid_frames": sum(
-            all(q == "valid" for q in f["quality"].values()) for f in engine.frames
+            all(q == "valid" for q in f["quality"].values())
+            for f in engine.frames
         ),
         "windows": len(engine.windows),
         "feature_order": engine.names,
         "context_order": CONTEXT,
-        "exclusions": dict(Counter(r for x in engine.exclusions for r in x["reasons"])),
+        "exclusions": dict(
+            Counter(r for x in engine.exclusions for r in x["reasons"])
+        ),
         "diagnostics": dict(engine.diagnostics),
         "config": engine.config,
         "final_watermark": tail.last_mark,
-        "input_hashes": {n: sha(tail.run / n) for n in files if (tail.run / n).exists()},
+        "input_hashes": {
+            n: sha(tail.run / n) for n in files if (tail.run / n).exists()
+        },
         "output_hashes": {
-            n: sha(out / (n + ".jsonl")) for n in ["frames", "windows", "exclusions"]
+            n: sha(out / (n + ".jsonl"))
+            for n in ["frames", "windows", "exclusions"]
         },
         "consumer_revision": {
-            str(p.relative_to(ROOT)): sha(p) for p in (ROOT / "ai/src/capstone_ai").glob("*.py")
+            str(p.relative_to(ROOT)): sha(p)
+            for p in (ROOT / "ai/src/capstone_ai").glob("*.py")
         },
-        "contract_sha256": sha(ROOT / "docs/specifications/CODEX_REBUILD_PACKAGE_V4_2/00_SHARED_DATA_CONTRACT.md"),
+        "contract_sha256": sha(
+            ROOT
+            / "docs/specifications/CODEX_REBUILD_PACKAGE_V4_2/00_SHARED_DATA_CONTRACT.md"
+        ),
         "python": sys.version,
         "partial_stream_bytes": len(tail.stream.buffer),
     }
@@ -74,11 +87,26 @@ def output(engine, tail, out, mode, evidence):
 
 def live_evidence_verified(mode, initial_status, grew, closed):
     # The producer enters mission after confirming airborne/OFFBOARD and command ACKs.
-    active = {"airborne", "mission", "taking_off", "landing", "armed", "running"}
+    active = {
+        "airborne",
+        "mission",
+        "taking_off",
+        "landing",
+        "armed",
+        "running",
+    }
     return mode == "live" and initial_status in active and grew and closed
 
 
-def process(run, out, config, mode="replay", chunk_bytes=1048576, timeout=300, resume=None):
+def process(
+    run,
+    out,
+    config,
+    mode="replay",
+    chunk_bytes=1048576,
+    timeout=300,
+    resume=None,
+):
     run = Path(run).resolve()
     engine = Preprocessor(read_json(run / "observations/metadata.json"), config)
     tail = DirectoryTail(run, engine, chunk_bytes)
@@ -105,14 +133,20 @@ def process(run, out, config, mode="replay", chunk_bytes=1048576, timeout=300, r
                 break
             time.sleep(0.02)
     evidence["live_verified"] = live_evidence_verified(
-        mode, initial["status"], evidence["source_grew_while_attached"], tail.closed
+        mode,
+        initial["status"],
+        evidence["source_grew_while_attached"],
+        tail.closed,
     )
     report = output(engine, tail, out, mode, evidence)
     return report
 
 
 def compare(left, right, config):
-    a, b = read_json(Path(left) / "summary.json"), read_json(Path(right) / "summary.json")
+    a, b = (
+        read_json(Path(left) / "summary.json"),
+        read_json(Path(right) / "summary.json"),
+    )
     errors, max_error = [], 0.0
 
     def equal(x, y, path):
@@ -123,7 +157,9 @@ def compare(left, right, config):
         elif isinstance(x, (float, int)) and isinstance(y, (float, int)):
             error = abs(x - y)
             max_error = max(max_error, error)
-            if error > config["comparison_atol"] + config["comparison_rtol"] * abs(x):
+            if error > config["comparison_atol"] + config[
+                "comparison_rtol"
+            ] * abs(x):
                 errors.append(path)
         elif isinstance(x, list) and isinstance(y, list):
             if len(x) != len(y):
@@ -131,19 +167,36 @@ def compare(left, right, config):
             else:
                 for i, (u, v) in enumerate(zip(x, y)):
                     equal(u, v, path + f"/{i}")
-        elif isinstance(x, dict) and isinstance(y, dict) and x.keys() == y.keys():
+        elif (
+            isinstance(x, dict) and isinstance(y, dict) and x.keys() == y.keys()
+        ):
             for k in x:
                 equal(x[k], y[k], path + "/" + k)
         else:
             errors.append(path + ":type_or_keys")
 
-    for key in ["run_id", "origin", "config", "final_watermark", "input_hashes"]:
+    for key in [
+        "run_id",
+        "origin",
+        "config",
+        "final_watermark",
+        "input_hashes",
+    ]:
         equal(a[key], b[key], key)
     for name in ["frames", "windows", "exclusions"]:
-        x = [json.loads(s) for s in (Path(left) / (name + ".jsonl")).read_text().splitlines()]
-        y = [json.loads(s) for s in (Path(right) / (name + ".jsonl")).read_text().splitlines()]
+        x = [
+            json.loads(s)
+            for s in (Path(left) / (name + ".jsonl")).read_text().splitlines()
+        ]
+        y = [
+            json.loads(s)
+            for s in (Path(right) / (name + ".jsonl")).read_text().splitlines()
+        ]
         equal(x, y, name)
-    if min(a["valid_frames"], b["valid_frames"], a["windows"], b["windows"]) == 0:
+    if (
+        min(a["valid_frames"], b["valid_frames"], a["windows"], b["windows"])
+        == 0
+    ):
         errors.append("empty_valid_frames_or_post_warmup_windows")
     if not a["closed"] or not b["closed"]:
         errors.append("not_final_watermark")
@@ -156,13 +209,16 @@ def compare(left, right, config):
         "frames": a["frames"],
         "windows": a["windows"],
         "C9_live": "verified"
-        if not errors and (a["evidence"]["live_verified"] or b["evidence"]["live_verified"])
+        if not errors
+        and (a["evidence"]["live_verified"] or b["evidence"]["live_verified"])
         else "not_executed",
     }
 
 
 def main():
-    parser = argparse.ArgumentParser(description="X500 AI: model-free DRONE-RAW preprocessing")
+    parser = argparse.ArgumentParser(
+        description="X500 AI: model-free DRONE-RAW preprocessing"
+    )
     sub = parser.add_subparsers(dest="action", required=True)
     for name in ["preprocess", "replay", "live"]:
         p = sub.add_parser(name)
@@ -209,7 +265,10 @@ def main():
             from .dataset import build
 
             build(args.config, args.out)
-            result = {"status": "built", "manifest": str(Path(args.out) / "manifest.json")}
+            result = {
+                "status": "built",
+                "manifest": str(Path(args.out) / "manifest.json"),
+            }
         elif args.action == "train":
             from .training import train_models
 
@@ -237,7 +296,9 @@ def main():
             result = {
                 "python": sys.version,
                 "platform": platform.platform(),
-                "packages": {d.metadata["Name"]: d.version for d in distributions()},
+                "packages": {
+                    d.metadata["Name"]: d.version for d in distributions()
+                },
             }
             dump(args.out, result)
         elif args.action == "audit":
@@ -262,7 +323,9 @@ def main():
             return 4
         return 0
     except (ValueError, OSError, KeyError, RuntimeError) as exc:
-        print(json.dumps({"status": "failed", "error": str(exc)}), file=sys.stderr)
+        print(
+            json.dumps({"status": "failed", "error": str(exc)}), file=sys.stderr
+        )
         return 2
 
 

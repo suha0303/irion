@@ -26,7 +26,11 @@ class Moments:
             return
         if values.ndim != 2 or not np.isfinite(values).all():
             raise ValueError("Invalid train scaler observations")
-        n, mean, m2 = len(values), values.mean(0), ((values - values.mean(0)) ** 2).sum(0)
+        n, mean, m2 = (
+            len(values),
+            values.mean(0),
+            ((values - values.mean(0)) ** 2).sum(0),
+        )
         if self.n == 0:
             self.n, self.mean, self.m2 = n, mean, m2
             return
@@ -68,7 +72,10 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
         if row["role"] in FIT:
             with (folder / "frames.jsonl").open() as stream:
                 frames = [json.loads(line) for line in stream if line.strip()]
-            lookup = {(f["clock_id"], f["segment_id"], f["time_us"]): f for f in frames}
+            lookup = {
+                (f["clock_id"], f["segment_id"], f["time_us"]): f
+                for f in frames
+            }
             samples, windows = [], 0
             with (folder / "windows.jsonl").open() as stream:
                 for line in stream:
@@ -83,15 +90,27 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
                         for t in w["target_times_us"]
                     ]
                     if any(
-                        f is None or any(f["quality"][n] != "valid" for n in TARGETS)
+                        f is None
+                        or any(f["quality"][n] != "valid" for n in TARGETS)
                         for f in targets
                     ):
                         continue
                     y = [[f["values"][n] for n in TARGETS] for f in targets]
                     samples.append(
-                        (w["X"], w["C"], y, row["run_id"], w["origin_us"], w["segment_id"])
+                        (
+                            w["X"],
+                            w["C"],
+                            y,
+                            row["run_id"],
+                            w["origin_us"],
+                            w["segment_id"],
+                        )
                     )
-            if not samples or not summary["valid_frames"] or windows != summary["windows"]:
+            if (
+                not samples
+                or not summary["valid_frames"]
+                or windows != summary["windows"]
+            ):
                 raise ValueError("Fit run missing valid windows/frames")
             x, c, y, ids, origins, segments = zip(*samples)
             arrays = dict(
@@ -105,7 +124,10 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
             target = work / f"run-{index:06d}.npz"
             np.savez(target, **arrays)
             fragments[row["role"]].append((target, len(samples)))
-            item.update(accepted_targets=len(samples), excluded_targets=windows - len(samples))
+            item.update(
+                accepted_targets=len(samples),
+                excluded_targets=windows - len(samples),
+            )
             if row["role"] == "normal_train":
                 frames_stats.add(
                     feature_transform(
@@ -113,7 +135,9 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
                             [f["values"][n] for n in FEATURES]
                             for f in frames
                             if f["operating_state"] == "airborne"
-                            and all(f["quality"][n] == "valid" for n in FEATURES)
+                            and all(
+                                f["quality"][n] == "valid" for n in FEATURES
+                            )
                         ],
                         preprocess,
                     )
@@ -131,7 +155,11 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
             with np.load(path, allow_pickle=False) as part:
                 for key in KEYS:
                     a = part[key]
-                    dtypes[key] = np.result_type(dtypes[key], a.dtype) if key in dtypes else a.dtype
+                    dtypes[key] = (
+                        np.result_type(dtypes[key], a.dtype)
+                        if key in dtypes
+                        else a.dtype
+                    )
                     shapes[key] = a.shape[1:]
         maps = {
             key: np.lib.format.open_memmap(
@@ -195,11 +223,16 @@ def mmap_archive(path, target, budget):
             raise ValueError("Unexpected numeric archive members")
         for key in KEYS:
             destination = target / (key + ".npy")
-            with archive.open(key + ".npy") as source, destination.open("xb") as output:
+            with (
+                archive.open(key + ".npy") as source,
+                destination.open("xb") as output,
+            ):
                 while block := source.read(1024 * 1024):
                     budget.check()
                     output.write(block)
-            result[key] = np.load(destination, mmap_mode="r", allow_pickle=False)
+            result[key] = np.load(
+                destination, mmap_mode="r", allow_pickle=False
+            )
     return result
 
 
@@ -243,25 +276,36 @@ def inspect_dataset(dataset, frozen, budget, *, inspect_run_fn):
     ):
         for row in frozen["runs"]:
             budget.check()
-            report, samples, selected = inspect_run_fn(dataset / "canonical" / row["run_id"], row)
+            report, samples, selected = inspect_run_fn(
+                dataset / "canonical" / row["run_id"], row
+            )
             role = row["role"]
             if role in FIT:
                 if not samples:
                     raise ValueError("Empty fit role run")
                 for key in ("accepted_targets", "excluded_targets"):
                     if original[row["run_id"]][key] != report[key]:
-                        raise ValueError("Target accounting differs from canonical")
+                        raise ValueError(
+                            "Target accounting differs from canonical"
+                        )
                 for key, values in zip(KEYS, zip(*samples)):
-                    actual = arrays[role][key][offsets[role] : offsets[role] + len(samples)]
+                    actual = arrays[role][key][
+                        offsets[role] : offsets[role] + len(samples)
+                    ]
                     if key in ("X", "C", "Y"):
                         max_error = max(
-                            max_error, derived.equal_array(actual, values, role + "/" + key)
+                            max_error,
+                            derived.equal_array(
+                                actual, values, role + "/" + key
+                            ),
                         )
                     elif not np.array_equal(actual, np.asarray(values)):
                         raise ValueError("Identity/order mismatch")
                 offsets[role] += len(samples)
                 if role == "normal_train":
-                    contexts = np.asarray([s[1] for s in samples], dtype=np.float64)
+                    contexts = np.asarray(
+                        [s[1] for s in samples], dtype=np.float64
+                    )
                     contexts.tofile(contexts_out)
                     context_count += len(contexts)
             if len(selected):
@@ -287,18 +331,31 @@ def inspect_dataset(dataset, frozen, budget, *, inspect_run_fn):
         )
     )
     cm, cs = derived.mean_scale(
-        np.memmap(work / "train-context.f64", dtype=np.float64, mode="r", shape=(context_count, 6))
+        np.memmap(
+            work / "train-context.f64",
+            dtype=np.float64,
+            mode="r",
+            shape=(context_count, 6),
+        )
     )
     indices = [FEATURES.index(n) for n in TARGETS]
     expected = dict(
-        x_mean=xm, x_scale=xs, c_mean=cm, c_scale=cs, y_mean=xm[indices], y_scale=xs[indices]
+        x_mean=xm,
+        x_scale=xs,
+        c_mean=cm,
+        c_scale=cs,
+        y_mean=xm[indices],
+        y_scale=xs[indices],
     )
     if sha(dataset / "scaler.npz") != manifest["hashes"]["scaler.npz"]:
         raise ValueError("Scaler hash mismatch")
     with np.load(dataset / "scaler.npz", allow_pickle=False) as saved:
         if set(saved.files) != set(expected):
             raise ValueError("Scaler member mismatch")
-        errors = {k: derived.equal_array(saved[k], v, "scaler/" + k) for k, v in expected.items()}
+        errors = {
+            k: derived.equal_array(saved[k], v, "scaler/" + k)
+            for k, v in expected.items()
+        }
     by_role = {}
     fields = (
         "frames",
@@ -316,8 +373,15 @@ def inspect_dataset(dataset, frozen, budget, *, inspect_run_fn):
     )
     for role in sorted({r["role"] for r in per_run}):
         reports = [r for r in per_run if r["role"] == role]
-        totals = dict(runs=len(reports), **{key: sum(r[key] for r in reports) for key in fields})
-        for key in ("target_drop_detail", "window_exclusion_reasons", "operating_state_frames"):
+        totals = dict(
+            runs=len(reports),
+            **{key: sum(r[key] for r in reports) for key in fields},
+        )
+        for key in (
+            "target_drop_detail",
+            "window_exclusion_reasons",
+            "operating_state_frames",
+        ):
             counter = Counter()
             for report in reports:
                 counter.update(report[key])
@@ -330,7 +394,9 @@ def inspect_dataset(dataset, frozen, budget, *, inspect_run_fn):
             totals["quality_counts"][feature] = dict(counter)
         by_role[role] = totals
     del arrays, data, actual
-    shutil.rmtree(work)  # Exact new scratch directory; never raw input or prior-task evidence.
+    shutil.rmtree(
+        work
+    )  # Exact new scratch directory; never raw input or prior-task evidence.
     budget.check()
     return dict(
         per_run=per_run,

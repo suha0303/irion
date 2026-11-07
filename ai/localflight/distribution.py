@@ -34,7 +34,9 @@ esac
 def copy_regular(source, destination):
     source, destination = Path(source), Path(destination)
     if source.is_symlink() or not source.is_file():
-        raise ValueError(f"Only regular application files may be packaged: {source}")
+        raise ValueError(
+            f"Only regular application files may be packaged: {source}"
+        )
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
 
@@ -61,11 +63,15 @@ def build(output, ui_packages):
         or platform.machine() != "x86_64"
         or platform.system() != "Linux"
     ):
-        raise ValueError("Build with the existing Python 3.10 Ubuntu x86_64 AI environment")
+        raise ValueError(
+            "Build with the existing Python 3.10 Ubuntu x86_64 AI environment"
+        )
     output = Path(output).absolute()
     ui_packages = Path(ui_packages).absolute()
     if output.exists():
-        raise ValueError("Choose a new output directory; existing packages are never overwritten")
+        raise ValueError(
+            "Choose a new output directory; existing packages are never overwritten"
+        )
     # Existing binary runtimes are copied; no installation or shared-env modification.
     base = Path(sys.base_prefix)
     ai_site = Path(sysconfig.get_paths()["purelib"])
@@ -81,7 +87,9 @@ def build(output, ui_packages):
     parent = output.parent
     parent.mkdir(parents=True, exist_ok=True)
     if shutil.disk_usage(parent).free < required * 2:
-        raise ValueError("Insufficient free space for staging and application package")
+        raise ValueError(
+            "Insufficient free space for staging and application package"
+        )
     if (
         not (ui_packages / "fastapi").is_dir()
         or not (ROOT / "irion-upload/UI/frontend/dist/index.html").is_file()
@@ -92,20 +100,35 @@ def build(output, ui_packages):
     catalog = Catalog()
     catalog.check_model_sources()
     output.mkdir()
-    for directory in ("ai/localflight", "ai/learning", "ai/execution", "ai/src"):
+    for directory in (
+        "ai/localflight",
+        "ai/learning",
+        "ai/execution",
+        "ai/src",
+    ):
         copy_tree(ROOT / directory, output / directory, python_only=True)
-    copy_tree(ROOT / "irion-upload/UI/backend/arion", output / "irion-upload/UI/backend/arion")
-    copy_tree(ROOT / "irion-upload/UI/frontend/dist", output / "irion-upload/UI/frontend/dist")
+    copy_tree(
+        ROOT / "irion-upload/UI/backend/arion",
+        output / "irion-upload/UI/backend/arion",
+    )
+    copy_tree(
+        ROOT / "irion-upload/UI/frontend/dist",
+        output / "irion-upload/UI/frontend/dist",
+    )
     frozen = catalog.root.relative_to(ROOT)
     required_model_files = set()
     for model in catalog.manifest["models"]:
         required_model_files.update(
-            str(p.relative_to(catalog.root)) for p in catalog.entry(model)["files"].values()
+            str(p.relative_to(catalog.root))
+            for p in catalog.entry(model)["files"].values()
         )
     required_model_files.update(
-        f"code/ai/learning/{name}/models.py" for name in ("history19", "run_health19")
+        f"code/ai/learning/{name}/models.py"
+        for name in ("history19", "run_health19")
     )
-    copy_regular(catalog.root / "MANIFEST.json", output / frozen / "MANIFEST.json")
+    copy_regular(
+        catalog.root / "MANIFEST.json", output / frozen / "MANIFEST.json"
+    )
     for name in sorted(required_model_files):
         copy_regular(catalog.checked(name), output / frozen / name)
     # Keep the delivered manifest intact; explicitly declare which files this runtime needs.
@@ -161,7 +184,9 @@ def build(output, ui_packages):
         "Empirical aircraft/model thresholds supported; real-aircraft detection performance unverified.\n"
     )
     hashes = {
-        str(p.relative_to(output)): digest(p) for p in sorted(output.rglob("*")) if p.is_file()
+        str(p.relative_to(output)): digest(p)
+        for p in sorted(output.rglob("*"))
+        if p.is_file()
     }
     manifest = dict(
         schema="drone.local-app/1",
@@ -173,7 +198,9 @@ def build(output, ui_packages):
         bytes=sum((output / p).stat().st_size for p in hashes),
         source_model_manifest_sha256=digest(catalog.root / "MANIFEST.json"),
     )
-    (output / "APP_MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (output / "APP_MANIFEST.json").write_text(
+        json.dumps(manifest, indent=2) + "\n"
+    )
     return dict(
         path=str(output),
         files=len(hashes),
@@ -202,8 +229,16 @@ def doctor():
         if item["task"] == "forecast":
             runtime.predict_scaled(np.zeros((1, 100, 19), dtype="f4"))
         else:
-            runtime.predict_scaled(np.zeros((1, 110, 19), dtype="f4"), np.array([110], dtype="i8"))
-    for module in ("fastapi", "uvicorn", "pymavlink", "pyulog", "arion.file_io"):
+            runtime.predict_scaled(
+                np.zeros((1, 110, 19), dtype="f4"), np.array([110], dtype="i8")
+            )
+    for module in (
+        "fastapi",
+        "uvicorn",
+        "pymavlink",
+        "pyulog",
+        "arion.file_io",
+    ):
         importlib.import_module(module)
 
     return dict(
@@ -224,13 +259,19 @@ def main(argv=None):
     parser.add_argument("action", choices=["build", "doctor"])
     parser.add_argument("--output", type=Path)
     parser.add_argument(
-        "--ui-packages", type=Path, default=ROOT / "ai/.local/desktop-build/ui-packages"
+        "--ui-packages",
+        type=Path,
+        default=ROOT / "ai/.local/desktop-build/ui-packages",
     )
     args = parser.parse_args(argv)
     try:
         if args.action == "build" and args.output is None:
             raise ValueError("--output is required")
-        result = build(args.output, args.ui_packages) if args.action == "build" else doctor()
+        result = (
+            build(args.output, args.ui_packages)
+            if args.action == "build"
+            else doctor()
+        )
         print(json.dumps(result, indent=2))
         return 0
     except (ValueError, OSError) as error:

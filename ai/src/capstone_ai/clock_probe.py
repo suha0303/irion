@@ -43,7 +43,10 @@ class ClockProbe:
                     or message.tc1 <= 0
                 ):
                     continue
-                if message.get_srcSystem() != self.system or message.get_srcComponent() != 1:
+                if (
+                    message.get_srcSystem() != self.system
+                    or message.get_srcComponent() != 1
+                ):
                     continue
                 received = time.monotonic_ns()
                 row = {
@@ -57,8 +60,13 @@ class ClockProbe:
                     "source_component": 1,
                     "peer": list(self.peer),
                 }
-                if self.previous is not None and row["sim_time_us"] < self.previous["sim_time_us"]:
-                    raise ValueError("PX4 clock regressed; cannot reuse mapping")
+                if (
+                    self.previous is not None
+                    and row["sim_time_us"] < self.previous["sim_time_us"]
+                ):
+                    raise ValueError(
+                        "PX4 clock regressed; cannot reuse mapping"
+                    )
                 self.previous = row
                 self.count += 1
                 self.logfile.write(json.dumps(row) + "\n")
@@ -67,7 +75,12 @@ class ClockProbe:
         self.errors += 1
         self.logfile.write(
             json.dumps(
-                {"run_id": self.run_id, "nonce": nonce, "host_send_ns": sent, "status": "timeout"}
+                {
+                    "run_id": self.run_id,
+                    "nonce": nonce,
+                    "host_send_ns": sent,
+                    "status": "timeout",
+                }
             )
             + "\n"
         )
@@ -95,7 +108,13 @@ def deadline_bounds(before, after, host_done_ns, deadline_us):
     low, high = before["sim_time_us"], after["sim_time_us"]
     if high < low:
         raise ValueError("clock regressed")
-    status = "on_time" if high < deadline_us else "late" if low >= deadline_us else "unverified"
+    status = (
+        "on_time"
+        if high < deadline_us
+        else "late"
+        if low >= deadline_us
+        else "unverified"
+    )
     return {
         "status": status,
         "lower_us": low,

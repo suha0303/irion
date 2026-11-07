@@ -6,13 +6,15 @@ import json
 from pathlib import Path
 
 import pytest
-from test_short_cycle_inputs import refresh, short_request, write
-from test_wind_metadata import fixture as wind_fixture
-
 from learning.admission19 import FINAL16, check_protection, validate_lineages
 from learning.history19 import final16
 from learning.history19.pilot import CRITICAL, ROOT, json_file, sha
-from learning.history19.pilot_connector import native_mission_interval, project_pair_receipt
+from learning.history19.pilot_connector import (
+    native_mission_interval,
+    project_pair_receipt,
+)
+from test_short_cycle_inputs import refresh, short_request, write
+from test_wind_metadata import fixture as wind_fixture
 
 
 @pytest.fixture
@@ -61,7 +63,9 @@ def final_request(tmp_path, monkeypatch):
     case, partner = manifest["cases"][:2]
     normal = Path(old["case_origin"]["run"]["path"]).parent
     anomaly = normal.parent / "synthetic-0-anomaly"
-    source = next(c for c in definitions["cases"] if c["case_id"].endswith("01-normal"))
+    source = next(
+        c for c in definitions["cases"] if c["case_id"].endswith("01-normal")
+    )
     scenario = wind_fixture(case["environment"], case["motion"])
     scenario.update(
         operation_variation=source["operation_variation"],
@@ -71,7 +75,9 @@ def final_request(tmp_path, monkeypatch):
         health_eligibility="confirmed_healthy",
         requested_duration_s=180,
         producer_lock_sha256=producer["runtime_sha256"],
-        joint_phase_policy=json_file(normal / "evaluation/scenario.json")["joint_phase_policy"],
+        joint_phase_policy=json_file(normal / "evaluation/scenario.json")[
+            "joint_phase_policy"
+        ],
     )
     scenario["wind_model"].update(
         profile=scenario["wind_profile"], clock=policy["wind_model_clock"]
@@ -92,13 +98,16 @@ def final_request(tmp_path, monkeypatch):
         sha256=sha(normal / "evaluation/scenario.json"),
     )
     refs["raw_integrity"] = dict(
-        path=str(normal / "integrity.json"), sha256=sha(normal / "integrity.json")
+        path=str(normal / "integrity.json"),
+        sha256=sha(normal / "integrity.json"),
     )
     normal_id, anomaly_id = (
         json_file(normal / "run.json")["run_id"],
         json_file(anomaly / "run.json")["run_id"],
     )
-    ledger = dict(schema="drone-ai.final16.ledger/1", task_id=final16.TASK, cases=[])
+    ledger = dict(
+        schema="drone-ai.final16.ledger/1", task_id=final16.TASK, cases=[]
+    )
     registry = dict(schema="drone-ai.global-protection/1", entries=[])
     for i, c in enumerate(manifest["cases"]):
         attempts = []
@@ -123,7 +132,9 @@ def final_request(tmp_path, monkeypatch):
             )
         ledger["cases"].append(
             dict(
-                case_id=c["case_id"], status="completed" if i < 2 else "pending", attempts=attempts
+                case_id=c["case_id"],
+                status="completed" if i < 2 else "pending",
+                attempts=attempts,
             )
         )
         registry["entries"].append(
@@ -144,7 +155,9 @@ def final_request(tmp_path, monkeypatch):
     for key in ("online_manifest", "run_manifest"):
         v = read_ref(key)
         row = v["run"] if key == "online_manifest" else v["runs"][0]
-        extras = [x for x in row["lineage"] if x.startswith(("run:", "raw-sha256:"))]
+        extras = [
+            x for x in row["lineage"] if x.startswith(("run:", "raw-sha256:"))
+        ]
         row.update(
             case_id=case["case_id"],
             purpose=FINAL16,
@@ -157,7 +170,10 @@ def final_request(tmp_path, monkeypatch):
     capsule = read_ref("capsule")
     capsule.update(
         paired_policy_sha256=sha(policy_path),
-        files={n: sha(ROOT / n) for n in (*CRITICAL, "Data/generation/pretrain/common.py")},
+        files={
+            n: sha(ROOT / n)
+            for n in (*CRITICAL, "Data/generation/pretrain/common.py")
+        },
     )
     put("capsule", capsule)
     report = normal.parent / "pair-0.json"
@@ -203,12 +219,17 @@ def run(path, capsys):
     return code, json.loads(capsys.readouterr().out)
 
 
-def test_shared19_full_case_and_native_pair_remain_causal_and_nonempty(final_request, capsys):
+def test_shared19_full_case_and_native_pair_remain_causal_and_nonempty(
+    final_request, capsys
+):
     code, result = run(final_request, capsys)
     assert code == 0, result
     assert result["status"] == "SYNTHETIC_FINAL16_CASE_INPUTS_CHECKED_NO_FIT"
     assert result["frames"] == 1801 and result["online"]["windows"] == 170
-    assert result["pair_verified"] is True and result["actual_data_verified"] is False
+    assert (
+        result["pair_verified"] is True
+        and result["actual_data_verified"] is False
+    )
     assert result["ledger_counts"]["planned_cases"] == 16
     assert result["ledger_counts"]["physical_attempts"] == 2
 
@@ -234,7 +255,9 @@ def test_shared19_full_case_and_native_pair_remain_causal_and_nonempty(final_req
         "producer",
     ],
 )
-def test_final16_scope_cannot_weaken_old_or_new_limits(final_request, capsys, damage):
+def test_final16_scope_cannot_weaken_old_or_new_limits(
+    final_request, capsys, damage
+):
     if damage in {
         "drop_case",
         "duplicate",
@@ -283,24 +306,44 @@ def test_final16_scope_cannot_weaken_old_or_new_limits(final_request, capsys, da
             final_request,
             "registry",
             lambda v: v["entries"].append(
-                dict(purpose="prior45", identities=["run:prior45"], forbidden_uses=["fit"])
+                dict(
+                    purpose="prior45",
+                    identities=["run:prior45"],
+                    forbidden_uses=["fit"],
+                )
             ),
         )
     if damage == "scope":
-        edit(final_request, "paired_policy", lambda p: p.update(scope_task="SHORT_CYCLE_20261107"))
+        edit(
+            final_request,
+            "paired_policy",
+            lambda p: p.update(scope_task="SHORT_CYCLE_20261107"),
+        )
     if damage == "auth":
-        edit(final_request, "paired_policy", lambda p: p.update(authorization_sha256="0" * 64))
+        edit(
+            final_request,
+            "paired_policy",
+            lambda p: p.update(authorization_sha256="0" * 64),
+        )
     if damage == "producer":
-        edit(final_request, "expected_producer", lambda p: p.update(runtime_sha256="0" * 64))
+        edit(
+            final_request,
+            "expected_producer",
+            lambda p: p.update(runtime_sha256="0" * 64),
+        )
     code, result = run(final_request, capsys)
     assert code == 1 and result["actual_data_verified"] is False
 
 
-def test_physical_failure_stays_in_sixteen_denominator_and_cannot_pass_final(final_request, capsys):
+def test_physical_failure_stays_in_sixteen_denominator_and_cannot_pass_final(
+    final_request, capsys
+):
     def failure(ledger):
         row = ledger["cases"][0]
         row["status"] = row["attempts"][0]["status"] = "failed"
-        row["attempts"][0]["failure_reason"] = "synthetic launch failure retained"
+        row["attempts"][0]["failure_reason"] = (
+            "synthetic launch failure retained"
+        )
 
     edit(final_request, "ledger", failure)
     r = json_file(final_request)
@@ -312,7 +355,9 @@ def test_physical_failure_stays_in_sixteen_denominator_and_cannot_pass_final(fin
     r["phase"] = "final"
     write(final_request, r)
     code, result = run(final_request, capsys)
-    assert code == 2 and result["ledger_counts"]["physical_failed_attempts"] == 1
+    assert (
+        code == 2 and result["ledger_counts"]["physical_failed_attempts"] == 1
+    )
 
 
 @pytest.mark.parametrize(
@@ -411,14 +456,22 @@ def test_final_requires_all_sixteen_and_eight_distinct_actual_pair_receipts(
             if damage == "producer":
                 evidence["runtime_manifest"] = "0" * 64
             if damage == "failed":
-                ledger["cases"][i]["status"] = ledger["cases"][i]["attempts"][0]["status"] = (
-                    "failed"
+                ledger["cases"][i]["status"] = ledger["cases"][i]["attempts"][
+                    0
+                ]["status"] = "failed"
+                ledger["cases"][i]["attempts"][0]["failure_reason"] = (
+                    "preserved failure"
                 )
-                ledger["cases"][i]["attempts"][0]["failure_reason"] = "preserved failure"
-        refs.append(write(final_request.parent / ("receipt-" + str(i) + ".json"), receipt))
+        refs.append(
+            write(
+                final_request.parent / ("receipt-" + str(i) + ".json"), receipt
+            )
+        )
     r["refs"]["ledger"] = write(Path(r["refs"]["ledger"]["path"]), ledger)
     r["refs"]["registry"] = write(Path(r["refs"]["registry"]["path"]), registry)
-    r.update(phase="final", case_receipts=refs[:-1] if damage == "drop" else refs)
+    r.update(
+        phase="final", case_receipts=refs[:-1] if damage == "drop" else refs
+    )
     if damage == "duplicate":
         r["case_receipts"][-1] = refs[0]
     write(final_request, r)
@@ -440,7 +493,9 @@ def test_final16_cannot_enter_fit_or_be_relabelled():
     )
     with pytest.raises(ValueError):
         check_protection(
-            [row], dict(schema="drone-ai.global-protection/1", entries=[]), usage="fit"
+            [row],
+            dict(schema="drone-ai.global-protection/1", entries=[]),
+            usage="fit",
         )
     with pytest.raises(ValueError):
         validate_lineages([dict(row, cohort="final")])

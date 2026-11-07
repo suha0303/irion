@@ -10,12 +10,28 @@ from pathlib import Path
 from x500_storage import capture
 
 from . import native_flight, pilot45, pilot_bridge
-from .common import HOME, ROOT, STORE, identity, now, read, runtime_identity, sha, verify, write
+from .common import (
+    HOME,
+    ROOT,
+    STORE,
+    identity,
+    now,
+    read,
+    runtime_identity,
+    sha,
+    verify,
+    write,
+)
 
-DEFAULT_HANDOFF = ROOT / "ai/reports/p27-pilot45-admission-20261107/recovery-01/data-handoff.json"
+DEFAULT_HANDOFF = (
+    ROOT
+    / "ai/reports/p27-pilot45-admission-20261107/recovery-01/data-handoff.json"
+)
 
 
-def init(name, previous, draft, handoff=DEFAULT_HANDOFF, *, reuse_integration=None):
+def init(
+    name, previous, draft, handoff=DEFAULT_HANDOFF, *, reuse_integration=None
+):
     pilot45.recovery_authorization()
     if not pilot45.re.fullmatch(r"[A-Za-z0-9_-]{1,56}", name):
         raise ValueError("Safe flow name required")
@@ -26,8 +42,12 @@ def init(name, previous, draft, handoff=DEFAULT_HANDOFF, *, reuse_integration=No
         )
     previous, draft = pilot45.task_path(previous), pilot45.task_path(draft)
     task.mkdir(parents=True)
-    sources = {str(p): sha(p) for p in (ROOT / "Data/generation/pretrain").glob("*.py")}
-    sources.update({str(p): sha(p) for p in (ROOT / "Data/generation/tests").glob("*.py")})
+    sources = {
+        str(p): sha(p) for p in (ROOT / "Data/generation/pretrain").glob("*.py")
+    }
+    sources.update(
+        {str(p): sha(p) for p in (ROOT / "Data/generation/tests").glob("*.py")}
+    )
     sources[str(pilot45.RECOVERY_AUTH)] = sha(pilot45.RECOVERY_AUTH)
     config = dict(
         mode="pilot45",
@@ -52,7 +72,9 @@ def init(name, previous, draft, handoff=DEFAULT_HANDOFF, *, reuse_integration=No
         dependency_handoff=str(Path(handoff).absolute()),
         previous_integration=str(previous),
         draft=str(draft),
-        reuse_integration=str(pilot45.task_path(reuse_integration)) if reuse_integration else None,
+        reuse_integration=str(pilot45.task_path(reuse_integration))
+        if reuse_integration
+        else None,
         training_authorized=False,
         fit_authorized=False,
     )
@@ -62,7 +84,12 @@ def init(name, previous, draft, handoff=DEFAULT_HANDOFF, *, reuse_integration=No
     write(task / "ledger.json", dict(cases={}, attempts=[], phases={}))
     write(
         task / "operator/state.json",
-        dict(status="READY_NOT_STARTED", stage="dependency_wait", task=name, updated_utc=now()),
+        dict(
+            status="READY_NOT_STARTED",
+            stage="dependency_wait",
+            task=name,
+            updated_utc=now(),
+        ),
     )
     return task
 
@@ -102,7 +129,9 @@ def completed_properties(properties):
     if required - set(properties):
         raise RuntimeError("Actual completion properties missing")
     if properties["LoadState"] != "loaded":
-        raise RuntimeError("Unloaded unit defaults are not historical exit evidence")
+        raise RuntimeError(
+            "Unloaded unit defaults are not historical exit evidence"
+        )
     if (
         properties["MainPID"] != "0"
         or properties["Result"] != "success"
@@ -140,14 +169,18 @@ def execute(flow, task, state):
     deadline = time.monotonic() + 24 * 3600
     while True:
         current = owned_status(task)
-        if not current["pid"] and current["properties"].get("ActiveState") not in {
+        if not current["pid"] and current["properties"].get(
+            "ActiveState"
+        ) not in {
             "activating",
             "deactivating",
         }:
             break
         if time.monotonic() > deadline:
             pilot45.stop(task, immediate=True)
-            raise RuntimeError("Finite task wait24h exceeded; only this own task stopped")
+            raise RuntimeError(
+                "Finite task wait24h exceeded; only this own task stopped"
+            )
         if (flow / "operator/stop-request.json").exists():
             if not (task / "operator/stop-request.json").exists():
                 pilot45.stop(task)
@@ -168,7 +201,11 @@ def execute(flow, task, state):
     if current["properties"].get("ActiveState") == "active":
         # Existing task units retain their exited state. Explicitly stop this
         # identity-checked PID0 unit so its ExecStopPost owns socket cleanup.
-        subprocess.run(["systemctl", "--user", "stop", current["unit"]], check=True, timeout=120)
+        subprocess.run(
+            ["systemctl", "--user", "stop", current["unit"]],
+            check=True,
+            timeout=120,
+        )
         result = subprocess.run(
             [
                 "systemctl",
@@ -184,16 +221,23 @@ def execute(flow, task, state):
             text=True,
             check=False,
         )
-        properties = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
+        properties = dict(
+            line.split("=", 1)
+            for line in result.stdout.splitlines()
+            if "=" in line
+        )
         if (
-            {"MainPID", "ActiveState", "LoadState", "SubState"} - set(properties)
+            {"MainPID", "ActiveState", "LoadState", "SubState"}
+            - set(properties)
             or properties["MainPID"] != "0"
             or properties["ActiveState"] != "inactive"
             or properties["SubState"] != "dead"
             or properties["LoadState"] not in {"loaded", "not-found"}
         ):
             raise RuntimeError("Own completed task unit did not terminate")
-        current["after_explicit_stop"] = dict(exit_code=result.returncode, properties=properties)
+        current["after_explicit_stop"] = dict(
+            exit_code=result.returncode, properties=properties
+        )
     write(
         task / "operator/termination-confirmed.json",
         dict(
@@ -222,7 +266,9 @@ def execute(flow, task, state):
         or cleanup["status"] != "CLEANUP_COMPLETE"
         or cleanup.get("service_result") != "success"
     ):
-        raise RuntimeError("Owned task/quality/termination requires correction: " + str(task))
+        raise RuntimeError(
+            "Owned task/quality/termination requires correction: " + str(task)
+        )
     with ExitStack() as stack:
         for p in (
             HOME / "pretrain.lock",
@@ -265,14 +311,19 @@ def worker(task):
             request = task / "operator/resume-request.json"
             if (
                 not request.exists()
-                or read(request).get("config_sha256") != sha(task / "config.json")
+                or read(request).get("config_sha256")
+                != sha(task / "config.json")
                 or read(request).get("owner_uid") != os.getuid()
             ):
                 raise RuntimeError("Explicit owned flow resume required")
             request.rename(task / "operator/resuming.json")
             stop = task / "operator/stop-request.json"
             if stop.exists():
-                stop.rename(task / "operator" / ("consumed-stop-" + str(time.time_ns()) + ".json"))
+                stop.rename(
+                    task
+                    / "operator"
+                    / ("consumed-stop-" + str(time.time_ns()) + ".json")
+                )
         else:
             with (task / "operator/claimed").open("x") as out:
                 out.write(now())
@@ -282,7 +333,9 @@ def worker(task):
             while True:
                 verify(cfg["source_sha256"])
                 if (task / "operator/stop-request.json").exists():
-                    raise RuntimeError("USER_STOP while waiting; no flight started")
+                    raise RuntimeError(
+                        "USER_STOP while waiting; no flight started"
+                    )
                 pilot45.resources()
                 try:
                     spec = pilot_bridge.dependencies(cfg["dependency_handoff"])
@@ -312,7 +365,10 @@ def worker(task):
                     str(ROOT / "Data/generation/tests/test_pilot45.py"),
                     str(ROOT / "Data/generation/tests/test_native_flight.py"),
                     str(ROOT / "Data/generation/tests/test_pilot_recovery.py"),
-                    str(ROOT / "Data/generation/tests/test_collection_identity.py"),
+                    str(
+                        ROOT
+                        / "Data/generation/tests/test_collection_identity.py"
+                    ),
                     "-q",
                 ]
                 with regression.open("x") as log:
@@ -323,7 +379,12 @@ def worker(task):
                             os.environ,
                             PYTHONPATH=":".join(
                                 str(ROOT / p)
-                                for p in ("Data/generation", "ai", "ai/src", "simulation/sim/src")
+                                for p in (
+                                    "Data/generation",
+                                    "ai",
+                                    "ai/src",
+                                    "simulation/sim/src",
+                                )
                             ),
                         ),
                         stdout=log,
@@ -339,12 +400,16 @@ def worker(task):
                         "Final stable-producer admission regression failed; no flight"
                     )
             elif read(task / "final-admission-regression.json")["exit_code"]:
-                raise RuntimeError("Prior regression failure preserved; correction required")
+                raise RuntimeError(
+                    "Prior regression failure preserved; correction required"
+                )
             write(environment, native_flight.environment_check())
             if cfg.get("reuse_integration"):
                 integration = pilot45.task_path(cfg["reuse_integration"])
             elif "integration" in ledger["phases"]:
-                integration = pilot45.task_path(ledger["phases"]["integration"]["task"])
+                integration = pilot45.task_path(
+                    ledger["phases"]["integration"]["task"]
+                )
             else:
                 integration = pilot45.init(
                     task.name + "-one",
@@ -392,7 +457,9 @@ def worker(task):
             else:
                 first = execute(task, integration, state)
             if (task / "operator/stop-request.json").exists():
-                raise RuntimeError("USER_STOP after current integration; no pilot started")
+                raise RuntimeError(
+                    "USER_STOP after current integration; no pilot started"
+                )
             pilot = (
                 pilot45.task_path(ledger["phases"]["pilot45"]["task"])
                 if "pilot45" in ledger["phases"]

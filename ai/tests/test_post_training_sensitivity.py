@@ -4,10 +4,9 @@ from contextlib import nullcontext
 from types import SimpleNamespace
 
 import pytest
-from test_post_training import fresh_config
-
 from execution.common import read, sha, write
 from learning import post_training as post
+from test_post_training import fresh_config
 
 
 def policy():
@@ -24,7 +23,11 @@ def policy():
 
 
 def config():
-    return dict(fresh_config(), sensitivity_policy=policy(), sensitivity_plan={"frozen": "plan"})
+    return dict(
+        fresh_config(),
+        sensitivity_policy=policy(),
+        sensitivity_plan={"frozen": "plan"},
+    )
 
 
 def test_sensitivity_is_one_fresh_full_comparison():
@@ -65,20 +68,27 @@ def test_config_rejects_changed_scope_or_mixed_conditions(change):
     [
         {"fresh_calibration": False},
         {"fresh_calibration": True, "diagnostic_only": True},
-        {"fresh_calibration": True, "numerical_policy": "/unused/old-policy.json"},
+        {
+            "fresh_calibration": True,
+            "numerical_policy": "/unused/old-policy.json",
+        },
     ],
 )
 def test_prepare_rejects_conflicting_mode_before_io(changes):
     with pytest.raises(ValueError, match="sensitivity-policy"):
         post.prepare(
             SimpleNamespace(
-                approve_post_training=True, sensitivity_policy="/unused/sensitivity.json", **changes
+                approve_post_training=True,
+                sensitivity_policy="/unused/sensitivity.json",
+                **changes,
             )
         )
 
 
 @pytest.mark.parametrize("tampered", ["sensitivity_policy", "sensitivity_plan"])
-def test_file_and_config_cannot_diverge_even_with_new_inventory(tmp_path, monkeypatch, tampered):
+def test_file_and_config_cannot_diverge_even_with_new_inventory(
+    tmp_path, monkeypatch, tampered
+):
     cfg = config()
     root = tmp_path / "attempt"
     source = tmp_path / "source"
@@ -87,7 +97,9 @@ def test_file_and_config_cannot_diverge_even_with_new_inventory(tmp_path, monkey
         path = root / "input" / (key.replace("_", "-") + ".json")
         write(path, cfg[key])
         cfg[key + "_sha256"] = sha(path)
-    cfg.update(source_training=str(source), source_training_files={}, model_files={})
+    cfg.update(
+        source_training=str(source), source_training_files={}, model_files={}
+    )
     write(root / "input/config.json", cfg)
     write(root / "server-profile.json", {})
     write(
@@ -99,8 +111,15 @@ def test_file_and_config_cannot_diverge_even_with_new_inventory(tmp_path, monkey
     )
 
     def inventory():
-        names = ("config.json", "sensitivity-policy.json", "sensitivity-plan.json")
-        write(root / "input/inventory.json", {name: sha(root / "input" / name) for name in names})
+        names = (
+            "config.json",
+            "sensitivity-policy.json",
+            "sensitivity-plan.json",
+        )
+        write(
+            root / "input/inventory.json",
+            {name: sha(root / "input" / name) for name in names},
+        )
         write(
             root / "prepared.json",
             dict(
@@ -117,12 +136,16 @@ def test_file_and_config_cannot_diverge_even_with_new_inventory(tmp_path, monkey
     path = root / "input" / (tampered.replace("_", "-") + ".json")
     write(path, {**cfg[tampered], "changed": True})
     inventory()
-    with pytest.raises(ValueError, match="Frozen common sensitivity inputs changed"):
+    with pytest.raises(
+        ValueError, match="Frozen common sensitivity inputs changed"
+    ):
         post.checked(root)
 
 
 @pytest.mark.parametrize("failed", [False, True])
-def test_worker_passes_one_frozen_gate_and_seals_only_after_success(tmp_path, monkeypatch, failed):
+def test_worker_passes_one_frozen_gate_and_seals_only_after_success(
+    tmp_path, monkeypatch, failed
+):
     import execution.engine
     import learning.telemetry
     import learning.training
@@ -144,9 +167,15 @@ def test_worker_passes_one_frozen_gate_and_seals_only_after_success(tmp_path, mo
     (tmp_path / "compute").mkdir()
     monkeypatch.setattr(post, "checked", lambda root: (root, cfg))
     monkeypatch.setattr(post.signal, "signal", lambda *a: None)
-    monkeypatch.setattr(post, "memory_snapshot", lambda: {"available_bytes": 32 * 1024**3})
-    monkeypatch.setattr(pipeline.runtime, "check", lambda *a, **kw: {"approved": True})
-    monkeypatch.setattr(learning.training, "project_lock", lambda *a: nullcontext())
+    monkeypatch.setattr(
+        post, "memory_snapshot", lambda: {"available_bytes": 32 * 1024**3}
+    )
+    monkeypatch.setattr(
+        pipeline.runtime, "check", lambda *a, **kw: {"approved": True}
+    )
+    monkeypatch.setattr(
+        learning.training, "project_lock", lambda *a: nullcontext()
+    )
     monkeypatch.setattr(
         learning.telemetry,
         "Telemetry",
@@ -156,17 +185,22 @@ def test_worker_passes_one_frozen_gate_and_seals_only_after_success(tmp_path, mo
         ),
     )
     checked_files, calls = [], []
-    monkeypatch.setattr(post, "verify", lambda root, files: checked_files.append(files))
+    monkeypatch.setattr(
+        post, "verify", lambda root, files: checked_files.append(files)
+    )
     monkeypatch.setattr(
         execution.engine,
         "preflight_models",
-        lambda *a, **kw: pytest.fail("Diagnostic-only phase was incorrectly called"),
+        lambda *a, **kw: pytest.fail(
+            "Diagnostic-only phase was incorrectly called"
+        ),
     )
 
     def calibrate(root, out, progress, **kw):
         calls.append(kw)
         write(
-            out / "sensitivity/summary.json", {"status": "FAILED_STOPPED" if failed else "PASSED"}
+            out / "sensitivity/summary.json",
+            {"status": "FAILED_STOPPED" if failed else "PASSED"},
         )
         if failed:
             raise ValueError("sensitivity gate failed")
@@ -176,7 +210,10 @@ def test_worker_passes_one_frozen_gate_and_seals_only_after_success(tmp_path, mo
         with pytest.raises(ValueError, match="sensitivity gate failed"):
             post.calibrate_worker(tmp_path)
         assert not (tmp_path / "compute/result-seal.json").exists()
-        assert read(tmp_path / "compute/progress.json")["status"] == "FAILED_STOPPED"
+        assert (
+            read(tmp_path / "compute/progress.json")["status"]
+            == "FAILED_STOPPED"
+        )
     else:
         post.calibrate_worker(tmp_path)
         seal = read(tmp_path / "compute/result-seal.json")

@@ -14,7 +14,9 @@ def test_default480_case_values_are_identical_to_reviewed_previous_source():
         common.ROOT
         / "docs/data/reports/short-cycle-20261107/attempt-01/before/Data/generation/pretrain/pilot45.py"
     )
-    spec = importlib.util.spec_from_file_location("pretrain._before_short", previous)
+    spec = importlib.util.spec_from_file_location(
+        "pretrain._before_short", previous
+    )
     old = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(old)
     assert pilot45.build_cases(12345) == old.build_cases(12345)
@@ -28,14 +30,22 @@ def test180_has_full45_27cells9pairs_and_safe_original_endpoints():
     assert Counter(r["category"] for r in rows) == dict(
         standalone_normal=27, paired_normal=9, anomaly=9
     )
-    assert Counter(r["role"] for r in rows) == dict(normal_test=36, anomaly_test=9)
+    assert Counter(r["role"] for r in rows) == dict(
+        normal_test=36, anomaly_test=9
+    )
     dynamic = [r for r in rows if r["anomaly_timing"] in {"step", "ramp"}]
     assert {r["fault_after_mission_s"] for r in dynamic} <= {45, 60, 75}
     assert all(r["fault_after_mission_s"] + 20 <= 95 for r in dynamic)
     assert all(
-        r["attempts_max"] == 3 and r["cohort"] == "short_cycle_development_reference" for r in rows
+        r["attempts_max"] == 3
+        and r["cohort"] == "short_cycle_development_reference"
+        for r in rows
     )
-    assert all(r["battery_stage"] == "rpt_16" for r in rows if r["anomaly_family"] == "combined")
+    assert all(
+        r["battery_stage"] == "rpt_16"
+        for r in rows
+        if r["anomaly_family"] == "combined"
+    )
 
 
 @pytest.mark.parametrize("duration", [1, 100, 179, 181, 900, 180.0, True])
@@ -47,7 +57,9 @@ def test_only_explicit180_and480_are_allowed(duration):
 def test_short_manifest_requires_exact_scope_and_new_duration(monkeypatch):
     monkeypatch.setattr(pilot45, "short_authorization", lambda: {})
     rows = pilot45.build_cases(12, duration=180, case_prefix="s180")
-    value = dict(short_cycle=True, mission_seconds=180, seed_base=12, cases=rows)
+    value = dict(
+        short_cycle=True, mission_seconds=180, seed_base=12, cases=rows
+    )
     assert pilot45.validate_manifest(value) == rows
     changed = copy.deepcopy(value)
     changed["cases"][0]["duration"] = 480
@@ -100,7 +112,9 @@ def test_progress_sampler_receives_requested_duration(monkeypatch, tmp_path):
     from types import SimpleNamespace
 
     monkeypatch.setattr(pilot45, "ROOT", tmp_path)
-    monkeypatch.setattr(pilot45, "collector", lambda: SimpleNamespace(MissionProgress=progress))
+    monkeypatch.setattr(
+        pilot45, "collector", lambda: SimpleNamespace(MissionProgress=progress)
+    )
     with pytest.raises(Done):
         pilot45.child(task, request, tmp_path / "never.log")
     assert observed == [(15, 180)]
@@ -112,7 +126,9 @@ def test_quality_requested_time_uses45_actual_case_durations(tmp_path):
         dict(cases=pilot45.build_cases(1, duration=180, case_prefix="s180")),
     )
     common.write(tmp_path / "config.json", {})
-    q = pilot45.quality_snapshot(tmp_path, dict(cases={}, attempts=[]), dict(status="NOT_STARTED"))
+    q = pilot45.quality_snapshot(
+        tmp_path, dict(cases={}, attempts=[]), dict(status="NOT_STARTED")
+    )
     assert q["requested_mission_seconds"] == 8100 and q["planned_cases"] == 45
     assert q["completed_raw"] == q["prepared_and_audited"] == 0
 
@@ -131,13 +147,26 @@ def test_short_parallel_scope_never_uses480_continuation(monkeypatch):
     )
     pilot_parallel.validate_config(cfg)
     with pytest.raises(pilot45.Blocked):
-        pilot_parallel.validate_config(dict(cfg, continuation=dict(previous_task="old480")))
+        pilot_parallel.validate_config(
+            dict(cfg, continuation=dict(previous_task="old480"))
+        )
 
 
 @pytest.mark.parametrize(
-    "change", [None, "retry", "inherited", "missing_ai", "failure", "missing_case", "missing_final"]
+    "change",
+    [
+        None,
+        "retry",
+        "inherited",
+        "missing_ai",
+        "failure",
+        "missing_case",
+        "missing_final",
+    ],
 )
-def test_clean_cycle_input_gate_requires_all45_first_attempts_and_two_readers(change):
+def test_clean_cycle_input_gate_requires_all45_first_attempts_and_two_readers(
+    change,
+):
     q = dict(
         status="PILOT45_QUALITY_PASSED_STOPPED",
         planned_cases=45,
@@ -168,13 +197,21 @@ def test_clean_cycle_input_gate_requires_all45_first_attempts_and_two_readers(ch
 
 
 @pytest.mark.parametrize("phase", ["prerequisites", "case", "final"])
-def test_short_bridge_uses_public_ai_connector_for_each_phase(monkeypatch, tmp_path, phase):
+def test_short_bridge_uses_public_ai_connector_for_each_phase(
+    monkeypatch, tmp_path, phase
+):
     from learning.history19 import short_cycle
     from pretrain import pilot_bridge
 
     task = tmp_path / "task"
-    common.write(task / "config.json", dict(short_cycle=True, task_id=short_cycle.TASK))
-    for member in ("expected-producer.json", "consumer-capsule.json", "ai-manifest.json"):
+    common.write(
+        task / "config.json", dict(short_cycle=True, task_id=short_cycle.TASK)
+    )
+    for member in (
+        "expected-producer.json",
+        "consumer-capsule.json",
+        "ai-manifest.json",
+    ):
         common.write(task / member, {})
     source = tmp_path / "simulation/config/producer-sources.json"
     runtime = tmp_path / "simulation/artifacts/runtime-manifest.json"
@@ -190,7 +227,9 @@ def test_short_bridge_uses_public_ai_connector_for_each_phase(monkeypatch, tmp_p
         actual = task / "prior-checks" / f"{i}.json"
         wrapper = task / "prior-checks" / f"{i}.wrapper.json"
         common.write(actual, dict(fixture_only=True))
-        common.write(wrapper, dict(receipt=str(actual), sha256=common.sha(actual)))
+        common.write(
+            wrapper, dict(receipt=str(actual), sha256=common.sha(actual))
+        )
         entries[str(i)] = dict(ai_receipt=str(wrapper))
     raw, output = task / "raw", task / "output"
     case = dict(case_id="0")
@@ -221,7 +260,9 @@ def test_short_bridge_uses_public_ai_connector_for_each_phase(monkeypatch, tmp_p
 
     monkeypatch.setattr(pilot_bridge, "snapshot", snapshot)
     monkeypatch.setattr(short_cycle, "main", static_gate)
-    result = pilot_bridge.check(task, spec, phase=phase, case_id="0" if phase == "case" else None)
+    result = pilot_bridge.check(
+        task, spec, phase=phase, case_id="0" if phase == "case" else None
+    )
     request = common.read(Path(result["receipt"]).with_name("request.json"))
     assert request["schema"] == "drone-ai.short-cycle.check/1"
     assert request["phase"] == phase
@@ -248,10 +289,19 @@ def test_short_global_registry_excludes_old_raw_without_blocking_own_new_cases(
     monkeypatch.setattr(pilot45, "ROOT", tmp_path)
     old = dict(records=[dict(run_id="old480", cohort="old_development")])
     value = pilot45.global_protection(
-        old, [dict(case_id="s180-new")], "short-new", cohort=pilot45.SHORT_COHORT
+        old,
+        [dict(case_id="s180-new")],
+        "short-new",
+        cohort=pilot45.SHORT_COHORT,
     )
-    prior = next(e for e in value["entries"] if e["identities"] == ["run:old480"])
-    fresh = next(e for e in value["entries"] if e["identities"] == ["case:short-new:s180-new"])
+    prior = next(
+        e for e in value["entries"] if e["identities"] == ["run:old480"]
+    )
+    fresh = next(
+        e
+        for e in value["entries"]
+        if e["identities"] == ["case:short-new:s180-new"]
+    )
     assert "short_cycle_input_check" in prior["forbidden_uses"]
     assert "short_cycle_input_check" not in fresh["forbidden_uses"]
     assert {"fit", "calibration", "final_test"} <= set(fresh["forbidden_uses"])
@@ -265,7 +315,9 @@ def test_short_draft_has_its_own_parallel_namespace_without_old_scope_authority(
     init_fixture(monkeypatch, tmp_path)
     monkeypatch.setattr(pilot45, "short_authorization", lambda: {})
     monkeypatch.setattr(
-        pilot45, "global_protection", lambda *a, **kw: dict(entries=[], purpose=kw["cohort"])
+        pilot45,
+        "global_protection",
+        lambda *a, **kw: dict(entries=[], purpose=kw["cohort"]),
     )
     task = pilot45.init("short-new-45", 90210, short_cycle=True)
     cfg = common.read(task / "config.json")
@@ -278,8 +330,12 @@ def test_short_draft_has_its_own_parallel_namespace_without_old_scope_authority(
     assert not (task / "operator/service.json").exists()
 
 
-@pytest.mark.parametrize("change", [None, "old6", "v1", "fixture", "480", "hash", "flight_argv"])
-def test_short_handoff_separates_static180_binding_from_old_ready(monkeypatch, tmp_path, change):
+@pytest.mark.parametrize(
+    "change", [None, "old6", "v1", "fixture", "480", "hash", "flight_argv"]
+)
+def test_short_handoff_separates_static180_binding_from_old_ready(
+    monkeypatch, tmp_path, change
+):
     from types import SimpleNamespace
 
     from learning import admission19
@@ -292,9 +348,13 @@ def test_short_handoff_separates_static180_binding_from_old_ready(monkeypatch, t
         propulsion_revision=admission19.PROPULSION_REVISION,
     )
     native = dict(
-        revision="joint-native-consumption-c2-v2", supported_duration_us=[180000000, 480000000]
+        revision="joint-native-consumption-c2-v2",
+        supported_duration_us=[180000000, 480000000],
     )
-    native_path, paired_path = tmp_path / "native.json", tmp_path / "paired.json"
+    native_path, paired_path = (
+        tmp_path / "native.json",
+        tmp_path / "paired.json",
+    )
     common.write(native_path, native)
     policy = dict(
         approved_for_short_cycle=True,
@@ -335,20 +395,30 @@ def test_short_handoff_separates_static180_binding_from_old_ready(monkeypatch, t
         expected_cases=45,
         expected_pairs=9,
         limits=dict(
-            flight_workers=16, RTF=2, aggregate_nonflight_workers=4, max_attempts_per_logical_case=3
+            flight_workers=16,
+            RTF=2,
+            aggregate_nonflight_workers=4,
+            max_attempts_per_logical_case=3,
         ),
         no_extra_development6=True,
         no_LR108_or_main_training_link=True,
         source_freeze=dict(path=str(freeze), sha256=common.sha(freeze)),
         simulation_evidence=dict(
-            contract=dict(path=str(sim_contract), sha256=common.sha(sim_contract))
+            contract=dict(
+                path=str(sim_contract), sha256=common.sha(sim_contract)
+            )
         ),
         schema="drone-ai.short-cycle.data-handoff/1",
         task_id="SHORT_CYCLE_20261107",
         status="READY",
         producer=producer,
-        paths=dict(native_policy=str(native_path), paired_policy=str(paired_path)),
-        sha256=dict(native_policy=common.sha(native_path), paired_policy=common.sha(paired_path)),
+        paths=dict(
+            native_policy=str(native_path), paired_policy=str(paired_path)
+        ),
+        sha256=dict(
+            native_policy=common.sha(native_path),
+            paired_policy=common.sha(paired_path),
+        ),
         origin_relative_path=policy["mission_source"],
         paired_cli_options=[
             "--phase-policy",
@@ -380,7 +450,9 @@ def test_short_handoff_separates_static180_binding_from_old_ready(monkeypatch, t
     monkeypatch.setattr(
         pilot_bridge.subprocess,
         "run",
-        lambda *a, **kw: SimpleNamespace(stdout="--phase-policy --paired-case-id"),
+        lambda *a, **kw: SimpleNamespace(
+            stdout="--phase-policy --paired-case-id"
+        ),
     )
     if change is None:
         assert pilot_bridge.dependencies(path) == value
@@ -417,7 +489,9 @@ def test_bounded_short_repair_keeps_attempt1_false_and_admits_exact_parent_as_at
             previous_task="previous",
             files={str(proof): common.sha(proof)},
             failures={
-                case["case_id"]: dict(run_id=previous["run_id"], attempt=1, seed=case["seed"])
+                case["case_id"]: dict(
+                    run_id=previous["run_id"], attempt=1, seed=case["seed"]
+                )
             },
         ),
     )
@@ -434,27 +508,48 @@ def test_bounded_short_repair_keeps_attempt1_false_and_admits_exact_parent_as_at
     request = common.read(job["request"])
     imported, current = coordinator.ledger["cases"][case["case_id"]]["attempts"]
     assert imported == previous and imported["retry_allowed"] is False
-    assert current["number"] == 2 and current["parent_attempt_id"] == previous["run_id"]
+    assert (
+        current["number"] == 2
+        and current["parent_attempt_id"] == previous["run_id"]
+    )
     assert current["execution_task"] == str(task)
     assert request["parent_attempt_id"] == previous["run_id"]
-    assert not Path(request["receipt"]).exists()  # admission boundary only, no native child
-    current.update(number=2, state="FAILED_PRESERVED", retry_allowed=False, run_id="new-failure")
+    assert not Path(
+        request["receipt"]
+    ).exists()  # admission boundary only, no native child
+    current.update(
+        number=2,
+        state="FAILED_PRESERVED",
+        retry_allowed=False,
+        run_id="new-failure",
+    )
     with pytest.raises(pilot45.Blocked):
-        coordinator.begin_flight(case, 0)  # repair never permits an unrelated new failure
+        coordinator.begin_flight(
+            case, 0
+        )  # repair never permits an unrelated new failure
     entries = coordinator.ledger["cases"][case["case_id"]]["attempts"]
     entries.append(dict(current, number=3, retry_allowed=True))
     with pytest.raises(pilot45.Blocked):
-        coordinator.begin_flight(case, 0)  # historical attempts count toward max3
+        coordinator.begin_flight(
+            case, 0
+        )  # historical attempts count toward max3
     assert len(entries) == 3
 
 
 @pytest.mark.parametrize(
     "change", [None, "retry", "failed", "unknown", "inherited", "missing_case"]
 )
-def test_current_cycle_and_cumulative_failure_denominators_stay_separate(change):
+def test_current_cycle_and_cumulative_failure_denominators_stay_separate(
+    change,
+):
     task = Path("current")
     current = [
-        dict(case_id=str(i), execution_task=str(task), state="COMPLETED", number=2 if i < 16 else 1)
+        dict(
+            case_id=str(i),
+            execution_task=str(task),
+            state="COMPLETED",
+            number=2 if i < 16 else 1,
+        )
         for i in range(45)
     ]
     history = [
@@ -467,9 +562,13 @@ def test_current_cycle_and_cumulative_failure_denominators_stay_separate(change)
         )
         for i in range(16)
     ]
-    ledger = dict(cases={str(i): {} for i in range(45)}, attempts=history + current)
+    ledger = dict(
+        cases={str(i): {} for i in range(45)}, attempts=history + current
+    )
     if change == "retry":
-        ledger["attempts"].append(dict(current[0], state="FAILED_PRESERVED", number=3))
+        ledger["attempts"].append(
+            dict(current[0], state="FAILED_PRESERVED", number=3)
+        )
     elif change == "failed":
         current[0]["state"] = "FAILED_PRESERVED"
     elif change == "unknown":
@@ -508,7 +607,10 @@ def test_explicit_stop_first_preserves_failure_instead_of_spending_next_attempt(
     case = cases[3]
     job = c.begin_flight(case, 0)
     raw = tmp_path / "simulation/runs/failed-clock-parent"
-    common.write(raw / "run.json", dict(status="failed", instance=0, parent_attempt_id=None))
+    common.write(
+        raw / "run.json",
+        dict(status="failed", instance=0, parent_attempt_id=None),
+    )
     common.write(
         raw / "evaluation/scenario.json",
         dict(
@@ -519,10 +621,13 @@ def test_explicit_stop_first_preserves_failure_instead_of_spending_next_attempt(
     )
     reason = "recording_stalled: PX4 clock advanced but raw capture did not"
     common.write(
-        common.read(job["request"])["receipt"], dict(status="failed", run=str(raw), reason=reason)
+        common.read(job["request"])["receipt"],
+        dict(status="failed", run=str(raw), reason=reason),
     )
     if stop_first:
-        with pytest.raises(pilot45.Blocked, match="automatic retry not allowed"):
+        with pytest.raises(
+            pilot45.Blocked, match="automatic retry not allowed"
+        ):
             c.finish_flight(job, RuntimeError(reason))
     else:
         assert c.finish_flight(job, RuntimeError(reason)) is False
@@ -530,4 +635,6 @@ def test_explicit_stop_first_preserves_failure_instead_of_spending_next_attempt(
     assert len(a) == 1 and a[0]["state"] == "FAILED_PRESERVED"
     assert a[0]["retry_allowed"] is (not stop_first)
     assert a[0]["run_id"] == raw.name
-    assert len(c.ledger["attempts"]) == 4  # three fixture successes + this one failure
+    assert (
+        len(c.ledger["attempts"]) == 4
+    )  # three fixture successes + this one failure

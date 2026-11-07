@@ -7,10 +7,16 @@ from torch import nn
 class LSTMForecast(nn.Module):
     def __init__(self, features=19, context=6, horizon=10, hidden=32):
         super().__init__()
-        self.encoder = nn.LSTM(features, hidden, 2, batch_first=True, dropout=0.1)
-        self.fuse = nn.Sequential(nn.Linear(hidden + context, hidden), nn.GELU())
+        self.encoder = nn.LSTM(
+            features, hidden, 2, batch_first=True, dropout=0.1
+        )
+        self.fuse = nn.Sequential(
+            nn.Linear(hidden + context, hidden), nn.GELU()
+        )
         self.lead = nn.Embedding(horizon, hidden)
-        self.decoder = nn.LSTM(hidden * 2, hidden, 2, batch_first=True, dropout=0.1)
+        self.decoder = nn.LSTM(
+            hidden * 2, hidden, 2, batch_first=True, dropout=0.1
+        )
         self.head = nn.Linear(hidden, 4)
         self.horizon = horizon
 
@@ -23,7 +29,9 @@ class LSTMForecast(nn.Module):
             .expand(len(history), -1, -1)
         )
         decoded, _ = self.decoder(
-            torch.cat([latent.unsqueeze(1).expand(-1, self.horizon, -1), lead], dim=-1)
+            torch.cat(
+                [latent.unsqueeze(1).expand(-1, self.horizon, -1), lead], dim=-1
+            )
         )
         return self.head(decoded)
 
@@ -36,7 +44,9 @@ class TransformerForecast(nn.Module):
         layer = nn.TransformerEncoderLayer(
             hidden, 4, hidden * 2, 0.1, activation="gelu", batch_first=True
         )
-        self.encoder = nn.TransformerEncoder(layer, 2, enable_nested_tensor=False)
+        self.encoder = nn.TransformerEncoder(
+            layer, 2, enable_nested_tensor=False
+        )
         decoder_layer = nn.TransformerDecoderLayer(
             hidden, 4, hidden * 2, 0.1, activation="gelu", batch_first=True
         )
@@ -60,7 +70,13 @@ class TransformerForecast(nn.Module):
         pe[:, 0::2] = torch.sin(pos * div)
         pe[:, 1::2] = torch.cos(pos * div)
         memory = self.encoder(
-            torch.cat([self.project(history) + pe, self.context(context).unsqueeze(1)], dim=1)
+            torch.cat(
+                [
+                    self.project(history) + pe,
+                    self.context(context).unsqueeze(1),
+                ],
+                dim=1,
+            )
         )
         query = (
             self.queries(torch.arange(self.horizon, device=history.device))

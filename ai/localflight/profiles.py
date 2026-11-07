@@ -42,11 +42,19 @@ def validate(profile):
         "battery_instance",
         "actuator_instance",
     }
-    if set(profile) - allowed or profile.get("schema") != "drone.real-aircraft/1":
+    if (
+        set(profile) - allowed
+        or profile.get("schema") != "drone.real-aircraft/1"
+    ):
         raise ValueError("Unknown aircraft profile schema or fields")
     if not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", profile.get("id", "")):
-        raise ValueError("Aircraft ID must contain 1..64 letters, digits, underscores or hyphens")
-    if not isinstance(profile.get("name"), str) or not 1 <= len(profile["name"]) <= 120:
+        raise ValueError(
+            "Aircraft ID must contain 1..64 letters, digits, underscores or hyphens"
+        )
+    if (
+        not isinstance(profile.get("name"), str)
+        or not 1 <= len(profile["name"]) <= 120
+    ):
         raise ValueError("Aircraft name required")
     if profile.get("autopilot") not in {"px4", "ardupilot", "unknown"}:
         raise ValueError("Unsupported autopilot")
@@ -56,11 +64,15 @@ def validate(profile):
             raise ValueError(f"Invalid {key}")
     for key in ("imu_instance", "battery_instance", "actuator_instance"):
         value = profile.get(key)
-        if value is not None and (type(value) is not int or not 0 <= value <= 15):
+        if value is not None and (
+            type(value) is not int or not 0 <= value <= 15
+        ):
             raise ValueError(f"Invalid {key}")
     for key in ("capacity_ah", "output_min", "output_max"):
         v = profile.get(key)
-        if v is not None and (type(v) not in (float, int) or not math.isfinite(v) or v < 0):
+        if v is not None and (
+            type(v) not in (float, int) or not math.isfinite(v) or v < 0
+        ):
             raise ValueError(f"Invalid {key}")
     if profile.get("capacity_ah") == 0:
         raise ValueError("Capacity must be positive")
@@ -75,7 +87,9 @@ def validate(profile):
     if len(set(channels.values())) != len(channels):
         raise ValueError("Motor channels must be distinct")
     for key in ("firmware", "battery_id", "mapping_evidence", "notes"):
-        if key in profile and (not isinstance(profile[key], str) or len(profile[key]) > 2000):
+        if key in profile and (
+            not isinstance(profile[key], str) or len(profile[key]) > 2000
+        ):
             raise ValueError(f"Invalid {key}")
     if not isinstance(profile.get("provenance", {}), dict):
         raise ValueError("Profile provenance must be an object")
@@ -85,7 +99,11 @@ def validate(profile):
 
 def eligibility(profile):
     validate(profile)
-    missing = [k for k in ("rotor_count", "series_cells", "capacity_ah") if not profile.get(k)]
+    missing = [
+        k
+        for k in ("rotor_count", "series_cells", "capacity_ah")
+        if not profile.get(k)
+    ]
     if profile["autopilot"] == "unknown":
         missing.append("autopilot")
     if set(profile.get("motor_channels", {})) != set(MOTOR_POSITIONS):
@@ -110,9 +128,12 @@ def eligibility(profile):
         timeline_ready=not timeline_missing and not unsupported,
         analysis_fields=list(ANALYSIS_FIELDS),
         record_fields=list(RECORD_FIELDS),
-        model_structure_compatible=not unsupported and profile.get("rotor_count") == 4,
+        model_structure_compatible=not unsupported
+        and profile.get("rotor_count") == 4,
         real_aircraft_validated=False,
-        reasons=(["Current model has four fixed motor inputs"] if unsupported else []),
+        reasons=(
+            ["Current model has four fixed motor inputs"] if unsupported else []
+        ),
     )
 
 
@@ -125,7 +146,9 @@ def save_profile(root, profile):
     if not profile.get("name"):
         profile = dict(profile, name=profile["id"])
     validate(profile)
-    encoded = json.dumps(profile, sort_keys=True, ensure_ascii=False, allow_nan=False).encode()
+    encoded = json.dumps(
+        profile, sort_keys=True, ensure_ascii=False, allow_nan=False
+    ).encode()
     version = hashlib.sha256(encoded).hexdigest()
     folder = Path(root) / "aircraft" / profile["id"]
     folder.mkdir(parents=True, exist_ok=True)
@@ -136,11 +159,17 @@ def save_profile(root, profile):
     except FileExistsError:
         if read_json(path) != profile:
             raise ValueError("Immutable profile version conflict")
-    return dict(profile=profile, version=version, eligibility=eligibility(profile))
+    return dict(
+        profile=profile, version=version, eligibility=eligibility(profile)
+    )
 
 
 def list_profiles(root):
     return [
-        dict(profile=read_json(p), version=p.stem, eligibility=eligibility(read_json(p)))
+        dict(
+            profile=read_json(p),
+            version=p.stem,
+            eligibility=eligibility(read_json(p)),
+        )
         for p in sorted((Path(root) / "aircraft").glob("*/*.json"))
     ]

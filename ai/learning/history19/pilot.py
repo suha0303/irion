@@ -8,7 +8,13 @@ import json
 import math
 from pathlib import Path
 
-from learning.admission19 import MISSION_POLICY, PILOT, check_producer, check_protection, digest
+from learning.admission19 import (
+    MISSION_POLICY,
+    PILOT,
+    check_producer,
+    check_protection,
+    digest,
+)
 from learning.wind_metadata import KINDS
 
 from .duration_profiles import NATIVE_ADAPTERS
@@ -16,7 +22,9 @@ from .duration_profiles import NATIVE_ADAPTERS
 ROOT = Path(__file__).absolute().parents[3]
 TASK = "P27_PILOT45_20261107"
 AUTH = ROOT / "ai/reports/p27-pilot45-20261107/attempt-01/authorization.json"
-RECOVERY_AUTH = ROOT / "ai/reports/p27-pilot45-20261107/recovery-01/authorization.json"
+RECOVERY_AUTH = (
+    ROOT / "ai/reports/p27-pilot45-20261107/recovery-01/authorization.json"
+)
 HISTORICAL_EXCLUSIONS = (
     ROOT
     / "ai/reports/p27-precollection-20261107/seal-review-05-bounded/development-reference-exclusions.json"
@@ -108,7 +116,9 @@ def sha(path):
 def json_file(path):
     path = regular(path)
     if path.stat().st_size > 16 * (1 << 20):
-        raise ValueError("Admission JSON exceeds16MiB; use bounded metadata, not raw events")
+        raise ValueError(
+            "Admission JSON exceeds16MiB; use bounded metadata, not raw events"
+        )
     return json.loads(path.read_text())
 
 
@@ -121,7 +131,9 @@ class Evidence:
         self.checked = []
 
     def ref(self, name, ref=None):
-        ref = required(self.request.get("refs", {}), name) if ref is None else ref
+        ref = (
+            required(self.request.get("refs", {}), name) if ref is None else ref
+        )
         path = required(ref, "path")
         expected = required(ref, "sha256")
         if not digest(expected):
@@ -146,12 +158,17 @@ def policy_check(ctx, expected, *, short_cycle=False):
     policy = ctx.doc("paired_policy")
     if policy.get("schema") != "drone-ai.paired-source-clock-policy/1":
         raise ValueError("AI paired policy projection schema required")
-    authority = "approved_for_short_cycle" if short_cycle else "approved_for_pilot"
+    authority = (
+        "approved_for_short_cycle" if short_cycle else "approved_for_pilot"
+    )
     if policy.get("status") != "FROZEN" or policy.get(authority) is not True:
-        raise Pending("Paired policy/criteria are not actually frozen and approved")
+        raise Pending(
+            "Paired policy/criteria are not actually frozen and approved"
+        )
     bind(policy, expected)
     if (
-        policy.get("alignment_mode") not in {"producer_source_clock", "versioned_joint_phase"}
+        policy.get("alignment_mode")
+        not in {"producer_source_clock", "versioned_joint_phase"}
         or policy.get("mission_policy") != MISSION_POLICY
         or policy.get("posthoc_adjustment") is not False
     ):
@@ -163,14 +180,18 @@ def policy_check(ctx, expected, *, short_cycle=False):
             raise ValueError("Explicit native clock/policy identity required")
     native = ctx.ref("native_policy")
     if policy.get("native_policy_sha256") != sha(native):
-        raise ValueError("Policy projection is not bound to actual native policy")
+        raise ValueError(
+            "Policy projection is not bound to actual native policy"
+        )
     if policy["alignment_mode"] == "versioned_joint_phase":
         document = json_file(native)
         if (
             document.get("schema") != "drone.joint-phase-policy/1"
             or document.get("revision") not in NATIVE_ADAPTERS
         ):
-            raise ValueError("Reviewed explicit joint-phase native revision required")
+            raise ValueError(
+                "Reviewed explicit joint-phase native revision required"
+            )
         required(policy, "mission_source")
     limits = required(policy, "limits")
     for key in LIMITS:
@@ -186,12 +207,19 @@ def policy_check(ctx, expected, *, short_cycle=False):
         from .joint_native import check_policy
 
         if policy["native_adapter"] != json_file(native)["revision"]:
-            raise ValueError("Native policy/adapter revision cannot be relabelled")
+            raise ValueError(
+                "Native policy/adapter revision cannot be relabelled"
+            )
         check_policy(
-            json_file(native), duration_profile=policy.get("duration_profile", "standard480")
+            json_file(native),
+            duration_profile=policy.get("duration_profile", "standard480"),
         )
-        if policy.get("fixture_only", False) != (ctx.request.get("fixture_only") is True):
-            raise ValueError("Native adapter fixture status cannot be relabelled")
+        if policy.get("fixture_only", False) != (
+            ctx.request.get("fixture_only") is True
+        ):
+            raise ValueError(
+                "Native adapter fixture status cannot be relabelled"
+            )
         ctx.checked.append("reviewed_joint_native_layout")
         return policy
     for key in ORIGIN_FIELDS:
@@ -213,14 +241,18 @@ def policy_check(ctx, expected, *, short_cycle=False):
 
 def project_native(native, policy):
     if native.get("schema") != policy["native_receipt_schema"]:
-        raise ValueError("Actual native receipt schema differs from frozen mapping")
+        raise ValueError(
+            "Actual native receipt schema differs from frozen mapping"
+        )
     projection = {}
     for key, parts in policy["native_receipt_field_paths"].items():
         value = native
         for part in parts:
             value = value[part]
         if value is None:
-            raise Pending("Native receipt has unconfirmed/null actual field: " + key)
+            raise Pending(
+                "Native receipt has unconfirmed/null actual field: " + key
+            )
         projection[key] = value
     return projection
 
@@ -236,33 +268,45 @@ def origin_member(ctx, member, policy, expected, label):
             ctx.paths[label + ":run"],
             policy,
             fixture=ctx.request.get("fixture_only") is True,
-            external_audit=ctx.request.get("external_audit") if label == "case" else None,
+            external_audit=ctx.request.get("external_audit")
+            if label == "case"
+            else None,
         )
         if (
             ctx.paths[label + ":origin"]
             != ctx.paths[label + ":run"].parent / policy["mission_source"]
         ):
-            raise ValueError("Actual native receipt must be the frozen raw member")
+            raise ValueError(
+                "Actual native receipt must be the frozen raw member"
+            )
         for name, value in projection["native_sources_sha256"].items():
             ctx.hashes[label + ":native:" + name] = value
-        for name, value in projection.get("external_audit_evidence", {}).items():
+        for name, value in projection.get(
+            "external_audit_evidence", {}
+        ).items():
             if name.endswith("sha256"):
                 ctx.hashes[label + ":external:" + name] = value
     else:
         projection = project_native(native, policy)
     if projection["source_acknowledged"] is not True:
         raise Pending("Actual source acknowledgement is not recorded")
-    if projection["run_id"] != run["run_id"] or projection["policy_id"] != policy["policy_id"]:
+    if (
+        projection["run_id"] != run["run_id"]
+        or projection["policy_id"] != policy["policy_id"]
+    ):
         raise ValueError("Receipt run/policy identity mismatch")
     for key in ("source_manifest_sha256", "runtime_sha256"):
         if projection[key] != expected[key]:
             raise ValueError("Receipt is from a different actual producer")
     fixture = ctx.request.get("fixture_only") is True
     if (
-        run.get("origin") != ("synthetic_unit_fixture" if fixture else "px4_sitl")
+        run.get("origin")
+        != ("synthetic_unit_fixture" if fixture else "px4_sitl")
         or run.get("status") != "completed"
     ):
-        raise ValueError("Completed actual run required; fixture cannot pass as SITL")
+        raise ValueError(
+            "Completed actual run required; fixture cannot pass as SITL"
+        )
     times = {}
     if policy["alignment_mode"] == "versioned_joint_phase":
         from .pilot_connector import native_mission_interval
@@ -272,14 +316,22 @@ def origin_member(ctx, member, policy, expected, label):
             policy_path=ctx.paths["paired_policy"],
             native_policy_path=ctx.paths["native_policy"],
             run_path=ctx.paths[label + ":run"],
-            external_audit=ctx.request.get("external_audit") if label == "case" else None,
+            external_audit=ctx.request.get("external_audit")
+            if label == "case"
+            else None,
         )
-        times = dict(mission=interval["start_us"], landing=interval["end_us_exclusive"])
+        times = dict(
+            mission=interval["start_us"], landing=interval["end_us_exclusive"]
+        )
     else:
         for state in ("mission", "landing"):
             events = [r for r in execution if r.get("state") == state]
-            if len(events) != 1 or not isinstance(events[0].get("sim_time"), (int, float)):
-                raise ValueError("Actual mission/landing execution events required")
+            if len(events) != 1 or not isinstance(
+                events[0].get("sim_time"), (int, float)
+            ):
+                raise ValueError(
+                    "Actual mission/landing execution events required"
+                )
             times[state] = round(events[0]["sim_time"] * 1e6)
     if not 0 <= times["mission"] < times["landing"]:
         raise ValueError("Ordered actual execution interval required")
@@ -291,7 +343,9 @@ def origin_member(ctx, member, policy, expected, label):
         raise ValueError("Receipt cannot replace/shift actual mission or clock")
     for key in ("weather_origin_us", "path_origin_us", "actual_source_ack_us"):
         if type(projection[key]) is not int or projection[key] < 0:
-            raise ValueError("Actual integer native origin/receipt time required")
+            raise ValueError(
+                "Actual integer native origin/receipt time required"
+            )
     limits = policy["limits"]
     if any(
         abs(projection[k] - times["mission"]) > limits["origin_delta_us"]
@@ -299,7 +353,11 @@ def origin_member(ctx, member, policy, expected, label):
     ):
         raise ValueError("Actual weather/path origin violates frozen policy")
     offset = projection["actual_source_ack_us"] - times["mission"]
-    if not limits["receipt_min_offset_us"] <= offset <= limits["receipt_max_offset_us"]:
+    if (
+        not limits["receipt_min_offset_us"]
+        <= offset
+        <= limits["receipt_max_offset_us"]
+    ):
         raise ValueError("Actual source receipt timing violates frozen policy")
     return projection
 
@@ -314,7 +372,9 @@ def pair_metrics(document, limits):
             or not math.isfinite(value)
             or not 0 <= value <= limits[key]
         ):
-            raise ValueError("Actual paired difference exceeds frozen criterion: " + key)
+            raise ValueError(
+                "Actual paired difference exceeds frozen criterion: " + key
+            )
 
 
 def comparison_evidence(ctx, pair, policy, label):
@@ -329,13 +389,17 @@ def comparison_evidence(ctx, pair, policy, label):
             external_audits=ctx.request.get("external_audits"),
         )
     if native.get("passed") is not True:
-        raise Pending("Actual native pair verification is not passed, including coverage gates")
+        raise Pending(
+            "Actual native pair verification is not passed, including coverage gates"
+        )
     for key in COMPARISON_FIELDS:
         if policy.get("native_adapter") in NATIVE_ADAPTERS:
             value = native[key]
         else:
             value = native
-            for part in required(policy.get("native_comparison_field_paths", {}), key):
+            for part in required(
+                policy.get("native_comparison_field_paths", {}), key
+            ):
                 value = value[part]
         if value is None:
             raise Pending("Native comparison metric is not confirmed: " + key)
@@ -347,7 +411,9 @@ def comparison_evidence(ctx, pair, policy, label):
             else policy["producer"][key]
         )
         if value != expected:
-            raise ValueError("Pair metrics differ from mapped actual native evidence: " + key)
+            raise ValueError(
+                "Pair metrics differ from mapped actual native evidence: " + key
+            )
 
 
 def development_check(ctx, expected, policy):
@@ -356,7 +422,9 @@ def development_check(ctx, expected, policy):
         document.get("schema") != "drone-ai.paired-development-evidence/1"
         or document.get("status") != "PASSED"
     ):
-        raise Pending("Final actual development6 receipt is not available/passed")
+        raise Pending(
+            "Final actual development6 receipt is not available/passed"
+        )
     bind(document, expected)
     if document.get("paired_policy_sha256") != ctx.hashes["paired_policy"]:
         raise ValueError("Development receipt uses a different policy")
@@ -371,34 +439,47 @@ def development_check(ctx, expected, policy):
     if len(ids) != 6 or len(document.get("comparisons", [])) != 3:
         raise ValueError("Three independent development pairs required")
     completion = ctx.doc("native_completion")
-    check_native_completion(completion, fixture=ctx.request.get("fixture_only") is True)
+    check_native_completion(
+        completion, fixture=ctx.request.get("fixture_only") is True
+    )
     if (
         set(completion["actual_run_ids"]) != ids
         or completion["source_sha256"] != expected["source_manifest_sha256"]
         or completion["runtime_sha256"] != expected["runtime_sha256"]
         or completion["policy_sha256"] != ctx.hashes["native_policy"]
     ):
-        raise ValueError("Development projection differs from actual native completion/seals")
+        raise ValueError(
+            "Development projection differs from actual native completion/seals"
+        )
     used = []
     for pair in document["comparisons"]:
         pair_metrics(pair, policy["limits"])
         used.extend((pair["normal_run_id"], pair["anomaly_run_id"]))
-        comparison_evidence(ctx, pair, policy, "development_pair_evidence:" + str(len(used)))
+        comparison_evidence(
+            ctx, pair, policy, "development_pair_evidence:" + str(len(used))
+        )
     if len(used) != len(set(used)) or set(used) != ids:
-        raise ValueError("Development pair membership differs from actual six receipts")
+        raise ValueError(
+            "Development pair membership differs from actual six receipts"
+        )
     ctx.checked.append("actual_development6_receipts_and_pair_criteria")
     return ids
 
 
 def check_native_completion(document, *, fixture=False):
     schema = (
-        "unit.native.completion/1" if fixture else "drone.paired-origin-development-completion/1"
+        "unit.native.completion/1"
+        if fixture
+        else "drone.paired-origin-development-completion/1"
     )
     if document.get("schema") != schema or document.get("task_id") != TASK:
         raise ValueError(
             "Known actual native completion schema/task required; never infer mappings"
         )
-    if document.get("passed") is not True or document.get("allow_pilot45") is not True:
+    if (
+        document.get("passed") is not True
+        or document.get("allow_pilot45") is not True
+    ):
         raise Pending("Actual native completion does not authorize pilot45")
     if (
         document.get("actual_runs") != 6
@@ -407,7 +488,9 @@ def check_native_completion(document, *, fixture=False):
         or len(set(required(document, "actual_run_ids"))) != 6
         or len(document["actual_run_ids"]) != 6
     ):
-        raise ValueError("Actual independent six-run/three-pair completion required")
+        raise ValueError(
+            "Actual independent six-run/three-pair completion required"
+        )
 
 
 def plan_and_ledger(
@@ -427,7 +510,9 @@ def plan_and_ledger(
             or cohort != SHORT
             or usage != "short_cycle_input_check"
         ):
-            raise ValueError("Quality rejection retries are restricted to the explicit short cycle")
+            raise ValueError(
+                "Quality rejection retries are restricted to the explicit short cycle"
+            )
     manifest = ctx.doc("pilot_manifest")
     if (
         manifest.get("schema") != "drone-ai.pilot45.manifest/1"
@@ -446,7 +531,9 @@ def plan_and_ledger(
     controls = [c for c in cases if c["case_kind"] == "paired_normal"]
     anomalies = [c for c in cases if c["case_kind"] == "anomaly"]
     if (len(base), len(controls), len(anomalies)) != (27, 9, 9):
-        raise ValueError("Pilot requires27 normal base+9 independent controls+9 anomalies")
+        raise ValueError(
+            "Pilot requires27 normal base+9 independent controls+9 anomalies"
+        )
     if {(c["motion"], c["environment"]) for c in base} != {
         (k, e) for k in KINDS for e in ("calm", "low", "strong")
     }:
@@ -460,10 +547,20 @@ def plan_and_ledger(
             or not isinstance(case.get("lineage"), list)
             or not case["lineage"]
         ):
-            raise ValueError("Explicit frozen seed/operation/pair/lineage required for each case")
-        if case["role"] != ("anomaly_test" if case["case_kind"] == "anomaly" else "normal_test"):
-            raise ValueError("Pilot has only36normal_test/9anomaly_test; never fit roles")
-        check_protection([{**case, "cohort": cohort, "purpose": cohort}], registry, usage=usage)
+            raise ValueError(
+                "Explicit frozen seed/operation/pair/lineage required for each case"
+            )
+        if case["role"] != (
+            "anomaly_test" if case["case_kind"] == "anomaly" else "normal_test"
+        ):
+            raise ValueError(
+                "Pilot has only36normal_test/9anomaly_test; never fit roles"
+            )
+        check_protection(
+            [{**case, "cohort": cohort, "purpose": cohort}],
+            registry,
+            usage=usage,
+        )
         protected = set().union(
             *(
                 set(r["forbidden_uses"])
@@ -478,21 +575,35 @@ def plan_and_ledger(
     for anomaly in anomalies:
         pair = [c for c in controls if c["pair_id"] == anomaly["pair_id"]]
         if len(pair) != 1 or any(
-            pair[0][k] != anomaly[k] for k in ("seed", "motion", "environment", "operation_sha256")
+            pair[0][k] != anomaly[k]
+            for k in ("seed", "motion", "environment", "operation_sha256")
         ):
-            raise ValueError("Every anomaly needs its own matching independent normal control")
+            raise ValueError(
+                "Every anomaly needs its own matching independent normal control"
+            )
     if len({c["pair_id"] for c in anomalies}) != 9:
-        raise ValueError("A single control cannot stand in for nine independent pairs")
+        raise ValueError(
+            "A single control cannot stand in for nine independent pairs"
+        )
     if {(c.get("health_family"), c.get("timing")) for c in anomalies} != {
-        (f, t) for f in ("battery", "propulsion", "combined") for t in ("existing", "step", "ramp")
+        (f, t)
+        for f in ("battery", "propulsion", "combined")
+        for t in ("existing", "step", "ramp")
     }:
-        raise ValueError("Pilot anomaly cases must preserve all nine family/timing combinations")
+        raise ValueError(
+            "Pilot anomaly cases must preserve all nine family/timing combinations"
+        )
     ledger = ctx.doc("ledger")
-    if ledger.get("schema") != "drone-ai.pilot45.ledger/1" or ledger.get("task_id") != task_id:
+    if (
+        ledger.get("schema") != "drone-ai.pilot45.ledger/1"
+        or ledger.get("task_id") != task_id
+    ):
         raise ValueError("Explicit full-case ledger required")
     entries = ledger.get("cases", [])
     if len(entries) != 45 or {r["case_id"] for r in entries} != case_ids:
-        raise ValueError("Failed/pending/unavailable cases cannot disappear from denominator45")
+        raise ValueError(
+            "Failed/pending/unavailable cases cannot disappear from denominator45"
+        )
     by_id = {c["case_id"]: c for c in cases}
     raw_ids, failures, quality_rejected = set(), 0, 0
     for row in entries:
@@ -515,7 +626,13 @@ def plan_and_ledger(
                 attempt["index"] != index
                 or attempt.get("status")
                 not in (
-                    {"running", "completed", "failed", "stopped", "quality_rejected"}
+                    {
+                        "running",
+                        "completed",
+                        "failed",
+                        "stopped",
+                        "quality_rejected",
+                    }
                     if quality_rejection_check is not None
                     else {"running", "completed", "failed", "stopped"}
                 )
@@ -524,7 +641,9 @@ def plan_and_ledger(
                 or attempt.get("seed") != case["seed"]
                 or not set(case["lineage"]) <= set(attempt["lineage"])
             ):
-                raise ValueError("Attempt ID/index/seed/group/retry lineage changed")
+                raise ValueError(
+                    "Attempt ID/index/seed/group/retry lineage changed"
+                )
             if attempt.get("parent_attempt_id") != (
                 attempts[index - 2]["run_id"] if index > 1 else None
             ):
@@ -534,21 +653,33 @@ def plan_and_ledger(
             if quality_rejection_check is not None:
                 quality_rejected += quality_rejection_check(case, attempt)
             elif attempt.get("quality_rejection") is not None:
-                raise ValueError("Quality rejection evidence is short-cycle only")
-            if attempt["status"] in {"failed", "stopped"} and not attempt.get("failure_reason"):
-                raise ValueError("Failed/stopped attempts must preserve their failure reason")
+                raise ValueError(
+                    "Quality rejection evidence is short-cycle only"
+                )
+            if attempt["status"] in {"failed", "stopped"} and not attempt.get(
+                "failure_reason"
+            ):
+                raise ValueError(
+                    "Failed/stopped attempts must preserve their failure reason"
+                )
             completed += attempt["status"] == "completed"
             failures += attempt["status"] == "failed"
             raw_ids.add(attempt["run_id"])
         if row["status"] in {"completed", "unavailable"} and (
             not attempts or attempts[-1]["status"] != "completed"
         ):
-            raise ValueError("Completed/unavailable case must preserve its completed physical raw")
+            raise ValueError(
+                "Completed/unavailable case must preserve its completed physical raw"
+            )
         if row["status"] == "quality_rejected" and (
             not attempts or attempts[-1]["status"] != "quality_rejected"
         ):
-            raise ValueError("Quality-rejected case must retain its rejected physical raw")
-    ctx.checked.append("frozen45_global_protection_and_full_failure_denominator")
+            raise ValueError(
+                "Quality-rejected case must retain its rejected physical raw"
+            )
+    ctx.checked.append(
+        "frozen45_global_protection_and_full_failure_denominator"
+    )
     for rid in raw_ids:
         protected = set().union(
             *(
@@ -574,7 +705,9 @@ def plan_and_ledger(
         counts.update(
             physical_failed_attempts=failures,
             quality_rejected_attempts=quality_rejected,
-            quality_rejected_cases=sum(r["status"] == "quality_rejected" for r in entries),
+            quality_rejected_cases=sum(
+                r["status"] == "quality_rejected" for r in entries
+            ),
         )
     return (
         by_id,
@@ -585,17 +718,24 @@ def plan_and_ledger(
 
 def prerequisites(ctx):
     auth = json_file(AUTH)
-    if auth.get("task_id") != TASK or auth.get("authorized", {}).get("pilot_runs") != 45:
+    if (
+        auth.get("task_id") != TASK
+        or auth.get("authorized", {}).get("pilot_runs") != 45
+    ):
         raise Pending("Current finite pilot authorization is not available")
     ctx.hashes["authorization"] = sha(AUTH)
     recovery = json_file(RECOVERY_AUTH)
     if (
         recovery.get("task_id") != TASK
         or recovery.get("authorized", {}).get("pilot_runs") != 45
-        or recovery.get("forbidden", {}).get("automatic_training_fit_forward_scoring_gpu")
+        or recovery.get("forbidden", {}).get(
+            "automatic_training_fit_forward_scoring_gpu"
+        )
         is not True
     ):
-        raise Pending("Current finite recovery/no-fit authorization is not available")
+        raise Pending(
+            "Current finite recovery/no-fit authorization is not available"
+        )
     ctx.hashes["recovery_authorization"] = sha(RECOVERY_AUTH)
     expected = ctx.doc("expected_producer")
     check_producer(expected, expected)
@@ -606,7 +746,10 @@ def prerequisites(ctx):
         or ctx.hashes["runtime_manifest"] != expected["runtime_sha256"]
     ):
         raise ValueError("Actual final source/runtime file hash mismatch")
-    if runtime.get("source_manifest_sha256") != expected["source_manifest_sha256"]:
+    if (
+        runtime.get("source_manifest_sha256")
+        != expected["source_manifest_sha256"]
+    ):
         raise ValueError("Runtime does not bind the final actual source")
     policy = policy_check(ctx, expected)
     capsule = ctx.doc("capsule")
@@ -617,18 +760,34 @@ def prerequisites(ctx):
         raise ValueError("Consumer capsule uses a different paired policy")
     files = required(capsule, "files")
     entrypoint = required(capsule, "Data_entrypoint")
-    if not isinstance(entrypoint, str) or not entrypoint.startswith("Data/generation/"):
+    if not isinstance(entrypoint, str) or not entrypoint.startswith(
+        "Data/generation/"
+    ):
         raise ValueError("Explicit Data-owned pilot entrypoint source required")
     if not set(CRITICAL) | {entrypoint} <= set(files):
-        raise ValueError("Capsule must cover critical AI readers and the Data entrypoint")
+        raise ValueError(
+            "Capsule must cover critical AI readers and the Data entrypoint"
+        )
     for name, expected_hash in files.items():
-        if not isinstance(name, str) or not name.startswith(("ai/", "Data/generation/")):
-            raise ValueError("Consumer capsule may contain only AI/Data source paths")
+        if not isinstance(name, str) or not name.startswith(
+            ("ai/", "Data/generation/")
+        ):
+            raise ValueError(
+                "Consumer capsule may contain only AI/Data source paths"
+            )
         path = regular(ROOT / name)
-        if path.suffix not in {".py", ".json", ".sh"} or path.stat().st_size > 2 * (1 << 20):
-            raise ValueError("Capsule hashes small source/config files, never model/data trees")
+        if path.suffix not in {
+            ".py",
+            ".json",
+            ".sh",
+        } or path.stat().st_size > 2 * (1 << 20):
+            raise ValueError(
+                "Capsule hashes small source/config files, never model/data trees"
+            )
         if expected_hash != sha(path):
-            raise ValueError("Current consumer source differs from capsule: " + name)
+            raise ValueError(
+                "Current consumer source differs from capsule: " + name
+            )
     config = json_file(ROOT / "ai/learning/history19/preprocessing.json")
     if any(
         config.get(k) != v
@@ -642,13 +801,18 @@ def prerequisites(ctx):
             nominal_capacity_ah=12,
         ).items()
     ):
-        raise ValueError("Current fixed19/history/future/unit preprocessing contract changed")
+        raise ValueError(
+            "Current fixed19/history/future/unit preprocessing contract changed"
+        )
     ids = development_check(ctx, expected, policy)
     registry = ctx.doc("registry")
     check_protection([], registry, usage="pilot_input_check")
     historical = json_file(HISTORICAL_EXCLUSIONS)
     ctx.hashes["historical_reference_exclusions"] = sha(HISTORICAL_EXCLUSIONS)
-    if historical.get("count") != 77 or len(set(historical["raw_attempt_ids"])) != 77:
+    if (
+        historical.get("count") != 77
+        or len(set(historical["raw_attempt_ids"])) != 77
+    ):
         raise ValueError("Preserved development77 inventory changed")
     for rid in ids | set(historical["raw_attempt_ids"]):
         protected = set().union(
@@ -658,7 +822,10 @@ def prerequisites(ctx):
                 if "run:" + rid in r["identities"]
             )
         )
-        if not {"pilot_input_check", "fit", "calibration", "final_test"} <= protected:
+        if (
+            not {"pilot_input_check", "fit", "calibration", "final_test"}
+            <= protected
+        ):
             raise ValueError(
                 "Development77+6 must be globally excluded from pilot/fit/calibration/final"
             )
@@ -686,7 +853,14 @@ def main(request_path, output=None):
 
             case_id = required(request, "case_id")
             result = check_case(
-                ctx, expected, policy, registry, cases[case_id], ledger[case_id], cases, ledger
+                ctx,
+                expected,
+                policy,
+                registry,
+                cases[case_id],
+                ledger[case_id],
+                cases,
+                ledger,
             )
         elif phase == "prerequisites":
             result = dict(
@@ -762,7 +936,9 @@ def main(request_path, output=None):
             or any(p.is_symlink() for p in (output, *output.parents))
             or (ctx and output in ctx.paths.values())
         ):
-            raise ValueError("Receipt output must be a new regular path, separate from input")
+            raise ValueError(
+                "Receipt output must be a new regular path, separate from input"
+            )
         with output.open("x") as stream:
             stream.write(json.dumps(result, indent=2, allow_nan=False) + "\n")
     print(json.dumps(result, allow_nan=False))

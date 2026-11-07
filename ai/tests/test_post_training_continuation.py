@@ -4,7 +4,6 @@ import copy
 import os
 
 import pytest
-
 from execution.common import read, sha, write
 from learning import operator
 from learning import post_training as post
@@ -27,9 +26,18 @@ def prior(tmp_path, monkeypatch):
         receipt_sha256="receipt",
         truth_archive={"path": "truth.tar.xz"},
         evaluation_plan_sha256="plan",
-        protocol={"detector": {"ewma_alpha": 0.3}, "implementation_sha256": {"replay": "old"}},
+        protocol={
+            "detector": {"ewma_alpha": 0.3},
+            "implementation_sha256": {"replay": "old"},
+        },
     )
-    release = dict(job_id="123", released=True, slurm_state="CANCELLED", exit_code="0:15", queue=[])
+    release = dict(
+        job_id="123",
+        released=True,
+        slurm_state="CANCELLED",
+        exit_code="0:15",
+        queue=[],
+    )
     for path in (
         "input/config.json",
         "input/inventory.json",
@@ -40,7 +48,8 @@ def prior(tmp_path, monkeypatch):
         write(root / path, {})
     write(root / "controller.json", {"status": "FAILED_STOPPED"})
     write(
-        root / "calibrate-submission.json", dict(job_id="123", phase="calibrate", uid=os.getuid())
+        root / "calibrate-submission.json",
+        dict(job_id="123", phase="calibrate", uid=os.getuid()),
     )
     write(root / "release.json", release)
     model = root / "compute/models" / name
@@ -48,9 +57,14 @@ def prior(tmp_path, monkeypatch):
     folder = root / "compute/calibration" / name
     write(
         folder / "calibration.json",
-        {"high": [1.0, 2.0], "bundle_integrity_sha256": sha(model / "integrity.json")},
+        {
+            "high": [1.0, 2.0],
+            "bundle_integrity_sha256": sha(model / "integrity.json"),
+        },
     )
-    (folder / "normal-residuals.npz").write_bytes(b"exact normal residual fixture")
+    (folder / "normal-residuals.npz").write_bytes(
+        b"exact normal residual fixture"
+    )
     write(
         folder / "normal-residuals.json",
         dict(
@@ -65,17 +79,31 @@ def prior(tmp_path, monkeypatch):
             dataset_manifest_sha256="manifest",
         ),
     )
-    write(folder / "completed-old-run/seal.json", {"old": "development result must not copy"})
-    write(folder / "partial-old-run/forecasts.jsonl", {"old": "partial remains untouched"})
+    write(
+        folder / "completed-old-run/seal.json",
+        {"old": "development result must not copy"},
+    )
+    write(
+        folder / "partial-old-run/forecasts.jsonl",
+        {"old": "partial remains untouched"},
+    )
     monkeypatch.setattr(post, "checked", lambda path: (path, cfg))
-    monkeypatch.setattr(operator, "snapshot", lambda record: copy.deepcopy(release))
+    monkeypatch.setattr(
+        operator, "snapshot", lambda record: copy.deepcopy(release)
+    )
     monkeypatch.setattr(operator, "own_queue", lambda: "")
     return root, cfg, name
 
 
-def test_only_normal_calibration_copied_and_old_attempt_unchanged(prior, tmp_path):
+def test_only_normal_calibration_copied_and_old_attempt_unchanged(
+    prior, tmp_path
+):
     previous, cfg, name = prior
-    before = {str(p.relative_to(previous)): sha(p) for p in previous.rglob("*") if p.is_file()}
+    before = {
+        str(p.relative_to(previous)): sha(p)
+        for p in previous.rglob("*")
+        if p.is_file()
+    }
     new_cfg = copy.deepcopy(cfg)
     new_cfg["protocol"]["implementation_sha256"]["replay"] = "optimized"
     proof = post.calibration_continuation(previous, new_cfg)
@@ -93,7 +121,9 @@ def test_only_normal_calibration_copied_and_old_attempt_unchanged(prior, tmp_pat
     for relative, digest in proof["source_calibration_files"].items():
         assert sha(output / "compute" / relative) == digest
     assert before == {
-        str(p.relative_to(previous)): sha(p) for p in previous.rglob("*") if p.is_file()
+        str(p.relative_to(previous)): sha(p)
+        for p in previous.rglob("*")
+        if p.is_file()
     }
 
 
@@ -116,7 +146,9 @@ def test_prior_truth_or_evaluation_use_is_rejected(prior, path):
         post.calibration_continuation(root, cfg)
 
 
-@pytest.mark.parametrize("kind", ["running", "other_owner", "unknown_accounting", "queue"])
+@pytest.mark.parametrize(
+    "kind", ["running", "other_owner", "unknown_accounting", "queue"]
+)
 def test_requires_actual_released_own_job(prior, monkeypatch, kind):
     root, cfg, _ = prior
     if kind == "running":
@@ -126,7 +158,9 @@ def test_requires_actual_released_own_job(prior, monkeypatch, kind):
         record["uid"] += 1
         write(root / "calibrate-submission.json", record)
     elif kind == "unknown_accounting":
-        monkeypatch.setattr(operator, "snapshot", lambda record: {"released": False})
+        monkeypatch.setattr(
+            operator, "snapshot", lambda record: {"released": False}
+        )
     else:
         monkeypatch.setattr(operator, "own_queue", lambda: "other-pending-job")
     with pytest.raises(ValueError, match="released own|allocation release"):
@@ -134,17 +168,27 @@ def test_requires_actual_released_own_job(prior, monkeypatch, kind):
 
 
 @pytest.mark.parametrize(
-    "key", ["source_training_seal_sha256", "source_dataset_sha256", "seed", "protocol"]
+    "key",
+    [
+        "source_training_seal_sha256",
+        "source_dataset_sha256",
+        "seed",
+        "protocol",
+    ],
 )
 def test_frozen_semantics_cannot_change(prior, key):
     root, cfg, _ = prior
     new_cfg = copy.deepcopy(cfg)
-    new_cfg[key] = {"detector": {"ewma_alpha": 0.9}} if key == "protocol" else "changed"
+    new_cfg[key] = (
+        {"detector": {"ewma_alpha": 0.9}} if key == "protocol" else "changed"
+    )
     with pytest.raises(ValueError, match="frozen input|original detection"):
         post.calibration_continuation(root, new_cfg)
 
 
-@pytest.mark.parametrize("filename", ["calibration.json", "normal-residuals.npz"])
+@pytest.mark.parametrize(
+    "filename", ["calibration.json", "normal-residuals.npz"]
+)
 def test_corrupted_complete_normal_evidence_is_not_refitted(prior, filename):
     root, cfg, name = prior
     (root / "compute/calibration" / name / filename).write_text("{}")

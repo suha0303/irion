@@ -12,9 +12,16 @@ from pretrain import common
 
 def test_pooled_scaler_uses_all_train_and_no_holdout_values(tmp_path):
     common.package_imports()
-    fixtures = common.load("pooled_numeric_fixture", common.ROOT / "ai/tests/fixtures/pretrain_numeric.py")
-    pipeline = common.load("pipeline.pooled_pipeline", common.ROOT / "ai/pipeline/pipeline.py")
-    audit = common.load("pooled_audit", common.RESOURCES / "admission/derived.py")
+    fixtures = common.load(
+        "pooled_numeric_fixture",
+        common.ROOT / "ai/tests/fixtures/pretrain_numeric.py",
+    )
+    pipeline = common.load(
+        "pipeline.pooled_pipeline", common.ROOT / "ai/pipeline/pipeline.py"
+    )
+    audit = common.load(
+        "pooled_audit", common.RESOURCES / "admission/derived.py"
+    )
     # First collection contributes one train run, second contributes two.
     # This deliberately detects an incorrect average of per-collection means.
     rows = [
@@ -36,12 +43,18 @@ def test_pooled_scaler_uses_all_train_and_no_holdout_values(tmp_path):
     for row in rows:
         folder = source / "canonical" / row["run_id"]
         offset = offsets.get(row["run_id"], 100000)
-        frames = [json.loads(line) for line in (folder / "frames.jsonl").read_text().splitlines()]
+        frames = [
+            json.loads(line)
+            for line in (folder / "frames.jsonl").read_text().splitlines()
+        ]
         for frame in frames:
             frame["values"]["body_rate_p"] += offset
             if frame["context"] is not None:
                 frame["context"][0] += offset
-        windows = [json.loads(line) for line in (folder / "windows.jsonl").read_text().splitlines()]
+        windows = [
+            json.loads(line)
+            for line in (folder / "windows.jsonl").read_text().splitlines()
+        ]
         for window in windows:
             for sample in window["X"]:
                 sample[feature_index] += offset
@@ -67,7 +80,9 @@ def test_pooled_scaler_uses_all_train_and_no_holdout_values(tmp_path):
     assert max(checked["scaler_max_abs_errors"].values()) < 1e-10
     with np.load(output / "scaler.npz") as scaler:
         assert scaler["x_mean"][feature_index] == pytest.approx(21)
-        assert scaler["x_scale"][feature_index] == pytest.approx(np.std([1, 21, 41]))
+        assert scaler["x_scale"][feature_index] == pytest.approx(
+            np.std([1, 21, 41])
+        )
         assert scaler["c_mean"][0] == pytest.approx(24)
         # Average of set means would be (1 + 31)/2 =16, which is incorrect.
         assert scaler["x_mean"][feature_index] != 16
@@ -78,4 +93,6 @@ def test_pooled_scaler_uses_all_train_and_no_holdout_values(tmp_path):
     train = pipeline.normalized_role(output, "normal_train", pooled)
     validation = pipeline.normalized_role(output, "normal_validation", pooled)
     assert set(train["run_id"]) == set(offsets)
-    assert validation["X"][0, 0, feature_index] > 1000  # Holdout extreme cannot fit its own scaler.
+    assert (
+        validation["X"][0, 0, feature_index] > 1000
+    )  # Holdout extreme cannot fit its own scaler.

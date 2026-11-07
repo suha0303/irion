@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
 from pretrain import ai19, common
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -19,12 +18,17 @@ spec = importlib.util.spec_from_file_location(
 )
 fixture = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fixture)
-CONFIG = json.loads((ROOT / "ai/learning/history19/preprocessing.json").read_text())
+CONFIG = json.loads(
+    (ROOT / "ai/learning/history19/preprocessing.json").read_text()
+)
 
 
 def mission(start_us=0, end_us=26_100_000):
     return dict(
-        policy=ai19.MISSION_POLICY, clock_id="px4-boot", start_us=start_us, end_us_exclusive=end_us
+        policy=ai19.MISSION_POLICY,
+        clock_id="px4-boot",
+        start_us=start_us,
+        end_us_exclusive=end_us,
     )
 
 
@@ -41,7 +45,8 @@ def raw_fixture(path, rid="synthetic-raw", seconds=26):
         battery_profile_id="vtc6_4s4p",
     )
     common.write(
-        path / "run.json", dict(run_id=rid, status="completed", origin="synthetic_unit_fixture")
+        path / "run.json",
+        dict(run_id=rid, status="completed", origin="synthetic_unit_fixture"),
     )
     common.write(path / "observations/metadata.json", metadata)
     events = list(fixture.events(seconds))
@@ -63,12 +68,18 @@ def raw_fixture(path, rid="synthetic-raw", seconds=26):
         + "\n"
     )
     (path / "observations/diagnostics.jsonl").touch()
-    common.write(path / "reference/source_lock.json", dict(synthetic_unit_fixture=True))
-    common.write(path / "evaluation/scenario.json", dict(synthetic_unit_fixture=True))
+    common.write(
+        path / "reference/source_lock.json", dict(synthetic_unit_fixture=True)
+    )
+    common.write(
+        path / "evaluation/scenario.json", dict(synthetic_unit_fixture=True)
+    )
     common.write(
         path / "integrity.json",
         {
-            str(p.relative_to(path)): dict(size=p.stat().st_size, sha256=common.sha(p))
+            str(p.relative_to(path)): dict(
+                size=p.stat().st_size, sha256=common.sha(p)
+            )
             for p in path.rglob("*")
             if p.is_file()
         },
@@ -98,16 +109,32 @@ def test_shared_engine_no_context_and_physical_vs_online_units(tmp_path):
     assert len(engine.frames) == 261 and len(engine.windows) > 0
     arrays, excluded = ai19.online_arrays(engine)
     physical, coverage = ai19.run_array(engine, mission())
-    assert set(arrays) == {"X", "Y", "run_id", "clock_id", "segment_id", "origin_us"}
-    assert arrays["X"].shape[1:] == (100, 19) and arrays["Y"].shape[1:] == (10, 4)
+    assert set(arrays) == {
+        "X",
+        "Y",
+        "run_id",
+        "clock_id",
+        "segment_id",
+        "origin_us",
+    }
+    assert arrays["X"].shape[1:] == (100, 19) and arrays["Y"].shape[1:] == (
+        10,
+        4,
+    )
     assert arrays["origin_us"][0] == 10_000_000
-    assert np.diff(arrays["origin_us"]).tolist() == [1_000_000] * (len(arrays["X"]) - 1)
+    assert np.diff(arrays["origin_us"]).tolist() == [1_000_000] * (
+        len(arrays["X"]) - 1
+    )
     np.testing.assert_allclose(arrays["X"][:, :, 17], 3.7)
     np.testing.assert_allclose(arrays["X"][:, :, 18], 0.5)
     np.testing.assert_allclose(physical["values"][:, 17], 14.8)
     np.testing.assert_allclose(physical["values"][:, 18], 6.0)
-    assert len(physical["values"]) == 261 and len(physical["values"]) % 100 == 61
-    assert physical["time_us"].dtype == np.int64 and np.all(np.diff(physical["time_us"]) == 100000)
+    assert (
+        len(physical["values"]) == 261 and len(physical["values"]) % 100 == 61
+    )
+    assert physical["time_us"].dtype == np.int64 and np.all(
+        np.diff(physical["time_us"]) == 100000
+    )
     assert (
         common.sha(raw / "observations/metadata.json") == before
         and alias["metadata_sha256"] == before
@@ -116,7 +143,9 @@ def test_shared_engine_no_context_and_physical_vs_online_units(tmp_path):
     assert all("C" not in w for w in engine.windows)
 
 
-@pytest.mark.parametrize("fault", ["gap", "segment", "clock", "missing", "ground", "short"])
+@pytest.mark.parametrize(
+    "fault", ["gap", "segment", "clock", "missing", "ground", "short"]
+)
 def test_run_unavailable_preserves_bad_interval(tmp_path, fault):
     engine, _ = ai19.replay(raw_fixture(tmp_path / "raw"), CONFIG)
     engine = copy.deepcopy(engine)
@@ -134,11 +163,17 @@ def test_run_unavailable_preserves_bad_interval(tmp_path, fault):
     elif fault == "short":
         engine.frames = engine.frames[:100]
     values, report = ai19.run_array(engine, mission())
-    assert values is None and report["status"] == "unavailable" and report["reasons"]
+    assert (
+        values is None
+        and report["status"] == "unavailable"
+        and report["reasons"]
+    )
     assert report["interval_frames"] == len(engine.frames)
 
 
-def test_mission_phase_is_explicit_and_landing_missing_values_are_preserved(tmp_path):
+def test_mission_phase_is_explicit_and_landing_missing_values_are_preserved(
+    tmp_path,
+):
     engine, _ = ai19.replay(raw_fixture(tmp_path / "raw"), CONFIG)
     last = engine.frames[-1]
     last["quality"]["climb_rate_error"] = "unavailable"
@@ -147,7 +182,10 @@ def test_mission_phase_is_explicit_and_landing_missing_values_are_preserved(tmp_
     scope = mission(start_us=2_050_000, end_us=22_370_000)
     values, report = ai19.run_array(engine, scope)
     assert report["status"] == "available"
-    assert values["time_us"][0] == 2_100_000 and values["time_us"][-1] == 22_300_000
+    assert (
+        values["time_us"][0] == 2_100_000
+        and values["time_us"][-1] == 22_300_000
+    )
     assert values["values"].shape == (203, 19)
     assert len(values["values"]) % 100 == 3
     assert report["excluded_airborne_before_mission"] == 21
@@ -155,12 +193,19 @@ def test_mission_phase_is_explicit_and_landing_missing_values_are_preserved(tmp_
     assert engine.frames == before
     engine.frames[100]["quality"]["pack_voltage"] = "invalid"
     rejected, coverage = ai19.run_array(engine, scope)
-    assert rejected is None and "missing_or_nonvalid_feature" in coverage["reasons"]
+    assert (
+        rejected is None
+        and "missing_or_nonvalid_feature" in coverage["reasons"]
+    )
 
 
-def test_mission_missing_boundary_or_edge_frames_never_fall_back_to_good_subset(tmp_path):
+def test_mission_missing_boundary_or_edge_frames_never_fall_back_to_good_subset(
+    tmp_path,
+):
     engine, _ = ai19.replay(raw_fixture(tmp_path / "raw"), CONFIG)
-    assert ai19.run_array(engine)[1]["reasons"] == ["missing_mission_boundaries"]
+    assert ai19.run_array(engine)[1]["reasons"] == [
+        "missing_mission_boundaries"
+    ]
     engine.frames.pop()
     values, report = ai19.run_array(engine, mission())
     assert values is None and "incomplete_mission_interval" in report["reasons"]
@@ -170,7 +215,10 @@ def test_mission_missing_boundary_or_edge_frames_never_fall_back_to_good_subset(
 def test_actual_operational_boundaries_are_unambiguous(tmp_path, damage):
     raw = tmp_path / "raw"
     raw.mkdir()
-    events = [dict(state="mission", sim_time=2.05), dict(state="landing", sim_time=22.37)]
+    events = [
+        dict(state="mission", sim_time=2.05),
+        dict(state="landing", sim_time=22.37),
+    ]
     if damage == "missing":
         events.pop()
     elif damage == "duplicate":
@@ -184,10 +232,16 @@ def test_actual_operational_boundaries_are_unambiguous(tmp_path, damage):
     path.write_text(json.dumps(events))
     with pytest.raises(ValueError):
         ai19.mission_interval(raw)
-    events = [dict(state="mission", sim_time=2.05), dict(state="landing", sim_time=22.37)]
+    events = [
+        dict(state="mission", sim_time=2.05),
+        dict(state="landing", sim_time=22.37),
+    ]
     path.write_text(json.dumps(events))
     interval = ai19.mission_interval(raw)
-    assert interval["start_us"] == 2_050_000 and interval["end_us_exclusive"] == 22_370_000
+    assert (
+        interval["start_us"] == 2_050_000
+        and interval["end_us_exclusive"] == 22_370_000
+    )
     assert interval["source_sha256"] == common.sha(path)
 
 
@@ -197,10 +251,14 @@ def test_no_missing_future_targets_filled_with_zeros(tmp_path):
     engine.frames[-5]["quality"]["pack_voltage"] = "invalid"
     after, excluded = ai19.online_arrays(engine)
     assert len(after["X"]) < len(before["X"]) and excluded
-    assert all(e["reason"] == "missing_or_nonvalid_future_target" for e in excluded)
+    assert all(
+        e["reason"] == "missing_or_nonvalid_future_target" for e in excluded
+    )
 
 
-@pytest.mark.parametrize("key", ["raw_flight_id", "paired_case_id", "group_id", "retry_family_id"])
+@pytest.mark.parametrize(
+    "key", ["raw_flight_id", "paired_case_id", "group_id", "retry_family_id"]
+)
 def test_lineage_rejects_split_leakage(key):
     train = row("train")
     validation = row("validation", "normal_validation")
@@ -237,7 +295,9 @@ def test_old_metadata_not_relabelled_as_current(tmp_path):
         ai19.replay(raw, CONFIG)
 
 
-def exported_fixture(tmp_path, monkeypatch, roles=("normal_train", "normal_validation")):
+def exported_fixture(
+    tmp_path, monkeypatch, roles=("normal_train", "normal_validation")
+):
     store = tmp_path / "store"
     store.mkdir()
     monkeypatch.setenv("X500_STORAGE_ROOT", str(store))
@@ -254,25 +314,34 @@ def exported_fixture(tmp_path, monkeypatch, roles=("normal_train", "normal_valid
         raw = raw_fixture(tmp_path / rid, rid)
         selection.append(dict(row(rid, role), path=str(raw)))
     path = tmp_path / "selection.json"
-    common.write(path, dict(schema="drone-data.ai19.selection/1", runs=selection))
+    common.write(
+        path, dict(schema="drone-data.ai19.selection/1", runs=selection)
+    )
     monkeypatch.setattr(
         ai19,
         "producer_binding",
         lambda: dict(
-            battery_policy=ai19.POLICY, source_hashes={}, runtime_sha256="synthetic-binding"
+            battery_policy=ai19.POLICY,
+            source_hashes={},
+            runtime_sha256="synthetic-binding",
         ),
     )
     monkeypatch.setattr(
         ai19,
         "admit",
-        lambda r, b: (r, dict(synthetic_unit_fixture=True, mission_interval=mission())),
+        lambda r, b: (
+            r,
+            dict(synthetic_unit_fixture=True, mission_interval=mission()),
+        ),
     )
     output = store / "processed/export"
     result = ai19.prepare(path, output)
     return output, result
 
 
-def test_archive_extract_two_views_and_train_only_unique_scaler(tmp_path, monkeypatch):
+def test_archive_extract_two_views_and_train_only_unique_scaler(
+    tmp_path, monkeypatch
+):
     output, result = exported_fixture(tmp_path, monkeypatch)
     assert ai19.check_export(output)["runs"] == 2
     assert result["history19_fit"]["status"] == "FIT_INPUT_EXPORTED_NOT_TRAINED"
@@ -285,10 +354,14 @@ def test_archive_extract_two_views_and_train_only_unique_scaler(tmp_path, monkey
     for r in result["records"]:
         consumer = Path(r["metadata_evidence"]["consumer_path"])
         assert {
-            str(p.relative_to(consumer)) for p in consumer.rglob("*") if p.is_file()
+            str(p.relative_to(consumer))
+            for p in consumer.rglob("*")
+            if p.is_file()
         } == ai19.CONSUMER
         assert not (consumer / "evaluation").exists()
-    env = dict(os.environ, PYTHONPATH=f"{ROOT}/ai:{ROOT}/ai/src:{ROOT}/Data/generation")
+    env = dict(
+        os.environ, PYTHONPATH=f"{ROOT}/ai:{ROOT}/ai/src:{ROOT}/Data/generation"
+    )
     script = """from pathlib import Path
 from learning.history19.data import load
 from learning.run_health19.data import load_manifest
@@ -311,7 +384,9 @@ for role in ('normal_train','normal_validation'):
         ai19.check_export(output)
 
 
-def test_one_run_is_two_views_but_not_fake_train_validation(tmp_path, monkeypatch):
+def test_one_run_is_two_views_but_not_fake_train_validation(
+    tmp_path, monkeypatch
+):
     output, result = exported_fixture(tmp_path, monkeypatch, ("normal_train",))
     check = ai19.check_export(output)
     assert check["online_available"] == check["run_available"] == 1
@@ -319,10 +394,14 @@ def test_one_run_is_two_views_but_not_fake_train_validation(tmp_path, monkeypatc
     assert not (output / "history19-manifest.json").exists()
 
 
-def test_one_run_shell_submits_one_scoped_task_and_rejects_unsafe_names(tmp_path):
+def test_one_run_shell_submits_one_scoped_task_and_rejects_unsafe_names(
+    tmp_path,
+):
     tool = tmp_path / "Data/generation/tools/ai19_one_run.sh"
     tool.parent.mkdir(parents=True)
-    tool.write_bytes((ROOT / "Data/generation/tools/ai19_one_run.sh").read_bytes())
+    tool.write_bytes(
+        (ROOT / "Data/generation/tools/ai19_one_run.sh").read_bytes()
+    )
     stub = tool.parent.parent / "drone-pretrain"
     stub.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> calls.txt\n')
     stub.chmod(0o700)
@@ -330,7 +409,8 @@ def test_one_run_shell_submits_one_scoped_task_and_rejects_unsafe_names(tmp_path
     calls = (tmp_path / "calls.txt").read_text().splitlines()
     assert calls == [
         "integration19 init --name one",
-        "integration19 start " + str(tmp_path / "Data/operations/pretrain/tasks/one"),
+        "integration19 start "
+        + str(tmp_path / "Data/operations/pretrain/tasks/one"),
     ]
     assert (
         subprocess.run(
@@ -342,19 +422,29 @@ def test_one_run_shell_submits_one_scoped_task_and_rejects_unsafe_names(tmp_path
 
 
 def test_data_subprocess_imports_no_training_dependencies():
-    env = dict(os.environ, PYTHONPATH=f"{ROOT}/Data/generation:{ROOT}/ai:{ROOT}/ai/src")
+    env = dict(
+        os.environ, PYTHONPATH=f"{ROOT}/Data/generation:{ROOT}/ai:{ROOT}/ai/src"
+    )
     command = 'import sys;from pretrain.ai19 import ai_modules;ai_modules();assert "torch" not in sys.modules'
     subprocess.run(
-        [str(ROOT / "Data/generation/.venv/bin/python"), "-B", "-c", command], env=env, check=True
+        [str(ROOT / "Data/generation/.venv/bin/python"), "-B", "-c", command],
+        env=env,
+        check=True,
     )
 
 
-def test_legacy_fresh_cli_blocks_current_battery_before_task_creation(monkeypatch, tmp_path):
+def test_legacy_fresh_cli_blocks_current_battery_before_task_creation(
+    monkeypatch, tmp_path
+):
     from pretrain import cli
 
-    args = cli.parser().parse_args(["init", "--name", "blocked", "--mode", "collect"])
+    args = cli.parser().parse_args(
+        ["init", "--name", "blocked", "--mode", "collect"]
+    )
     monkeypatch.setattr(
-        cli, "producer_sources", lambda: {"profiles/battery-aging/cmu-vah01.json": "fixture"}
+        cli,
+        "producer_sources",
+        lambda: {"profiles/battery-aging/cmu-vah01.json": "fixture"},
     )
     monkeypatch.setattr(cli, "HOME", tmp_path)
     with pytest.raises(ValueError, match="19신호"):
@@ -408,21 +498,30 @@ def admission_fixture(tmp_path, monkeypatch):
             },
         ),
     )
-    (raw / "evaluation/battery-catalog.json").write_bytes(battery_aging.CATALOG.read_bytes())
+    (raw / "evaluation/battery-catalog.json").write_bytes(
+        battery_aging.CATALOG.read_bytes()
+    )
     common.write(
         raw / "evaluation/battery-selection.json",
-        battery_aging.resolve("hover_normal", None, None, collection_config.battery()),
+        battery_aging.resolve(
+            "hover_normal", None, None, collection_config.battery()
+        ),
     )
     common.write(
         raw / "evaluation/execution.json",
-        [dict(state="mission", sim_time=0), dict(state="landing", sim_time=26.1)],
+        [
+            dict(state="mission", sim_time=0),
+            dict(state="landing", sim_time=26.1),
+        ],
     )
 
     def integrity():
         common.write(
             raw / "integrity.json",
             {
-                str(p.relative_to(raw)): dict(size=p.stat().st_size, sha256=common.sha(p))
+                str(p.relative_to(raw)): dict(
+                    size=p.stat().st_size, sha256=common.sha(p)
+                )
                 for p in raw.rglob("*")
                 if p.is_file() and p.name != "integrity.json"
             },
@@ -454,8 +553,12 @@ def admission_fixture(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     "damage", [None, "old_producer", "wrong_policy", "tamper", "failed_quality"]
 )
-def test_current_producer_battery_and_quality_admission(tmp_path, monkeypatch, damage):
-    raw, binding, selection, integrity, assessment = admission_fixture(tmp_path, monkeypatch)
+def test_current_producer_battery_and_quality_admission(
+    tmp_path, monkeypatch, damage
+):
+    raw, binding, selection, integrity, assessment = admission_fixture(
+        tmp_path, monkeypatch
+    )
     if damage == "old_producer":
         d = common.read(raw / "evaluation/scenario.json")
         d["producer_lock_sha256"] = "0" * 64
@@ -469,7 +572,9 @@ def test_current_producer_battery_and_quality_admission(tmp_path, monkeypatch, d
     if damage == "tamper":
         (raw / "observations/streams.jsonl").write_text("tampered")
     if damage == "failed_quality":
-        monkeypatch.setattr(assessment, "assess", lambda *a: dict(contract_passed=False))
+        monkeypatch.setattr(
+            assessment, "assess", lambda *a: dict(contract_passed=False)
+        )
     if damage:
         with pytest.raises(ValueError):
             ai19.admit(selection, binding)
@@ -484,7 +589,11 @@ def test_current_producer_battery_and_quality_admission(tmp_path, monkeypatch, d
 
 @pytest.mark.parametrize(
     "field,value",
-    [("previous_attempts", "run-id"), ("previous_attempts", [None]), ("parent_attempt_id", 123)],
+    [
+        ("previous_attempts", "run-id"),
+        ("previous_attempts", [None]),
+        ("parent_attempt_id", 123),
+    ],
 )
 def test_malformed_retry_identity_is_rejected(field, value):
     r = row("current")

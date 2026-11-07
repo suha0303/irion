@@ -8,9 +8,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from test_collection19 import export
-from test_pilot_publisher import fixture as native_fixture
-
 from learning.collection19 import (
     audit_case,
     check_quality_rejection,
@@ -20,6 +17,8 @@ from learning.collection19 import (
 )
 from learning.history19.pilot import ROOT, json_file, sha
 from learning.history19.pilot_connector import native_mission_interval
+from test_collection19 import export
+from test_pilot_publisher import fixture as native_fixture
 
 ag = importlib.import_module("learning.collection19.aggregate")
 
@@ -43,9 +42,13 @@ def refresh(raw):
 def full480(tmp_path, monkeypatch):
     args = native_fixture(tmp_path / "native")
     binding = json_file(args["producer_binding"])
-    native = json_file(ROOT / "simulation/profiles/collection/joint-phase-policy.json")
+    native = json_file(
+        ROOT / "simulation/profiles/collection/joint-phase-policy.json"
+    )
     args["native_policy"].write_bytes(
-        (ROOT / "simulation/profiles/collection/joint-phase-policy.json").read_bytes()
+        (
+            ROOT / "simulation/profiles/collection/joint-phase-policy.json"
+        ).read_bytes()
     )
     auth = json_file(contract.AUTH)
     auth.update(
@@ -60,7 +63,12 @@ def full480(tmp_path, monkeypatch):
     monkeypatch.setattr(contract, "AUTH", auth_path)
     monkeypatch.setattr(contract, "AUTH_SHA256", sha(auth_path))
     policy_path = tmp_path / "policy.json"
-    prepare_policy(args["native_policy"], args["producer_binding"], policy_path, fixture_only=True)
+    prepare_policy(
+        args["native_policy"],
+        args["producer_binding"],
+        policy_path,
+        fixture_only=True,
+    )
     bundle = dict(
         paired_policy=str(policy_path),
         native_policy=str(args["native_policy"]),
@@ -71,9 +79,15 @@ def full480(tmp_path, monkeypatch):
     first, last = 60000000, 540024000
     start = json_file(raw / "evaluation/joint-origin.json")
     start.update(
-        revision=native["revision"], policy_sha256=sha(args["native_policy"]), duration_us=480000000
+        revision=native["revision"],
+        policy_sha256=sha(args["native_policy"]),
+        duration_us=480000000,
     )
-    landing = dict(start, kind="actual_auto_land_reference_consumption", actual_time_us=last)
+    landing = dict(
+        start,
+        kind="actual_auto_land_reference_consumption",
+        actual_time_us=last,
+    )
     put(raw / "evaluation/joint-origin.json", start)
     put(raw / "evaluation/joint-landing.json", landing)
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
@@ -128,7 +142,9 @@ def full480(tmp_path, monkeypatch):
         )
         for seq, phase in enumerate(range(0, 480000001, 25000), 1):
             index = phase // 100000
-            writer.writerow([seq, first + phase, phase, index, *rows[index][1:]])
+            writer.writerow(
+                [seq, first + phase, phase, index, *rows[index][1:]]
+            )
     put(raw / "evaluation/joint-check.json", joint_phase.verify(raw))
     selection = dict(fixture_only=True)
     put(raw / "evaluation/battery-selection.json", selection)
@@ -151,7 +167,9 @@ def full480(tmp_path, monkeypatch):
         group_id=namespace + case["group_id"],
         retry_family_id=namespace + case["retry_family_id"],
         mission_interval=interval,
-        source_evidence=dict(battery_selection=selection, propulsion_selection=selection),
+        source_evidence=dict(
+            battery_selection=selection, propulsion_selection=selection
+        ),
         lineage=[
             "run:" + rid,
             "pair:" + case["paired_case_id"],
@@ -194,7 +212,9 @@ def full480(tmp_path, monkeypatch):
     )
 
 
-def test_public_full480_native_case_keeps_all_frames_windows_and_land_tail(full480, tmp_path):
+def test_public_full480_native_case_keeps_all_frames_windows_and_land_tail(
+    full480, tmp_path
+):
     result = audit_case(
         full480["export"],
         producer=full480["producer"],
@@ -214,9 +234,12 @@ def test_public_full480_native_case_keeps_all_frames_windows_and_land_tail(full4
 
 
 @pytest.mark.parametrize(
-    "damage", ["pilot_policy", "assessment", "csv", "scope_case", "origin_clock"]
+    "damage",
+    ["pilot_policy", "assessment", "csv", "scope_case", "origin_clock"],
 )
-def test_public_main_case_rejects_wrong_old_authority_or_source(full480, tmp_path, damage):
+def test_public_main_case_rejects_wrong_old_authority_or_source(
+    full480, tmp_path, damage
+):
     if damage == "pilot_policy":
         p = Path(full480["bundle"]["paired_policy"])
         v = json_file(p)
@@ -232,7 +255,9 @@ def test_public_main_case_rejects_wrong_old_authority_or_source(full480, tmp_pat
         v["physical_gate_passed"] = False
         full480["assessment"] = put(p, v)
     if damage == "csv":
-        with (full480["raw"] / "evaluation/joint-consumption.csv").open("a") as f:
+        with (full480["raw"] / "evaluation/joint-consumption.csv").open(
+            "a"
+        ) as f:
             f.write("\n")
     if damage == "scope_case":
         p = full480["export"] / "online.json"
@@ -276,7 +301,9 @@ def rejected(full480):
     a.update(
         contract_passed=False,
         physical_gate_passed=False,
-        errors=["Joint native consumption: Incomplete actual reference consumption coverage"],
+        errors=[
+            "Joint native consumption: Incomplete actual reference consumption coverage"
+        ],
     )
     full480["assessment"] = put(p, a)
 
@@ -306,13 +333,20 @@ def test_main_quality_rejection_is_independently_rechecked_and_preserves_physica
     )
     assert check_quality_rejection(ref, a, full480["producer"]) is True
     doc = json_file(ref["path"])
-    assert doc["measured"]["max_gap_us"] == 50000 and doc["measured"]["reference_rows_seen"] == 4801
+    assert (
+        doc["measured"]["max_gap_us"] == 50000
+        and doc["measured"]["reference_rows_seen"] == 4801
+    )
     assert (
         json_file(full480["raw"] / "run.json")["status"] == "completed"
         and sha(full480["raw"] / "integrity.json") == before
     )
     second = dict(
-        a, index=2, run_id="synthetic-retry", parent_attempt_id=a["run_id"], status="completed"
+        a,
+        index=2,
+        run_id="synthetic-retry",
+        parent_attempt_id=a["run_id"],
+        status="completed",
     )
     second.pop("quality_rejection")
     second.pop("physical_status")
@@ -325,13 +359,19 @@ def test_main_quality_rejection_is_independently_rechecked_and_preserves_physica
             accepted_run_id=second["run_id"],
         ),
     )
-    _, counts = ag._ledger(ledger, full480["case"], full480["producer"], set(), full480["bundle"])
+    _, counts = ag._ledger(
+        ledger, full480["case"], full480["producer"], set(), full480["bundle"]
+    )
     assert counts == dict(
-        physical_attempts=2, physical_failed_attempts=0, quality_rejected_attempts=1
+        physical_attempts=2,
+        physical_failed_attempts=0,
+        quality_rejected_attempts=1,
     )
 
 
-def test_main_quality_rejection_never_accepts_unknown_failure_or_valid_success(full480, tmp_path):
+def test_main_quality_rejection_never_accepts_unknown_failure_or_valid_success(
+    full480, tmp_path
+):
     with pytest.raises(ValueError):
         publish_quality_rejection(
             full480["raw"],

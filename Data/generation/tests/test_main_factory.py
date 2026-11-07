@@ -40,7 +40,9 @@ def factory(monkeypatch, tmp_path):
     monkeypatch.setattr(
         main.native_flight,
         "command",
-        lambda *a, **k: (_ for _ in ()).throw(AssertionError("Native dispatch prohibited")),
+        lambda *a, **k: (_ for _ in ()).throw(
+            AssertionError("Native dispatch prohibited")
+        ),
     )
     return home, store
 
@@ -53,7 +55,9 @@ def test_main_factory_includes_existing_lr108_once_and_user_menu_submits_one_sco
     cfg = common.read(lr / "config.json")
     # Boundary fixture: the already independently accepted catalogue is immutable input.
     for case in common.read(lr / "manifest.json")["cases"]:
-        rid = hashlib.md5(case["case_id"].encode(), usedforsecurity=False).hexdigest()
+        rid = hashlib.md5(
+            case["case_id"].encode(), usedforsecurity=False
+        ).hexdigest()
         proof = tmp_path / "proofs" / (rid + ".json")
         common.write(proof, dict(fixture_only=True))
         entry = dict(
@@ -73,7 +77,9 @@ def test_main_factory_includes_existing_lr108_once_and_user_menu_submits_one_sco
             commit=dict(path=str(proof), sha256=common.sha(proof)),
         )
         common.write(main.CATALOG / (case["case_id"] + ".json"), entry)
-    monkeypatch.setattr(main.main_storage, "committed", lambda p, **k: common.read(p))
+    monkeypatch.setattr(
+        main.main_storage, "committed", lambda p, **k: common.read(p)
+    )
     task = main.create("main", storage_root=store, name="main19-fixture-main")
     manifest = common.read(task / "manifest.json")
     ledger = common.read(task / "ledger.json")
@@ -93,11 +99,20 @@ def test_main_factory_includes_existing_lr108_once_and_user_menu_submits_one_sco
     # The actual factory is reused; no service/native/model can be invoked by this test.
     monkeypatch.setattr("builtins.input", lambda _: "2")
     original_start = main.user_start
-    monkeypatch.setattr(main, "user_start", lambda scope: original_start(scope, storage_root=store))
+    monkeypatch.setattr(
+        main,
+        "user_start",
+        lambda scope: original_start(scope, storage_root=store),
+    )
     cli.menu()
     assert len(calls) == 1 and calls[0] != task
     assert screens == calls
-    new_entries = [common.read(p) for p in common.read(calls[0] / "ledger.json")["cases"].values()]
-    assert len(new_entries) == 1674 and all(not e["attempts"] for e in new_entries)
+    new_entries = [
+        common.read(p)
+        for p in common.read(calls[0] / "ledger.json")["cases"].values()
+    ]
+    assert len(new_entries) == 1674 and all(
+        not e["attempts"] for e in new_entries
+    )
     assert main.create("main", storage_root=store) == calls[0]
     assert not list(home.glob("tasks/*/operator/service.json"))

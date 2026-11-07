@@ -3,10 +3,12 @@
 import json
 
 import pytest
-
 from learning.history19 import joint_native as native
 from learning.history19.pilot import ROOT, TASK, json_file, sha
-from learning.history19.pilot_connector import native_mission_interval, project_pair_receipt
+from learning.history19.pilot_connector import (
+    native_mission_interval,
+    project_pair_receipt,
+)
 from learning.history19.pilot_publish import publish
 
 
@@ -18,7 +20,10 @@ def write(path, value):
 
 def fixture(root):
     root.mkdir()
-    policy = json_file(ROOT / "simulation/artifacts/paired-origin-20261107/recovery-01/policy.json")
+    policy = json_file(
+        ROOT
+        / "simulation/artifacts/paired-origin-20261107/recovery-01/policy.json"
+    )
     policy_path = write(root / "native-policy.json", policy)
     source_path = write(
         root / "source.json",
@@ -33,7 +38,9 @@ def fixture(root):
             }
         ),
     )
-    runtime_path = write(root / "runtime.json", dict(source_manifest_sha256=sha(source_path)))
+    runtime_path = write(
+        root / "runtime.json", dict(source_manifest_sha256=sha(source_path))
+    )
     producer = dict(
         battery_policy="cmu-vah01-rpt16-only/1",
         battery_revision="cmu-vah01-baseline/1",
@@ -66,7 +73,9 @@ def fixture(root):
                 consumer="PositionControl::setInputSetpoint",
             )
             landing = dict(
-                start, kind="actual_auto_land_reference_consumption", actual_time_us=last
+                start,
+                kind="actual_auto_land_reference_consumption",
+                actual_time_us=last,
             )
             checked = dict(
                 status="passed",
@@ -85,7 +94,9 @@ def fixture(root):
                 operation_variation=dict(path=dict(kind="random")),
                 wind_profile=dict(environment="strong"),
                 producer_lock_sha256=sha(runtime_path),
-                health_eligibility="confirmed_healthy" if role == "normal" else "abnormal",
+                health_eligibility="confirmed_healthy"
+                if role == "normal"
+                else "abnormal",
                 joint_phase_policy=dict(
                     revision=native.ADAPTER,
                     policy_sha256=sha(policy_path),
@@ -122,7 +133,9 @@ def fixture(root):
             write(
                 raw / "integrity.json",
                 {
-                    name: dict(sha256=sha(raw / name), size=(raw / name).stat().st_size)
+                    name: dict(
+                        sha256=sha(raw / name), size=(raw / name).stat().st_size
+                    )
                     for name in files
                 },
             )
@@ -131,7 +144,9 @@ def fixture(root):
             schema="drone.joint-phase-pair-check/1",
             status="passed",
             errors=[],
-            policy=dict(revision=native.ADAPTER, policy_sha256=sha(policy_path)),
+            policy=dict(
+                revision=native.ADAPTER, policy_sha256=sha(policy_path)
+            ),
             source_sha256=sha(source_path),
             runtime_sha256=sha(runtime_path),
             normal_run=str(paths[0].absolute()),
@@ -155,7 +170,11 @@ def fixture(root):
             ),
             origins=starts,
             wind_function_checks=[
-                dict(status="passed", mission_samples=480001, max_abs_component_error_mps=0.0)
+                dict(
+                    status="passed",
+                    mission_samples=480001,
+                    max_abs_component_error_mps=0.0,
+                )
             ]
             * 2,
         )
@@ -194,7 +213,12 @@ def test_publisher_uses_actual_layout_and_keeps_fixture_out_of_ready(tmp_path):
     code, result = publish(**arguments)
     assert code == 0 and result["status"] == "SYNTHETIC_READY"
     assert result["native_development_verified"] is False
-    assert result["model_forward_steps"] == result["optimizer_steps"] == result["GPU_jobs"] == 0
+    assert (
+        result["model_forward_steps"]
+        == result["optimizer_steps"]
+        == result["GPU_jobs"]
+        == 0
+    )
     policy_path = arguments["output_dir"] / "paired-policy.json"
     policy = json_file(policy_path)
     raw = tmp_path / "unit/synthetic-0-normal"
@@ -204,13 +228,21 @@ def test_publisher_uses_actual_layout_and_keeps_fixture_out_of_ready(tmp_path):
         native_policy_path=arguments["native_policy"],
         run_path=raw / "run.json",
     )
-    assert interval["start_us"] == 60000000 and interval["end_us_exclusive"] == 540024000
     assert (
-        interval["landing_tail_us"] == 24000 and native.LANDING in interval["native_sources_sha256"]
+        interval["start_us"] == 60000000
+        and interval["end_us_exclusive"] == 540024000
     )
-    projected = project_pair_receipt(arguments["pair_checks"][0], policy_path=policy_path)
+    assert (
+        interval["landing_tail_us"] == 24000
+        and native.LANDING in interval["native_sources_sha256"]
+    )
+    projected = project_pair_receipt(
+        arguments["pair_checks"][0], policy_path=policy_path
+    )
     assert projected["origin_delta_us"] == 0
-    assert sha(arguments["output_dir"] / "native-policy.json") == sha(arguments["native_policy"])
+    assert sha(arguments["output_dir"] / "native-policy.json") == sha(
+        arguments["native_policy"]
+    )
     assert (
         json_file(arguments["pair_checks"][0])["origins"]["normal"]
         != json_file(arguments["pair_checks"][0])["origins"]["anomaly"]
@@ -234,15 +266,25 @@ def test_publisher_uses_actual_layout_and_keeps_fixture_out_of_ready(tmp_path):
         "null_landing",
     ],
 )
-def test_publisher_fails_closed_and_never_repairs_or_filters_failed_evidence(tmp_path, damage):
+def test_publisher_fails_closed_and_never_repairs_or_filters_failed_evidence(
+    tmp_path, damage
+):
     arguments = fixture(tmp_path / "unit")
     before = json_file(arguments["native_completion"])
     if damage == "false_completion":
-        write(arguments["native_completion"], dict(before, passed=False, allow_pilot45=False))
+        write(
+            arguments["native_completion"],
+            dict(before, passed=False, allow_pilot45=False),
+        )
     elif damage == "stopped_completion":
         write(
             arguments["native_completion"],
-            dict(before, passed=False, allow_pilot45=False, status="FAILED_NATIVE_COVERAGE"),
+            dict(
+                before,
+                passed=False,
+                allow_pilot45=False,
+                status="FAILED_NATIVE_COVERAGE",
+            ),
         )
     elif damage == "missing_report":
         arguments["pair_checks"] = None
@@ -271,9 +313,13 @@ def test_publisher_fails_closed_and_never_repairs_or_filters_failed_evidence(tmp
         path = raw / native.LANDING
         write(path, dict(json_file(path), actual_time_us=None))
         integrity = json_file(raw / "integrity.json")
-        integrity[native.LANDING] = dict(sha256=sha(path), size=path.stat().st_size)
+        integrity[native.LANDING] = dict(
+            sha256=sha(path), size=path.stat().st_size
+        )
         write(raw / "integrity.json", integrity)
-    write(arguments["handoff"], dict(status="READY", old_scope="must_be_archived"))
+    write(
+        arguments["handoff"], dict(status="READY", old_scope="must_be_archived")
+    )
     code, result = publish(**arguments)
     assert code in (1, 2) and result["status"] in {"WAITING", "FAILED"}
     assert json_file(arguments["handoff"])["status"] != "READY"
@@ -297,12 +343,17 @@ def test_pair_projection_rejects_wrong_caller_pair(tmp_path):
     policy = json_file(arguments["output_dir"] / "paired-policy.json")
     with pytest.raises(ValueError, match="another physical pair"):
         native.pair(
-            arguments["pair_checks"][0], policy, fixture=True, normal_run=tmp_path / "other"
+            arguments["pair_checks"][0],
+            policy,
+            fixture=True,
+            normal_run=tmp_path / "other",
         )
 
 
 @pytest.mark.parametrize("collision", ["input", "snapshot"])
-def test_handoff_cannot_overwrite_inputs_or_immutable_snapshots(tmp_path, collision):
+def test_handoff_cannot_overwrite_inputs_or_immutable_snapshots(
+    tmp_path, collision
+):
     arguments = fixture(tmp_path / "unit")
     original = sha(arguments["producer_binding"])
     arguments["handoff"] = (
@@ -312,4 +363,7 @@ def test_handoff_cannot_overwrite_inputs_or_immutable_snapshots(tmp_path, collis
     )
     with pytest.raises(ValueError, match="overwrite|immutable"):
         publish(**arguments)
-    assert sha(arguments["producer_binding"]) == original and not arguments["output_dir"].exists()
+    assert (
+        sha(arguments["producer_binding"]) == original
+        and not arguments["output_dir"].exists()
+    )

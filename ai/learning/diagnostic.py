@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-
 from execution.common import Progress, read, sha, verify, write
 from pipeline.pipeline import normalized_role
 from pipeline.runtime import check
@@ -39,23 +38,37 @@ def candidate_batches(profile, pilot):
     if free <= 4 * 1024**3 or peak <= 0:
         raise MemoryError("No valid measured memory headroom")
     grid = [128, 256, 512, 1024, 2048, 4096]
-    admitted = [b for b in grid if peak * b / 32 * 1.5 <= min(0.85 * free, free - 4 * 1024**3)]
+    admitted = [
+        b
+        for b in grid
+        if peak * b / 32 * 1.5 <= min(0.85 * free, free - 4 * 1024**3)
+    ]
     preferred = [b for b in PROFILES[profile]["batches"] if b in admitted]
-    selected = sorted(set(([32] if profile == "reference" else []) + preferred[:1] + admitted[-1:]))
+    selected = sorted(
+        set(
+            ([32] if profile == "reference" else [])
+            + preferred[:1]
+            + admitted[-1:]
+        )
+    )
     if not selected:
         raise MemoryError("No candidate admitted from full-step peak; stop")
     return selected, [b for b in grid if b not in admitted]
 
 
 def stop_signal(signum, frame):
-    raise RuntimeError(f"Received signal {signum}; preserve diagnostic evidence and stop")
+    raise RuntimeError(
+        f"Received signal {signum}; preserve diagnostic evidence and stop"
+    )
 
 
 def gate_child(root, name, phase):
     root = Path(root)
     settings = read(root / "run.json")
     data = dict(np.load(root / "output/gate-input.npz"))
-    progress = Progress(root / "output" / f"gate-{name}-{phase}.json", hours=0.15)
+    progress = Progress(
+        root / "output" / f"gate-{name}-{phase}.json", hours=0.15
+    )
     run_fit(
         ModelSpec(name, 32),
         data,
@@ -69,7 +82,9 @@ def gate_child(root, name, phase):
         epochs=4,
         patience=5,
         stop_after_epoch=2 if phase == "partial" else None,
-        resume=root / "output" / f"gate-{name}-partial/last.pt" if phase == "resume" else None,
+        resume=root / "output" / f"gate-{name}-partial/last.pt"
+        if phase == "resume"
+        else None,
         progress=progress,
     )
 
@@ -82,7 +97,9 @@ def resume_gate(root, arrays, progress):
         for phase in ["full", "partial", "resume"]:
             progress.check()
             progress.update(stage="resume_gate", model=name, phase=phase)
-            with (root / "output" / f"gate-{name}-{phase}.log").open("x") as log:
+            with (root / "output" / f"gate-{name}-{phase}.log").open(
+                "x"
+            ) as log:
                 subprocess.run(
                     [
                         sys.executable,
@@ -103,33 +120,49 @@ def resume_gate(root, arrays, progress):
                     timeout=480,
                 )
         full = torch.load(
-            root / "output" / f"gate-{name}-full/last.pt", map_location="cpu", weights_only=False
+            root / "output" / f"gate-{name}-full/last.pt",
+            map_location="cpu",
+            weights_only=False,
         )
         resumed = torch.load(
-            root / "output" / f"gate-{name}-resume/last.pt", map_location="cpu", weights_only=False
+            root / "output" / f"gate-{name}-resume/last.pt",
+            map_location="cpu",
+            weights_only=False,
         )
         checks = {
             key: same(full[key], resumed[key])
-            for key in ["model", "optimizer", "rng", "best", "best_epoch", "best_state"]
+            for key in [
+                "model",
+                "optimizer",
+                "rng",
+                "best",
+                "best_epoch",
+                "best_state",
+            ]
         }
         checks["loss_history"] = all(
-            [x[k] for x in full["history"]] == [x[k] for x in resumed["history"]]
+            [x[k] for x in full["history"]]
+            == [x[k] for x in resumed["history"]]
             for k in ("train_loss", "validation_loss")
         )
-        checks["export"] = sha(root / "output" / f"gate-{name}-full/model.safetensors") == sha(
-            root / "output" / f"gate-{name}-resume/model.safetensors"
-        )
+        checks["export"] = sha(
+            root / "output" / f"gate-{name}-full/model.safetensors"
+        ) == sha(root / "output" / f"gate-{name}-resume/model.safetensors")
         result[name] = checks
         write(root / "output/resume-gate.json", result)
         if not all(checks.values()):
-            raise ValueError(f"{name} CUDA resume mismatch; no benchmark or main training")
+            raise ValueError(
+                f"{name} CUDA resume mismatch; no benchmark or main training"
+            )
     return result
 
 
 def main_run(root):
     root = Path(root).resolve()
     cfg = read(root / "run.json")
-    progress = Progress(root / "output/progress.json", hours=cfg["diagnostic_hours"])
+    progress = Progress(
+        root / "output/progress.json", hours=cfg["diagnostic_hours"]
+    )
     (root / "output").mkdir(exist_ok=False)
     signal.signal(signal.SIGTERM, stop_signal)
     signal.signal(signal.SIGINT, stop_signal)
@@ -163,7 +196,12 @@ def main_run(root):
         for profile in PROFILES:
             for spec in specs(profile):
                 label = profile + "-" + spec.name
-                progress.update(stage="memory_probe", model=label, done=len(rows), total=planned)
+                progress.update(
+                    stage="memory_probe",
+                    model=label,
+                    done=len(rows),
+                    total=planned,
+                )
                 pilot = measure(
                     spec,
                     train,
@@ -251,7 +289,9 @@ def main_run(root):
         )
     except BaseException as exc:
         progress.update(
-            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}", automatic_retry=False
+            status="FAILED_STOPPED",
+            reason=f"{type(exc).__name__}: {exc}",
+            automatic_retry=False,
         )
         raise
 

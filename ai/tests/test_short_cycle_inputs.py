@@ -5,15 +5,14 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from test_pilot45_admission import make_request
-from test_pilot_publisher import fixture as native_fixture
-from test_wind_metadata import fixture as wind_fixture
-
 from capstone_ai.mapping import FEATURES, TARGETS
 from learning.admission19 import SHORT
 from learning.history19 import joint_native, short_cycle
 from learning.history19.pilot import CRITICAL, ROOT, json_file, sha
 from learning.history19.pilot_connector import native_mission_interval
+from test_pilot45_admission import make_request
+from test_pilot_publisher import fixture as native_fixture
+from test_wind_metadata import fixture as wind_fixture
 
 
 def write(path, value):
@@ -32,13 +31,16 @@ def refresh(raw):
 
 def native180(folder):
     args = native_fixture(folder)
-    native = json_file(ROOT / "simulation/profiles/collection/joint-phase-policy.json")
+    native = json_file(
+        ROOT / "simulation/profiles/collection/joint-phase-policy.json"
+    )
     assert native["revision"] == "joint-native-consumption-c2-v2"
     write(args["native_policy"], native)
     for i in range(3):
         report = json_file(args["pair_checks"][i])
         report["policy"].update(
-            revision=native["revision"], policy_sha256=sha(args["native_policy"])
+            revision=native["revision"],
+            policy_sha256=sha(args["native_policy"]),
         )
         report["original_interval_us"] = [0, 180000000]
         report["wind"].update(samples=180001, expected_samples=180001)
@@ -90,7 +92,10 @@ def native180(folder):
                     "evaluation/execution.json",
                     [
                         dict(state="mission", sim_time=first / 1e6),
-                        dict(state="landing", sim_time=end["actual_time_us"] / 1e6),
+                        dict(
+                            state="landing",
+                            sim_time=end["actual_time_us"] / 1e6,
+                        ),
                     ],
                 ),
             ):
@@ -100,7 +105,10 @@ def native180(folder):
         write(args["pair_checks"][i], report)
     policy_path = folder / "short-policy.json"
     policy = short_cycle.prepare_policy(
-        args["native_policy"], args["producer_binding"], policy_path, fixture_only=True
+        args["native_policy"],
+        args["producer_binding"],
+        policy_path,
+        fixture_only=True,
     )
     return args, policy_path, policy
 
@@ -111,7 +119,11 @@ def short_request(folder, *, phase="case"):
     path = make_request(folder / "request", phase=phase)
     request = json_file(path)
     refs = request["refs"]
-    request.update(schema="drone-ai.short-cycle.check/1", task_id=short_cycle.TASK, purpose=SHORT)
+    request.update(
+        schema="drone-ai.short-cycle.check/1",
+        task_id=short_cycle.TASK,
+        purpose=SHORT,
+    )
     for key in ("native_completion", "development_receipt"):
         refs.pop(key)
     for key, keyarg in (
@@ -120,8 +132,12 @@ def short_request(folder, *, phase="case"):
         ("runtime_manifest", "runtime_manifest"),
         ("native_policy", "native_policy"),
     ):
-        refs[key] = dict(path=str(args[keyarg].absolute()), sha256=sha(args[keyarg]))
-    refs["paired_policy"] = dict(path=str(policy_path.absolute()), sha256=sha(policy_path))
+        refs[key] = dict(
+            path=str(args[keyarg].absolute()), sha256=sha(args[keyarg])
+        )
+    refs["paired_policy"] = dict(
+        path=str(policy_path.absolute()), sha256=sha(policy_path)
+    )
 
     def update_ref(key, value):
         old = refs[key]
@@ -140,7 +156,10 @@ def short_request(folder, *, phase="case"):
     update_ref("ledger", ledger)
     registry = json_file(path.parent / refs["registry"]["path"])
     registry["entries"].append(
-        dict(identities=["run:" + rid], forbidden_uses=["fit", "calibration", "final_test"])
+        dict(
+            identities=["run:" + rid],
+            forbidden_uses=["fit", "calibration", "final_test"],
+        )
     )
     update_ref("registry", registry)
     capsule = json_file(path.parent / refs["capsule"]["path"])
@@ -148,7 +167,10 @@ def short_request(folder, *, phase="case"):
         producer=policy["producer"],
         paired_policy_sha256=sha(policy_path),
         Data_entrypoint="Data/generation/pretrain/common.py",
-        files={n: sha(ROOT / n) for n in (*CRITICAL, "Data/generation/pretrain/common.py")},
+        files={
+            n: sha(ROOT / n)
+            for n in (*CRITICAL, "Data/generation/pretrain/common.py")
+        },
     )
     update_ref("capsule", capsule)
     scenario = wind_fixture("calm", "altitude")
@@ -157,7 +179,9 @@ def short_request(folder, *, phase="case"):
         producer_lock_sha256=policy["producer"]["runtime_sha256"],
         health_eligibility="confirmed_healthy",
         requested_duration_s=180,
-        joint_phase_policy=json_file(raw / "evaluation/scenario.json")["joint_phase_policy"],
+        joint_phase_policy=json_file(raw / "evaluation/scenario.json")[
+            "joint_phase_policy"
+        ],
     )
     scenario["wind_model"]["clock"] = policy["wind_model_clock"]
     write(raw / "evaluation/scenario.json", scenario)
@@ -168,7 +192,10 @@ def short_request(folder, *, phase="case"):
         value = json_file(path.parent / refs[key]["path"])
         refs[key] = write(raw / member, value)
     integrity = json_file(raw / "integrity.json")
-    for member in ("evaluation/battery-selection.json", "evaluation/propulsion-selection.json"):
+    for member in (
+        "evaluation/battery-selection.json",
+        "evaluation/propulsion-selection.json",
+    ):
         p = raw / member
         integrity[member] = dict(sha256=sha(p), size=p.stat().st_size)
     write(raw / "integrity.json", integrity)
@@ -183,7 +210,9 @@ def short_request(folder, *, phase="case"):
         ("scenario", "evaluation/scenario.json"),
         ("raw_integrity", "integrity.json"),
     ):
-        refs[key] = dict(path=str((raw / member).absolute()), sha256=sha(raw / member))
+        refs[key] = dict(
+            path=str((raw / member).absolute()), sha256=sha(raw / member)
+        )
     request["case_origin"] = {
         key: dict(path=str((raw / member).absolute()), sha256=sha(raw / member))
         for key, member in (
@@ -195,8 +224,12 @@ def short_request(folder, *, phase="case"):
     online = json_file(path.parent / refs["online_manifest"]["path"])
     run = json_file(path.parent / refs["run_manifest"]["path"])
     row = online["run"]
-    row.update(run_id=rid, purpose=SHORT, cohort=SHORT, mission_interval=interval)
-    row["source_evidence"].update(producer_runtime_sha256=policy["producer"]["runtime_sha256"])
+    row.update(
+        run_id=rid, purpose=SHORT, cohort=SHORT, mission_interval=interval
+    )
+    row["source_evidence"].update(
+        producer_runtime_sha256=policy["producer"]["runtime_sha256"]
+    )
     times = np.arange(60000000, 240024000, 100000, dtype=np.int64)
     physical = np.tile(np.arange(19) * 0.01, (len(times), 1))
     physical[:, 17:] = [16, 24]
@@ -215,26 +248,42 @@ def short_request(folder, *, phase="case"):
                         values=dict(zip(FEATURES, values.tolist())),
                         quality=dict.fromkeys(FEATURES, "valid"),
                         operating_state="airborne",
-                        lineage=dict(sample=dict(sample_time_us=int(t), available_time_us=int(t))),
+                        lineage=dict(
+                            sample=dict(
+                                sample_time_us=int(t), available_time_us=int(t)
+                            )
+                        ),
                     )
                 )
                 + "\n"
             )
-    refs["canonical_frames"] = dict(path=str(canonical.absolute()), sha256=sha(canonical))
+    refs["canonical_frames"] = dict(
+        path=str(canonical.absolute()), sha256=sha(canonical)
+    )
     rnpz = path.parent / "short-run.npz"
     np.savez(rnpz, values=physical, time_us=times)
-    run.update(producer=policy["producer"], runs=[dict(row, path=rnpz.name, sha256=sha(rnpz))])
+    run.update(
+        producer=policy["producer"],
+        runs=[dict(row, path=rnpz.name, sha256=sha(rnpz))],
+    )
     update_ref("run_manifest", run)
     origins = np.arange(70000000, 240000000, 1000000, dtype=np.int64)
     at = {int(t): i for i, t in enumerate(times)}
     values = physical.copy()
     values[:, 17] /= 4
     values[:, 18] /= 12
-    X = np.array([[values[at[int(t) + j * 100000]] for j in range(-99, 1)] for t in origins])
+    X = np.array(
+        [
+            [values[at[int(t) + j * 100000]] for j in range(-99, 1)]
+            for t in origins
+        ]
+    )
     Y = np.array(
         [
             [
-                values[at[int(t) + j * 100000]][[FEATURES.index(n) for n in TARGETS]]
+                values[at[int(t) + j * 100000]][
+                    [FEATURES.index(n) for n in TARGETS]
+                ]
                 for j in range(1, 11)
             ]
             for t in origins
@@ -250,30 +299,45 @@ def short_request(folder, *, phase="case"):
         run_id=np.full(len(origins), rid),
         clock_id=np.full(len(origins), "px4-boot"),
     )
-    online.update(producer=policy["producer"], run=row, file=dict(path=onpz.name, sha256=sha(onpz)))
+    online.update(
+        producer=policy["producer"],
+        run=row,
+        file=dict(path=onpz.name, sha256=sha(onpz)),
+    )
     update_ref("online_manifest", online)
     write(path, request)
     return path
 
 
-def test_complete_short180_case_has_positive_full_frames_windows_and_tail(tmp_path, capsys):
+def test_complete_short180_case_has_positive_full_frames_windows_and_tail(
+    tmp_path, capsys
+):
     path = short_request(tmp_path / "unit")
     code = short_cycle.main(path)
     receipt = json.loads(capsys.readouterr().out)
-    assert code == 0 and receipt["status"] == "SYNTHETIC_SHORT180_CASE_INPUTS_CHECKED_NO_FIT"
+    assert (
+        code == 0
+        and receipt["status"] == "SYNTHETIC_SHORT180_CASE_INPUTS_CHECKED_NO_FIT"
+    )
     assert (
         receipt["frames"] == 1801
         and receipt["online"]["windows"] == 170
         and receipt["tail_frames"] == 1
     )
-    assert receipt["actual_data_verified"] is False and receipt["expected_case_denominator"] == 45
+    assert (
+        receipt["actual_data_verified"] is False
+        and receipt["expected_case_denominator"] == 45
+    )
 
 
 def test_short_static_gate_has_no_native6_dependency(tmp_path, capsys):
     path = short_request(tmp_path / "unit", phase="prerequisites")
     code = short_cycle.main(path)
     r = json.loads(capsys.readouterr().out)
-    assert code == 0 and r["status"] == "SYNTHETIC_SHORT180_STATIC_INPUTS_CHECKED_NO_FLIGHTS"
+    assert (
+        code == 0
+        and r["status"] == "SYNTHETIC_SHORT180_STATIC_INPUTS_CHECKED_NO_FLIGHTS"
+    )
 
 
 @pytest.mark.parametrize(
@@ -287,7 +351,9 @@ def test_short_static_gate_has_no_native6_dependency(tmp_path, capsys):
         "revision",
     ],
 )
-def test_short_native_mismatch_is_rejected_without_cropping_or_relabelling(tmp_path, damage):
+def test_short_native_mismatch_is_rejected_without_cropping_or_relabelling(
+    tmp_path, damage
+):
     args, policy_path, policy = native180(tmp_path / "unit")
     raw = tmp_path / "unit/synthetic-0-normal"
     if damage in {"reference_rows", "counter_conflict", "gap"}:
@@ -324,7 +390,9 @@ def test_short_native_mismatch_is_rejected_without_cropping_or_relabelling(tmp_p
 
 def test_short_pair_uses_all180001_weather_ticks(tmp_path):
     args, pp, policy = native180(tmp_path / "unit")
-    assert joint_native.pair(args["pair_checks"][0], policy, fixture=True)["passed"]
+    assert joint_native.pair(args["pair_checks"][0], policy, fixture=True)[
+        "passed"
+    ]
     p = args["pair_checks"][0]
     v = json_file(p)
     v["wind"]["samples"] -= 1
@@ -333,14 +401,26 @@ def test_short_pair_uses_all180001_weather_ticks(tmp_path):
         joint_native.pair(p, policy, fixture=True)
 
 
-def test_short_final_cannot_pass_with_missing_actual_case_receipts(tmp_path, capsys):
+def test_short_final_cannot_pass_with_missing_actual_case_receipts(
+    tmp_path, capsys
+):
     path = short_request(tmp_path / "unit", phase="final")
     assert short_cycle.main(path) == 2
-    assert json.loads(capsys.readouterr().out)["status"] == "BLOCKED_PENDING_INPUT"
+    assert (
+        json.loads(capsys.readouterr().out)["status"] == "BLOCKED_PENDING_INPUT"
+    )
 
 
 @pytest.mark.parametrize(
-    "damage", [None, "drop_case", "empty_windows", "missing_pair", "reused_pair", "stale_scope"]
+    "damage",
+    [
+        None,
+        "drop_case",
+        "empty_windows",
+        "missing_pair",
+        "reused_pair",
+        "stale_scope",
+    ],
 )
 def test_final45_and_nine_pairs_are_required_even_for_a_synthetic_campaign(
     tmp_path, capsys, damage
@@ -369,11 +449,19 @@ def test_final45_and_nine_pairs_are_required_even_for_a_synthetic_campaign(
             ],
         )
         registry["entries"].append(
-            dict(identities=["run:" + rid], forbidden_uses=["fit", "calibration", "final_test"])
+            dict(
+                identities=["run:" + rid],
+                forbidden_uses=["fit", "calibration", "final_test"],
+            )
         )
         evidence = {
             key: r["refs"][key]["sha256"]
-            for key in ("source_manifest", "runtime_manifest", "paired_policy", "capsule")
+            for key in (
+                "source_manifest",
+                "runtime_manifest",
+                "paired_policy",
+                "capsule",
+            )
         }
         if case["case_kind"] != "normal_base":
             evidence["pilot_pair_native_evidence"] = hashlib.sha256(
@@ -407,7 +495,9 @@ def test_final45_and_nine_pairs_are_required_even_for_a_synthetic_campaign(
             evidence["pilot_pair_native_evidence"] = "0" * 64
         if damage == "stale_scope" and index == 0:
             record["task_id"] = "P27_PILOT45_20261107"
-        receipts.append(write(path.parent / ("receipt-" + str(index) + ".json"), record))
+        receipts.append(
+            write(path.parent / ("receipt-" + str(index) + ".json"), record)
+        )
     r["refs"]["ledger"] = write(Path(r["refs"]["ledger"]["path"]), ledger)
     r["refs"]["registry"] = write(Path(r["refs"]["registry"]["path"]), registry)
     r["case_receipts"] = receipts[:-1] if damage == "drop_case" else receipts

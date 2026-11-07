@@ -2,7 +2,6 @@ import json
 
 import numpy as np
 import pytest
-
 from capstone_ai.detection import DomainAlarms
 from execution.common import read, sha, write
 from execution.evaluate import ResidualSummary, evaluate, forecast_errors
@@ -51,7 +50,9 @@ def fixture_evaluation(tmp_path):
                         origin_time_us=origin,
                         decision_time_us=origin + 1_000_000,
                         scores=scores,
-                        signed_residual=np.full((10, 4), index + j / 10).tolist(),
+                        signed_residual=np.full(
+                            (10, 4), index + j / 10
+                        ).tolist(),
                         unscored_reasons=[],
                         **detector.update(scores, origin),
                     )
@@ -64,11 +65,20 @@ def fixture_evaluation(tmp_path):
             (replay / "forecasts.jsonl").write_text('{"fixture":"frozen"}\n')
             write(
                 replay / "summary.json",
-                dict(operational_seconds=6, operational_spans_us={"clock": [0, 6_000_000]}),
+                dict(
+                    operational_seconds=6,
+                    operational_spans_us={"clock": [0, 6_000_000]},
+                ),
             )
-            write(replay / "seal.json", {"files": {p.name: sha(p) for p in replay.glob("*.jsonl")}})
+            write(
+                replay / "seal.json",
+                {"files": {p.name: sha(p) for p in replay.glob("*.jsonl")}},
+            )
     for name in names:
-        write(inference / "calibration" / name / "calibration.json", {"high": [1, 1]})
+        write(
+            inference / "calibration" / name / "calibration.json",
+            {"high": [1, 1]},
+        )
     write(dataset / "manifest.json", {"runs": rows})
     write(
         inference / "result-seal.json",
@@ -78,16 +88,23 @@ def fixture_evaluation(tmp_path):
             truth_join=False,
             status="TRAIN_CALIBRATION_INFERENCE_COMPLETE",
             files={
-                str(p.relative_to(inference)): sha(p) for p in inference.rglob("*") if p.is_file()
+                str(p.relative_to(inference)): sha(p)
+                for p in inference.rglob("*")
+                if p.is_file()
             },
         ),
     )
-    write(tmp_path / "release.json", dict(released=True, slurm_state="COMPLETED", exit_code="0:0"))
+    write(
+        tmp_path / "release.json",
+        dict(released=True, slurm_state="COMPLETED", exit_code="0:0"),
+    )
     config = dict(
         dataset=str(dataset),
         seed=0,
         dataset_files={
-            str(p.relative_to(dataset)): sha(p) for p in dataset.rglob("*") if p.is_file()
+            str(p.relative_to(dataset)): sha(p)
+            for p in dataset.rglob("*")
+            if p.is_file()
         },
     )
 
@@ -97,12 +114,19 @@ def fixture_evaluation(tmp_path):
         elif row["run_id"] == "r1":
             value = (
                 json.dumps(
-                    dict(event_id="step", onset_kind="in_flight_step", applied_time_us=4_000_000)
+                    dict(
+                        event_id="step",
+                        onset_kind="in_flight_step",
+                        applied_time_us=4_000_000,
+                    )
                 )
                 + "\n"
             )
         else:
-            value = json.dumps(dict(event_id="existing", onset_kind="pre_existing")) + "\n"
+            value = (
+                json.dumps(dict(event_id="existing", onset_kind="pre_existing"))
+                + "\n"
+            )
         path.write_text(value)
 
     output = tmp_path / "evaluation"
@@ -130,7 +154,9 @@ def test_accumulator_matches_concatenated_residuals_without_retaining_pool():
         ("rmse", np.sqrt((residuals**2).mean((0, 1)))),
         ("signed_bias", residuals.mean((0, 1))),
     ]:
-        np.testing.assert_allclose(actual[key], expected, rtol=1e-13, atol=1e-14)
+        np.testing.assert_allclose(
+            actual[key], expected, rtol=1e-13, atol=1e-14
+        )
     assert actual["scored_forecasts"] == 71
     assert all(not isinstance(value, list) for value in vars(summary).values())
     assert forecast_errors([])["mae"] is None
@@ -138,29 +164,50 @@ def test_accumulator_matches_concatenated_residuals_without_retaining_pool():
         summary.add([np.zeros((9, 4))])
 
 
-def test_default_reassessment_preserves_fixed_results_and_original_files(tmp_path):
+def test_default_reassessment_preserves_fixed_results_and_original_files(
+    tmp_path,
+):
     evaluation, inference, original = fixture_evaluation(tmp_path)
     before = {
-        str(p): sha(p) for root in (evaluation, inference) for p in root.rglob("*") if p.is_file()
+        str(p): sha(p)
+        for root in (evaluation, inference)
+        for p in root.rglob("*")
+        if p.is_file()
     }
     metrics = reassess(evaluation, tmp_path / "reassessed", {})
-    assert metrics["common_valid_origins"] == original["common_valid_origins"] == 18
+    assert (
+        metrics["common_valid_origins"]
+        == original["common_valid_origins"]
+        == 18
+    )
     for name in metrics["models"]:
         old, new = original["models"][name], metrics["models"][name]
         assert new["anomaly_independent_groups"] == 1
         for key in old.keys() - {"per_run"}:
             assert new[key] == old[key]
         for old_run, new_run in zip(old["per_run"], new["per_run"]):
-            for key in ("events", "metrics", "point_metrics", "forecast_errors"):
+            for key in (
+                "events",
+                "metrics",
+                "point_metrics",
+                "forecast_errors",
+            ):
                 assert new_run[key] == old_run[key]
     assert {path: sha(path) for path in before} == before
-    assert read(evaluation / "report.json")["status"] == "EVALUATION_COMPLETE_PENDING_RELEASE"
-    assert read(evaluation / "evidence.json")["runs"][0]["normal_variation"] == {"wind_mps": 2}
+    assert (
+        read(evaluation / "report.json")["status"]
+        == "EVALUATION_COMPLETE_PENDING_RELEASE"
+    )
+    assert read(evaluation / "evidence.json")["runs"][0][
+        "normal_variation"
+    ] == {"wind_mps": 2}
     with pytest.raises(ValueError, match="fresh output"):
         reassess(evaluation, tmp_path / "reassessed", {})
 
 
-def test_explicit_matching_and_threshold_variants_do_not_refit_models(tmp_path, monkeypatch):
+def test_explicit_matching_and_threshold_variants_do_not_refit_models(
+    tmp_path, monkeypatch
+):
     evaluation, _, _ = fixture_evaluation(tmp_path)
     import capstone_ai.detection_protocol as protocol
     import capstone_ai.training as training
@@ -170,18 +217,31 @@ def test_explicit_matching_and_threshold_variants_do_not_refit_models(tmp_path, 
 
     monkeypatch.setattr(protocol, "fit_calibration", forbidden)
     monkeypatch.setattr(training.Predictor, "__init__", forbidden)
-    new_episode = reassess(evaluation, tmp_path / "episode", {"event_success": "new_episode"})
-    window = reassess(evaluation, tmp_path / "window", {"max_detection_delay_s": 0})
-    high = reassess(evaluation, tmp_path / "high", {"threshold_multiplier": [3, 3]})
+    new_episode = reassess(
+        evaluation, tmp_path / "episode", {"event_success": "new_episode"}
+    )
+    window = reassess(
+        evaluation, tmp_path / "window", {"max_detection_delay_s": 0}
+    )
+    high = reassess(
+        evaluation, tmp_path / "high", {"threshold_multiplier": [3, 3]}
+    )
     for name in new_episode["models"]:
         assert new_episode["models"][name]["events"]["detected"] == 1
         assert window["models"][name]["events"]["detected"] == 1
         assert high["models"][name]["events"]["detected"] == 0
-        assert high["models"][name]["forecast_errors_all_valid"]["scored_forecasts"] == 18
+        assert (
+            high["models"][name]["forecast_errors_all_valid"][
+                "scored_forecasts"
+            ]
+            == 18
+        )
     assert len({r["protocol_sha256"] for r in (new_episode, window, high)}) == 3
 
 
-@pytest.mark.parametrize("tamper", ["truth", "decisions", "protocol", "evidence"])
+@pytest.mark.parametrize(
+    "tamper", ["truth", "decisions", "protocol", "evidence"]
+)
 def test_changed_immutable_evidence_rejected(tmp_path, tamper):
     evaluation, inference, _ = fixture_evaluation(tmp_path)
     target = {

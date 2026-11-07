@@ -24,12 +24,16 @@ def binding(runtime, metadata, adaptation=None):
         model_id=runtime.entry["id"],
         profile_version=fingerprint(metadata["profile"]),
         origin=metadata["origin"],
-        weight_sha256=adaptation["model_sha256"] if adaptation else runtime.entry["weight_sha256"],
+        weight_sha256=adaptation["model_sha256"]
+        if adaptation
+        else runtime.entry["weight_sha256"],
         scaler_sha256=digest(runtime.entry["files"]["scaler.npz"]),
         preprocessing=REVISION,
         live_input=metadata.get("live_input"),
         policy=POLICY,
-        clock="receipt_monotonic" if timing.get("clock") == "receipt_monotonic" else "onboard",
+        clock="receipt_monotonic"
+        if timing.get("clock") == "receipt_monotonic"
+        else "onboard",
         fast_max_age_ms=timing.get("fast_max_age_ms", 200),
         battery_max_age_ms=timing.get("battery_max_age_ms", 350),
     )
@@ -50,7 +54,10 @@ def forecast_scores(observed, predicted, scaler):
 def health_score(components, voltage_scale):
     if components.get("status") != "available":
         raise ValueError("No valid post-initial voltage observations")
-    score = math.hypot(components["short_cell_v"], components["long_cell_v"]) / voltage_scale
+    score = (
+        math.hypot(components["short_cell_v"], components["long_cell_v"])
+        / voltage_scale
+    )
     if not math.isfinite(score) or score < 0:
         raise ValueError("Nonfinite run residual score")
     return score
@@ -70,7 +77,11 @@ def read(root, calibration_id):
     if fingerprint(record) != calibration_id or record.get("schema") != POLICY:
         raise ValueError("Calibration integrity mismatch")
     threshold = record.get("threshold")
-    if type(threshold) not in (int, float) or not math.isfinite(threshold) or threshold < 0:
+    if (
+        type(threshold) not in (int, float)
+        or not math.isfinite(threshold)
+        or threshold < 0
+    ):
         raise ValueError("Invalid calibration threshold")
     return record
 
@@ -85,7 +96,8 @@ def list_calibrations(root):
             dict(
                 record,
                 id=path.stem,
-                active=selected.get(fingerprint(record["binding"])) == path.stem,
+                active=selected.get(fingerprint(record["binding"]))
+                == path.stem,
             )
         )
     return dict(calibrations=rows)
@@ -100,7 +112,9 @@ def select(root, calibration_id, enabled=True):
         index[key] = calibration_id
     else:
         if index.get(key) != calibration_id:
-            raise ValueError("Only the currently selected calibration can be disabled")
+            raise ValueError(
+                "Only the currently selected calibration can be disabled"
+            )
         index.pop(key)
     write(path, index)
     return dict(id=calibration_id, enabled=enabled)
@@ -131,23 +145,35 @@ def fit(root, model_id, manifests, *, bundle, adapted=None, quantile=0.99):
     flights = [load(p, normal=True)[0] for p in manifests]
     distinct_flights(flights)
     if any(m["role"] != "calibration" for m in flights):
-        raise ValueError("학습·모델 선택·평가와 분리한 calibration 비행만 사용하세요.")
+        raise ValueError(
+            "학습·모델 선택·평가와 분리한 calibration 비행만 사용하세요."
+        )
     training_sources = (
-        read_json(Path(adapted) / "result.json")["binding"]["source_sha256"] if adapted else []
+        read_json(Path(adapted) / "result.json")["binding"]["source_sha256"]
+        if adapted
+        else []
     )
     if set(training_sources) & {m["source_sha256"] for m in flights}:
-        raise ValueError("학습/모델 선택에 사용한 원본 비행은 보정에 재사용할 수 없습니다.")
-    results = [analyze(model_id, p, bundle=bundle, adapted=adapted) for p in manifests]
+        raise ValueError(
+            "학습/모델 선택에 사용한 원본 비행은 보정에 재사용할 수 없습니다."
+        )
+    results = [
+        analyze(model_id, p, bundle=bundle, adapted=adapted) for p in manifests
+    ]
     bindings = [r["calibration_binding"] for r in results]
     if any(b != bindings[0] for b in bindings):
-        raise ValueError("Calibration flights require identical clock and preprocessing policy")
+        raise ValueError(
+            "Calibration flights require identical clock and preprocessing policy"
+        )
     arrays = [r["scoring"]["scores"] for r in results]
     minimum = 20 if model_id.startswith("forecast_") else 1
     if any(len(a) < minimum for a in arrays):
         raise ValueError(
             f"Each calibration flight needs at least {minimum} valid scoring observations"
         )
-    per_flight = [float(np.quantile(a, quantile, method="higher")) for a in arrays]
+    per_flight = [
+        float(np.quantile(a, quantile, method="higher")) for a in arrays
+    ]
     threshold = float(np.quantile(per_flight, quantile, method="higher"))
     record = dict(
         schema=POLICY,
@@ -165,7 +191,9 @@ def fit(root, model_id, manifests, *, bundle, adapted=None, quantile=0.99):
         per_flight_quantiles=per_flight,
         unit=results[0]["scoring"]["unit"],
         normal_flights=len(flights),
-        fitted_exceedance_per_flight=[float(np.mean(np.asarray(a) > threshold)) for a in arrays],
+        fitted_exceedance_per_flight=[
+            float(np.mean(np.asarray(a) > threshold)) for a in arrays
+        ],
         validation_status="experimental_normal_only",
         false_alarm_guarantee=False,
         real_aircraft_validated=False,
@@ -184,8 +212,13 @@ def fit(root, model_id, manifests, *, bundle, adapted=None, quantile=0.99):
 def decide(record, scores, *, source_sha256=None):
     a = np.asarray(scores, dtype="f8")
     if record is None:
-        return dict(status="unavailable", reason="일치하는 기체·모델·입력 방식의 보정값 없음")
-    if source_sha256 in record["source_sha256"] + record.get("training_source_sha256", []):
+        return dict(
+            status="unavailable",
+            reason="일치하는 기체·모델·입력 방식의 보정값 없음",
+        )
+    if source_sha256 in record["source_sha256"] + record.get(
+        "training_source_sha256", []
+    ):
         return dict(
             status="unavailable",
             reason="학습·보정에 사용한 비행: 독립 판정에서 제외",
@@ -214,25 +247,37 @@ def annotate(result, metadata, root):
     try:
         record = active(root, result["calibration_binding"])
         decision = decide(
-            record, result["scoring"]["scores"], source_sha256=metadata["source_sha256"]
+            record,
+            result["scoring"]["scores"],
+            source_sha256=metadata["source_sha256"],
         )
         for row in result.get("segment_results", []):
-            row["decision"] = decide(record, row["scores"], source_sha256=metadata["source_sha256"])
+            row["decision"] = decide(
+                record, row["scores"], source_sha256=metadata["source_sha256"]
+            )
     except (ValueError, OSError, KeyError) as error:
-        decision = dict(status="unavailable", reason="보정값 검사 실패: " + str(error))
+        decision = dict(
+            status="unavailable", reason="보정값 검사 실패: " + str(error)
+        )
         for row in result.get("segment_results", []):
             row["decision"] = decision
     result["decision"] = decision
-    result["health_verdict"] = decision["status"] if decision["status"] != "unavailable" else None
+    result["health_verdict"] = (
+        decision["status"] if decision["status"] != "unavailable" else None
+    )
     result["calibration_status"] = (
-        "empirical_calibration_applied" if result["health_verdict"] else "unavailable"
+        "empirical_calibration_applied"
+        if result["health_verdict"]
+        else "unavailable"
     )
     if (
         result["health_verdict"]
         and metadata["role"] == "evaluation"
         and metadata["health"] == "confirmed_normal"
     ):
-        result["normal_alarm_rate"] = decision["exceedances"] / decision["observations"]
+        result["normal_alarm_rate"] = (
+            decision["exceedances"] / decision["observations"]
+        )
         result["alarm_rate_status"] = (
             "independent_normal_observation_exceedance_rate_not_flight_FPR"
         )
@@ -263,7 +308,9 @@ def admit_completed(manifest, output, *, role, health, evidence):
         role=role,
         health=health,
         health_evidence=evidence,
-        admission=dict(source_manifest_sha256=digest(manifest), evidence=evidence),
+        admission=dict(
+            source_manifest_sha256=digest(manifest), evidence=evidence
+        ),
     )
     write(output / "manifest.json", metadata)
     load(output / "manifest.json", normal=role == "calibration")

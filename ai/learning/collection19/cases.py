@@ -4,10 +4,10 @@ import sys
 from pathlib import Path
 
 import numpy as np
-
 from capstone_ai.dataset import feature_transform, target_transform
 from capstone_ai.mapping import FEATURES, TARGETS
 from execution.common import child
+
 from learning.admission19 import (
     check_producer,
     check_protection,
@@ -45,7 +45,9 @@ def verify_source_snapshot(raw, producer):
     expected_sources = json_file(reviewed)["files"]
     runtime = json_file(runtime_path)
     binaries = {
-        "vendor/PX4-Autopilot/build/px4_sitl_default/bin/px4": runtime["px4_binary_sha256"],
+        "vendor/PX4-Autopilot/build/px4_sitl_default/bin/px4": runtime[
+            "px4_binary_sha256"
+        ],
         "build/current/libDronePowertrain.so": runtime["physics_plugin_sha256"],
     }
     transport = "runtime/gazebo-transport/lib/libgz-transport13.so.13.6.0"
@@ -61,12 +63,17 @@ def verify_source_snapshot(raw, producer):
         )
         or snapshot.get("runtime_binary_sha256") != binaries
     ):
-        raise ValueError("Original source/runtime snapshot differs from current producer")
+        raise ValueError(
+            "Original source/runtime snapshot differs from current producer"
+        )
 
 
 def _row_paths(export_root):
     root = Path(export_root).absolute()
-    online, whole = json_file(root / "online.json"), json_file(root / "run.json")
+    online, whole = (
+        json_file(root / "online.json"),
+        json_file(root / "run.json"),
+    )
     if len(whole.get("runs", [])) != 1:
         raise ValueError("A per-case export must contain one whole-run record")
     row, other = online["run"], whole["runs"][0]
@@ -82,7 +89,9 @@ def _row_paths(export_root):
         "origin",
     ):
         if row.get(key) != other.get(key):
-            raise ValueError("Both19 views must have identical scope/mission/source identity")
+            raise ValueError(
+                "Both19 views must have identical scope/mission/source identity"
+            )
     return root, online, whole, row
 
 
@@ -95,8 +104,12 @@ def compare_views(export_root, *, producer, protection):
     check_protection([row], registry, usage="input_check")
     check_producer(online["producer"], producer)
     check_producer(whole["producer"], producer)
-    checked = inspect_run(root / "online.json", expected_producer=producer, protection=registry)
-    iterator = iter_manifests([root / "run.json"], expected_producer=producer, protection=registry)
+    checked = inspect_run(
+        root / "online.json", expected_producer=producer, protection=registry
+    )
+    iterator = iter_manifests(
+        [root / "run.json"], expected_producer=producer, protection=registry
+    )
     run = next(iterator)
     try:
         next(iterator)
@@ -108,14 +121,18 @@ def compare_views(export_root, *, producer, protection):
     if not np.array_equal(run.time_us, times) or not np.allclose(
         run.values, physical, atol=ATOL, rtol=RTOL
     ):
-        raise ValueError("Whole-run array differs from the complete canonical mission/tail")
+        raise ValueError(
+            "Whole-run array differs from the complete canonical mission/tail"
+        )
     config = json_file(ROOT / "ai/learning/history19/preprocessing.json")
     if (
         config.get("nominal_capacity_ah") != 12
         or config.get("history") != 100
         or config.get("future") != 10
     ):
-        raise ValueError("Fixed common19/history100/future10/nameplate contract changed")
+        raise ValueError(
+            "Fixed common19/history100/future10/nameplate contract changed"
+        )
     transformed = feature_transform(physical, config)
     target = target_transform(physical[:, [FEATURES.index(k) for k in TARGETS]])
     source = child(root, online["file"]["path"])
@@ -124,9 +141,15 @@ def compare_views(export_root, *, producer, protection):
     eligible = [
         int(t)
         for t in times
-        if t % 1000000 == 0 and t - 9900000 >= times[0] and t + 1000000 <= times[-1]
+        if t % 1000000 == 0
+        and t - 9900000 >= times[0]
+        and t + 1000000 <= times[-1]
     ]
-    if origins.tolist() != eligible or not eligible or not np.all(segments == segment):
+    if (
+        origins.tolist() != eligible
+        or not eligible
+        or not np.all(segments == segment)
+    ):
         raise ValueError(
             "Online windows omitted/duplicated eligible mission origins or mixed segments"
         )
@@ -165,21 +188,34 @@ def compare_views(export_root, *, producer, protection):
 
 
 def audit_case(
-    export_root, *, producer, protection, policy_bundle, evidence_root, assessment_ref, output=None
+    export_root,
+    *,
+    producer,
+    protection,
+    policy_bundle,
+    evidence_root,
+    assessment_ref,
+    output=None,
 ):
     scope = check_scope()
     policy = json_file(policy_bundle["paired_policy"])
     validate_policy(policy, policy_bundle["native_policy"])
     check_producer(policy["producer"], producer)
-    checked = compare_views(export_root, producer=producer, protection=protection)
+    checked = compare_views(
+        export_root, producer=producer, protection=protection
+    )
     row = checked["row"]
     case = scope["cases"].get(case_key(row["case_id"]))
     if case is None:
         raise ValueError("Run is outside the approved1674 plan")
     check_case_record(row, case)
     fixture = policy.get("fixture_only") is True
-    if row.get("origin") != ("synthetic_unit_fixture" if fixture else "px4_sitl"):
-        raise ValueError("Synthetic data cannot be promoted to actual collection admission")
+    if row.get("origin") != (
+        "synthetic_unit_fixture" if fixture else "px4_sitl"
+    ):
+        raise ValueError(
+            "Synthetic data cannot be promoted to actual collection admission"
+        )
     if not fixture:
         source_evidence(row, producer)
     raw = Path(evidence_root).absolute()
@@ -203,20 +239,35 @@ def audit_case(
     for member in required:
         path = regular(raw / member)
         hashes[member] = sha(path)
-        if integrity[member] != dict(sha256=hashes[member], size=path.stat().st_size):
-            raise ValueError("Evidence capsule differs from original closing: " + member)
-    if state.get("run_id") != row["run_id"] or state.get("status") != "completed":
-        raise ValueError("Native evidence is not the accepted original physical run")
+        if integrity[member] != dict(
+            sha256=hashes[member], size=path.stat().st_size
+        ):
+            raise ValueError(
+                "Evidence capsule differs from original closing: " + member
+            )
+    if (
+        state.get("run_id") != row["run_id"]
+        or state.get("status") != "completed"
+    ):
+        raise ValueError(
+            "Native evidence is not the accepted original physical run"
+        )
     if any(scenario.get(k) != case[k] for k in ("seed", "operation_variation")):
-        raise ValueError("Actual seed/path/wind differs from immutable planned definition")
+        raise ValueError(
+            "Actual seed/path/wind differs from immutable planned definition"
+        )
     if scenario.get("name") != case["scenario"]:
-        raise ValueError("Source scenario/fault differs from immutable planned case")
+        raise ValueError(
+            "Source scenario/fault differs from immutable planned case"
+        )
     for name, member in (
         ("battery_selection", "evaluation/battery-selection.json"),
         ("propulsion_selection", "evaluation/propulsion-selection.json"),
     ):
         if row["source_evidence"][name] != json_file(raw / member):
-            raise ValueError("Selection provenance differs from original native source")
+            raise ValueError(
+                "Selection provenance differs from original native source"
+            )
     if not fixture:
         verify_source_snapshot(raw, producer)
     mission = native_mission_interval(
@@ -225,8 +276,13 @@ def audit_case(
         native_policy_path=policy_bundle["native_policy"],
         run_path=raw / "run.json",
     )
-    if mission != row["mission_interval"] or mission.get("mission_duration_us") != 480000000:
-        raise ValueError("Both19 views must preserve the actual480 native start/LAND/tail")
+    if (
+        mission != row["mission_interval"]
+        or mission.get("mission_duration_us") != 480000000
+    ):
+        raise ValueError(
+            "Both19 views must preserve the actual480 native start/LAND/tail"
+        )
     assessment_path = bound(assessment_ref)
     assessment = json_file(assessment_path)
     if (
@@ -243,7 +299,9 @@ def audit_case(
         )
         or assessment.get("errors")
     ):
-        raise ValueError("Preserved official pre-retirement full assessment must pass all gates")
+        raise ValueError(
+            "Preserved official pre-retirement full assessment must pass all gates"
+        )
     source_binding = assessment.get("source_binding")
     if source_binding is not None:
         expected_binding = dict(
@@ -260,10 +318,16 @@ def audit_case(
         native_policy_path = regular(raw / "evaluation/joint-phase-policy.json")
         if (
             integrity.get("evaluation/joint-phase-policy.json")
-            != dict(sha256=expected_binding["native_policy_sha256"], size=native_policy_path.stat().st_size)
-            or sha(native_policy_path) != expected_binding["native_policy_sha256"]
+            != dict(
+                sha256=expected_binding["native_policy_sha256"],
+                size=native_policy_path.stat().st_size,
+            )
+            or sha(native_policy_path)
+            != expected_binding["native_policy_sha256"]
         ):
-            raise ValueError("Assessment native policy differs from original closing")
+            raise ValueError(
+                "Assessment native policy differs from original closing"
+            )
         consumed = json_file(raw / "evaluation/joint-check.json")
         native_verification = "reused_hash_bound_full_assessment"
     else:
@@ -279,7 +343,9 @@ def audit_case(
         finally:
             sys.dont_write_bytecode = prior
         if consumed != json_file(raw / "evaluation/joint-check.json"):
-            raise ValueError("Preserved CHECK differs from actual native CSV/reference verification")
+            raise ValueError(
+                "Preserved CHECK differs from actual native CSV/reference verification"
+            )
         native_verification = "legacy_receipt_native_csv_rechecked"
     result = dict(
         checked,

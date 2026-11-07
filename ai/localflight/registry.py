@@ -11,9 +11,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from safetensors.torch import load_file
-
 from execution.prepare import npz_headers
+from safetensors.torch import load_file
 
 from .adapt import write
 from .catalog import Catalog, digest, read_json
@@ -26,7 +25,11 @@ MAX_ARCHIVE = 64 * 1024 * 1024
 def fingerprint(value):
     return hashlib.sha256(
         json.dumps(
-            value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
         ).encode()
     ).hexdigest()
 
@@ -56,7 +59,9 @@ def validate(folder, bundle):
         result["status"] != "experimental_adaptation_complete"
         or result["calibration_status"] != "not_calibrated"
     ):
-        raise ValueError("Only complete uncalibrated head adaptations are supported")
+        raise ValueError(
+            "Only complete uncalibrated head adaptations are supported"
+        )
     runtime = Runtime(result["base_model_id"], catalog=Catalog(bundle))
     if result["binding"]["base_sha256"] != runtime.entry["weight_sha256"]:
         raise ValueError("Adapted model base mismatch")
@@ -84,13 +89,17 @@ def validate(folder, bundle):
             or not torch.isfinite(tensor).all()
         ):
             raise ValueError("Invalid model tensor")
-        if not key.startswith("head.") and not torch.equal(tensor, original[key]):
+        if not key.startswith("head.") and not torch.equal(
+            tensor, original[key]
+        ):
             raise ValueError("Frozen model encoder changed")
     runtime.model.load_state_dict(weights, strict=True)
     if runtime.entry["task"] == "forecast":
         runtime.predict_scaled(np.zeros((1, 100, 19), dtype="f4"))
     else:
-        runtime.predict_scaled(np.zeros((1, 110, 19), dtype="f4"), np.array([110], dtype="i8"))
+        runtime.predict_scaled(
+            np.zeros((1, 110, 19), dtype="f4"), np.array([110], dtype="i8")
+        )
     return result
 
 
@@ -142,9 +151,14 @@ def read_model(root, model_id, *, bundle, full=True):
         digest(folder / k) != h for k, h in descriptor["files"].items()
     ):
         raise ValueError("Model package integrity mismatch")
-    result = validate(folder, bundle) if full else read_json(folder / "result.json")
+    result = (
+        validate(folder, bundle) if full else read_json(folder / "result.json")
+    )
     if (
-        any(descriptor[k] != result[k] for k in ("base_model_id", "model_sha256", "origin"))
+        any(
+            descriptor[k] != result[k]
+            for k in ("base_model_id", "model_sha256", "origin")
+        )
         or descriptor["profile"] != result["binding"]["profile"]
     ):
         raise ValueError("Model package metadata mismatch")
@@ -159,14 +173,19 @@ def list_models(root, *, bundle):
     ]
     state = Path(root) / "model-selection.json"
     return dict(
-        models=models, selection=read_json(state) if state.exists() else dict(active={}, history=[])
+        models=models,
+        selection=read_json(state)
+        if state.exists()
+        else dict(active={}, history=[]),
     )
 
 
 def export_model(root, model_id, output, *, bundle):
     read_model(root, model_id, bundle=bundle)
     folder = model_path(root, model_id)
-    with zipfile.ZipFile(output, "x", compression=zipfile.ZIP_DEFLATED) as archive:
+    with zipfile.ZipFile(
+        output, "x", compression=zipfile.ZIP_DEFLATED
+    ) as archive:
         for name in (*FILES, "package.json"):
             archive.write(folder / name, name)
     return dict(path=str(output), sha256=digest(output), model_id=model_id)
@@ -189,16 +208,23 @@ def import_model(root, source, *, bundle):
             or set(names) != {*FILES, "package.json"}
             or sum(e.file_size for e in entries) > MAX_ARCHIVE
         ):
-            raise ValueError("Unexpected model archive entries or uncompressed size")
+            raise ValueError(
+                "Unexpected model archive entries or uncompressed size"
+            )
         folder = Path(tmp)
         for entry in entries:
             if (entry.external_attr >> 16) & 0o170000 == 0o120000:
                 raise ValueError("Symlinks are forbidden in model archives")
-            with archive.open(entry) as src, (folder / entry.filename).open("xb") as dst:
+            with (
+                archive.open(entry) as src,
+                (folder / entry.filename).open("xb") as dst,
+            ):
                 shutil.copyfileobj(src, dst)
         descriptor = read_json(folder / "package.json")
         hashes = {name: digest(folder / name) for name in FILES}
-        if descriptor.get("files") != hashes or descriptor.get("id") != fingerprint(hashes):
+        if descriptor.get("files") != hashes or descriptor.get(
+            "id"
+        ) != fingerprint(hashes):
             raise ValueError("Imported package hash mismatch")
         # No code, pickle or raw flight logs are loaded from the archive.
         return register(root, folder, bundle=bundle)
@@ -216,9 +242,15 @@ def select_model(root, model_id, comparison, *, bundle):
         or measured.get("adapted_sha256") != descriptor["model_sha256"]
         or measured.get("profile_version") != fingerprint(descriptor["profile"])
     ):
-        raise ValueError("An independent local comparison of this model and profile is required")
+        raise ValueError(
+            "An independent local comparison of this model and profile is required"
+        )
     return change_selection(
-        root, descriptor["profile"], descriptor["base_model_id"], model_id, comparison
+        root,
+        descriptor["profile"],
+        descriptor["base_model_id"],
+        model_id,
+        comparison,
     )
 
 
@@ -245,27 +277,43 @@ def change_selection(root, profile, base_model_id, model_id, comparison=None):
 
 def rollback(root, event_id, *, bundle):
     state = read_json(Path(root) / "model-selection.json")
-    event = next((e for e in reversed(state["history"]) if e["id"] == event_id), None)
+    event = next(
+        (e for e in reversed(state["history"]) if e["id"] == event_id), None
+    )
     if event is None or state["active"].get(event["key"]) != event["selected"]:
-        raise ValueError("Selection changed since this event; choose the latest event")
+        raise ValueError(
+            "Selection changed since this event; choose the latest event"
+        )
     # Only undo the latest change for this key, including repeated selections.
-    if next(e for e in reversed(state["history"]) if e["key"] == event["key"])["id"] != event_id:
+    if (
+        next(e for e in reversed(state["history"]) if e["key"] == event["key"])[
+            "id"
+        ]
+        != event_id
+    ):
         raise ValueError("Only the latest selection event can be rolled back")
     old = event["previous"]
     if old:
         read_model(root, old, bundle=bundle)
     descriptor = read_model(root, event["selected"] or old, bundle=bundle)
-    return change_selection(root, descriptor["profile"], descriptor["base_model_id"], old)
+    return change_selection(
+        root, descriptor["profile"], descriptor["base_model_id"], old
+    )
 
 
 def active_folder(root, profile, base_model_id, *, bundle):
     state = Path(root) / "model-selection.json"
     if not state.exists():
         return None
-    model_id = read_json(state)["active"].get(selection_key(profile, base_model_id))
+    model_id = read_json(state)["active"].get(
+        selection_key(profile, base_model_id)
+    )
     if not model_id:
         return None
     descriptor = read_model(root, model_id, bundle=bundle)
-    if descriptor["profile"] != profile or descriptor["base_model_id"] != base_model_id:
+    if (
+        descriptor["profile"] != profile
+        or descriptor["base_model_id"] != base_model_id
+    ):
         raise ValueError("Selected model profile mismatch")
     return model_path(root, model_id)

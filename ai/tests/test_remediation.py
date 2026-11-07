@@ -4,7 +4,6 @@ import copy
 import json
 
 import pytest
-
 from capstone_ai.dataset import validate_split, verify_input
 from capstone_ai.evaluation import flight_bootstrap, match_event
 from capstone_ai.source import dump, sha
@@ -57,12 +56,20 @@ def decision(t, active, start=False):
 
 
 def test_event_matching_preexisting_pre_alarm_and_end():
-    event = {"event_id": "e", "onset_kind": "pre_existing", "physical_onset_time_us": None}
+    event = {
+        "event_id": "e",
+        "onset_kind": "pre_existing",
+        "physical_onset_time_us": None,
+    }
     result = match_event(event, [decision(60000000, True, True)], 5000000)
     assert result["physical_onset_delay_s"] is None
     assert result["recognition_from_observation_start_s"] == 55
     assert result["recognition_from_first_valid_s"] == 0
-    event.update(onset_kind="in_flight_step", physical_onset_time_us=2000000, end_time_us=5000000)
+    event.update(
+        onset_kind="in_flight_step",
+        physical_onset_time_us=2000000,
+        end_time_us=5000000,
+    )
     decisions = [
         decision(1000000, True, True),
         decision(2000000, True),
@@ -84,13 +91,17 @@ def test_bootstrap_identical_exposure():
 def test_asset_replacement_and_missing_conditions():
     from capstone_ai.trend import comparison_gate
 
-    records = json.load(open("simulation/artifacts/remediation-20261014/asset-fixtures/asset-registry.json"))[
-        "records"
-    ]
+    records = json.load(
+        open(
+            "simulation/artifacts/remediation-20261014/asset-fixtures/asset-registry.json"
+        )
+    )["records"]
     a = comparison_gate(records[0], records[1])
     b = comparison_gate(records[1], records[2])
     assert not a["comparable"] and not b["comparable"]
-    assert {"asset_replacement_or_identity_change", "independent_reset"} <= set(a["reasons"])
+    assert {"asset_replacement_or_identity_change", "independent_reset"} <= set(
+        a["reasons"]
+    )
     assert "insufficient_comparable_conditions" in b["reasons"]
     assert "independent_reset" in b["reasons"]
     continuous = copy.deepcopy(records[0])
@@ -100,10 +111,17 @@ def test_asset_replacement_and_missing_conditions():
         start_time_utc="2026-10-01T01:00:00+00:00",
         end_time_utc="2026-10-01T02:00:00+00:00",
     )
-    after = {**continuous, "run_id": "next", "start_time_utc": "2026-10-02T01:00:00+00:00"}
+    after = {
+        **continuous,
+        "run_id": "next",
+        "start_time_utc": "2026-10-02T01:00:00+00:00",
+    }
     assert comparison_gate(continuous, after)["comparable"]
     after["bundle_sha256"] = "changed"
-    assert "bundle_revision_changed" in comparison_gate(continuous, after)["reasons"]
+    assert (
+        "bundle_revision_changed"
+        in comparison_gate(continuous, after)["reasons"]
+    )
 
 
 def test_deadline_bracket_strict_boundary():
@@ -124,7 +142,6 @@ def test_deadline_bracket_strict_boundary():
 
 def test_live_jitter_keeps_origin_cadence_and_unverified_no_score():
     import numpy as np
-
     from capstone_ai.inference import PendingForecasts
 
     p = PendingForecasts(np.ones((10, 4)), [1, 1])
@@ -139,5 +156,6 @@ def test_live_jitter_keeps_origin_cadence_and_unverified_no_score():
     k = p.issue("r", "c", 0, 3000000, None, np.zeros((10, 4)))
     p.advance(5000000, closed=True)
     assert (
-        p.decisions[k]["scores"] is None and p.decisions[k]["state"] == "forecast_timing_unverified"
+        p.decisions[k]["scores"] is None
+        and p.decisions[k]["state"] == "forecast_timing_unverified"
     )

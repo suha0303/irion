@@ -4,7 +4,6 @@ import math
 from pathlib import Path
 
 import pytest
-
 from capstone_ai.mapping import mapped
 from capstone_ai.preprocessing import LowPass, Preprocessor
 from capstone_ai.source import DirectoryTail, Lines, dump, read_json
@@ -21,7 +20,13 @@ def events(seconds=72):
         "vehicle_rates_setpoint": {"roll": 1.1, "pitch": 2.2, "yaw": 3.3},
         "vehicle_attitude": {"q": [1.0, 0.0, 0.0, 0.0]},
         "vehicle_acceleration": {"xyz": [0.0, 0.0, -9.81]},
-        "vehicle_local_position": {"x": 0.0, "y": 0.0, "z": -2.0, "vz": -0.5, "z_valid": 1},
+        "vehicle_local_position": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": -2.0,
+            "vz": -0.5,
+            "z_valid": 1,
+        },
         "vehicle_local_position_setpoint": {"vx": 0.0, "vy": 0.0, "vz": -0.6},
         "battery_status": {"voltage_v": 14.8, "current_a": 6.0},
         "vehicle_status": {"arming_state": 2, "nav_state": 14, "hil_state": 0},
@@ -71,14 +76,18 @@ def test_known_mapping_context_and_window():
     assert len(p.windows[0]["X"]) == 100
     assert len(p.windows[0]["X"][0]) == 19
     assert p.windows[0]["history_times_us"][0] == 50100000
-    assert p.windows[0]["target_times_us"] == list(range(60100000, 61100000, 100000))
+    assert p.windows[0]["target_times_us"] == list(
+        range(60100000, 61100000, 100000)
+    )
 
 
 def test_filter_analytic_step_and_frequency():
     f = LowPass(0, 0.0, 0.08)
     f.update(0, 1.0)
     t = 0.16
-    assert f.at(int(t * 1e6))[1] == pytest.approx(1 - (1 + t / 0.08) * math.exp(-t / 0.08))
+    assert f.at(int(t * 1e6))[1] == pytest.approx(
+        1 - (1 + t / 0.08) * math.exp(-t / 0.08)
+    )
     f.update(70000, 1.0)
     assert f.at(160000)[1] == pytest.approx(1 - 3 * math.exp(-2))
 
@@ -93,7 +102,9 @@ def test_filter_analytic_step_and_frequency():
                 outputs.append(lp.y2)
         return (max(outputs) - min(outputs)) / 2
 
-    assert gain(1) == pytest.approx(1 / (1 + (2 * math.pi * 0.08) ** 2), rel=0.01)
+    assert gain(1) == pytest.approx(
+        1 / (1 + (2 * math.pi * 0.08) ** 2), rel=0.01
+    )
     assert gain(20) < 0.011
 
 
@@ -116,14 +127,18 @@ def test_future_mutation_does_not_change_prefix_or_windows():
 
 def test_late_available_and_old_sample():
     es = list(events(2))
-    delayed = next(copy.deepcopy(e) for e in es if e["topic"] == "battery_status")
+    delayed = next(
+        copy.deepcopy(e) for e in es if e["topic"] == "battery_status"
+    )
     delayed["seq"] = 1000
     delayed["available_time_us"] = 1500000
     delayed["fields"]["voltage_v"] = 999.0
     es.append(delayed)
     es.sort(key=lambda e: e["available_time_us"])
     p = run(es)
-    assert all(f["values"]["pack_voltage"] == pytest.approx(14.8) for f in p.frames)
+    assert all(
+        f["values"]["pack_voltage"] == pytest.approx(14.8) for f in p.frames
+    )
     assert p.diagnostics["old_sample_discarded"] == 2
 
 
@@ -147,7 +162,11 @@ def test_duplicates_reversal_and_snapshot():
 
 
 def test_gap_clock_instance_reset_and_quality():
-    es = [e for e in events() if not (10000000 < e["available_time_us"] < 13000000)]
+    es = [
+        e
+        for e in events()
+        if not (10000000 < e["available_time_us"] < 13000000)
+    ]
     p = run(es)
     assert p.diagnostics["reset_signal_gap"] >= 1
     assert any("stale" in f["quality"].values() for f in p.frames)
@@ -160,7 +179,10 @@ def test_gap_clock_instance_reset_and_quality():
     assert p.frames[-1]["warmup"]
     p2 = Preprocessor(META, CONFIG)
     for e in events(2):
-        if e["topic"] == "vehicle_angular_velocity" and e["sample_time_us"] >= 1000000:
+        if (
+            e["topic"] == "vehicle_angular_velocity"
+            and e["sample_time_us"] >= 1000000
+        ):
             e["instance"] = 1
         p2.ingest(e)
     p2.advance("px4-boot", 2000000)

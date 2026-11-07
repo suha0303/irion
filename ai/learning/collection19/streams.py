@@ -5,9 +5,9 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
-
 from capstone_ai.mapping import FEATURES
 from execution.prepare import npz_headers
+
 from learning.history19.pilot import regular
 
 
@@ -17,7 +17,9 @@ def grid(row):
     last = ((interval["end_us_exclusive"] - 1) // 100000) * 100000
     n = (last - first) // 100000 + 1
     if not 101 <= n <= 10000:
-        raise ValueError("Nonempty full mission after initial100 required; no duration crop")
+        raise ValueError(
+            "Nonempty full mission after initial100 required; no duration crop"
+        )
     return first, last, n
 
 
@@ -33,9 +35,16 @@ def canonical_blocks(path, row, *, chunk=256):
             if len(line) > 65536:
                 raise ValueError("Canonical frame exceeds64KiB")
             f = json.loads(line)
-            if f.get("run_id") != row["run_id"] or type(f.get("time_us")) is not int:
+            if (
+                f.get("run_id") != row["run_id"]
+                or type(f.get("time_us")) is not int
+            ):
                 raise ValueError("Canonical raw/time identity mismatch")
-            if not interval["start_us"] <= f["time_us"] < interval["end_us_exclusive"]:
+            if (
+                not interval["start_us"]
+                <= f["time_us"]
+                < interval["end_us_exclusive"]
+            ):
                 continue
             sid = f.get("segment_id")
             if (
@@ -48,18 +57,26 @@ def canonical_blocks(path, row, *, chunk=256):
                 or f["time_us"] != previous + 100000
                 or f.get("operating_state") != "airborne"
                 or any(
-                    f["quality"].get(k) != "valid" or f["values"].get(k) is None for k in FEATURES
+                    f["quality"].get(k) != "valid" or f["values"].get(k) is None
+                    for k in FEATURES
                 )
                 or not f.get("lineage")
                 or any(
-                    not 0 <= p["sample_time_us"] <= p["available_time_us"] <= f["time_us"]
+                    not 0
+                    <= p["sample_time_us"]
+                    <= p["available_time_us"]
+                    <= f["time_us"]
                     for p in f["lineage"].values()
                 )
             ):
-                raise ValueError("Canonical mission clock/gap/quality/causality mismatch")
+                raise ValueError(
+                    "Canonical mission clock/gap/quality/causality mismatch"
+                )
             vector = [f["values"][k] for k in FEATURES]
             if not np.isfinite(vector).all():
-                raise ValueError("Missing/nonfinite frame cannot enter statistics")
+                raise ValueError(
+                    "Missing/nonfinite frame cannot enter statistics"
+                )
             previous, segment = f["time_us"], sid
             count += 1
             values.append(vector)
@@ -72,9 +89,15 @@ def canonical_blocks(path, row, *, chunk=256):
                 )
                 values, times = [], []
     if count != n or previous != last:
-        raise ValueError("Canonical mission lost original start/LAND tail frames")
+        raise ValueError(
+            "Canonical mission lost original start/LAND tail frames"
+        )
     if values:
-        yield np.asarray(values, dtype=np.float64), np.asarray(times, dtype=np.int64), segment
+        yield (
+            np.asarray(values, dtype=np.float64),
+            np.asarray(times, dtype=np.int64),
+            segment,
+        )
 
 
 def canonical_matrix(path, row):
@@ -104,7 +127,11 @@ def array_blocks(path, key, *, chunk=64):
             else np.lib.format.read_array_header_2_0
         )
         actual_shape, fortran, actual_dtype = reader(stream)
-        if fortran or tuple(actual_shape) != tuple(shape) or actual_dtype != dtype:
+        if (
+            fortran
+            or tuple(actual_shape) != tuple(shape)
+            or actual_dtype != dtype
+        ):
             raise ValueError("Canonical C-order NPY header required")
         width = int(np.prod(shape[1:]))
         for start in range(0, shape[0], chunk):
@@ -112,7 +139,10 @@ def array_blocks(path, key, *, chunk=64):
             body = stream.read(count * width * dtype.itemsize)
             if len(body) != count * width * dtype.itemsize:
                 raise ValueError("Truncated array rows")
-            yield start, np.frombuffer(body, dtype=dtype).reshape(count, *shape[1:])
+            yield (
+                start,
+                np.frombuffer(body, dtype=dtype).reshape(count, *shape[1:]),
+            )
         if stream.read(1):
             raise ValueError("Trailing array bytes")
 
@@ -122,7 +152,9 @@ def write_npz(path, specs):
     path = Path(path)
     if path.exists() or path.is_symlink():
         raise ValueError("Preserve existing dataset members")
-    with zipfile.ZipFile(path, "x", compression=zipfile.ZIP_STORED, allowZip64=True) as archive:
+    with zipfile.ZipFile(
+        path, "x", compression=zipfile.ZIP_STORED, allowZip64=True
+    ) as archive:
         for name, (shape, dtype, blocks) in specs.items():
             dtype = np.dtype(dtype)
             if dtype.hasobject:
@@ -168,7 +200,9 @@ class Moments:
         n = len(values)
         center = values.mean(0)
         delta, total = center - self.mean, self.count + n
-        self.m2 += ((values - center) ** 2).sum(0) + delta**2 * self.count * n / total
+        self.m2 += ((values - center) ** 2).sum(
+            0
+        ) + delta**2 * self.count * n / total
         self.mean += delta * n / total
         self.count = total
 

@@ -49,16 +49,27 @@ def fit_cpu(
         or any(r.role != "normal_train" for r in train)
         or any(r.role != "normal_validation" for r in validation)
     ):
-        raise ValueError("Fit and selection require separate normal_train/normal_validation")
+        raise ValueError(
+            "Fit and selection require separate normal_train/normal_validation"
+        )
     if any(len(r.values) <= 100 for r in [*train, *validation]):
-        raise ValueError("Each fit/validation run needs a post-initial scoring interval")
+        raise ValueError(
+            "Each fit/validation run needs a post-initial scoring interval"
+        )
     if (
         len(train) + len(validation) > 16
         or sum(len(r.values) for r in [*train, *validation]) > 20000
     ):
-        raise ValueError("This is a bounded local development fit, not production training")
-    if any(type(v) is not int or v < 1 for v in (epochs, batch_size)) or type(seed) is not int:
-        raise ValueError("Positive integer epochs/batch size and integer seed required")
+        raise ValueError(
+            "This is a bounded local development fit, not production training"
+        )
+    if (
+        any(type(v) is not int or v < 1 for v in (epochs, batch_size))
+        or type(seed) is not int
+    ):
+        raise ValueError(
+            "Positive integer epochs/batch size and integer seed required"
+        )
     total_steps = math.ceil(len(train) / batch_size) * epochs
     optimization = policy_for("sgd")
     schedule = WarmupCosine(total_steps, learning_rate, optimization)
@@ -81,13 +92,23 @@ def fit_cpu(
     )
     # Bind resume to implementation as well as data/scaler/hyperparameters.
     learning = Path(__file__).parent.parent
-    sources = [Path(__file__).with_name(n) for n in ("models.py", "data.py", "training.py")]
+    sources = [
+        Path(__file__).with_name(n)
+        for n in ("models.py", "data.py", "training.py")
+    ]
     sources += [
-        learning / n for n in ("history19/models.py", "history19/training.py", "optimization.py")
+        learning / n
+        for n in (
+            "history19/models.py",
+            "history19/training.py",
+            "optimization.py",
+        )
     ]
     sources.append(learning.parent / "src/capstone_ai/training.py")
     plan["source_hashes"] = {
-        str(p.relative_to(learning.parent)): hashlib.sha256(p.read_bytes()).hexdigest()
+        str(p.relative_to(learning.parent)): hashlib.sha256(
+            p.read_bytes()
+        ).hexdigest()
         for p in sources
     }
     plan["environment"] = dict(
@@ -100,17 +121,33 @@ def fit_cpu(
     seed_all(seed)
     model = make_model(spec).cpu()
     optimizer = make_optimizer(model.parameters(), learning_rate, optimization)
-    start, step, records, best_loss, best_epoch, best_state = 0, 0, [], None, None, None
+    start, step, records, best_loss, best_epoch, best_state = (
+        0,
+        0,
+        [],
+        None,
+        None,
+        None,
+    )
     if resume is not None:
         resume = Path(resume)
-        if resume.name != "last.pt" or any(p.is_symlink() for p in (resume, *resume.parents)):
-            raise ValueError("Resume requires the saved, regular last.pt checkpoint")
+        if resume.name != "last.pt" or any(
+            p.is_symlink() for p in (resume, *resume.parents)
+        ):
+            raise ValueError(
+                "Resume requires the saved, regular last.pt checkpoint"
+            )
         integrity = json.loads((resume.parent / "integrity.json").read_text())
-        if hashlib.sha256(resume.read_bytes()).hexdigest() != integrity["last.pt"]:
+        if (
+            hashlib.sha256(resume.read_bytes()).hexdigest()
+            != integrity["last.pt"]
+        ):
             raise ValueError("Resume checkpoint integrity mismatch")
         saved = torch.load(resume, map_location="cpu", weights_only=True)
         if saved["plan"] != plan:
-            raise ValueError("Resume data/model/scaler/source/environment/plan changed")
+            raise ValueError(
+                "Resume data/model/scaler/source/environment/plan changed"
+            )
         model.load_state_dict(saved["model"])
         optimizer.load_state_dict(saved["optimizer"])
         start, step, records = saved["epoch"], saved["step"], saved["records"]
@@ -134,7 +171,9 @@ def fit_cpu(
             order = torch.randperm(len(train), generator=generator).tolist()
             train_sum = 0.0
             for offset in range(0, len(order), batch_size):
-                selected = [train[i] for i in order[offset : offset + batch_size]]
+                selected = [
+                    train[i] for i in order[offset : offset + batch_size]
+                ]
                 x, lengths = batch(selected, scaler)
                 for group in optimizer.param_groups:
                     group["lr"] = schedule(step)
@@ -159,11 +198,18 @@ def fit_cpu(
                     validation_sum += float(value) * len(selected)
             value = validation_sum / len(validation)
             records.append(
-                dict(epoch=epoch + 1, train_loss=train_sum / len(train), validation_loss=value)
+                dict(
+                    epoch=epoch + 1,
+                    train_loss=train_sum / len(train),
+                    validation_loss=value,
+                )
             )
             if best_loss is None or value < best_loss:
                 best_loss, best_epoch = value, epoch + 1
-                best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+                best_state = {
+                    k: v.detach().cpu().clone()
+                    for k, v in model.state_dict().items()
+                }
             saved = dict(
                 plan=plan,
                 model=model.state_dict(),
@@ -194,7 +240,9 @@ def fit_cpu(
     )
     write(folder / "result.json", result)
     manifest = {
-        p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in folder.iterdir() if p.is_file()
+        p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in folder.iterdir()
+        if p.is_file()
     }
     write(folder / "integrity.json", manifest)
     return result
@@ -207,11 +255,23 @@ def restore(folder):
     if any(p.is_symlink() for p in (folder, *folder.parents)):
         raise ValueError("Symlink model folder unsupported")
     manifest = json.loads((folder / "integrity.json").read_text())
-    for name in ("plan.json", "model-spec.json", "scaler.json", "model.safetensors"):
+    for name in (
+        "plan.json",
+        "model-spec.json",
+        "scaler.json",
+        "model.safetensors",
+    ):
         if (folder / name).is_symlink():
             raise ValueError("Symlink model file unsupported")
-        if hashlib.sha256((folder / name).read_bytes()).hexdigest() != manifest[name]:
+        if (
+            hashlib.sha256((folder / name).read_bytes()).hexdigest()
+            != manifest[name]
+        ):
             raise ValueError("Saved model integrity mismatch")
-    model = make_model(ModelSpec(**json.loads((folder / "model-spec.json").read_text())))
+    model = make_model(
+        ModelSpec(**json.loads((folder / "model-spec.json").read_text()))
+    )
     model.load_state_dict(load_file(folder / "model.safetensors"))
-    return model.eval(), Scaler.from_dict(json.loads((folder / "scaler.json").read_text()))
+    return model.eval(), Scaler.from_dict(
+        json.loads((folder / "scaler.json").read_text())
+    )

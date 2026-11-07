@@ -5,7 +5,6 @@ import copy
 import numpy as np
 import pytest
 import torch
-
 from execution.common import read
 from learning import benchmark
 from learning.models import ModelSpec
@@ -20,7 +19,9 @@ def arrays(n):
     }
 
 
-def test_validation_is_a_separate_full_pass_without_optimizer_steps(tmp_path, monkeypatch):
+def test_validation_is_a_separate_full_pass_without_optimizer_steps(
+    tmp_path, monkeypatch
+):
     torch.set_num_threads(2)
     step = benchmark.safe_step
     calls = []
@@ -97,7 +98,10 @@ def test_budget_accounts_for_full_epochs_validation_elapsed_and_reserves():
     result = estimate([row()])
     assert result["models"][0]["train_seconds"] == 120
     assert result["models"][0]["validation_seconds"] == 90
-    assert result["projected_total_with_reserves_seconds"] == 100 + 210 * 1.25 + 3600
+    assert (
+        result["projected_total_with_reserves_seconds"]
+        == 100 + 210 * 1.25 + 3600
+    )
     assert result["passed"] is True
     assert estimate([row()], hours=1)["passed"] is False
     assert result["automatic_budget_extension"] is False

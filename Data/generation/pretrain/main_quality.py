@@ -3,7 +3,9 @@
 from . import ai19
 from .common import read, verify
 
-ERROR = "Joint native consumption: Incomplete actual reference consumption coverage"
+ERROR = (
+    "Joint native consumption: Incomplete actual reference consumption coverage"
+)
 
 
 class QualityRejected(ValueError):
@@ -23,7 +25,9 @@ def publish(raw, case, binding, assessment_path, output, *, policy_bundle):
         case_id=case["case_id"],
         producer=binding,
         policy_bundle=policy_bundle,
-        assessment_ref=dict(path=str(assessment_path), sha256=sha(assessment_path)),
+        assessment_ref=dict(
+            path=str(assessment_path), sha256=sha(assessment_path)
+        ),
         output=output,
     )
     import os
@@ -60,7 +64,9 @@ def allowed(cfg, case, prior):
         or value.get("case_id") != case["case_id"]
         or value.get("run_id") != prior.get("run_id")
     ):
-        raise ValueError("Completed retry requires this exact independently rejected case/UUID")
+        raise ValueError(
+            "Completed retry requires this exact independently rejected case/UUID"
+        )
     ai19.ai_modules()
     from learning.collection19 import check_quality_rejection
 

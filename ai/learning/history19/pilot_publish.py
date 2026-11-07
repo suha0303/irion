@@ -12,7 +12,14 @@ from pathlib import Path
 
 from learning.admission19 import MISSION_POLICY, PILOT, check_producer
 
-from .joint_native import ADAPTER, ORIGIN, WIND_CLOCK, check_policy, origin, pair
+from .joint_native import (
+    ADAPTER,
+    ORIGIN,
+    WIND_CLOCK,
+    check_policy,
+    origin,
+    pair,
+)
 from .pilot import (
     RECOVERY_AUTH,
     ROOT,
@@ -56,7 +63,9 @@ def pointer(path, value):
             write_new(archive, previous)
     temporary = None
     try:
-        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, delete=False) as stream:
+        with tempfile.NamedTemporaryFile(
+            mode="w", dir=path.parent, delete=False
+        ) as stream:
             temporary = Path(stream.name)
             stream.write(json.dumps(value, indent=2, allow_nan=False) + "\n")
         os.replace(temporary, path)
@@ -68,8 +77,13 @@ def pointer(path, value):
 def check_outputs(output_dir, handoff, *, fixture=False):
     paths = tuple(Path(p).absolute() for p in (output_dir, handoff))
     if not fixture and any(not p.is_relative_to(ROOT / "ai") for p in paths):
-        raise PublicationPathError("Publication writes only inside the AI project")
-    if any(".." in p.parts or any(q.is_symlink() for q in (p, *p.parents)) for p in paths):
+        raise PublicationPathError(
+            "Publication writes only inside the AI project"
+        )
+    if any(
+        ".." in p.parts or any(q.is_symlink() for q in (p, *p.parents))
+        for p in paths
+    ):
         raise PublicationPathError("No symlink/traversal publication outputs")
     if paths[1].is_relative_to(paths[0]):
         raise PublicationPathError(
@@ -95,7 +109,9 @@ def publish(
     Pair report paths are explicit owner inputs. There is no directory scan or
     guessed filename. Every output snapshot is new; old attempts are preserved.
     """
-    output_dir, handoff = check_outputs(output_dir, handoff, fixture=fixture_only)
+    output_dir, handoff = check_outputs(
+        output_dir, handoff, fixture=fixture_only
+    )
     input_paths = [
         native_completion,
         native_policy,
@@ -105,7 +121,9 @@ def publish(
         *(pair_checks or []),
     ]
     if any(handoff == Path(p).absolute() for p in input_paths if p is not None):
-        raise PublicationPathError("Handoff must never overwrite a publication input")
+        raise PublicationPathError(
+            "Handoff must never overwrite a publication input"
+        )
     base = dict(
         schema="drone-ai.pilot45.data-handoff/1",
         task_id=TASK,
@@ -124,25 +142,43 @@ def publish(
             or authorization.get("authorized", {}).get("pilot_runs") != 45
         ):
             raise Pending("Finite recovery authorization unavailable")
-        native_completion, native_policy = regular(native_completion), regular(native_policy)
+        native_completion, native_policy = (
+            regular(native_completion),
+            regular(native_policy),
+        )
         complete = json_file(native_completion)
-        if str(complete.get("status", "")).upper().startswith(("FAILED", "STOPPED")):
+        if (
+            str(complete.get("status", ""))
+            .upper()
+            .startswith(("FAILED", "STOPPED"))
+        ):
             raise ValueError(
                 "Native development stopped/failed; preserve evidence and stop the finite flow"
             )
         check_native_completion(complete, fixture=fixture_only)
         native = json_file(native_policy)
         check_policy(native)
-        source_manifest, runtime_manifest = regular(source_manifest), regular(runtime_manifest)
+        source_manifest, runtime_manifest = (
+            regular(source_manifest),
+            regular(runtime_manifest),
+        )
         if not fixture_only:
             if (
-                source_manifest != ROOT / "simulation/config/producer-sources.json"
-                or runtime_manifest != ROOT / "simulation/artifacts/runtime-manifest.json"
+                source_manifest
+                != ROOT / "simulation/config/producer-sources.json"
+                or runtime_manifest
+                != ROOT / "simulation/artifacts/runtime-manifest.json"
             ):
-                raise ValueError("Publish against current producer files, not a historical copy")
-            installed = ROOT / "simulation/profiles/collection/joint-phase-policy.json"
+                raise ValueError(
+                    "Publish against current producer files, not a historical copy"
+                )
+            installed = (
+                ROOT / "simulation/profiles/collection/joint-phase-policy.json"
+            )
             if sha(regular(installed)) != sha(native_policy):
-                raise ValueError("Native policy is not the installed current producer policy")
+                raise ValueError(
+                    "Native policy is not the installed current producer policy"
+                )
         producer = json_file(producer_binding)
         check_producer(producer, producer)
         source_hash, runtime_hash, policy_hash = (
@@ -153,7 +189,8 @@ def publish(
         if (
             source_hash != producer["source_manifest_sha256"]
             or runtime_hash != producer["runtime_sha256"]
-            or json_file(runtime_manifest).get("source_manifest_sha256") != source_hash
+            or json_file(runtime_manifest).get("source_manifest_sha256")
+            != source_hash
             or complete.get("source_sha256") != source_hash
             or complete.get("runtime_sha256") != runtime_hash
             or complete.get("policy_sha256") != policy_hash
@@ -168,14 +205,22 @@ def publish(
             "profiles/collection/joint-phase-policy.json",
         ):
             if member not in source.get("files", {}):
-                raise ValueError("Native interface source is absent from final producer manifest")
+                raise ValueError(
+                    "Native interface source is absent from final producer manifest"
+                )
             if (
                 not fixture_only
-                and sha(regular(ROOT / "simulation" / member)) != source["files"][member]
+                and sha(regular(ROOT / "simulation" / member))
+                != source["files"][member]
             ):
-                raise ValueError("Current native interface source differs from seal: " + member)
+                raise ValueError(
+                    "Current native interface source differs from seal: "
+                    + member
+                )
         if not fixture_only:
-            interface = (ROOT / "simulation/sim/src/capstone_sim/cli.py").read_text()
+            interface = (
+                ROOT / "simulation/sim/src/capstone_sim/cli.py"
+            ).read_text()
             if any(
                 token not in interface
                 for token in (
@@ -186,11 +231,17 @@ def publish(
                     "--anomaly-run",
                 )
             ):
-                raise ValueError("Reviewed official phase/pair CLI is absent from installed source")
+                raise ValueError(
+                    "Reviewed official phase/pair CLI is absent from installed source"
+                )
         if pair_checks is None:
-            raise Pending("Owner-provided three actual native pair report paths are missing")
+            raise Pending(
+                "Owner-provided three actual native pair report paths are missing"
+            )
         if len(pair_checks) != 3:
-            raise ValueError("Exactly three independent native pair reports required")
+            raise ValueError(
+                "Exactly three independent native pair reports required"
+            )
         policy = dict(
             schema="drone-ai.paired-source-clock-policy/1",
             status="FROZEN",
@@ -221,7 +272,9 @@ def publish(
             report = json_file(report_path)
             for role in ("normal", "anomaly"):
                 raw = Path(report[role + "_run"])
-                identity = origin(raw / "run.json", policy, fixture=fixture_only)["run_id"]
+                identity = origin(
+                    raw / "run.json", policy, fixture=fixture_only
+                )["run_id"]
                 if identity in ids:
                     raise ValueError(
                         "Development pair control/raw reused; six distinct runs required"
@@ -234,10 +287,17 @@ def publish(
                         origin=reference(raw / ORIGIN),
                     )
                 )
-            comparisons.append(dict(**projected, native_evidence=reference(report_path)))
+            comparisons.append(
+                dict(**projected, native_evidence=reference(report_path))
+            )
         if ids != set(complete["actual_run_ids"]):
-            raise ValueError("Native completion membership differs from the three actual pairs")
-        if sha(source_manifest) != source_hash or sha(runtime_manifest) != runtime_hash:
+            raise ValueError(
+                "Native completion membership differs from the three actual pairs"
+            )
+        if (
+            sha(source_manifest) != source_hash
+            or sha(runtime_manifest) != runtime_hash
+        ):
             raise ValueError("Producer changed during one-shot publication")
         output_dir.mkdir(parents=True, exist_ok=False)
         for name, path in (
@@ -246,7 +306,10 @@ def publish(
         ):
             with (output_dir / name).open("xb") as stream:
                 stream.write(path.read_bytes())
-        for name, value in (("expected-producer.json", producer), ("paired-policy.json", policy)):
+        for name, value in (
+            ("expected-producer.json", producer),
+            ("paired-policy.json", policy),
+        ):
             write_new(output_dir / name, value)
         development = dict(
             schema="drone-ai.paired-development-evidence/1",
@@ -262,7 +325,9 @@ def publish(
             paired_policy=reference(output_dir / "paired-policy.json"),
             native_policy=reference(output_dir / "native-policy.json"),
             native_completion=reference(output_dir / "native-completion.json"),
-            development_receipt=reference(output_dir / "development-receipt.json"),
+            development_receipt=reference(
+                output_dir / "development-receipt.json"
+            ),
         )
         request = dict(
             schema="drone-ai.pilot45.check/1",
@@ -294,7 +359,12 @@ def publish(
                 )
             },
             origin_relative_path=ORIGIN,
-            paired_cli_options=["--phase-policy", ADAPTER, "--paired-case-id", "{paired_case_id}"],
+            paired_cli_options=[
+                "--phase-policy",
+                ADAPTER,
+                "--paired-case-id",
+                "{paired_case_id}",
+            ],
             pair_verifier_argv=[
                 str(ROOT / "simulation/capstone-sim"),
                 "pair-check",
@@ -323,7 +393,11 @@ def publish(
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--spec", type=Path, help="Owner-provided actual native publication paths")
+    parser.add_argument(
+        "--spec",
+        type=Path,
+        help="Owner-provided actual native publication paths",
+    )
     for name in (
         "native-completion",
         "native-policy",
@@ -333,7 +407,9 @@ def main(argv=None):
         "output-dir",
         "handoff",
     ):
-        parser.add_argument("--" + name, required=name in {"output-dir", "handoff"}, type=Path)
+        parser.add_argument(
+            "--" + name, required=name in {"output-dir", "handoff"}, type=Path
+        )
     parser.add_argument("--pair-check", action="append", type=Path)
     args = parser.parse_args(argv)
     try:
@@ -364,18 +440,30 @@ def main(argv=None):
             for name in values:
                 supplied = paths.get(name)
                 if supplied is None:
-                    raise Pending("Native publication input is not delivered: " + name)
+                    raise Pending(
+                        "Native publication input is not delivered: " + name
+                    )
 
                 def path(value):
                     p = Path(value)
-                    return p if p.is_absolute() else args.spec.absolute().parent / p
+                    return (
+                        p
+                        if p.is_absolute()
+                        else args.spec.absolute().parent / p
+                    )
 
                 values[name] = (
-                    [path(v) for v in supplied] if name == "pair_checks" else path(supplied)
+                    [path(v) for v in supplied]
+                    if name == "pair_checks"
+                    else path(supplied)
                 )
         if any(value is None for value in values.values()):
-            raise Pending("Supply --spec or every explicit native publication input")
-        code, result = publish(**values, output_dir=args.output_dir, handoff=args.handoff)
+            raise Pending(
+                "Supply --spec or every explicit native publication input"
+            )
+        code, result = publish(
+            **values, output_dir=args.output_dir, handoff=args.handoff
+        )
     except (Pending, FileNotFoundError) as error:
         code, result = (
             2,

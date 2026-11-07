@@ -9,7 +9,8 @@ from .common import ROOT, identity, now, read, sha, verify, write
 from .pilot19 import audit_one
 
 CONTROL_FILES = {
-    str(ROOT / "Data/generation/pretrain" / name) for name in ("pilot45.py", "pilot_flow.py")
+    str(ROOT / "Data/generation/pretrain" / name)
+    for name in ("pilot45.py", "pilot_flow.py")
 }
 
 
@@ -21,7 +22,10 @@ def compatible_sources(task):
         current = sha(ai19.no_links(name))
         if current != old:
             if name not in CONTROL_FILES:
-                raise ValueError("Integration producer/preprocessor dependency changed: " + name)
+                raise ValueError(
+                    "Integration producer/preprocessor dependency changed: "
+                    + name
+                )
             changed[name] = dict(old_sha256=old, current_sha256=current)
     return dict(verified_entries=len(sources), reviewed_control_changes=changed)
 
@@ -31,7 +35,12 @@ def historical_termination(task):
     cleanup = read(task / "operator/socket-cleanup.json")
     state = read(task / "operator/state.json")
     unit = read(task / "operator/service.json")["unit"]
-    if {"status", "service_result", "errors", "remaining_unremoved_sockets"} - set(cleanup):
+    if {
+        "status",
+        "service_result",
+        "errors",
+        "remaining_unremoved_sockets",
+    } - set(cleanup):
         raise ValueError("Historical cleanup fields missing")
     if (
         cleanup.get("status") != "CLEANUP_COMPLETE"
@@ -39,12 +48,16 @@ def historical_termination(task):
         or cleanup.get("errors")
         or cleanup.get("remaining_unremoved_sockets")
     ):
-        raise ValueError("Historical actual SERVICE_RESULT/cleanup evidence does not pass")
+        raise ValueError(
+            "Historical actual SERVICE_RESULT/cleanup evidence does not pass"
+        )
     if (
         state.get("status") != "INTEGRATION19_QUALITY_PASSED_STOPPED"
         or state.get("service_unit") != unit
     ):
-        raise ValueError("Historical integration completion/owned unit does not match")
+        raise ValueError(
+            "Historical integration completion/owned unit does not match"
+        )
     if identity(state["pid"]) == state["pid_start_ticks"]:
         raise ValueError("Integration worker is still alive")
     cgroup = state["cgroup"].strip().removeprefix("0::/")
@@ -55,16 +68,23 @@ def historical_termination(task):
         raise ValueError("Historical integration cgroup still has processes")
     processes = []
     for stage in ("flight", "prepare", "audit"):
-        paths = sorted((task / "pilot/execution").glob("*/" + stage + "-*.process.json"))
+        paths = sorted(
+            (task / "pilot/execution").glob("*/" + stage + "-*.process.json")
+        )
         if len(paths) != 1:
-            raise ValueError("Exactly one successful integration stage receipt required: " + stage)
+            raise ValueError(
+                "Exactly one successful integration stage receipt required: "
+                + stage
+            )
         p = read(paths[0])
         if (
             p.get("exit_code") != 0
             or p.get("owner_uid") != state["owner_uid"]
             or p.get("cgroup") != state["cgroup"]
         ):
-            raise ValueError("Historical child exit/owner/cgroup evidence failed: " + stage)
+            raise ValueError(
+                "Historical child exit/owner/cgroup evidence failed: " + stage
+            )
         if identity(p["pid"]) == p["pid_start_ticks"]:
             raise ValueError("Historical stage still running")
         processes.append(str(paths[0]))
@@ -84,8 +104,12 @@ def accept(task, output):
     task = task_path(task)
     verify(
         {
-            str(task / "config.json"): (task / "config.sha256").read_text().strip(),
-            str(task / "manifest.json"): (task / "manifest.sha256").read_text().strip(),
+            str(task / "config.json"): (task / "config.sha256")
+            .read_text()
+            .strip(),
+            str(task / "manifest.json"): (task / "manifest.sha256")
+            .read_text()
+            .strip(),
         }
     )
     source = compatible_sources(task)
@@ -97,7 +121,9 @@ def accept(task, output):
         or quality.get("online_available") != 1
         or quality.get("run_available") != 1
     ):
-        raise ValueError("A fully available and audited single integration is required")
+        raise ValueError(
+            "A fully available and audited single integration is required"
+        )
     ledger = read(task / "ledger.json")
     if len(ledger["cases"]) != 1:
         raise ValueError("Exactly one completed integration case required")
@@ -113,7 +139,9 @@ def accept(task, output):
         raise ValueError("Completed actual integration raw required")
     for pid in read(raw / "run.json").get("owned_process_groups", {}).values():
         if identity(pid) is not None:
-            raise ValueError("Recorded native process ID is still live; review ownership")
+            raise ValueError(
+                "Recorded native process ID is still live; review ownership"
+            )
     expected = read(task / "expected-producer.json")
     ai19.ai_modules()
     from learning.admission19 import check_producer
@@ -162,7 +190,9 @@ def validate(task, receipt):
         raise ValueError("Actual integration reuse receipt required")
     verify(value["evidence_sha256"])
     if compatible_sources(task) != value["source_compatibility"]:
-        raise ValueError("Integration source compatibility changed since acceptance")
+        raise ValueError(
+            "Integration source compatibility changed since acceptance"
+        )
     return value
 
 
@@ -172,4 +202,8 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     result = accept(args.task, args.output)
-    print(json.dumps(dict(status=result["status"], raw=result["raw"], new_flights=0)))
+    print(
+        json.dumps(
+            dict(status=result["status"], raw=result["raw"], new_flights=0)
+        )
+    )

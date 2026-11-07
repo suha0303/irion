@@ -7,7 +7,9 @@ from .profiles import eligibility
 
 REVISION = "logged-profile-v2"
 ARDU_MATRIX = "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.0/libraries/AP_Motors/AP_MotorsMatrix.cpp"
-ARDU_PARAMS = "https://ardupilot.org/copter/docs/parameters-Copter-stable-V4.4.0.html"
+ARDU_PARAMS = (
+    "https://ardupilot.org/copter/docs/parameters-Copter-stable-V4.4.0.html"
+)
 PX4_PARAMS = "https://docs.px4.io/main/en/advanced_config/parameter_reference"
 LABELS = {
     "autopilot": "비행제어기 종류",
@@ -37,7 +39,11 @@ def suggest(audit):
     # Legacy inventories lost changed-parameter information; never use them as proof.
     def parameter(name):
         values = histories.get(name, [])
-        if len(values) == 1 and type(values[0]) in (int, float) and math.isfinite(values[0]):
+        if (
+            len(values) == 1
+            and type(values[0]) in (int, float)
+            and math.isfinite(values[0])
+        ):
             return values[0]
         return None
 
@@ -71,7 +77,9 @@ def suggest(audit):
             )
 
     put("autopilot", audit["autopilot"], "로그 형식")
-    firmware = [m for m in audit.get("messages", []) if re.match(r"ArduCopter V\d", m)]
+    firmware = [
+        m for m in audit.get("messages", []) if re.match(r"ArduCopter V\d", m)
+    ]
     if audit["autopilot"] == "ardupilot":
         if len(set(firmware)) == 1:
             put("firmware", firmware[0], "MSG.Message")
@@ -81,9 +89,15 @@ def suggest(audit):
         if parameter("FRAME_CLASS") == 1:
             put("rotor_count", 4, "FRAME_CLASS=1 (Quad)", ARDU_PARAMS)
         functions = {i: parameter(f"SERVO{i}_FUNCTION") for i in range(1, 17)}
-        if reviewed and parameter("FRAME_CLASS") == 1 and parameter("FRAME_TYPE") == 1:
+        if (
+            reviewed
+            and parameter("FRAME_CLASS") == 1
+            and parameter("FRAME_TYPE") == 1
+        ):
             # Standard Quad X: motor 1 FR, 2 RL, 3 FL, 4 RR. Never channel-count inference.
-            positions = dict(front_right=33, rear_left=34, front_left=35, rear_right=36)
+            positions = dict(
+                front_right=33, rear_left=34, front_left=35, rear_right=36
+            )
             mapped = {
                 pos: [i for i, value in functions.items() if value == fn]
                 for pos, fn in positions.items()
@@ -93,7 +107,10 @@ def suggest(audit):
                 for k, v in histories.items()
                 if re.fullmatch(r"SERVO\d+_FUNCTION", k)
             )
-            if all(len(v) == 1 for v in mapped.values()) and not changed_motor_assignment:
+            if (
+                all(len(v) == 1 for v in mapped.values())
+                and not changed_motor_assignment
+            ):
                 put(
                     "motor_channels",
                     {pos: v[0] for pos, v in mapped.items()},
@@ -132,7 +149,11 @@ def suggest(audit):
         unique_instance("battery_instance", "BAT")
         if audit.get("counts", {}).get("RCOU", 0):
             # BIN RCOU is one channel array, not a selectable MAVLink output bank.
-            put("actuator_instance", 0, "BIN RCOU 단일 출력 배열 (실시간 port를 추정한 값이 아님)")
+            put(
+                "actuator_instance",
+                0,
+                "BIN RCOU 단일 출력 배열 (실시간 port를 추정한 값이 아님)",
+            )
         low, high = parameter("MOT_PWM_MIN"), parameter("MOT_PWM_MAX")
         if (
             parameter("MOT_PWM_TYPE") == 0
@@ -153,7 +174,9 @@ def suggest(audit):
                     prefix + "_CAPACITY (mAh → Ah, 기록된 설정값)",
                     ARDU_PARAMS,
                 )
-        reasons["series_cells"] = "셀 수를 하나로 추정할 전압 근거가 부족하거나 설정이 충돌합니다."
+        reasons["series_cells"] = (
+            "셀 수를 하나로 추정할 전압 근거가 부족하거나 설정이 충돌합니다."
+        )
         # This is an application heuristic under a 4.2 V-class lithium assumption,
         # not an ArduPilot cell-count formula or a measured hardware specification.
         # BAT ranges aggregate instances: use them only for a single, matched battery.
@@ -172,7 +195,10 @@ def suggest(audit):
             and audit.get("instances", {}).get("BAT", {}).get("0", 0) >= 100
             and audit.get("field_units", {}).get("BAT.Volt") == ["V"]
             and len(voltage) == 2
-            and all(type(v) in (int, float) and math.isfinite(v) and v > 0 for v in voltage)
+            and all(
+                type(v) in (int, float) and math.isfinite(v) and v > 0
+                for v in voltage
+            )
             and voltage[0] <= voltage[1]
             and all(v is not None and v > 0 for v in settings.values())
             and settings["MOT_BAT_VOLT_MIN"] < settings["MOT_BAT_VOLT_MAX"]
@@ -184,13 +210,18 @@ def suggest(audit):
                 n
                 for n in range(1, 33)
                 if 3.8 <= voltage[1] / n <= 4.3
-                and all(lo <= settings[key] / n <= hi for key, (lo, hi) in bounds.items())
+                and all(
+                    lo <= settings[key] / n <= hi
+                    for key, (lo, hi) in bounds.items()
+                )
             ]
             if len(options) == 1:
                 n = options[0]
                 source = (
                     f"전압 기반 {n}S 추정 · BAT.Volt {voltage[0]:.2f}–{voltage[1]:.2f} V; "
-                    + ", ".join(f"{key}={value:g} V" for key, value in settings.items())
+                    + ", ".join(
+                        f"{key}={value:g} V" for key, value in settings.items()
+                    )
                     + ". 4.2 V급 리튬계 가정, 실물 미확인. 필요하면 수정하세요."
                 )
                 put("series_cells", n, source, ARDU_PARAMS)
@@ -225,11 +256,24 @@ def suggest(audit):
         battery = profile.get("battery_instance")
         if battery is not None:
             prefix = f"BAT{battery + 1}"
-            cells, capacity = parameter(prefix + "_N_CELLS"), parameter(prefix + "_CAPACITY")
+            cells, capacity = (
+                parameter(prefix + "_N_CELLS"),
+                parameter(prefix + "_CAPACITY"),
+            )
             if cells is not None and cells == int(cells) and 1 <= cells <= 32:
-                put("series_cells", int(cells), prefix + "_N_CELLS (명시 설정)", PX4_PARAMS)
+                put(
+                    "series_cells",
+                    int(cells),
+                    prefix + "_N_CELLS (명시 설정)",
+                    PX4_PARAMS,
+                )
             if capacity is not None and capacity > 0:
-                put("capacity_ah", capacity / 1000, prefix + "_CAPACITY (mAh → Ah)", PX4_PARAMS)
+                put(
+                    "capacity_ah",
+                    capacity / 1000,
+                    prefix + "_CAPACITY (mAh → Ah)",
+                    PX4_PARAMS,
+                )
         # PX4 output routing/mixer semantics vary by board/version. Expose parameters
         # for review; do not equate output instance zero with a physical MAIN connector.
         reasons["motor_channels"] = (
@@ -239,14 +283,18 @@ def suggest(audit):
             "선택한 actuator_outputs의 출력 단위·범위를 확인하세요. 관측 최솟값/최댓값은 설정 범위가 아닙니다."
         )
     profile["provenance"] = dict(
-        extraction_revision=REVISION, source_sha256=audit["sha256"], fields=evidence
+        extraction_revision=REVISION,
+        source_sha256=audit["sha256"],
+        fields=evidence,
     )
     e = eligibility(profile)
     questions = [
         dict(
             field=k,
             label=LABELS[k],
-            reason=reasons.get(k, "로그에서 확정할 근거가 부족하거나 설정이 변경되었습니다."),
+            reason=reasons.get(
+                k, "로그에서 확정할 근거가 부족하거나 설정이 변경되었습니다."
+            ),
             candidates=candidates.get(k, []),
         )
         for k in e["log_missing_fields"]

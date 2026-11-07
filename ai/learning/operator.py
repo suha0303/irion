@@ -42,27 +42,38 @@ FILE_VISIBILITY_INTERVAL_SECONDS = 5
 
 
 def command(argv):
-    return subprocess.check_output(argv, text=True, stderr=subprocess.PIPE, timeout=30).strip()
+    return subprocess.check_output(
+        argv, text=True, stderr=subprocess.PIPE, timeout=30
+    ).strip()
 
 
 def own_queue():
-    return command(["squeue", "-h", "-u", str(os.getuid()), "-o", "%A|%j|%T|%N"])
+    return command(
+        ["squeue", "-h", "-u", str(os.getuid()), "-o", "%A|%j|%T|%N"]
+    )
 
 
 def parse_snapshot(identifier, queue, accounting, owner):
-    active = [line for line in queue.splitlines() if line.split("|")[0] == identifier]
+    active = [
+        line for line in queue.splitlines() if line.split("|")[0] == identifier
+    ]
     result = dict(job_id=identifier, released=False, queue=active)
     if active:
         return result
     entries = [
-        line.split("|") for line in accounting.splitlines() if line.split("|")[0] == identifier
+        line.split("|")
+        for line in accounting.splitlines()
+        if line.split("|")[0] == identifier
     ]
     if len(entries) == 1 and entries[0][2].split()[0] in TERMINAL:
         row = entries[0]
         if row[1] != owner:
             raise ValueError("Slurm accounting owner mismatch")
         result.update(
-            released=True, slurm_state=row[2], exit_code=row[3], remaining_own_queue=queue
+            released=True,
+            slurm_state=row[2],
+            exit_code=row[3],
+            remaining_own_queue=queue,
         )
     else:
         result["status"] = "UNKNOWN_ACCOUNTING"
@@ -78,32 +89,52 @@ def snapshot(record):
         ""
         if any(line.split("|")[0] == identifier for line in queue.splitlines())
         else command(
-            ["sacct", "-n", "-P", "-j", identifier, "--format=JobIDRaw,User,State,ExitCode"]
+            [
+                "sacct",
+                "-n",
+                "-P",
+                "-j",
+                identifier,
+                "--format=JobIDRaw,User,State,ExitCode",
+            ]
         )
     )
-    return parse_snapshot(identifier, queue, accounting, pwd.getpwuid(os.getuid()).pw_name)
+    return parse_snapshot(
+        identifier, queue, accounting, pwd.getpwuid(os.getuid()).pw_name
+    )
 
 
 def submit(root, phase, cfg):
     if phase not in {"fit", "evaluate"}:
         raise ValueError("Unknown approved phase")
-    if phase == "evaluate" and comparison.execution_scope(cfg) == "training_only":
-        raise ValueError("Evaluation submission is not authorized for this training-only attempt")
+    if (
+        phase == "evaluate"
+        and comparison.execution_scope(cfg) == "training_only"
+    ):
+        raise ValueError(
+            "Evaluation submission is not authorized for this training-only attempt"
+        )
     if comparison.is_comparison(cfg):
         comparison.config_check(cfg)
     profile = runtime_profile(root, required=True)
     if any(
         profile["slurm"].get(k) != v
-        for k, v in dict(partition="p02", node="DIS01", nodes=1, ntasks=1, gpus=1).items()
+        for k, v in dict(
+            partition="p02", node="DIS01", nodes=1, ntasks=1, gpus=1
+        ).items()
     ):
-        raise ValueError("Only the currently approved p02/DIS01 single-GPU allocation is allowed")
+        raise ValueError(
+            "Only the currently approved p02/DIS01 single-GPU allocation is allowed"
+        )
     receipt = read(root / "prepared.json")
     if sha(root / "server-profile.json") != receipt["server_profile_sha256"]:
         raise ValueError("Selected server profile changed")
     with LOCK.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if own_queue():
-            raise ValueError("Own job already pending/running; no concurrent submission")
+            raise ValueError(
+                "Own job already pending/running; no concurrent submission"
+            )
         verify(root / "input", read(root / "input/inventory.json"))
         if phase == "evaluate":
             require_success(read(root / "release.json"))
@@ -111,13 +142,19 @@ def submit(root, phase, cfg):
                 read(root / "compute/result-seal.json")["status"]
                 != "TRAIN_CALIBRATION_INFERENCE_COMPLETE"
             ):
-                raise ValueError("Complete sealed compute required before evaluation")
+                raise ValueError(
+                    "Complete sealed compute required before evaluation"
+                )
         with (root / (phase + "-submitted.claim")).open("x") as stream:
-            stream.write("One submission; unknown response must not be retried.\n")
+            stream.write(
+                "One submission; unknown response must not be retried.\n"
+            )
         script = root / (phase + "-job.sh")
         script.write_text(
             "#!/bin/bash\nset -euo pipefail\nexport PYTHONPATH="
-            + shlex.quote(str(root / "input/ai") + ":" + str(root / "input/ai/src"))
+            + shlex.quote(
+                str(root / "input/ai") + ":" + str(root / "input/ai/src")
+            )
             + "\n"
             + "export DRONE_AI_PROFILE="
             + shlex.quote(str(root / "server-profile.json"))
@@ -151,7 +188,12 @@ def submit(root, phase, cfg):
             else "--mem=16G",
             "--time="
             + (
-                str(cfg["wall_hours"] if phase == "fit" else cfg["evaluation_hours"]) + ":00:00"
+                str(
+                    cfg["wall_hours"]
+                    if phase == "fit"
+                    else cfg["evaluation_hours"]
+                )
+                + ":00:00"
                 if comparison.is_comparison(cfg)
                 else ("06:00:00" if phase == "fit" else "02:00:00")
             ),
@@ -169,8 +211,15 @@ def submit(root, phase, cfg):
         response = command(argv)
         identifier = response.split(";")[0]
         if not identifier.isdigit():
-            raise ValueError("Unknown submission outcome; no retry: " + response)
-        record = dict(job_id=identifier, uid=os.getuid(), phase=phase, submitted=time.time())
+            raise ValueError(
+                "Unknown submission outcome; no retry: " + response
+            )
+        record = dict(
+            job_id=identifier,
+            uid=os.getuid(),
+            phase=phase,
+            submitted=time.time(),
+        )
         write(root / (phase + "-submission.json"), record)
         return record
 
@@ -181,24 +230,32 @@ def require_success(release):
         or release.get("slurm_state") != "COMPLETED"
         or release.get("exit_code") != "0:0"
     ):
-        raise RuntimeError("Phase did not finish successfully: " + json.dumps(release))
+        raise RuntimeError(
+            "Phase did not finish successfully: " + json.dumps(release)
+        )
     if release.get("remaining_own_queue"):
         raise RuntimeError("Another own job remains; stop before next stage")
 
 
 def wait_release(root, record, state, cfg):
-    deadline = time.monotonic() + (cfg["queue_hours"] + cfg["wall_hours"] + 1) * 3600
+    deadline = (
+        time.monotonic() + (cfg["queue_hours"] + cfg["wall_hours"] + 1) * 3600
+    )
     gaps = 0
     while True:
         result = snapshot(record)
         write(root / (record["phase"] + "-snapshot.json"), result)
-        state.update(updated=time.time(), job_id=record["job_id"], queue=result["queue"])
+        state.update(
+            updated=time.time(), job_id=record["job_id"], queue=result["queue"]
+        )
         write(root / "controller.json", state)
         if result["released"]:
             return result
         gaps = gaps + 1 if result.get("status") == "UNKNOWN_ACCOUNTING" else 0
         if gaps >= 5 or time.monotonic() > deadline:
-            raise RuntimeError("Job release unconfirmed; no continuation or resubmission")
+            raise RuntimeError(
+                "Job release unconfirmed; no continuation or resubmission"
+            )
         time.sleep(30)  # Finite program wait; never calls an LLM.
 
 
@@ -207,20 +264,34 @@ def phase_files_visible(root, phase, cfg):
     if phase == "fit":
         seal = read(root / "compute/result-seal.json")
         training_only = comparison.execution_scope(cfg) == "training_only"
-        expected = "TRAINING_COMPLETE" if training_only else "TRAIN_CALIBRATION_INFERENCE_COMPLETE"
+        expected = (
+            "TRAINING_COMPLETE"
+            if training_only
+            else "TRAIN_CALIBRATION_INFERENCE_COMPLETE"
+        )
         if seal["status"] != expected:
-            raise ValueError("Complete sealed compute required for the approved scope")
+            raise ValueError(
+                "Complete sealed compute required for the approved scope"
+            )
         if training_only and any(
             seal.get(key) is not False
-            for key in ("calibration_started", "inference_started", "evaluation_started")
+            for key in (
+                "calibration_started",
+                "inference_started",
+                "evaluation_started",
+            )
         ):
-            raise ValueError("Training-only result contains unauthorized post-training phases")
+            raise ValueError(
+                "Training-only result contains unauthorized post-training phases"
+            )
         for name in seal["files"]:
             with child(root / "compute", name).open("rb"):
                 pass
     elif phase == "evaluate":
         if comparison.execution_scope(cfg) == "training_only":
-            raise ValueError("Evaluation result is outside this attempt's approved scope")
+            raise ValueError(
+                "Evaluation result is outside this attempt's approved scope"
+            )
         evaluation = read(root / "evaluation/report.json")
         if evaluation["status"] != "REPORT_READY_STOPPED":
             raise ValueError("Final report status verification failed")
@@ -328,14 +399,21 @@ def training_report(root, cfg):
 def control(root):
     root = Path(root).resolve()
     if os.environ.get("SLURM_JOB_ID"):
-        raise ValueError("Coordinator runs in login-node tmux; computations run in Slurm")
-    if Path(sys.executable).resolve() != Path(python_for(root, required=True)).resolve():
+        raise ValueError(
+            "Coordinator runs in login-node tmux; computations run in Slurm"
+        )
+    if (
+        Path(sys.executable).resolve()
+        != Path(python_for(root, required=True)).resolve()
+    ):
         raise ValueError("Approved Python required")
     cfg = read(root / "input/config.json")
     if comparison.is_comparison(cfg):
         comparison.config_check(cfg)
         if not os.environ.get("TMUX"):
-            raise ValueError("Comparison controller must run inside server tmux")
+            raise ValueError(
+                "Comparison controller must run inside server tmux"
+            )
         verify(root / "input", read(root / "input/inventory.json"))
     with (root / "controller.claim").open("x") as stream:
         stream.write("One finite approved lifecycle; no automatic retry.\n")
@@ -355,13 +433,25 @@ def control(root):
         training_only = comparison.execution_scope(cfg) == "training_only"
         for phase in ("fit",) if training_only else ("fit", "evaluate"):
             record = submit(root, phase, cfg)
-            state.update(stage=phase, job_id=record["job_id"], allocation_released=False)
+            state.update(
+                stage=phase, job_id=record["job_id"], allocation_released=False
+            )
             write(root / "controller.json", state)
             release = wait_release(root, record, state, cfg)
-            write(root / ("release.json" if phase == "fit" else "evaluation-release.json"), release)
+            write(
+                root
+                / (
+                    "release.json"
+                    if phase == "fit"
+                    else "evaluation-release.json"
+                ),
+                release,
+            )
             require_success(release)
             wait_phase_files(root, phase, state, cfg)
-        verify(root / "compute", read(root / "compute/result-seal.json")["files"])
+        verify(
+            root / "compute", read(root / "compute/result-seal.json")["files"]
+        )
         if training_only:
             seal = read(root / "compute/result-seal.json")
             if (
@@ -370,7 +460,9 @@ def control(root):
             ):
                 raise ValueError("Training-only output binding mismatch")
             if own_queue():
-                raise ValueError("Own job still pending/running at training completion check")
+                raise ValueError(
+                    "Own job still pending/running at training completion check"
+                )
             training_report(root, cfg)
             status = "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
             write(
@@ -400,7 +492,8 @@ def control(root):
         evaluation = read(root / "evaluation/report.json")
         if (
             evaluation["status"] != "REPORT_READY_STOPPED"
-            or sha(root / "evaluation/metrics.json") != evaluation["metrics_sha256"]
+            or sha(root / "evaluation/metrics.json")
+            != evaluation["metrics_sha256"]
         ):
             raise ValueError("Final report verification failed")
         if own_queue():
@@ -468,21 +561,36 @@ def render(root):
         state
         if preparing
         else optional(
-            root / ("evaluation-progress.json" if phase == "evaluate" else "compute/progress.json")
+            root
+            / (
+                "evaluation-progress.json"
+                if phase == "evaluate"
+                else "compute/progress.json"
+            )
         )
     )
     gpu = optional(root / "compute/gpu-live.json")
     age = time.time() - gpu.get("timestamp", 0)
     cfg = optional(root / "input/config.json")
     final = cfg.get("execution_scope") == "final_test_evaluation"
-    is_comparison = comparison.is_comparison(cfg) or state.get("round") == comparison.REVISION
-    neural_count = (len(cfg.get("variants", [])) or
-                    sum(n.startswith(("lstm_", "transformer_")) for n in cfg.get("models", [])) or 8)
+    is_comparison = (
+        comparison.is_comparison(cfg)
+        or state.get("round") == comparison.REVISION
+    )
+    neural_count = (
+        len(cfg.get("variants", []))
+        or sum(
+            n.startswith(("lstm_", "transformer_"))
+            for n in cfg.get("models", [])
+        )
+        or 8
+    )
     model_count = len(cfg.get("models", [])) or 10
     lines = [
         (
             "Drone AI / 최종 시험324run · 학습 완료 신경망16 + baseline2 · batch256 · seed0"
-            if final else f"Drone AI / 1200run · 신경망{neural_count} · 전체{model_count} · batch256 · seed0"
+            if final
+            else f"Drone AI / 1200run · 신경망{neural_count} · 전체{model_count} · batch256 · seed0"
             if is_comparison
             else "Drone AI / 신경망2 + baseline2 · hidden128 · 2층 · batch256 · seed17"
         ),
@@ -490,7 +598,8 @@ def render(root):
         "─" * 90,
         (
             "흐름: 고정 모델·scaler·임계값 확인 → 최종 추론 → 별도 최종 평가·기록 → 반납·정지 (학습·보정·분석 없음)"
-            if final else f"흐름: {neural_count}구성 메모리·복원·처리율 → {model_count}종 학습·저장 → 반납·정지 (보정·평가 승인 대기)"
+            if final
+            else f"흐름: {neural_count}구성 메모리·복원·처리율 → {model_count}종 학습·저장 → 반납·정지 (보정·평가 승인 대기)"
             if cfg.get("execution_scope") == "training_only"
             else f"흐름: {model_count}종 공통 수치 검사 → 새 정상 보정·개발 추론 → 별도 평가 → 반납·정지 (학습 없음)"
             if cfg.get("execution_scope") == "post_training_evaluation"
@@ -502,12 +611,20 @@ def render(root):
     if progress.get("model"):
         lines.append("모델: " + progress["model"])
     if final:
-        final_completed = optional(root / "compute/progress.json").get("models_completed", 0)
-        lines.append(f"최종 추론 완료 모델: {final_completed}/18 · CPU8병렬 · 결과 비교/해석 자동 실행 없음")
+        final_completed = optional(root / "compute/progress.json").get(
+            "models_completed", 0
+        )
+        lines.append(
+            f"최종 추론 완료 모델: {final_completed}/18 · CPU8병렬 · 결과 비교/해석 자동 실행 없음"
+        )
     if progress.get("parallel_benchmark_active"):
-        lines.append("2·4·8 CPU 병렬 사전시험 · 정상 검증 비행1개 반복 · 본 개발 추론 진행률 아님")
+        lines.append(
+            "2·4·8 CPU 병렬 사전시험 · 정상 검증 비행1개 반복 · 본 개발 추론 진행률 아님"
+        )
     elif progress.get("selected_cpu_workers"):
-        lines.append(f"실측 선택 CPU 작업자: {progress['selected_cpu_workers']}개 · 전 모델 동일 적용")
+        lines.append(
+            f"실측 선택 CPU 작업자: {progress['selected_cpu_workers']}개 · 전 모델 동일 적용"
+        )
     if state.get("file_visibility"):
         lines.append(
             f"파일 가시성: {state['file_visibility_phase']} / {state['file_visibility']} "
@@ -515,7 +632,9 @@ def render(root):
             f"| 현재 할당 반납 {'확인' if state.get('allocation_released') else '대기'}"
         )
     if is_comparison and "models_completed" in progress:
-        lines.append(f"모델 산출물: {len(progress['models_completed'])}/{model_count} (보정·평가는 별도)")
+        lines.append(
+            f"모델 산출물: {len(progress['models_completed'])}/{model_count} (보정·평가는 별도)"
+        )
     if progress.get("gate_phase"):
         lines.append("복원 검사: " + progress["gate_phase"])
     if progress.get("epoch"):
@@ -529,7 +648,9 @@ def render(root):
         lines.append(
             f"현재 단계 [{'█' * int(percent / 5):·<20}] {percent:5.1f}%  {done}/{total} (전체 시간 진행률 아님)"
         )
-    if progress.get("cpu_workers") and str(progress.get("stage", "")).startswith("development_"):
+    if progress.get("cpu_workers") and str(
+        progress.get("stage", "")
+    ).startswith("development_"):
         lines.append(
             f"병렬 처리: GPU 추론1 · CPU 경보/저장{progress['cpu_workers']} · 입력 미리 읽기1 "
             f"| CPU 미완료 {progress.get('cpu_pending', 0)}건 · 완료 건수는 seal 작성 기준"
@@ -538,7 +659,11 @@ def render(root):
         if progress.get(key) is not None:
             lines.append(f"{key}: {progress[key]}")
     if gpu.get("status") == "SAMPLED":
-        label = "실시간" if age < 10 and phase in {"fit", "calibrate", "diagnose", "infer"} else f"마지막 기록 ({age:.0f}초 전)"
+        label = (
+            "실시간"
+            if age < 10 and phase in {"fit", "calibrate", "diagnose", "infer"}
+            else f"마지막 기록 ({age:.0f}초 전)"
+        )
         used = gpu.get("used_mib")
         capacity = gpu.get("total_mib")
         memory = (
@@ -550,7 +675,9 @@ def render(root):
             f"GPU {label}: 연산 {gpu.get('utilization_pct')}% | VRAM {memory} | {gpu.get('power_w')}W | {gpu.get('temperature_c')}°C"
         )
     else:
-        lines.append("GPU 사용률: " + gpu.get("reason", "할당·표본 대기 / 미확인"))
+        lines.append(
+            "GPU 사용률: " + gpu.get("reason", "할당·표본 대기 / 미확인")
+        )
     if state.get("reason") or progress.get("reason"):
         lines.append("사유: " + str(state.get("reason") or progress["reason"]))
     lines += [
@@ -570,16 +697,28 @@ def render(root):
     if (root / "completion.json").exists():
         completion = optional(root / "completion.json")
         if (
-            completion.get("status") == "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
+            completion.get("status")
+            == "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
             and completion.get("fit_release", {}).get("released") is True
         ):
-            lines.append("학습 산출물·실제 할당 반납 확인됨. 보정·평가는 미실행·별도 승인 대기.")
+            lines.append(
+                "학습 산출물·실제 할당 반납 확인됨. 보정·평가는 미실행·별도 승인 대기."
+            )
         elif (
             completion.get("status") == "REPORT_READY_STOPPED"
-            and completion.get("fit_release", completion.get("calibration_release", completion.get("inference_release", {}))).get("released") is True
+            and completion.get(
+                "fit_release",
+                completion.get(
+                    "calibration_release",
+                    completion.get("inference_release", {}),
+                ),
+            ).get("released")
+            is True
             and completion.get("evaluation_release", {}).get("released") is True
         ):
-            lines.append("실제 할당 반납·평가 완료 확인됨. 다음 회차 실행 없음.")
+            lines.append(
+                "실제 할당 반납·평가 완료 확인됨. 다음 회차 실행 없음."
+            )
     return "\n".join(lines)
 
 

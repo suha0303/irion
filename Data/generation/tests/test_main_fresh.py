@@ -4,10 +4,9 @@ import copy
 import json
 
 import pytest
-from test_main_factory import factory
-
 from pretrain import common, pilot45
 from pretrain import main_collection as main
+from test_main_factory import factory
 
 
 def old_campaign(monkeypatch, tmp_path):
@@ -43,7 +42,9 @@ def old_campaign(monkeypatch, tmp_path):
         role=case["role"],
         paired_case_id=case["paired_case_id"],
         group_id=cfg["lineage_namespace"] + ":" + case["group_id"],
-        retry_family_id=cfg["lineage_namespace"] + ":" + case["retry_family_id"],
+        retry_family_id=cfg["lineage_namespace"]
+        + ":"
+        + case["retry_family_id"],
     )
     inventory = dict(
         records=[
@@ -62,28 +63,51 @@ def old_campaign(monkeypatch, tmp_path):
     return task, store, case, record, raw
 
 
-def test_fresh_start_does_not_import_old_raw_attempts_or_modify_old_files(monkeypatch, tmp_path):
+def test_fresh_start_does_not_import_old_raw_attempts_or_modify_old_files(
+    monkeypatch, tmp_path
+):
     previous, store, case, record, raw = old_campaign(monkeypatch, tmp_path)
-    preserved = {str(p): common.sha(p) for p in previous.rglob("*") if p.is_file()}
+    preserved = {
+        str(p): common.sha(p) for p in previous.rglob("*") if p.is_file()
+    }
     preserved[str(raw / "run.json")] = common.sha(raw / "run.json")
-    preserved.update({str(p): common.sha(p) for p in main.CATALOG.glob("*.json")})
-    fresh = main.create("main", storage_root=store, name="fresh-main", fresh=True)
+    preserved.update(
+        {str(p): common.sha(p) for p in main.CATALOG.glob("*.json")}
+    )
+    fresh = main.create(
+        "main", storage_root=store, name="fresh-main", fresh=True
+    )
     cfg = common.read(fresh / "config.json")
-    entries = [common.read(p) for p in common.read(fresh / "ledger.json")["cases"].values()]
-    assert len(entries) == 1674 and all(not e["attempts"] and "run" not in e for e in entries)
-    assert cfg["unit_attempts_max"] == 3 and cfg["lineage_namespace"] != main.NAMESPACE
+    entries = [
+        common.read(p)
+        for p in common.read(fresh / "ledger.json")["cases"].values()
+    ]
+    assert len(entries) == 1674 and all(
+        not e["attempts"] and "run" not in e for e in entries
+    )
+    assert (
+        cfg["unit_attempts_max"] == 3
+        and cfg["lineage_namespace"] != main.NAMESPACE
+    )
     assert common.read(fresh / "budget.json")["new_cases"] == 1674
     assert all(common.sha(p) == h for p, h in preserved.items())
     protection = common.read(fresh / "global-protection.json")
     identities = {x for e in protection["entries"] for x in e["identities"]}
-    assert "run:" + raw.name in identities and "raw-sha256:" + "a" * 64 in identities
+    assert (
+        "run:" + raw.name in identities
+        and "raw-sha256:" + "a" * 64 in identities
+    )
     assert "pair:" + case["paired_case_id"] not in identities
     assert not (fresh / "operator/service.json").exists()
 
 
-def test_new_campaign_cannot_read_or_write_legacy_catalog(monkeypatch, tmp_path):
+def test_new_campaign_cannot_read_or_write_legacy_catalog(
+    monkeypatch, tmp_path
+):
     previous, store, case, _, _ = old_campaign(monkeypatch, tmp_path)
-    fresh = main.create("main", storage_root=store, name="fresh-catalog", fresh=True)
+    fresh = main.create(
+        "main", storage_root=store, name="fresh-catalog", fresh=True
+    )
     original = common.sha(main.CATALOG / (case["case_id"] + ".json"))
     c = main.Campaign(fresh)
     assert "run" not in c.ledger["cases"][case["case_id"]]
@@ -93,19 +117,24 @@ def test_new_campaign_cannot_read_or_write_legacy_catalog(monkeypatch, tmp_path)
 
 
 @pytest.mark.parametrize(
-    "mutation", [None, "cohort", "seed", "uuid", "hash", "retry", "unknown_task"]
+    "mutation",
+    [None, "cohort", "seed", "uuid", "hash", "retry", "unknown_task"],
 )
 def test_fresh_registry_accepts_same_condition_but_keeps_identity_exclusions(
     monkeypatch, tmp_path, mutation
 ):
     previous, store, case, old, raw = old_campaign(monkeypatch, tmp_path)
-    fresh = main.create("main", storage_root=store, name="fresh-registry", fresh=True)
+    fresh = main.create(
+        "main", storage_root=store, name="fresh-registry", fresh=True
+    )
     cfg = common.read(fresh / "config.json")
     new = copy.deepcopy(old)
     new.update(
         task=fresh.name,
         group_id=cfg["lineage_namespace"] + ":" + case["group_id"],
-        retry_family_id=cfg["lineage_namespace"] + ":" + case["retry_family_id"],
+        retry_family_id=cfg["lineage_namespace"]
+        + ":"
+        + case["retry_family_id"],
     )
     if mutation == "cohort":
         new["cohort"] = "final"
@@ -122,9 +151,13 @@ def test_fresh_registry_accepts_same_condition_but_keeps_identity_exclusions(
     assert main.registry_identity(fresh, cfg, old, new) is (mutation is None)
 
 
-def test_same_case_registry_append_uses_real_guard_without_a_child(monkeypatch, tmp_path):
+def test_same_case_registry_append_uses_real_guard_without_a_child(
+    monkeypatch, tmp_path
+):
     previous, store, case, old, raw = old_campaign(monkeypatch, tmp_path)
-    fresh = main.create("main", storage_root=store, name="fresh-append", fresh=True)
+    fresh = main.create(
+        "main", storage_root=store, name="fresh-append", fresh=True
+    )
     registry = tmp_path / "registry.jsonl"
     registry.write_text(json.dumps(old) + "\n")
     monkeypatch.setattr(pilot45, "REGISTRY", registry)
@@ -136,28 +169,40 @@ def test_same_case_registry_append_uses_real_guard_without_a_child(monkeypatch, 
     assert not list(fresh.glob("pilot/execution/*/*.process.json"))
 
 
-def test_second_user_start_creates_another_empty_task_without_claim_reset(monkeypatch, tmp_path):
+def test_second_user_start_creates_another_empty_task_without_claim_reset(
+    monkeypatch, tmp_path
+):
     previous, store, case, old, raw = old_campaign(monkeypatch, tmp_path)
     submitted = []
-    monkeypatch.setattr("pretrain.cli.start", lambda task: submitted.append(task))
+    monkeypatch.setattr(
+        "pretrain.cli.start", lambda task: submitted.append(task)
+    )
     first = main.user_start("main", storage_root=store, name="fresh-a")
     common.write(first / "operator/service.json", dict(unit="fixture-stopped"))
     (first / "operator/claimed").write_text("previous attempt preserved")
     second = main.user_start("main", storage_root=store, name="fresh-b")
     assert submitted == [first, second] and first != second
-    assert (first / "operator/claimed").read_text() == "previous attempt preserved"
+    assert (
+        first / "operator/claimed"
+    ).read_text() == "previous attempt preserved"
     assert common.read(second / "ledger.json")["physical_attempts"] == 0
 
 
-def test_existing_unknown_seed_remains_blocked_before_task_creation(monkeypatch, tmp_path):
+def test_existing_unknown_seed_remains_blocked_before_task_creation(
+    monkeypatch, tmp_path
+):
     home, store = factory(monkeypatch, tmp_path)
     _, plan = main.plans("main")
     case = plan["cases"][0]
     monkeypatch.setattr(
         main,
         "prior_inventory",
-        lambda: dict(records=[dict(seed=case["seed"], scenario=case["scenario"])]),
+        lambda: dict(
+            records=[dict(seed=case["seed"], scenario=case["scenario"])]
+        ),
     )
     with pytest.raises(pilot45.Blocked, match="already exists"):
-        main.create("main", storage_root=store, name="must-not-exist", fresh=True)
+        main.create(
+            "main", storage_root=store, name="must-not-exist", fresh=True
+        )
     assert not (home / "tasks/must-not-exist").exists()

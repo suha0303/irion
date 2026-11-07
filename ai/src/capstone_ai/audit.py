@@ -18,7 +18,9 @@ def audit(run, out):
     metadata = read_json(run / "observations/metadata.json")
     config = read_json(ROOT / "ai/configs/preprocessing.json")
     validate_metadata(metadata, config)
-    validator = jsonschema.Draft202012Validator(read_json(ROOT / "simulation/contracts/raw-event.schema.json"))
+    validator = jsonschema.Draft202012Validator(
+        read_json(ROOT / "simulation/contracts/raw-event.schema.json")
+    )
     topics: Counter[str] = Counter()
     quality: Counter[str] = Counter()
     previous: dict[tuple, dict[str, Any]] = {}
@@ -34,7 +36,13 @@ def audit(run, out):
             e = json.loads(line)
             for error in validator.iter_errors(e):
                 if len(errors) < 20:
-                    errors.append({"line": i + 1, "path": list(error.path), "error": error.message})
+                    errors.append(
+                        {
+                            "line": i + 1,
+                            "path": list(error.path),
+                            "error": error.message,
+                        }
+                    )
             topic = e["topic"]
             key = (e["clock_id"], e["source"], topic, e["instance"])
             topics[topic] += 1
@@ -44,7 +52,9 @@ def audit(run, out):
                 p = previous[key]
                 cadence[topic].append(e["sample_time_us"] - p["sample_time_us"])
                 seq_gaps[topic] += max(0, e["seq"] - p["seq"] - 1)
-                sample_reversals[topic] += e["sample_time_us"] < p["sample_time_us"]
+                sample_reversals[topic] += (
+                    e["sample_time_us"] < p["sample_time_us"]
+                )
             previous[key] = e
             examples.setdefault(topic, e)
 
@@ -83,13 +93,17 @@ def audit(run, out):
         }
     diag = [
         json.loads(s)
-        for s in (run / "observations/diagnostics.jsonl").read_text().splitlines()
+        for s in (run / "observations/diagnostics.jsonl")
+        .read_text()
+        .splitlines()
         if s.strip()
     ]
     skipped: dict[str, int] = {}
     for row in diag:
         if "skipped_total" in row:
-            skipped[row["topic"]] = max(skipped.get(row["topic"], 0), row["skipped_total"])
+            skipped[row["topic"]] = max(
+                skipped.get(row["topic"], 0), row["skipped_total"]
+            )
     result = {
         "passed": not errors,
         "run": str(run),

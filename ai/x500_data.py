@@ -9,7 +9,10 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-DEFAULT_PLAN = Path(__file__).resolve().parent / "experiments/ROUND_001/long-runs-01/plan.json"
+DEFAULT_PLAN = (
+    Path(__file__).resolve().parent
+    / "experiments/ROUND_001/long-runs-01/plan.json"
+)
 ARCHIVED = {"ARCHIVED_PENDING_QUALITY"}
 TERMINAL = {
     "FAILED_DRAINED_STOPPED",
@@ -26,12 +29,21 @@ def estimate_eta(plan, ledger, resources, cases):
     completed = [row for row in cases.values() if row.get("status") in ARCHIVED]
     elapsed = max(ledger.get("elapsed_s", 0), resources.get("elapsed_s", 0))
     completed_work = sum(
-        row.get("case", {}).get("mission_seconds", plan.get("mission_seconds", 0))
+        row.get("case", {}).get(
+            "mission_seconds", plan.get("mission_seconds", 0)
+        )
         for row in completed
     )
     total_work = ledger.get("planned_mission_seconds_total")
-    result = {"seconds": None, "basis": "완료 실측 부족", "confidence": "unavailable"}
-    if ledger.get("status") in {"FAILED_DRAINED_STOPPED", "COLLECTED_WITH_ERRORS_STOPPED"}:
+    result = {
+        "seconds": None,
+        "basis": "완료 실측 부족",
+        "confidence": "unavailable",
+    }
+    if ledger.get("status") in {
+        "FAILED_DRAINED_STOPPED",
+        "COLLECTED_WITH_ERRORS_STOPPED",
+    }:
         result["basis"] = "실패 중지: 완료 ETA를 계산하지 않음"
     elif ledger.get("status") == "COLLECTED_PENDING_QUALITY_STOPPED":
         result.update(seconds=0, basis="수집 종료 기록", confidence="observed")
@@ -42,7 +54,9 @@ def estimate_eta(plan, ledger, resources, cases):
         and elapsed > 0
     ):
         result.update(
-            seconds=max(0, total_work - completed_work) * elapsed / completed_work,
+            seconds=max(0, total_work - completed_work)
+            * elapsed
+            / completed_work,
             basis=f"완료 {len(completed)}run / 명목임무 {completed_work:.0f}s 처리에 wall {elapsed:.0f}s; 병렬·검증·압축 포함 처리율",
             confidence="low; 조건·길이·동시성·저장속도 변화에 민감, 보장/신뢰구간 아님",
         )
@@ -67,7 +81,11 @@ def snapshot(plan_path):
         }
     ledger = load(ledger_path)
     resource_path = execution / "resource-progress.json"
-    resources = load(resource_path) if resource_path.exists() else ledger.get("resources", {})
+    resources = (
+        load(resource_path)
+        if resource_path.exists()
+        else ledger.get("resources", {})
+    )
     cases = ledger.get("cases", {})
     done = sum(row.get("status") in ARCHIVED for row in cases.values())
     total = plan.get("attempts_max", 0)
@@ -76,7 +94,11 @@ def snapshot(plan_path):
         if row.get("status") in ARCHIVED:
             continue
         # Case IDs are untrusted even in a status file. Never read outside execution.
-        if not case_id or Path(case_id).name != case_id or case_id in {".", ".."}:
+        if (
+            not case_id
+            or Path(case_id).name != case_id
+            or case_id in {".", ".."}
+        ):
             continue
         worker = {
             "case": case_id,
@@ -102,7 +124,9 @@ def snapshot(plan_path):
         flight = worker["flight"]
         if flight.get("observed_simulation_elapsed_s") is not None:
             try:
-                producer_time = datetime.fromisoformat(flight["producer_progress_updated_utc"])
+                producer_time = datetime.fromisoformat(
+                    flight["producer_progress_updated_utc"]
+                )
                 fresh = (
                     producer_time.tzinfo is not None
                     and 0 <= time.time() - producer_time.timestamp() <= 10
@@ -121,7 +145,15 @@ def snapshot(plan_path):
             if path.exists():
                 item = load(path)
                 progress.append(
-                    {k: item.get(k) for k in ("stage", "status", "bytes_processed", "elapsed_s")}
+                    {
+                        k: item.get(k)
+                        for k in (
+                            "stage",
+                            "status",
+                            "bytes_processed",
+                            "elapsed_s",
+                        )
+                    }
                 )
         worker["progress"] = progress
         workers.append(worker)
@@ -130,7 +162,9 @@ def snapshot(plan_path):
         "status": ledger.get("status", "UNKNOWN"),
         "total": total,
         "archived": done,
-        "failed": sum(row.get("status") == "FAILED_PRESERVED" for row in cases.values()),
+        "failed": sum(
+            row.get("status") == "FAILED_PRESERVED" for row in cases.values()
+        ),
         "not_started": len(ledger.get("not_started", [])),
         "percent": min(100.0, 100 * done / total) if total else None,
         "workers": workers,
@@ -139,7 +173,9 @@ def snapshot(plan_path):
         "resources": resources,
         "eta": estimate_eta(plan, ledger, resources, cases),
         "measurements": {
-            key: row["assessment"] for key, row in cases.items() if "assessment" in row
+            key: row["assessment"]
+            for key, row in cases.items()
+            if "assessment" in row
         },
         "reason": ledger.get("stop_reason", []),
         "updated_unix": ledger_path.stat().st_mtime,
@@ -154,7 +190,9 @@ def render(state):
     ]
     if state["updated_unix"] is not None:
         age = max(0, time.time() - state["updated_unix"])
-        lines.append(f"ledger 갱신 후 {age:.0f}초 — 파일 기록 기준, 프로세스 생존은 미확인")
+        lines.append(
+            f"ledger 갱신 후 {age:.0f}초 — 파일 기록 기준, 프로세스 생존은 미확인"
+        )
     resources = state.get("resources", {})
     if resources:
         for key, label in (
@@ -167,7 +205,9 @@ def render(state):
         ):
             value = resources.get(key)
             lines.append(
-                f"{label}: {value / 1e9:.2f} GB" if value is not None else f"{label}: 미측정"
+                f"{label}: {value / 1e9:.2f} GB"
+                if value is not None
+                else f"{label}: 미측정"
             )
     for case_id, result in state.get("measurements", {}).items():
         lines.append(
@@ -177,11 +217,20 @@ def render(state):
     if state.get("phase") in {"benchmark", "endurance"}:
         lines.append("사전 gate 자료: 학습·최종 시험 데이터에 포함하지 않음")
     eta = state.get(
-        "eta", {"seconds": None, "basis": "완료 실측 부족", "confidence": "unavailable"}
+        "eta",
+        {
+            "seconds": None,
+            "basis": "완료 실측 부족",
+            "confidence": "unavailable",
+        },
     )
     lines.append(
         "남은 예상시간: "
-        + (f"{eta['seconds'] / 60:.1f}분" if eta["seconds"] is not None else "미확인")
+        + (
+            f"{eta['seconds'] / 60:.1f}분"
+            if eta["seconds"] is not None
+            else "미확인"
+        )
     )
     lines.append(f"  근거: {eta['basis']}; 불확실성: {eta['confidence']}")
     for worker in state["workers"]:
@@ -206,9 +255,13 @@ def render(state):
             )
         for progress in worker["progress"]:
             count = progress.get("bytes_processed") or 0
-            lines.append(f"  {progress['stage']}: {count / 1e6:.1f} MB 처리 / {progress['status']}")
+            lines.append(
+                f"  {progress['stage']}: {count / 1e6:.1f} MB 처리 / {progress['status']}"
+            )
         if worker["status"] == "VERIFYING":
-            lines.append("  producer verify byte 진행: 미확인 (별도 byte sidecar 없음)")
+            lines.append(
+                "  producer verify byte 진행: 미확인 (별도 byte sidecar 없음)"
+            )
         if worker.get("error"):
             lines.append("  " + worker["error"])
     for reason in state["reason"]:
@@ -239,13 +292,22 @@ def main(argv=None):
                 return 2
             if args.command == "watch" and not args.json:
                 print("\033[2J\033[H", end="")
-            print(json.dumps(state, ensure_ascii=False) if args.json else render(state), flush=True)
+            print(
+                json.dumps(state, ensure_ascii=False)
+                if args.json
+                else render(state),
+                flush=True,
+            )
             if (
                 args.command == "status"
                 or state["status"] in TERMINAL
                 or state["status"] == "NOT_STARTED_OR_NO_LEDGER"
             ):
-                return 0 if state["status"] == "COLLECTED_PENDING_QUALITY_STOPPED" else 2
+                return (
+                    0
+                    if state["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
+                    else 2
+                )
             time.sleep(args.interval)
     except KeyboardInterrupt:
         return 0

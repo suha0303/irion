@@ -13,7 +13,6 @@ import time
 from pathlib import Path
 
 import numpy as np
-
 from capstone_ai.mapping import FEATURES
 
 from .analysis import analyze, load_runtime
@@ -26,7 +25,9 @@ from .registry import active_folder
 
 def write(path, value):
     temp = path.with_suffix(".tmp")
-    temp.write_text(json.dumps(value, ensure_ascii=False, allow_nan=False), encoding="utf-8")
+    temp.write_text(
+        json.dumps(value, ensure_ascii=False, allow_nan=False), encoding="utf-8"
+    )
     temp.replace(path)
 
 
@@ -37,11 +38,16 @@ def validate(request):
     e = eligibility(profile)
     if not e["profile_complete"] or not e["model_structure_compatible"]:
         raise ValueError("완전한 4로터 기체 프로파일과 모터 매핑이 필요합니다.")
-    if any(profile.get(k) is None for k in ("battery_instance", "actuator_instance")):
+    if any(
+        profile.get(k) is None
+        for k in ("battery_instance", "actuator_instance")
+    ):
         raise ValueError("배터리 ID와 출력 port를 지정해 주세요.")
     for key in ("source_system", "source_component"):
         if type(request.get(key)) is not int or not 1 <= request[key] <= 255:
-            raise ValueError("MAVLink system/component ID 1..255를 지정해 주세요.")
+            raise ValueError(
+                "MAVLink system/component ID 1..255를 지정해 주세요."
+            )
     if request.get("scope") not in ("real_aircraft", "simulation_test"):
         raise ValueError("실기체 또는 시뮬레이터 통신 시험을 명시하세요.")
     if request.get("imu_message") not in (
@@ -51,12 +57,20 @@ def validate(request):
         "SCALED_IMU3",
     ):
         raise ValueError("IMU 메시지를 선택하세요.")
-    if type(request.get("imu_id")) is not int or not 0 <= request["imu_id"] <= 255:
+    if (
+        type(request.get("imu_id")) is not int
+        or not 0 <= request["imu_id"] <= 255
+    ):
         raise ValueError("MAVLink IMU ID가 필요합니다.")
     catalog = Catalog(request.get("bundle", DEFAULT_BUNDLE))
-    for key, task in (("forecast_model", "forecast"), ("post_model", "run_health")):
+    for key, task in (
+        ("forecast_model", "forecast"),
+        ("post_model", "run_health"),
+    ):
         if catalog.entry(request[key])["task"] != task:
-            raise ValueError("비행 중 모델과 종료 후 모델의 종류가 맞지 않습니다.")
+            raise ValueError(
+                "비행 중 모델과 종료 후 모델의 종류가 맞지 않습니다."
+            )
     return dict(
         valid=True,
         transport="MAVLink telemetry with optional interval requests",
@@ -68,7 +82,11 @@ def validate(request):
 
 
 def number(value):
-    return float(value) if type(value) in (int, float) and math.isfinite(value) else None
+    return (
+        float(value)
+        if type(value) in (int, float) and math.isfinite(value)
+        else None
+    )
 
 
 def decode(name, f, p, request):
@@ -79,7 +97,13 @@ def decode(name, f, p, request):
                 ("roll", "pitch", "body_rate_p", "body_rate_q", "body_rate_r"),
                 (
                     number(f.get(k))
-                    for k in ("roll", "pitch", "rollspeed", "pitchspeed", "yawspeed")
+                    for k in (
+                        "roll",
+                        "pitch",
+                        "rollspeed",
+                        "pitchspeed",
+                        "yawspeed",
+                    )
                 ),
             )
         )
@@ -88,7 +112,10 @@ def decode(name, f, p, request):
         return {
             "rate_target_" + a: None if mask & (1 << i) else number(f.get(k))
             for i, (a, k) in enumerate(
-                zip("pqr", ("body_roll_rate", "body_pitch_rate", "body_yaw_rate"))
+                zip(
+                    "pqr",
+                    ("body_roll_rate", "body_pitch_rate", "body_yaw_rate"),
+                )
             )
         }
     if name == request["imu_message"]:
@@ -97,7 +124,9 @@ def decode(name, f, p, request):
         scale = 1 if name == "HIGHRES_IMU" else 9.80665 / 1000
         return {
             "specific_force_" + a: (
-                number(f.get(a + "acc")) * scale if number(f.get(a + "acc")) is not None else None
+                number(f.get(a + "acc")) * scale
+                if number(f.get(a + "acc")) is not None
+                else None
             )
             for i, a in enumerate("xyz")
             if name != "HIGHRES_IMU" or f.get("fields_updated", 0) & (1 << i)
@@ -130,7 +159,9 @@ def decode(name, f, p, request):
         # and 0 for unused extension slots. Capacity is never inferred here.
         cells = f.get("voltages", [])
         valid = [number(v) for v in cells if v != 65535]
-        extension = [number(v) for v in f.get("voltages_ext", []) if v not in (0, 65535)]
+        extension = [
+            number(v) for v in f.get("voltages_ext", []) if v not in (0, 65535)
+        ]
         voltage = (
             sum(valid + extension) / 1000
             if valid and all(v is not None and v > 0 for v in valid + extension)
@@ -139,7 +170,9 @@ def decode(name, f, p, request):
         current = number(f.get("current_battery"))
         return dict(
             pack_voltage=voltage,
-            pack_current=None if current is None or current == -1 else current / 100,
+            pack_current=None
+            if current is None or current == -1
+            else current / 100,
         )
     return {}
 
@@ -211,17 +244,25 @@ class Mapper:
         if name == "HEARTBEAT":
             expected = 12 if self.profile["autopilot"] == "px4" else 3
             if fields.get("autopilot") != expected:
-                raise ValueError("HEARTBEAT autopilot과 기체 프로파일이 다릅니다.")
+                raise ValueError(
+                    "HEARTBEAT autopilot과 기체 프로파일이 다릅니다."
+                )
             self.heartbeat = t
             mode = fields.get("base_mode")
-            self.armed = bool(mode & 128) if type(mode) is int and 0 <= mode <= 255 else None
+            self.armed = (
+                bool(mode & 128)
+                if type(mode) is int and 0 <= mode <= 255
+                else None
+            )
             self.disarm.accept(self.armed, t)
         events = []
         updates = decode(name, fields, self.profile, self.request)
         clock = fields.get("time_boot_ms", fields.get("time_usec"))
         key = (name, fields.get("id"), fields.get("port"))
         old = self.previous.get(key)
-        if item.get("boundary") or (old is not None and clock is not None and clock < old):
+        if item.get("boundary") or (
+            old is not None and clock is not None and clock < old
+        ):
             events.append((t, t, {"__reset__": True}))
             self.previous.clear()
             self.resets += 1
@@ -240,7 +281,13 @@ def completed(events, journal, output, request, origin, *, end_us=None):
     """Archive retained segments in bounded packages; analyze each without gap bridging."""
     from .run_summary import aggregate
 
-    end_us = end_us if end_us is not None else events[-1][0] + 100000 if events else 0
+    end_us = (
+        end_us
+        if end_us is not None
+        else events[-1][0] + 100000
+        if events
+        else 0
+    )
     context = dict(
         start_us=0,
         end_us=end_us,
@@ -258,7 +305,9 @@ def completed(events, journal, output, request, origin, *, end_us=None):
                 [],
                 context=context,
                 spans=[],
-                exclusions=[dict(start_us=0, end_us=end_us, reason="too_short")],
+                exclusions=[
+                    dict(start_us=0, end_us=end_us, reason="too_short")
+                ],
             ),
         )
     values, times, timing = causal_frames(events, 0, end_us)
@@ -278,7 +327,11 @@ def completed(events, journal, output, request, origin, *, end_us=None):
             folder.mkdir()
             # Immutable local hard links avoid copying the entire flight per segment.
             os.link(output / "source.jsonl", folder / "source.jsonl")
-            np.savez(folder / "frames.npz", values=values[indices], time_us=times[indices])
+            np.savez(
+                folder / "frames.npz",
+                values=values[indices],
+                time_us=times[indices],
+            )
             m = dict(
                 schema="drone.real-common19/1",
                 preprocessing_revision=REVISION,
@@ -286,7 +339,9 @@ def completed(events, journal, output, request, origin, *, end_us=None):
                 units="physical_pack_V_A",
                 profile=request["profile"],
                 origin=origin,
-                live_input=dict(imu_message=request["imu_message"], imu_id=request["imu_id"]),
+                live_input=dict(
+                    imu_message=request["imu_message"], imu_id=request["imu_id"]
+                ),
                 role="evaluation",
                 health="unknown",
                 health_evidence="",
@@ -296,11 +351,14 @@ def completed(events, journal, output, request, origin, *, end_us=None):
                 mapping_scope="Declared MAVLink receipt-clock adapter; real performance unverified",
                 source_path="source.jsonl",
                 source_sha256=source_hash,
-                file=dict(path="frames.npz", sha256=digest(folder / "frames.npz")),
+                file=dict(
+                    path="frames.npz", sha256=digest(folder / "frames.npz")
+                ),
                 timing=dict(
                     timing,
                     clock="receipt_monotonic",
-                    coverage=timing["complete_frames"] / timing["requested_frames"],
+                    coverage=timing["complete_frames"]
+                    / timing["requested_frames"],
                 ),
                 run_context=context,
             )
@@ -312,7 +370,9 @@ def completed(events, journal, output, request, origin, *, end_us=None):
                 adapted=request.get("post_adapted"),
                 data_root=request.get("data_root"),
             )
-            reports.append(dict(manifest=str(folder / "manifest.json"), analysis=result))
+            reports.append(
+                dict(manifest=str(folder / "manifest.json"), analysis=result)
+            )
     return dict(
         status="complete" if reports else "insufficient_data",
         analyses=reports,
@@ -322,11 +382,19 @@ def completed(events, journal, output, request, origin, *, end_us=None):
         run_summary=aggregate(
             [r["analysis"] for r in reports],
             context=context,
-            spans=[s for r in reports for s in r["analysis"]["run_evidence"]["spans"]],
+            spans=[
+                s
+                for r in reports
+                for s in r["analysis"]["run_evidence"]["spans"]
+            ],
             exclusions=[
                 *timing["excluded_intervals"],
                 *[
-                    dict(start_us=s["start_us"], end_us=s["end_us"], reason="too_short")
+                    dict(
+                        start_us=s["start_us"],
+                        end_us=s["end_us"],
+                        reason="too_short",
+                    )
                     for s in timing["candidate_segments"]
                     if not s["usable"]
                 ],
@@ -338,7 +406,9 @@ def completed(events, journal, output, request, origin, *, end_us=None):
     )
 
 
-def arrived_decision(pending, values, times, segment_start, reset, cells, scaler, calibration):
+def arrived_decision(
+    pending, values, times, segment_start, reset, cells, scaler, calibration
+):
     """Score only an arrived exact target within the same uninterrupted segment."""
     from .calibration import decide, forecast_scores
 
@@ -357,7 +427,9 @@ def arrived_decision(pending, values, times, segment_start, reset, cells, scaler
         observed = values[index, [4, 5, 6, 17]].copy()
         observed[3] /= cells
         scaled = (observed - scaler["y_mean"]) / scaler["y_scale"]
-        score = forecast_scores(scaled[None], np.array(prior["scaled"])[None], scaler)
+        score = forecast_scores(
+            scaled[None], np.array(prior["scaled"])[None], scaler
+        )
         decision = dict(decide(calibration, score), time_us=prior["due"])
     return future, decision
 
@@ -382,7 +454,10 @@ def run(request):
     bundle = request.get("bundle", DEFAULT_BUNDLE)
     adapted = (
         active_folder(
-            request["data_root"], request["profile"], request["forecast_model"], bundle=bundle
+            request["data_root"],
+            request["profile"],
+            request["forecast_model"],
+            bundle=bundle,
         )
         if request.get("use_active")
         else None
@@ -392,7 +467,10 @@ def run(request):
     )
     post_adapted = (
         active_folder(
-            request["data_root"], request["profile"], request["post_model"], bundle=bundle
+            request["data_root"],
+            request["profile"],
+            request["post_model"],
+            bundle=bundle,
         )
         if request.get("use_active")
         else None
@@ -408,12 +486,16 @@ def run(request):
     state["adapted_sha256"] = adaptation["model_sha256"] if adaptation else None
     from .calibration import active, binding
 
-    metadata["live_input"] = dict(imu_message=request["imu_message"], imu_id=request["imu_id"])
+    metadata["live_input"] = dict(
+        imu_message=request["imu_message"], imu_id=request["imu_id"]
+    )
     metadata["timing"] = dict(
         clock="receipt_monotonic", fast_max_age_ms=200, battery_max_age_ms=350
     )
     try:
-        calibration = active(request["data_root"], binding(runtime, metadata, adaptation))
+        calibration = active(
+            request["data_root"], binding(runtime, metadata, adaptation)
+        )
         calibration_error = None
     except (ValueError, KeyError, OSError) as error:
         calibration, calibration_error = None, str(error)
@@ -452,34 +534,53 @@ def run(request):
                     prediction=None,
                     decision=dict(
                         status="unavailable",
-                        reason=calibration_error or "유효한 미래 실측 도착 대기",
+                        reason=calibration_error
+                        or "유효한 미래 실측 도착 대기",
                     ),
                     missing_features=[],
                     updated_at=time.time(),
                 )
-                if mapper.heartbeat is None or mapper.last_us - mapper.heartbeat > 3_000_000:
-                    state.update(status="waiting", message="일치하는 HEARTBEAT 수신 대기")
+                if (
+                    mapper.heartbeat is None
+                    or mapper.last_us - mapper.heartbeat > 3_000_000
+                ):
+                    state.update(
+                        status="waiting", message="일치하는 HEARTBEAT 수신 대기"
+                    )
                 elif time.monotonic() - last_data > 1 or (
                     mapper.last_receipt is not None
-                    and time.monotonic_ns() - mapper.last_receipt > 1_000_000_000
+                    and time.monotonic_ns() - mapper.last_receipt
+                    > 1_000_000_000
                 ):
-                    state.update(status="stale", message="수신 중단 · 예측 보류")
+                    state.update(
+                        status="stale", message="수신 중단 · 예측 보류"
+                    )
                 elif mapper.last_us >= 11_000_000:
                     start = max(0, mapper.last_us - 14_000_000)
                     recent = [e for e in events if e[0] >= start]
-                    values, times, report = causal_frames(recent, start, mapper.last_us + 1)
+                    values, times, report = causal_frames(
+                        recent, start, mapper.last_us + 1
+                    )
                     spans = report["candidate_segments"]
                     last = spans[-1] if spans else None
                     state["missing_features"] = [
-                        name for name, value in zip(FEATURES, values[-1]) if not np.isfinite(value)
+                        name
+                        for name, value in zip(FEATURES, values[-1])
+                        if not np.isfinite(value)
                     ]
-                    if last and last["end_index"] == len(times) and last["frames"] >= 100:
+                    if (
+                        last
+                        and last["end_index"] == len(times)
+                        and last["frames"] >= 100
+                    ):
                         x = values[-100:].copy()
                         x[:, 17] /= request["profile"]["series_cells"]
                         x[:, 18] /= request["profile"]["capacity_ah"]
                         s = runtime.scaler
                         y = runtime.predict_scaled(
-                            ((x - s["x_mean"]) / s["x_scale"]).astype("f4")[None]
+                            ((x - s["x_mean"]) / s["x_scale"]).astype("f4")[
+                                None
+                            ]
                         )[0]
                         pending_predictions, decision = arrived_decision(
                             pending_predictions,
@@ -535,16 +636,21 @@ def run(request):
                 ):
                     write(
                         folder / "auto-finish.json",
-                        dict(reason="confirmed_disarm", receipt_us=mapper.last_us),
+                        dict(
+                            reason="confirmed_disarm", receipt_us=mapper.last_us
+                        ),
                     )
                 if (folder / "finish").exists():
                     if pending:
-                        raise ValueError("종료 저널의 마지막 행이 완전하지 않습니다.")
+                        raise ValueError(
+                            "종료 저널의 마지막 행이 완전하지 않습니다."
+                        )
                     state.update(
                         status="analyzing",
                         prediction=None,
                         decision=dict(
-                            status="unavailable", reason="실시간 판정 종료 · 비행 후 분석 중"
+                            status="unavailable",
+                            reason="실시간 판정 종료 · 비행 후 분석 중",
                         ),
                         message="기록 종료 · 구간별 비행 후 분석 중",
                     )
@@ -555,7 +661,9 @@ def run(request):
                         folder / "completed",
                         request,
                         admitted["origin"],
-                        end_us=mapper.last_us + 100000 if mapper.base is not None else 0,
+                        end_us=mapper.last_us + 100000
+                        if mapper.base is not None
+                        else 0,
                     )
                     write(folder / "result.json", result)
                     state.update(
@@ -566,7 +674,8 @@ def run(request):
                         if (folder / "auto-finish.json").exists()
                         else "manual",
                         decision=dict(
-                            status="unavailable", reason="실시간 판정 종료 · 아래 비행 후 결과 확인"
+                            status="unavailable",
+                            reason="실시간 판정 종료 · 아래 비행 후 결과 확인",
                         ),
                     )
                     write(path, state)

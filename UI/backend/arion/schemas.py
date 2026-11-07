@@ -25,7 +25,9 @@ class DetectionResult(BaseModel):
     valid_until_ms: float = Field(ge=0)
     model_version: str = Field(min_length=1, max_length=100)
     status: Literal["normal", "suspect", "unavailable", "warming_up"]
-    target: Literal["battery", "powertrain", "motor_1", "motor_2", "motor_3", "motor_4"]
+    target: Literal[
+        "battery", "powertrain", "motor_1", "motor_2", "motor_3", "motor_4"
+    ]
     score: float | None = None
     threshold: float | None = None
     title: str = Field(min_length=1, max_length=160)
@@ -35,9 +37,18 @@ class DetectionResult(BaseModel):
 
     @model_validator(mode="after")
     def ordered_times(self):
-        if not self.start_ms <= self.end_ms <= self.decided_at_ms <= self.valid_until_ms:
-            raise ValueError("start ≤ end ≤ decided_at ≤ valid_until 순서가 필요합니다.")
-        if self.status in ("normal", "suspect") and (self.score is None or self.threshold is None):
+        if (
+            not self.start_ms
+            <= self.end_ms
+            <= self.decided_at_ms
+            <= self.valid_until_ms
+        ):
+            raise ValueError(
+                "start ≤ end ≤ decided_at ≤ valid_until 순서가 필요합니다."
+            )
+        if self.status in ("normal", "suspect") and (
+            self.score is None or self.threshold is None
+        ):
             raise ValueError("판정에는 점수와 임계값이 필요합니다.")
         return self
 
@@ -48,7 +59,9 @@ class AIResponse(BaseModel):
     run_id: str
     input_sha256: str
     state: Literal["ready", "warming_up", "unavailable"]
-    results: list[DetectionResult] = Field(default_factory=list, max_length=10000)
+    results: list[DetectionResult] = Field(
+        default_factory=list, max_length=10000
+    )
 
 
 class AIConnection(BaseModel):

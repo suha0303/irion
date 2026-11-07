@@ -11,10 +11,17 @@ from pathlib import Path
 
 import numpy as np
 import torch
-
 from capstone_ai.mapping import FEATURES, TARGETS
 from capstone_ai.training import Predictor
-from execution.common import MODELS, Progress, memory_snapshot, read, sha, verify, write
+from execution.common import (
+    MODELS,
+    Progress,
+    memory_snapshot,
+    read,
+    sha,
+    verify,
+    write,
+)
 from execution.engine import calibrate, ridge_fit
 from pipeline.pipeline import normalized_role
 from pipeline.runtime import check
@@ -50,7 +57,9 @@ def config_check(cfg):
         gate_windows=512,
         production_training_authorized=True,
     )
-    if any(type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()):
+    if any(
+        type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()
+    ):
         raise ValueError("Approved R5 configuration mismatch")
 
 
@@ -80,12 +89,17 @@ def spec_for(cfg, name):
             from .study import spec_for as study_spec
 
             return study_spec(entry)
-        return ModelSpec(entry["name"], entry["hidden"], entry["layers"], entry["heads"])
+        return ModelSpec(
+            entry["name"], entry["hidden"], entry["layers"], entry["heads"]
+        )
     return ModelSpec(name, cfg["hidden"], cfg["layers"], cfg["heads"])
 
 
 def fit_settings(root, cfg, name):
-    if cfg.get("model_revision", "explicit_dropout_v1") == "explicit_dropout_v1":
+    if (
+        cfg.get("model_revision", "explicit_dropout_v1")
+        == "explicit_dropout_v1"
+    ):
         return dict(learning_rate=cfg["learning_rate"])
     from .study import selected_settings
 
@@ -94,7 +108,11 @@ def fit_settings(root, cfg, name):
 
 def gate_child(root, name, phase):
     root, cfg, upstream, out = paths(root)
-    if name not in neural_ids(cfg) or phase not in {"full", "partial", "resume"}:
+    if name not in neural_ids(cfg) or phase not in {
+        "full",
+        "partial",
+        "resume",
+    }:
         raise ValueError("Unknown gate child")
     with np.load(out / "gates/inputs.npz", allow_pickle=False) as archive:
         train = {k: archive["train_" + k] for k in ("X", "C", "Y")}
@@ -113,8 +131,12 @@ def gate_child(root, name, phase):
         patience=10,
         **fit_settings(root, cfg, name),
         stop_after_epoch=2 if phase == "partial" else None,
-        resume=out / "gates" / f"{name}-partial/last.pt" if phase == "resume" else None,
-        progress=Progress(out / "gates" / f"{name}-{phase}-progress.json", hours=0.5),
+        resume=out / "gates" / f"{name}-partial/last.pt"
+        if phase == "resume"
+        else None,
+        progress=Progress(
+            out / "gates" / f"{name}-{phase}-progress.json", hours=0.5
+        ),
     )
 
 
@@ -135,7 +157,10 @@ def gates(root, cfg, out, train, val, progress):
     proofs = {}
     for name in neural_ids(cfg):
         progress.update(
-            stage="batch256_memory_gate", model=name, done=0, total=len(neural_ids(cfg))
+            stage="batch256_memory_gate",
+            model=name,
+            done=0,
+            total=len(neural_ids(cfg)),
         )
         proofs[name] = dict(
             memory=measure(
@@ -151,13 +176,18 @@ def gates(root, cfg, out, train, val, progress):
                 runtime_stage="fit",
                 progress=progress,
                 **({"validation": val} if training_only else {}),
-                **(fit_settings(root, cfg, name)
-                   if cfg.get("model_revision") == "interlayer_norm_no_dropout" else {}),
+                **(
+                    fit_settings(root, cfg, name)
+                    if cfg.get("model_revision") == "interlayer_norm_no_dropout"
+                    else {}
+                ),
             )[0]
         )
         for phase in ("full", "partial", "resume"):
             progress.check()
-            progress.update(stage="batch256_resume_gate", model=name, gate_phase=phase)
+            progress.update(
+                stage="batch256_resume_gate", model=name, gate_phase=phase
+            )
             with (folder / f"{name}-{phase}.log").open("x") as log:
                 subprocess.run(
                     [
@@ -178,25 +208,41 @@ def gates(root, cfg, out, train, val, progress):
                     check=True,
                     timeout=1800,
                 )
-        full = torch.load(folder / f"{name}-full/last.pt", map_location="cpu", weights_only=False)
+        full = torch.load(
+            folder / f"{name}-full/last.pt",
+            map_location="cpu",
+            weights_only=False,
+        )
         resumed = torch.load(
-            folder / f"{name}-resume/last.pt", map_location="cpu", weights_only=False
+            folder / f"{name}-resume/last.pt",
+            map_location="cpu",
+            weights_only=False,
         )
         checks = {
             k: same(full[k], resumed[k])
-            for k in ("model", "optimizer", "rng", "best", "best_epoch", "best_state")
+            for k in (
+                "model",
+                "optimizer",
+                "rng",
+                "best",
+                "best_epoch",
+                "best_state",
+            )
         }
         checks["loss_history"] = all(
-            [x[k] for x in full["history"]] == [x[k] for x in resumed["history"]]
+            [x[k] for x in full["history"]]
+            == [x[k] for x in resumed["history"]]
             for k in ("train_loss", "validation_loss")
         )
-        checks["export"] = sha(folder / f"{name}-full/model.safetensors") == sha(
-            folder / f"{name}-resume/model.safetensors"
-        )
+        checks["export"] = sha(
+            folder / f"{name}-full/model.safetensors"
+        ) == sha(folder / f"{name}-resume/model.safetensors")
         proofs[name]["resume"] = checks
         write(folder / "gate-results.json", proofs)
         if not all(checks.values()):
-            raise ValueError(name + " exact-config resume gate failed; no fit or retry")
+            raise ValueError(
+                name + " exact-config resume gate failed; no fit or retry"
+            )
     if training_only:
         budget = estimate_fit_budget(
             [proofs[name]["memory"] for name in neural_ids(cfg)],
@@ -209,7 +255,9 @@ def gates(root, cfg, out, train, val, progress):
         budget["measurement_context"] = dict(
             config_sha256=sha(root / "input/config.json"),
             source_dataset_sha256=cfg.get("source_dataset_sha256"),
-            preprocessing_sha256=cfg.get("upstream_files", {}).get("preprocessing.json"),
+            preprocessing_sha256=cfg.get("upstream_files", {}).get(
+                "preprocessing.json"
+            ),
             model_code_sha256=cfg.get("binding", {}).get("sources"),
             scaler_sha256=cfg.get("binding", {}).get("scaler"),
             training_stride_us=cfg["training_stride_us"],
@@ -224,7 +272,9 @@ def gates(root, cfg, out, train, val, progress):
             models=cfg["variants"],
         )
         write(out / "training-budget.json", budget)
-        progress.update(stage="training_budget_admission", budget_passed=budget["passed"])
+        progress.update(
+            stage="training_budget_admission", budget_passed=budget["passed"]
+        )
         if not budget["passed"]:
             raise TimeoutError(
                 "Measured maximum-epoch fit estimate exceeds finite wall budget; no production fit or retry"
@@ -272,7 +322,10 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
                 from .study import validated_selection
 
                 selection = validated_selection(cfg, name, out)
-                settings = {key: selection[key] for key in ("learning_rate", "optimization")}
+                settings = {
+                    key: selection[key]
+                    for key in ("learning_rate", "optimization")
+                }
             else:
                 settings = fit_settings(out.parent, cfg, name)
             history = run_fit(
@@ -293,7 +346,9 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
             )
             result = dict(
                 history=history,
-                selected_epoch=min(history, key=lambda x: x["validation_loss"])["epoch"],
+                selected_epoch=min(history, key=lambda x: x["validation_loss"])[
+                    "epoch"
+                ],
                 seconds=time.monotonic() - started,
                 device=device,
                 precision="float32",
@@ -303,7 +358,9 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
             if selection is not None:
                 initial = read(folder / "initialization.json")["state_sha256"]
                 if initial != selection["initial_state_sha256"]:
-                    raise ValueError("Main fit did not start from the same frozen initial weights")
+                    raise ValueError(
+                        "Main fit did not start from the same frozen initial weights"
+                    )
                 result.update(**settings, initial_state_sha256=initial)
         else:
             folder.mkdir()
@@ -315,11 +372,18 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
         for file in ("scaler.npz", "manifest.json"):
             shutil.copyfile(
                 upstream / "dataset" / file,
-                folder / ("training_manifest.json" if file == "manifest.json" else file),
+                folder
+                / (
+                    "training_manifest.json"
+                    if file == "manifest.json"
+                    else file
+                ),
             )
         metadata = dict(
             name=spec_for(cfg, name).name if name in neural_ids(cfg) else name,
-            hidden=spec_for(cfg, name).hidden if name in neural_ids(cfg) else cfg.get("hidden", 0),
+            hidden=spec_for(cfg, name).hidden
+            if name in neural_ids(cfg)
+            else cfg.get("hidden", 0),
             model_id=name,
             task="forecast",
             target_order=TARGETS,
@@ -329,7 +393,9 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
         if name in neural_ids(cfg):
             metadata["model_revision"] = spec_for(cfg, name).revision
         write(folder / "model.json", metadata)
-        shutil.copyfile(upstream / "preprocessing.json", folder / "preprocessing.json")
+        shutil.copyfile(
+            upstream / "preprocessing.json", folder / "preprocessing.json"
+        )
         write(
             folder / "forecast_contract.json",
             dict(
@@ -343,18 +409,27 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
             ),
         )
         write(folder / "training.json", result)
-        write(folder / "integrity.json", {p.name: sha(p) for p in folder.iterdir() if p.is_file()})
+        write(
+            folder / "integrity.json",
+            {p.name: sha(p) for p in folder.iterdir() if p.is_file()},
+        )
         if name in neural_ids(cfg):
             predictor = Predictor(folder, device=device)
             restored = make_model(spec_for(cfg, name)).to(device)
-            best = torch.load(folder / "best.pt", map_location="cpu", weights_only=False)
+            best = torch.load(
+                folder / "best.pt", map_location="cpu", weights_only=False
+            )
             restored.load_state_dict(best["best_state"])
             restored.eval()
             with backend(device), torch.no_grad():
                 expected = (
                     restored(
-                        torch.as_tensor(val["X"][:2], dtype=torch.float32, device=device),
-                        torch.as_tensor(val["C"][:2], dtype=torch.float32, device=device),
+                        torch.as_tensor(
+                            val["X"][:2], dtype=torch.float32, device=device
+                        ),
+                        torch.as_tensor(
+                            val["C"][:2], dtype=torch.float32, device=device
+                        ),
                     )
                     .cpu()
                     .numpy()
@@ -363,7 +438,10 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
             difference = float(np.max(np.abs(expected - actual)))
             if not np.isfinite(difference) or difference > 1e-6:
                 raise ValueError("Best-checkpoint bundle reload mismatch")
-            write(out / (name + "-export-check.json"), dict(max_abs=difference, passed=True))
+            write(
+                out / (name + "-export-check.json"),
+                dict(max_abs=difference, passed=True),
+            )
             del predictor, restored, best
         gc.collect()
         if device == "cuda":
@@ -387,7 +465,9 @@ def fit_worker(root):
         verify(root / "input", read(root / "input/inventory.json"))
         verify(upstream, cfg["upstream_files"])
         progress.update(stage="resource_admission", round=cfg["revision"])
-        environment = check(root / "input/ai", out, "fit", job_prefix="drone-ai-")
+        environment = check(
+            root / "input/ai", out, "fit", job_prefix="drone-ai-"
+        )
         required = (
             cfg["memory"]["estimated_host_peak_bytes"] + 1024**3
             if comparison.is_comparison(cfg)
@@ -412,11 +492,17 @@ def fit_worker(root):
             )
         telemetry = Telemetry(out)
         telemetry.start()
-        scaler = dict(np.load(upstream / "dataset/scaler.npz", allow_pickle=False))
+        scaler = dict(
+            np.load(upstream / "dataset/scaler.npz", allow_pickle=False)
+        )
         train, val = [
             (
                 comparison.normalized_mmap(
-                    upstream / "dataset", role, scaler, out / "normalized" / role, progress
+                    upstream / "dataset",
+                    role,
+                    scaler,
+                    out / "normalized" / role,
+                    progress,
                 )
                 if comparison.is_comparison(cfg)
                 else normalized_role(upstream / "dataset", role, scaler)
@@ -430,11 +516,16 @@ def fit_worker(root):
         if comparison.is_comparison(cfg):
             cache = out / "normalized"
             entries = {
-                str(p.relative_to(cache)): p.stat().st_size for p in cache.rglob("*") if p.is_file()
+                str(p.relative_to(cache)): p.stat().st_size
+                for p in cache.rglob("*")
+                if p.is_file()
             }
-            shutil.rmtree(cache)  # Only this job's disposable normalized mmap cache.
+            shutil.rmtree(
+                cache
+            )  # Only this job's disposable normalized mmap cache.
             write(
-                out / "normalized-cache-cleanup.json", dict(removed=entries, models_exported=True)
+                out / "normalized-cache-cleanup.json",
+                dict(removed=entries, models_exported=True),
             )
         torch.cuda.empty_cache()
         training_only = comparison.execution_scope(cfg) == "training_only"
@@ -486,7 +577,9 @@ def fit_worker(root):
         )
     except BaseException as exc:
         progress.update(
-            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}", automatic_retry=False
+            status="FAILED_STOPPED",
+            reason=f"{type(exc).__name__}: {exc}",
+            automatic_retry=False,
         )
         raise
     finally:
@@ -497,9 +590,12 @@ def fit_worker(root):
 def evaluate_worker(root):
     root, cfg, upstream, out = paths(root)
     if comparison.execution_scope(cfg) == "training_only":
-        raise ValueError("Evaluation is not authorized by this training-only attempt")
+        raise ValueError(
+            "Evaluation is not authorized by this training-only attempt"
+        )
     progress = Progress(
-        root / "evaluation-progress.json", hours=cfg.get("evaluation_hours", 2) - 0.1
+        root / "evaluation-progress.json",
+        hours=cfg.get("evaluation_hours", 2) - 0.1,
     )
     signal.signal(signal.SIGTERM, stop_signal)
     signal.signal(signal.SIGINT, stop_signal)
@@ -510,10 +606,12 @@ def evaluate_worker(root):
 
         if comparison.is_comparison(cfg):
             result = read(out / "result-seal.json")
-            if result.get("seed") != cfg["seed"] or result.get("config_sha256") != sha(
-                root / "input/config.json"
-            ):
-                raise ValueError("Comparison output config/seed binding mismatch before truth join")
+            if result.get("seed") != cfg["seed"] or result.get(
+                "config_sha256"
+            ) != sha(root / "input/config.json"):
+                raise ValueError(
+                    "Comparison output config/seed binding mismatch before truth join"
+                )
         inventory = read(root / "truth/index.json")
         if sha(root / "truth/index.json") != cfg["truth_index_sha256"]:
             raise ValueError("Coordinator truth inventory changed")
@@ -544,10 +642,14 @@ def evaluate_worker(root):
                 model_names=model_ids(cfg),
                 development_counts=cfg.get("development_counts"),
             )
-        progress.update(status="EVALUATION_COMPLETE_PENDING_RELEASE", stage="stopped")
+        progress.update(
+            status="EVALUATION_COMPLETE_PENDING_RELEASE", stage="stopped"
+        )
     except BaseException as exc:
         progress.update(
-            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}", automatic_retry=False
+            status="FAILED_STOPPED",
+            reason=f"{type(exc).__name__}: {exc}",
+            automatic_retry=False,
         )
         raise
 

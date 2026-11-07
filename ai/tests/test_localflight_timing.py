@@ -3,14 +3,13 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from test_localflight_adapt import flight
-
 from capstone_ai.mapping import FEATURES
 from localflight.catalog import digest
 from localflight.prepare import bin_events, bin_values, causal_frames, prepare
 from localflight.prepared import distinct_flights, load, windows
 from localflight.runtime import Runtime
 from localflight.timing import ClockAudit, clock_maps, split_streams
+from test_localflight_adapt import flight
 
 
 def events(seconds=40, gap=None):
@@ -46,7 +45,8 @@ def test_future_measurements_do_not_change_past_frames():
     source = events()
     before = causal_frames(source, 0, 40000000)[0]
     changed = [
-        (a, s, {**v, "pack_voltage": 30.0}) if a > 20000000 else (a, s, v) for a, s, v in source
+        (a, s, {**v, "pack_voltage": 30.0}) if a > 20000000 else (a, s, v)
+        for a, s, v in source
     ]
     after = causal_frames(changed, 0, 40000000)[0]
     np.testing.assert_array_equal(before[:201], after[:201])
@@ -69,11 +69,14 @@ def test_affine_clock_correction_and_anchor_support():
     maps = clock_maps(
         {
             "BAT:0": dict(
-                anchors_us=[[1000000, 1100000], [21000000, 21102000]], evidence="paired sync pulses"
+                anchors_us=[[1000000, 1100000], [21000000, 21102000]],
+                evidence="paired sync pulses",
             )
         }
     )
-    streams = {"BAT:0": [(0, 0, {}), (1000000, 1000000, {}), (21000000, 21000000, {})]}
+    streams = {
+        "BAT:0": [(0, 0, {}), (1000000, 1000000, {}), (21000000, 21000000, {})]
+    }
     out, r = split_streams(streams, maps)
     assert [e[0] for e in out] == [1100000, 21102000]
     assert r["BAT:0"]["outside_anchor_range"] == 1
@@ -90,9 +93,19 @@ def test_reversal_is_not_silently_sorted_or_aligned_by_count():
     with pytest.raises(ValueError, match="epoch boundary"):
         split_streams({"RATE:0": [(10, 10, {}), (20, 20, {}), (1, 1, {})]}, {})
     out, report = split_streams(
-        {"RATE:0": [(10, 10, {"x": 1}), (10, 10, {"x": 2}), (20, 20, {"x": 3})]}, {}
+        {
+            "RATE:0": [
+                (10, 10, {"x": 1}),
+                (10, 10, {"x": 2}),
+                (20, 20, {"x": 3}),
+            ]
+        },
+        {},
     )
-    assert out[0][2]["x"] == 1 and report["RATE:0"]["duplicate_records_removed"] == 1
+    assert (
+        out[0][2]["x"] == 1
+        and report["RATE:0"]["duplicate_records_removed"] == 1
+    )
 
 
 def test_onboard_units_cm_per_second_are_respected():
@@ -118,7 +131,8 @@ def test_prepared_segments_feed_only_contained_windows(tmp_path, monkeypatch):
         lambda p: dict(autopilot="px4", sha256=digest(p), parser_warnings=""),
     )
     monkeypatch.setattr(
-        "localflight.prepare.px4_events", lambda *args: (events(gap=(15000000, 20000000)), {})
+        "localflight.prepare.px4_events",
+        lambda *args: (events(gap=(15000000, 20000000)), {}),
     )
     preview = prepare(raw, profile, preview=True, start_us=0, end_us=40000000)
     assert len(preview["timing"]["candidate_segments"]) == 2
@@ -126,13 +140,19 @@ def test_prepared_segments_feed_only_contained_windows(tmp_path, monkeypatch):
     for key in ("firmware", "battery_id", "mapping_evidence"):
         incomplete.pop(key, None)
     assert (
-        prepare(raw, incomplete, preview=True, start_us=0, end_us=40000000)["timing"][
-            "complete_frames"
-        ]
+        prepare(raw, incomplete, preview=True, start_us=0, end_us=40000000)[
+            "timing"
+        ]["complete_frames"]
         > 0
     )
     with pytest.raises(ValueError, match="series_cells"):
-        prepare(raw, incomplete, tmp_path / "not-admitted", start_us=0, end_us=40000000)
+        prepare(
+            raw,
+            incomplete,
+            tmp_path / "not-admitted",
+            start_us=0,
+            end_us=40000000,
+        )
     r = prepare(
         raw,
         profile,
@@ -158,7 +178,9 @@ def test_prepared_segments_feed_only_contained_windows(tmp_path, monkeypatch):
 
 
 def test_short_segments_and_sample_hold_are_reported():
-    _, _, report = causal_frames(events(seconds=20, gap=(5000000, 15000000)), 0, 20000000)
+    _, _, report = causal_frames(
+        events(seconds=20, gap=(5000000, 15000000)), 0, 20000000
+    )
     assert not any(s["usable"] for s in report["candidate_segments"])
     with pytest.raises(ValueError, match="20..2000"):
         causal_frames(events(), 0, 40000000, fast_max_age_ms=2001)
@@ -167,14 +189,17 @@ def test_short_segments_and_sample_hold_are_reported():
 def test_dropout_resets_state_even_without_a_missing_grid_frame():
     source = events()
     source.append((15050000, 15050000, {"__reset__": True}))
-    _, _, report = causal_frames(sorted(source, key=lambda e: e[0]), 0, 40000000)
+    _, _, report = causal_frames(
+        sorted(source, key=lambda e: e[0]), 0, 40000000
+    )
     assert len(report["candidate_segments"]) == 2
 
 
 def test_large_finite_sensor_excursions_are_retained():
     source = events()
     source = [
-        (a, s, {**v, "body_rate_p": 5000.0, "specific_force_x": -2000.0}) for a, s, v in source
+        (a, s, {**v, "body_rate_p": 5000.0, "specific_force_x": -2000.0})
+        for a, s, v in source
     ]
     values, _, report = causal_frames(source, 0, 40000000)
     assert report["missing_or_stale_frames"] == 0
@@ -183,7 +208,9 @@ def test_large_finite_sensor_excursions_are_retained():
 
 
 @pytest.mark.parametrize("failure", ["reset", "corrupt", "exception"])
-def test_bin_keeps_only_file_prefix_at_first_reset_or_corruption(monkeypatch, failure):
+def test_bin_keeps_only_file_prefix_at_first_reset_or_corruption(
+    monkeypatch, failure
+):
     import localflight.bin_reader as reader_module
 
     class Reader:
@@ -192,7 +219,9 @@ def test_bin_keeps_only_file_prefix_at_first_reset_or_corruption(monkeypatch, fa
 
         def recv_msg(self):
             self.offset += 10
-            stamp = {10: 1000000, 20: 2000000, 30: 100000, 40: 3000000}.get(self.offset)
+            stamp = {10: 1000000, 20: 2000000, 30: 100000, 40: 3000000}.get(
+                self.offset
+            )
             if stamp is None:
                 return None
             if self.offset == 30 and failure == "exception":
@@ -203,7 +232,9 @@ def test_bin_keeps_only_file_prefix_at_first_reset_or_corruption(monkeypatch, fa
                 TimeUS=stamp,
                 get_type=lambda: "CTUN",
                 to_dict=lambda: dict(CRt=100.0, DCRt=100.0),
-                fmt=SimpleNamespace(columns=["CRt", "DCRt"], units=["cm/s", "cm/s"]),
+                fmt=SimpleNamespace(
+                    columns=["CRt", "DCRt"], units=["cm/s", "cm/s"]
+                ),
             )
 
         def close(self):
@@ -216,9 +247,11 @@ def test_bin_keeps_only_file_prefix_at_first_reset_or_corruption(monkeypatch, fa
     assert (
         report["retained_prefix_boundary"]["reason"]
         == (
-            {"reset": "clock_reset", "corrupt": "parser_warning", "exception": "parser_exception"}[
-                failure
-            ]
+            {
+                "reset": "clock_reset",
+                "corrupt": "parser_warning",
+                "exception": "parser_exception",
+            }[failure]
         )
     )
 
@@ -233,7 +266,10 @@ def test_segmented_health_does_not_carry_context_between_segments(tmp_path):
     with np.load(data) as z:
         v, t = z["values"], z["time_us"]
     t[125:] += 10000000
-    m["segments"] = [dict(start_index=0, end_index=125), dict(start_index=125, end_index=250)]
+    m["segments"] = [
+        dict(start_index=0, end_index=125),
+        dict(start_index=125, end_index=250),
+    ]
     np.savez(data, values=v, time_us=t)
     m["file"]["sha256"] = digest(data)
     path.write_text(json.dumps(m))
@@ -245,4 +281,7 @@ def test_segmented_health_does_not_carry_context_between_segments(tmp_path):
     second = analyze("run_health_lstm_h64_l2", path, bundle=DEFAULT_BUNDLE)
     assert first["metrics"]["segments"][0] == second["metrics"]["segments"][0]
     assert first["metrics"]["segments"][1] != second["metrics"]["segments"][1]
-    assert first["health_verdict"] is None and not first["metrics"]["whole_flight_verdict"]
+    assert (
+        first["health_verdict"] is None
+        and not first["metrics"]["whole_flight_verdict"]
+    )

@@ -8,21 +8,29 @@ from pathlib import Path
 from . import training19
 from .common import ROOT, now, read, sha, verify, write
 
-AUTH = ROOT / "Data/operations/training19/authorizations/main1674-20261107-01.json"
+AUTH = (
+    ROOT / "Data/operations/training19/authorizations/main1674-20261107-01.json"
+)
 DEFAULT_PLAN = training19.PLANS / "main1674-20261107-01"
 
 
 def approval():
     if not AUTH.is_file():
-        raise ValueError("User final1674 approval required before main manifest creation")
+        raise ValueError(
+            "User final1674 approval required before main manifest creation"
+        )
     value = read(AUTH)
     if (
         value.get("direct_user_answer") != "전체 1,674런 구성 승인"
         or value.get("approved_total") != 1674
         or value.get("preliminary_data_connected") is not False
     ):
-        raise ValueError("User final1674 approval required before main manifest creation")
-    if value.get("lr108_reuse_same_roles") != dict(normal_train=81, normal_validation=27):
+        raise ValueError(
+            "User final1674 approval required before main manifest creation"
+        )
+    if value.get("lr108_reuse_same_roles") != dict(
+        normal_train=81, normal_validation=27
+    ):
         raise ValueError("Exact LR train/validation subset approval required")
     return value
 
@@ -32,7 +40,12 @@ def build(lr, seed, excluded):
     import sys
 
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
-    from capstone_sim import bounded_wind, flight_program, normal_variation, random_flight
+    from capstone_sim import (
+        bounded_wind,
+        flight_program,
+        normal_variation,
+        random_flight,
+    )
 
     rows = [copy.deepcopy(c) for c in lr["cases"]]
     used = set(excluded) | {c["seed"] for c in rows}
@@ -108,7 +121,11 @@ def build(lr, seed, excluded):
         for fi, family in enumerate(("battery", "propulsion", "combined")):
             for ti, timing in enumerate(("existing", "step", "ramp")):
                 for mi, kind in enumerate(training19.KINDS):
-                    winds = [(mi + fi + ti) % 3] if cohort == "development" else range(3)
+                    winds = (
+                        [(mi + fi + ti) % 3]
+                        if cohort == "development"
+                        else range(3)
+                    )
                     for ei in winds:
                         env, value = training19.ENVIRONMENTS[ei], fresh()
                         group = f"main-{cohort}-{family}-{timing}-{mi:02}-{ei}"
@@ -119,7 +136,9 @@ def build(lr, seed, excluded):
                             else (mi + ei + fi + ti) % 3
                         ]
                         for abnormal in (False, True):
-                            cid = group + ("-anomaly" if abnormal else "-normal")
+                            cid = group + (
+                                "-anomaly" if abnormal else "-normal"
+                            )
                             scenario = (
                                 (
                                     (
@@ -135,12 +154,16 @@ def build(lr, seed, excluded):
                             rows.append(
                                 dict(
                                     case_id=cid,
-                                    role="anomaly_test" if abnormal else "normal_test",
+                                    role="anomaly_test"
+                                    if abnormal
+                                    else "normal_test",
                                     cohort=cohort,
                                     purpose="model_development"
                                     if cohort == "development"
                                     else "independent_final_test",
-                                    category="anomaly" if abnormal else "paired_normal",
+                                    category="anomaly"
+                                    if abnormal
+                                    else "paired_normal",
                                     group_id=group,
                                     retry_family_id=cid,
                                     paired_case_id=f"x500-{kind}-seed{value}",
@@ -168,12 +191,18 @@ def validate(rows, lr):
     if len(rows) != 1674 or len({c["case_id"] for c in rows}) != 1674:
         raise ValueError("Full1674 unique case denominator required")
     if Counter(c["cohort"] for c in rows) != dict(
-        normal_train=540, normal_validation=81, normal_calibration=81, development=243, final=729
+        normal_train=540,
+        normal_validation=81,
+        normal_calibration=81,
+        development=243,
+        final=729,
     ):
         raise ValueError("Approved main roles/cohorts changed")
     by_id = {c["case_id"]: c for c in rows}
     if any(by_id.get(c["case_id"]) != c for c in lr["cases"]):
-        raise ValueError("LR108 must be retained byte-equivalent in the same role/cohort")
+        raise ValueError(
+            "LR108 must be retained byte-equivalent in the same role/cohort"
+        )
     ownership = {}
     groups = defaultdict(list)
     for c in rows:
@@ -181,7 +210,8 @@ def validate(rows, lr):
         if (
             c["duration"] != 480
             or c["attempts_max"] != 3
-            or (op["soc"], op["temperature"], op["payload"]) != (0.9, 298.15, 0.0)
+            or (op["soc"], op["temperature"], op["payload"])
+            != (0.9, 298.15, 0.0)
         ):
             raise ValueError("Approved operation/duration/retry changed")
         for k in ("group_id", "seed", "paired_case_id"):
@@ -194,8 +224,13 @@ def validate(rows, lr):
             if members[0]["category"] != "standalone_normal":
                 raise ValueError("Unpaired anomaly/control")
             continue
-        if len(members) != 2 or {c["category"] for c in members} != {"paired_normal", "anomaly"}:
-            raise ValueError("Exactly one independent normal control per anomaly")
+        if len(members) != 2 or {c["category"] for c in members} != {
+            "paired_normal",
+            "anomaly",
+        }:
+            raise ValueError(
+                "Exactly one independent normal control per anomaly"
+            )
         if (
             any(
                 members[0][k] != members[1][k]
@@ -225,7 +260,9 @@ def validate(rows, lr):
             if c["cohort"] == cohort and c["category"] == "standalone_normal"
         )
         if len(normal_cells) != 27 or set(normal_cells.values()) != {quota}:
-            raise ValueError("Every standalone normal condition must retain its approved quota")
+            raise ValueError(
+                "Every standalone normal condition must retain its approved quota"
+            )
     for cohort, expected in (("development", 81), ("final", 243)):
         selected = [c for c in rows if c["cohort"] == cohort]
         if Counter(c["category"] for c in selected) != dict(
@@ -237,12 +274,19 @@ def validate(rows, lr):
                 subset = [
                     c
                     for c in selected
-                    if c["anomaly_family"] == fi and c["anomaly_timing"] == timing
+                    if c["anomaly_family"] == fi
+                    and c["anomaly_timing"] == timing
                 ]
                 if len(subset) != (9 if cohort == "development" else 27):
                     raise ValueError("Anomaly family/timing coverage changed")
-                if cohort == "final" and len({(c["kind"], c["environment"]) for c in subset}) != 27:
-                    raise ValueError("Final anomaly must cover all27 conditions")
+                if (
+                    cohort == "final"
+                    and len({(c["kind"], c["environment"]) for c in subset})
+                    != 27
+                ):
+                    raise ValueError(
+                        "Final anomaly must cover all27 conditions"
+                    )
     return rows
 
 
@@ -254,7 +298,13 @@ def prepare(path=DEFAULT_PLAN, lr_path=training19.DEFAULT_PLAN):
     lr_path = training19.prepare_plan(lr_path)
     lr = read(lr_path / "manifest.json")
     if path.exists():
-        verify({str(path / "manifest.json"): (path / "manifest.sha256").read_text().strip()})
+        verify(
+            {
+                str(path / "manifest.json"): (path / "manifest.sha256")
+                .read_text()
+                .strip()
+            }
+        )
         m = read(path / "manifest.json")
         validate(m["cases"], lr)
         return path

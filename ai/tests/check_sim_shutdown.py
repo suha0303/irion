@@ -15,22 +15,33 @@ class ShutdownChecks(unittest.TestCase):
     def service_process(self):
         process = Mock(pid=123, returncode=None)
         process.poll.side_effect = lambda: process.returncode
-        process.wait.side_effect = lambda **kw: setattr(process, "returncode", 0)
+        process.wait.side_effect = lambda **kw: setattr(
+            process, "returncode", 0
+        )
         return process
 
     def service_args(self):
         run = Path("/tmp") / ("a" * 32)
-        return dict(run=run, env={"GZ_PARTITION": "x500_" + run.name, "GZ_IP": "127.0.0.1"})
+        return dict(
+            run=run,
+            env={"GZ_PARTITION": "x500_" + run.name, "GZ_IP": "127.0.0.1"},
+        )
 
     def test_service_ack_and_actual_exit_need_no_signal(self):
         process = self.service_process()
         response = Mock(returncode=0, stdout="data: true\n", stderr="")
         with (
-            patch("capstone_sim.runner.subprocess.run", return_value=response) as request,
+            patch(
+                "capstone_sim.runner.subprocess.run", return_value=response
+            ) as request,
             patch("capstone_sim.runner.os.killpg") as kill,
         ):
-            record = stop_owned_process(process, "gazebo", **self.service_args())
-        self.assertEqual(request.call_args.kwargs["env"], self.service_args()["env"])
+            record = stop_owned_process(
+                process, "gazebo", **self.service_args()
+            )
+        self.assertEqual(
+            request.call_args.kwargs["env"], self.service_args()["env"]
+        )
         self.assertIn("/server_control", request.call_args.args[0])
         self.assertEqual(request.call_args.kwargs["timeout"], 15)
         process.wait.assert_called_once_with(timeout=600)
@@ -70,7 +81,9 @@ class ShutdownChecks(unittest.TestCase):
                         request.side_effect = response
                     else:
                         request.return_value = response
-                    record = stop_owned_process(process, "gazebo", **self.service_args())
+                    record = stop_owned_process(
+                        process, "gazebo", **self.service_args()
+                    )
                 self.assertFalse(record["service_stop"]["acknowledged"])
                 self.assertEqual(record["signals"], ["SIGTERM"])
                 kill.assert_called_once_with(123, signal.SIGTERM)
@@ -87,26 +100,36 @@ class ShutdownChecks(unittest.TestCase):
         with (
             patch(
                 "capstone_sim.runner.subprocess.run",
-                return_value=Mock(returncode=0, stdout="data: true\n", stderr=""),
+                return_value=Mock(
+                    returncode=0, stdout="data: true\n", stderr=""
+                ),
             ),
             patch("capstone_sim.runner.os.killpg"),
         ):
-            record = stop_owned_process(process, "gazebo", **self.service_args())
+            record = stop_owned_process(
+                process, "gazebo", **self.service_args()
+            )
         self.assertTrue(record["service_stop"]["exit_wait_expired"])
         self.assertEqual(record["signals"], ["SIGTERM", "SIGKILL"])
         self.assertEqual(record["exit_code"], -9)
 
     def test_ack_does_not_hide_nonzero_exit(self):
         process = self.service_process()
-        process.wait.side_effect = lambda **kw: setattr(process, "returncode", 4)
+        process.wait.side_effect = lambda **kw: setattr(
+            process, "returncode", 4
+        )
         with (
             patch(
                 "capstone_sim.runner.subprocess.run",
-                return_value=Mock(returncode=0, stdout="data: true\n", stderr=""),
+                return_value=Mock(
+                    returncode=0, stdout="data: true\n", stderr=""
+                ),
             ),
             patch("capstone_sim.runner.os.killpg") as kill,
         ):
-            record = stop_owned_process(process, "gazebo", **self.service_args())
+            record = stop_owned_process(
+                process, "gazebo", **self.service_args()
+            )
         kill.assert_not_called()
         self.assertEqual(record["exit_code"], 4)
 
@@ -123,7 +146,10 @@ class ShutdownChecks(unittest.TestCase):
     def test_timeout_records_sigkill_and_nonzero_exit(self):
         process = Mock(pid=123, returncode=-9)
         process.poll.return_value = None
-        process.wait.side_effect = [subprocess.TimeoutExpired("fixture", 600), -9]
+        process.wait.side_effect = [
+            subprocess.TimeoutExpired("fixture", 600),
+            -9,
+        ]
         with patch("capstone_sim.runner.os.killpg"):
             record = stop_owned_process(process, "gazebo")
         self.assertEqual(record["signals"], ["SIGTERM", "SIGKILL"])
@@ -137,8 +163,13 @@ class ShutdownChecks(unittest.TestCase):
         self.assertFalse(gate.step(299, lambda _: None))
         with self.assertRaises(TimeoutError):
             gate.step(300, lambda _: None)
-        self.assertEqual(gate.evidence(300, False, "fixture")["timeout_wall_s"], 300)
-        self.assertEqual(COLLECTION_PHASE_WAIT_S, dict(streaming=300, takeoff=180, landing=300))
+        self.assertEqual(
+            gate.evidence(300, False, "fixture")["timeout_wall_s"], 300
+        )
+        self.assertEqual(
+            COLLECTION_PHASE_WAIT_S,
+            dict(streaming=300, takeoff=180, landing=300),
+        )
 
     def test_preexisting_failure_preserved(self):
         process = Mock(pid=123, returncode=-9)
@@ -159,7 +190,10 @@ print("ready", flush=True)
 while True: signal.pause()
 """
         process = subprocess.Popen(
-            [sys.executable, "-c", code], start_new_session=True, stdout=subprocess.PIPE, text=True
+            [sys.executable, "-c", code],
+            start_new_session=True,
+            stdout=subprocess.PIPE,
+            text=True,
         )
         try:
             self.assertEqual(process.stdout.readline().strip(), "ready")

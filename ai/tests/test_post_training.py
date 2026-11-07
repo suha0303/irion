@@ -7,7 +7,6 @@ import tarfile
 from types import SimpleNamespace
 
 import pytest
-
 from execution.common import read, sha, write
 from learning import comparison, operator
 from learning import post_training as post
@@ -65,7 +64,9 @@ def test_scope_rejects_unapproved_work(key, value):
 def test_submit_cannot_fit_or_overlap(tmp_path, monkeypatch):
     monkeypatch.setattr(post, "checked", lambda root: (root, config()))
     monkeypatch.setattr(post, "SUBMIT_LOCK", tmp_path / "submit.lock")
-    monkeypatch.setattr(operator, "own_queue", lambda: "123|other|RUNNING|DIS01")
+    monkeypatch.setattr(
+        operator, "own_queue", lambda: "123|other|RUNNING|DIS01"
+    )
     with pytest.raises(ValueError, match="Only calibration"):
         post.submit(tmp_path, "fit", config())
     with pytest.raises(ValueError, match="concurrent"):
@@ -73,11 +74,16 @@ def test_submit_cannot_fit_or_overlap(tmp_path, monkeypatch):
     assert not list(tmp_path.glob("*-submitted.claim"))
 
 
-def test_evaluator_submission_requires_successful_release(tmp_path, monkeypatch):
+def test_evaluator_submission_requires_successful_release(
+    tmp_path, monkeypatch
+):
     monkeypatch.setattr(post, "checked", lambda root: (root, config()))
     monkeypatch.setattr(post, "SUBMIT_LOCK", tmp_path / "submit.lock")
     monkeypatch.setattr(operator, "own_queue", lambda: "")
-    write(tmp_path / "release.json", dict(released=True, slurm_state="FAILED", exit_code="1:0"))
+    write(
+        tmp_path / "release.json",
+        dict(released=True, slurm_state="FAILED", exit_code="1:0"),
+    )
     with pytest.raises(RuntimeError, match="successfully"):
         post.submit(tmp_path, "evaluate", config())
     assert not (tmp_path / "evaluate-submitted.claim").exists()
@@ -89,7 +95,11 @@ def test_submit_is_pinned_and_never_retried(tmp_path, monkeypatch):
     monkeypatch.setattr(post, "python_for", lambda *a, **kw: "/approved/python")
     monkeypatch.setattr(operator, "own_queue", lambda: "")
     submitted = []
-    monkeypatch.setattr(operator, "command", lambda argv: submitted.append(argv) or "123;cluster")
+    monkeypatch.setattr(
+        operator,
+        "command",
+        lambda argv: submitted.append(argv) or "123;cluster",
+    )
     result = post.submit(tmp_path, "calibrate", config())
     assert result["job_id"] == "123"
     for flag in (
@@ -124,7 +134,9 @@ def test_control_failure_stops_before_evaluator(tmp_path, monkeypatch):
         return dict(phase=phase, job_id="123", uid=os.getuid())
 
     monkeypatch.setattr(post, "submit", submit)
-    failed = dict(released=True, slurm_state="FAILED", exit_code="1:0", queue=[])
+    failed = dict(
+        released=True, slurm_state="FAILED", exit_code="1:0", queue=[]
+    )
     monkeypatch.setattr(operator, "wait_release", lambda *a: failed)
     monkeypatch.setattr(operator, "snapshot", lambda *a: failed)
     monkeypatch.setattr(operator, "own_queue", lambda: "")
@@ -178,7 +190,9 @@ def test_no_final_completion_until_both_jobs_release(tmp_path, monkeypatch):
         },
     )
     monkeypatch.setattr(
-        operator, "report", lambda root, cfg: (root / "report.txt").write_text("report")
+        operator,
+        "report",
+        lambda root, cfg: (root / "report.txt").write_text("report"),
     )
     post.control(tmp_path)
     completed = read(tmp_path / "completion.json")
@@ -197,17 +211,23 @@ def test_truth_archive_never_opened_before_successful_release(tmp_path):
 
 
 @pytest.mark.parametrize("unknown_phase", ["calibrate", "evaluate"])
-def test_unacknowledged_submission_never_counts_as_stopped(tmp_path, monkeypatch, unknown_phase):
+def test_unacknowledged_submission_never_counts_as_stopped(
+    tmp_path, monkeypatch, unknown_phase
+):
     cfg = config()
     monkeypatch.setattr(post, "checked", lambda root: (root, cfg))
     monkeypatch.setattr(post, "python_for", lambda *a, **kw: sys.executable)
     monkeypatch.setenv("TMUX", "fixture")
     monkeypatch.delenv("SLURM_JOB_ID", raising=False)
-    release = dict(released=True, slurm_state="COMPLETED", exit_code="0:0", queue=[])
+    release = dict(
+        released=True, slurm_state="COMPLETED", exit_code="0:0", queue=[]
+    )
 
     def submit(root, phase, cfg):
         if phase == unknown_phase:
-            write(root / (phase + "-submission-intent.json"), {"argv": ["sbatch"]})
+            write(
+                root / (phase + "-submission-intent.json"), {"argv": ["sbatch"]}
+            )
             raise TimeoutError("sbatch acknowledgement missing")
         return dict(phase=phase, job_id="123", uid=os.getuid())
 
@@ -241,17 +261,24 @@ def test_extract_truth_is_bounded_and_hash_verified(tmp_path, monkeypatch):
     )
     write(bundle / "receipt.json", {"evaluator_truth": ref})
     root = tmp_path / "evaluation"
-    write(root / "release.json", dict(released=True, slurm_state="COMPLETED", exit_code="0:0"))
+    write(
+        root / "release.json",
+        dict(released=True, slurm_state="COMPLETED", exit_code="0:0"),
+    )
     monkeypatch.setattr(post, "seal_check", lambda *a: {})
     cfg = dict(
-        source_bundle=str(bundle), truth_archive=ref, receipt_sha256=sha(bundle / "receipt.json")
+        source_bundle=str(bundle),
+        truth_archive=ref,
+        receipt_sha256=sha(bundle / "receipt.json"),
     )
     post.extract_truth(root, cfg, SimpleNamespace(check=lambda: None))
     assert (root / "truth/run.jsonl").read_bytes() == payload
     assert read(root / "truth/index.json") == ref["members"]
 
 
-def test_changed_model_files_block_start_without_mutation(tmp_path, monkeypatch):
+def test_changed_model_files_block_start_without_mutation(
+    tmp_path, monkeypatch
+):
     cfg = config()
     source = tmp_path / "source"
     source.mkdir()
@@ -265,11 +292,17 @@ def test_changed_model_files_block_start_without_mutation(tmp_path, monkeypatch)
             "model_files": {"models/persistence/model.json": "bad-hash"},
         },
     )
-    write(root / "input/inventory.json", {"config.json": sha(root / "input/config.json")})
+    write(
+        root / "input/inventory.json",
+        {"config.json": sha(root / "input/config.json")},
+    )
     write(root / "server-profile.json", {})
     write(
         root / "authorization.json",
-        dict(config_sha256=sha(root / "input/config.json"), execution_scope=post.SCOPE),
+        dict(
+            config_sha256=sha(root / "input/config.json"),
+            execution_scope=post.SCOPE,
+        ),
     )
     write(
         root / "prepared.json",
@@ -285,19 +318,31 @@ def test_changed_model_files_block_start_without_mutation(tmp_path, monkeypatch)
     before = (root / "compute/models/persistence/model.json").read_bytes()
     with pytest.raises(ValueError, match="Input hash changed"):
         post.start(root)
-    assert (root / "compute/models/persistence/model.json").read_bytes() == before
+    assert (
+        root / "compute/models/persistence/model.json"
+    ).read_bytes() == before
     assert not (root / "start.claim").exists()
 
 
 @pytest.mark.parametrize(
     "fresh_calibration,policy_kind,normalization_study,include_baselines,parallel_workers",
-    [(False, None, False, False, None), (True, None, False, False, None),
-     (True, "numerical", False, False, None), (True, "sensitivity", False, False, None),
-     (True, "sensitivity", True, False, None), (True, "sensitivity", True, True, None),
-     (True, "sensitivity", True, True, 2)],
+    [
+        (False, None, False, False, None),
+        (True, None, False, False, None),
+        (True, "numerical", False, False, None),
+        (True, "sensitivity", False, False, None),
+        (True, "sensitivity", True, False, None),
+        (True, "sensitivity", True, True, None),
+        (True, "sensitivity", True, True, 2),
+    ],
 )
 def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
-    tmp_path, monkeypatch, fresh_calibration, policy_kind, normalization_study, include_baselines,
+    tmp_path,
+    monkeypatch,
+    fresh_calibration,
+    policy_kind,
+    normalization_study,
+    include_baselines,
     parallel_workers,
 ):
     """Exercise actual preparation/copy/binding, with only bulky data admission mocked."""
@@ -341,7 +386,10 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
         source_cfg = configure(source_cfg)
     comparison.config_check(source_cfg)
     write(source / "input/config.json", source_cfg)
-    write(source / "input/inventory.json", {"config.json": sha(source / "input/config.json")})
+    write(
+        source / "input/inventory.json",
+        {"config.json": sha(source / "input/config.json")},
+    )
     write(source / "server-profile.json", {"preserved": True})
     write(
         source / "authorization.json",
@@ -363,9 +411,15 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
     for name in source_cfg["models"]:
         folder = source / "compute/models" / name
         write(folder / "model.json", {"model_id": name})
-        write(folder / "integrity.json", {"model.json": sha(folder / "model.json")})
+        write(
+            folder / "integrity.json",
+            {"model.json": sha(folder / "model.json")},
+        )
         files.update(
-            {"models/" + name + "/" + n: sha(folder / n) for n in ("model.json", "integrity.json")}
+            {
+                "models/" + name + "/" + n: sha(folder / n)
+                for n in ("model.json", "integrity.json")
+            }
         )
     write(
         source / "compute/result-seal.json",
@@ -382,9 +436,18 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
         ),
     )
     (source / "training-report.txt").write_text("sealed training report")
-    release = dict(job_id="123", released=True, slurm_state="COMPLETED", exit_code="0:0", queue=[])
+    release = dict(
+        job_id="123",
+        released=True,
+        slurm_state="COMPLETED",
+        exit_code="0:0",
+        queue=[],
+    )
     write(source / "release.json", release)
-    write(source / "fit-submission.json", dict(job_id="123", phase="fit", uid=os.getuid()))
+    write(
+        source / "fit-submission.json",
+        dict(job_id="123", phase="fit", uid=os.getuid()),
+    )
     write(source / "controller.json", dict(status=post.COMPLETE))
     write(
         source / "completion.json",
@@ -406,7 +469,10 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
         bundle / "receipt.json",
         dict(
             evaluator_truth=dict(
-                path=archived.name, bytes=archived.stat().st_size, sha256=sha(archived), members={}
+                path=archived.name,
+                bytes=archived.stat().st_size,
+                sha256=sha(archived),
+                members={},
             )
         ),
     )
@@ -423,23 +489,32 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
             output_root=str(root),
             ssh=None,
             slurm=dict(
-                partition="p02", node="DIS01", nodes=1, ntasks=1, gpus=1, cpus=4, memory_gib=64
+                partition="p02",
+                node="DIS01",
+                nodes=1,
+                ntasks=1,
+                gpus=1,
+                cpus=4,
+                memory_gib=64,
             ),
         ),
     )
     monkeypatch.setattr(post, "dataset_binding", lambda *a: {})
     import execution.prepare
 
-    monkeypatch.setattr(execution.prepare, "npz_headers", lambda *a: {"X": {"bytes": 1024}})
+    monkeypatch.setattr(
+        execution.prepare, "npz_headers", lambda *a: {"X": {"bytes": 1024}}
+    )
     policy_options = {}
     if policy_kind is not None:
         if policy_kind == "sensitivity":
+            import learning.sensitivity_data
             from test_post_training_sensitivity import policy
 
-            import learning.sensitivity_data
-
             monkeypatch.setattr(
-                learning.sensitivity_data, "build_plan", lambda *a: {"fixture": "plan"}
+                learning.sensitivity_data,
+                "build_plan",
+                lambda *a: {"fixture": "plan"},
             )
             monkeypatch.setattr(
                 learning.sensitivity_data,
@@ -453,7 +528,11 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
         write(policy_path, policy())
         policy_digest = sha(policy_path)
         policy_options[policy_kind + "_policy"] = policy_path
-    before = {str(p.relative_to(source)): sha(p) for p in source.rglob("*") if p.is_file()}
+    before = {
+        str(p.relative_to(source)): sha(p)
+        for p in source.rglob("*")
+        if p.is_file()
+    }
     baseline = None
     baseline_before = None
     if include_baselines:
@@ -462,16 +541,30 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
         for name in post.BASELINES:
             folder = baseline / "compute/models" / name
             write(folder / "model.json", dict(model_id=name))
-            write(folder / "integrity.json", {"model.json": sha(folder / "model.json")})
+            write(
+                folder / "integrity.json",
+                {"model.json": sha(folder / "model.json")},
+            )
             for filename in ("model.json", "integrity.json"):
-                baseline_files[f"models/{name}/{filename}"] = sha(folder / filename)
+                baseline_files[f"models/{name}/{filename}"] = sha(
+                    folder / filename
+                )
         for filename in ("input/config.json", "compute/result-seal.json"):
             write(baseline / filename, dict(frozen=True))
-        binding = {filename: sha(baseline / filename) for filename in
-                   ("input/config.json", "compute/result-seal.json")}
-        monkeypatch.setattr(post, "baseline_source_proof",
-                            lambda *a: ({}, dict(files=baseline_files), binding))
-        baseline_before = {str(p.relative_to(baseline)): sha(p) for p in baseline.rglob("*") if p.is_file()}
+        binding = {
+            filename: sha(baseline / filename)
+            for filename in ("input/config.json", "compute/result-seal.json")
+        }
+        monkeypatch.setattr(
+            post,
+            "baseline_source_proof",
+            lambda *a: ({}, dict(files=baseline_files), binding),
+        )
+        baseline_before = {
+            str(p.relative_to(baseline)): sha(p)
+            for p in baseline.rglob("*")
+            if p.is_file()
+        }
     post.prepare(
         SimpleNamespace(
             root=root,
@@ -488,16 +581,31 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
             **policy_options,
         )
     )
-    assert before == {str(p.relative_to(source)): sha(p) for p in source.rglob("*") if p.is_file()}
+    assert before == {
+        str(p.relative_to(source)): sha(p)
+        for p in source.rglob("*")
+        if p.is_file()
+    }
     assert read(root / "prepared.json")["status"] == "AUTHORIZED_NOT_STARTED"
     if parallel_workers is not None:
         assert read(root / "input/config.json")["parallel_replay_workers"] == 2
         assert (root / "input/ai/learning/parallel_replay.py").is_file()
     if include_baselines:
-        assert read(root / "input/config.json")["models"] == source_cfg["models"] + list(post.BASELINES)
-        assert read(root / "authorization.json")["models"] == source_cfg["models"] + list(post.BASELINES)
-        assert all((root / "compute/models" / name / "model.json").is_file() for name in post.BASELINES)
-        assert baseline_before == {str(p.relative_to(baseline)): sha(p) for p in baseline.rglob("*") if p.is_file()}
+        assert read(root / "input/config.json")["models"] == source_cfg[
+            "models"
+        ] + list(post.BASELINES)
+        assert read(root / "authorization.json")["models"] == source_cfg[
+            "models"
+        ] + list(post.BASELINES)
+        assert all(
+            (root / "compute/models" / name / "model.json").is_file()
+            for name in post.BASELINES
+        )
+        assert baseline_before == {
+            str(p.relative_to(baseline)): sha(p)
+            for p in baseline.rglob("*")
+            if p.is_file()
+        }
     assert not (root / "truth").exists()
     assert not list(root.glob("*-submitted.claim"))
     if policy_kind is not None:
@@ -519,9 +627,13 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
         assert not (root / "compute/calibration").exists()
         assert {p.name for p in (root / "compute").iterdir()} == {"models"}
         assert {p.name for p in (root / "compute/models").iterdir()} == set(
-            source_cfg["models"] + (list(post.BASELINES) if include_baselines else [])
+            source_cfg["models"]
+            + (list(post.BASELINES) if include_baselines else [])
         )
-    env = {**os.environ, "PYTHONPATH": str(root / "input/ai") + ":" + str(root / "input/ai/src")}
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(root / "input/ai") + ":" + str(root / "input/ai/src"),
+    }
     subprocess.run(
         [
             sys.executable,
@@ -541,8 +653,17 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
 @pytest.mark.parametrize("policy_kind", ["numerical", "sensitivity"])
 @pytest.mark.parametrize(
     "invalid_path",
-    ["missing", "directory", "symlink", "parent_symlink", "dangling", "traversal",
-     "fifo", "invalid_json", "invalid_schema"],
+    [
+        "missing",
+        "directory",
+        "symlink",
+        "parent_symlink",
+        "dangling",
+        "traversal",
+        "fifo",
+        "invalid_json",
+        "invalid_schema",
+    ],
 )
 def test_prepare_rejects_invalid_policy_before_creating_output(
     tmp_path, policy_kind, invalid_path
@@ -579,12 +700,14 @@ def test_prepare_rejects_invalid_policy_before_creating_output(
         write(path, {"schema": "unrecognized"})
     root = tmp_path / "evaluation"
     with pytest.raises(ValueError):
-        post.prepare(SimpleNamespace(
-            approve_post_training=True,
-            fresh_calibration=True,
-            root=root,
-            **{policy_kind + "_policy": path},
-        ))
+        post.prepare(
+            SimpleNamespace(
+                approve_post_training=True,
+                fresh_calibration=True,
+                root=root,
+                **{policy_kind + "_policy": path},
+            )
+        )
     assert not root.exists()
 
 
@@ -599,13 +722,16 @@ def fresh_config():
     )
 
 
-@pytest.mark.parametrize("change", [
-    {"reuse_calibration": {"persistence": {"files": {}}}},
-    {"continuation": {}},
-    {"prediction_batch_size": 1},
-    {"all_model_calibration_fresh": False},
-    {"verify_prediction_batch": False},
-])
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"reuse_calibration": {"persistence": {"files": {}}}},
+        {"continuation": {}},
+        {"prediction_batch_size": 1},
+        {"all_model_calibration_fresh": False},
+        {"verify_prediction_batch": False},
+    ],
+)
 def test_fresh_calibration_rejects_reuse_or_changed_execution(change):
     cfg = fresh_config()
     post.config_check(cfg)
@@ -616,17 +742,23 @@ def test_fresh_calibration_rejects_reuse_or_changed_execution(change):
 
 def test_fresh_calibration_rejects_continuation_before_io(tmp_path):
     with pytest.raises(ValueError, match="mutually exclusive"):
-        post.prepare(SimpleNamespace(
-            approve_post_training=True,
-            fresh_calibration=True,
-            continue_from=tmp_path / "old",
-        ))
+        post.prepare(
+            SimpleNamespace(
+                approve_post_training=True,
+                fresh_calibration=True,
+                continue_from=tmp_path / "old",
+            )
+        )
     assert not list(tmp_path.iterdir())
 
 
-@pytest.mark.parametrize("artifact", ["compute/calibration", "input/continuation.json"])
+@pytest.mark.parametrize(
+    "artifact", ["compute/calibration", "input/continuation.json"]
+)
 @pytest.mark.parametrize("dangling_symlink", [False, True])
-def test_fresh_worker_guard_rejects_existing_artifacts(tmp_path, artifact, dangling_symlink):
+def test_fresh_worker_guard_rejects_existing_artifacts(
+    tmp_path, artifact, dangling_symlink
+):
     cfg = fresh_config()
     post.require_fresh_calibration_inputs(tmp_path, cfg)
     path = tmp_path / artifact
@@ -637,6 +769,8 @@ def test_fresh_worker_guard_rejects_existing_artifacts(tmp_path, artifact, dangl
         write(path, {"existing": True})
     else:
         path.mkdir(parents=True)
-    with pytest.raises(ValueError, match="without calibration or reuse artifacts"):
+    with pytest.raises(
+        ValueError, match="without calibration or reuse artifacts"
+    ):
         post.require_fresh_calibration_inputs(tmp_path, cfg)
     assert path.exists() or path.is_symlink()

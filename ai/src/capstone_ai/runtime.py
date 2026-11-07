@@ -56,20 +56,34 @@ def replay_forecasts(canonical, bundle, out):
             previous_segment = segment
             valid = all(frame["quality"][n] == "valid" for n in TARGETS)
             actual = [frame["values"][n] for n in TARGETS] if valid else None
-            ledger.observe(frame["run_id"], frame["clock_id"], frame["segment_id"], t, t, actual)
+            ledger.observe(
+                frame["run_id"],
+                frame["clock_id"],
+                frame["segment_id"],
+                t,
+                t,
+                actual,
+            )
             ledger.advance(t)
             emit()
             w = windows.get((*segment, t))
             if w is None:
                 continue
             scale = predictor.scaler
-            x = (feature_transform([w["X"]]) - scale["x_mean"]) / scale["x_scale"]
+            x = (feature_transform([w["X"]]) - scale["x_mean"]) / scale[
+                "x_scale"
+            ]
             c = (np.array([w["C"]]) - scale["c_mean"]) / scale["c_scale"]
             start = time.perf_counter()
             prediction = predictor.physical(predictor.predict_scaled(x, c))[0]
             elapsed = time.perf_counter() - start
             key = ledger.issue(
-                frame["run_id"], frame["clock_id"], frame["segment_id"], t, t, prediction
+                frame["run_id"],
+                frame["clock_id"],
+                frame["segment_id"],
+                t,
+                t,
+                prediction,
             )
             forecasts.write(
                 json.dumps(
@@ -90,8 +104,12 @@ def replay_forecasts(canonical, bundle, out):
     result = {
         "forecasts": len(ledger.forecasts),
         "decisions": len(ledger.decisions),
-        "valid_scores": sum(d["scores"] is not None for d in ledger.decisions.values()),
-        "missing_or_late": sum(d["scores"] is None for d in ledger.decisions.values()),
+        "valid_scores": sum(
+            d["scores"] is not None for d in ledger.decisions.values()
+        ),
+        "missing_or_late": sum(
+            d["scores"] is None for d in ledger.decisions.values()
+        ),
         "execution": "offline_logical_replay; live inference clock synchronization not verified",
         "forecast_hash": ledger.forecast_hash(),
         "files": {p.name: sha(p) for p in out.glob("*.jsonl")},

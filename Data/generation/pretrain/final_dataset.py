@@ -70,7 +70,14 @@ def operating_conditions(motion, environment, seed, stratum):
         return low + (high - low) * (stratum + rng.random()) / 3
 
     spec = sample("hover_normal", seed)
-    spec.update(soc=0.9, temperature=298.15, payload=0.0, wind_e=0.0, wind_n=0.0, gust_sigma=0.0)
+    spec.update(
+        soc=0.9,
+        temperature=298.15,
+        payload=0.0,
+        wind_e=0.0,
+        wind_n=0.0,
+        gust_sigma=0.0,
+    )
     if environment == "reference":
         spec["soc"] = draw(0.87, 0.95)
     elif environment == "middle_soc":
@@ -95,7 +102,11 @@ def operating_conditions(motion, environment, seed, stratum):
     if motion == "random":
         spec["path"] = random_path(spec, seed, seconds)
     elif motion == "composite":
-        path.update(kind="mixed", radius=min(path["radius"], 1.2), omega=min(path["omega"], 0.08))
+        path.update(
+            kind="mixed",
+            radius=min(path["radius"], 1.2),
+            omega=min(path["omega"], 0.08),
+        )
         # Short low-SOC flights retain the existing >=80s component guard.
         kinds = (
             ("altitude", "line")
@@ -106,7 +117,11 @@ def operating_conditions(motion, environment, seed, stratum):
         path.update(
             duration_s=seconds,
             program=[
-                dict(start_s=i * seconds / len(kinds), duration_s=seconds / len(kinds), path=p)
+                dict(
+                    start_s=i * seconds / len(kinds),
+                    duration_s=seconds / len(kinds),
+                    path=p,
+                )
                 for i, p in enumerate(components)
             ],
         )
@@ -122,10 +137,20 @@ def operating_conditions(motion, environment, seed, stratum):
 
 def cases(seed_base):
     templates = read(RESOURCES / "case_manifest.json")["cases"]
-    normal = {row["scenario"]: row for row in templates if row["role"] == "normal_train"}
-    anomaly = {row["scenario"]: row for row in templates if row["role"] == "anomaly_dev"}
+    normal = {
+        row["scenario"]: row
+        for row in templates
+        if row["role"] == "normal_train"
+    }
+    anomaly = {
+        row["scenario"]: row
+        for row in templates
+        if row["role"] == "anomaly_dev"
+    }
     if len(normal) != 9 or len(anomaly) != 6:
-        raise ValueError("Final holdout requires the existing nine normal/six anomaly definitions")
+        raise ValueError(
+            "Final holdout requires the existing nine normal/six anomaly definitions"
+        )
     rows = []
 
     def add(template, cohort, seed, motion, environment, stratum, **extra):
@@ -144,8 +169,12 @@ def cases(seed_base):
             motion=motion,
             environment=environment,
             condition_stratum=stratum,
-            path_mode={"composite": "mixed", "random": "random"}.get(motion, "basic"),
-            operation_variation=operating_conditions(motion, environment, seed, stratum),
+            path_mode={"composite": "mixed", "random": "random"}.get(
+                motion, "basic"
+            ),
+            operation_variation=operating_conditions(
+                motion, environment, seed, stratum
+            ),
             retries=0,
             attempts_max=3,
             parent_attempt_id=None,
@@ -156,7 +185,12 @@ def cases(seed_base):
     for motion_index, motion in enumerate(MOTIONS):
         for environment_index, environment in enumerate(ENVIRONMENTS):
             for repeat in range(3):
-                seed = seed_base + motion_index * 18 + environment_index * 3 + repeat
+                seed = (
+                    seed_base
+                    + motion_index * 18
+                    + environment_index * 3
+                    + repeat
+                )
                 add(
                     normal[normal_scenario(motion, environment)],
                     "standalone_normal",
@@ -168,11 +202,15 @@ def cases(seed_base):
     for kind, name in enumerate(sorted(anomaly)):
         long_index = 0
         for motion_index, motion in enumerate(MOTIONS):
-            for repeat, environment in enumerate(PAIR_ENVIRONMENTS[motion_index]):
+            for repeat, environment in enumerate(
+                PAIR_ENVIRONMENTS[motion_index]
+            ):
                 seed = seed_base + 1000 + kind * 18 + motion_index * 3 + repeat
                 group = f"F324v2-pair-{seed}"
                 offset = (
-                    100 if environment == "low_soc" else (180, 240, 300)[(long_index + kind) % 3]
+                    100
+                    if environment == "low_soc"
+                    else (180, 240, 300)[(long_index + kind) % 3]
                 )
                 if environment != "low_soc":
                     long_index += 1
@@ -210,7 +248,10 @@ def cases(seed_base):
 
 
 def validate(rows):
-    if len(rows) != 324 or Counter(row.get("final_cohort") for row in rows) != COHORTS:
+    if (
+        len(rows) != 324
+        or Counter(row.get("final_cohort") for row in rows) != COHORTS
+    ):
         raise ValueError("Final324 cohort membership mismatch")
     base = rows[0].get("composition_seed")
     if type(base) is not int or rows != cases(base):
@@ -221,8 +262,12 @@ def protection_inputs(exclude_task=None):
     """Only manifests/planned membership, never old raw observations or model scores."""
     paths = [RESOURCES / "protected-inventory.json"]
     for storage in sorted({ROOT / "Data", Path(STORE)}):
-        paths += sorted((storage / "processed").glob("*/prepared/frozen-manifest.json"))
-        paths += sorted((storage / "processed/final-test").glob("*/sealed-manifest.json"))
+        paths += sorted(
+            (storage / "processed").glob("*/prepared/frozen-manifest.json")
+        )
+        paths += sorted(
+            (storage / "processed/final-test").glob("*/sealed-manifest.json")
+        )
     paths += sorted((HOME / "tasks").glob("*/planned-cases.json"))
     sources, seeds, groups, raw_ids, hashes = {}, set(), set(), set(), set()
     for path in paths:
@@ -237,7 +282,9 @@ def protection_inputs(exclude_task=None):
                 seeds.add(row["seed"])
             if row.get("group_id"):
                 groups.add(row["group_id"])
-            raw_ids.update(row[key] for key in ("run_id", "raw_flight_id") if row.get(key))
+            raw_ids.update(
+                row[key] for key in ("run_id", "raw_flight_id") if row.get(key)
+            )
             if row.get("raw_sha256"):
                 hashes.add(row["raw_sha256"])
     return dict(
@@ -290,14 +337,23 @@ def admit_rows(folder, planned, protected, destination):
     module = load("final_archive_identity", ADMISSION / "freeze.py")
     ledger = read(folder / "execution/ledger.json")
     source_plan = read(folder / "plan.json")
-    if ledger["status"] != "COLLECTED_PENDING_QUALITY_STOPPED" or ledger.get("not_started"):
+    if ledger["status"] != "COLLECTED_PENDING_QUALITY_STOPPED" or ledger.get(
+        "not_started"
+    ):
         raise ValueError("Incomplete final collection cannot be sealed")
     if set(ledger["cases"]) != {row["case_id"] for row in planned}:
         raise ValueError("Final ledger membership differs")
-    rows, seen_ids, seen_hashes = [], set(protected["raw_ids"]), set(protected["raw_sha256"])
+    rows, seen_ids, seen_hashes = (
+        [],
+        set(protected["raw_ids"]),
+        set(protected["raw_sha256"]),
+    )
     for case in planned:
         record = ledger["cases"][case["case_id"]]
-        if record["status"] != "ARCHIVED_PENDING_QUALITY" or record["case"] != case:
+        if (
+            record["status"] != "ARCHIVED_PENDING_QUALITY"
+            or record["case"] != case
+        ):
             raise ValueError("Final case failed or changed")
         attempt = record.get("attempt", 1)
         limit = source_plan.get("unit_attempts_max", 1)
@@ -310,7 +366,8 @@ def admit_rows(folder, planned, protected, destination):
             or not 1 <= attempt <= limit
             or record.get("attempts_max", limit) != limit
             or len(history) != attempt - 1
-            or [item.get("attempt") for item in history] != list(range(1, attempt))
+            or [item.get("attempt") for item in history]
+            != list(range(1, attempt))
         ):
             raise ValueError("Final attempt identity/history mismatch")
         if any(
@@ -332,7 +389,9 @@ def admit_rows(folder, planned, protected, destination):
         )
         values = module.identity(archive)
         meta, scenario = values["run.json"], values["evaluation/scenario.json"]
-        collector().verify_run_source_snapshot(source_plan, values["reference/source_lock.json"])
+        collector().verify_run_source_snapshot(
+            source_plan, values["reference/source_lock.json"]
+        )
         if (
             meta.get("run_id"),
             meta.get("status"),
@@ -354,10 +413,18 @@ def admit_rows(folder, planned, protected, destination):
         if any(
             value.get(key)
             for value in (meta, scenario)
-            for key in ("parent_attempt_id", "previous_attempts", "continuation_id")
+            for key in (
+                "parent_attempt_id",
+                "previous_attempts",
+                "continuation_id",
+            )
         ) or any(
             scenario.get(key) != case.get(key)
-            for key in ("normal_variation", "operation_variation", "fault_after_mission_s")
+            for key in (
+                "normal_variation",
+                "operation_variation",
+                "fault_after_mission_s",
+            )
         ):
             raise ValueError("Final continuation or conditions differ")
         onset = case.get("fault_after_mission_s")
@@ -374,15 +441,22 @@ def admit_rows(folder, planned, protected, destination):
                 or schedule.get("acknowledged") is not True
                 or schedule.get("clock") != "px4-boot"
                 or schedule.get("origin") != "airborne_path_zero"
-                or any(type(schedule.get(k)) is not int or schedule[k] < 0 for k in time_keys)
+                or any(
+                    type(schedule.get(k)) is not int or schedule[k] < 0
+                    for k in time_keys
+                )
                 or schedule["requested_offset_us"] != onset * 1_000_000
                 or schedule["scheduled_time_us"]
-                != schedule["mission_origin_time_us"] + schedule["requested_offset_us"]
+                != schedule["mission_origin_time_us"]
+                + schedule["requested_offset_us"]
                 or not schedule["scheduled_time_us"]
                 <= schedule["applied_time_us"]
-                < schedule["mission_origin_time_us"] + case["mission_seconds"] * 1_000_000
+                < schedule["mission_origin_time_us"]
+                + case["mission_seconds"] * 1_000_000
             ):
-                raise ValueError("Final actual mission fault schedule missing or inconsistent")
+                raise ValueError(
+                    "Final actual mission fault schedule missing or inconsistent"
+                )
         elif schedule is not None:
             raise ValueError("Final unscheduled case contains a fault schedule")
         if (
@@ -396,7 +470,9 @@ def admit_rows(folder, planned, protected, destination):
         rid, raw_hash = record["run_id"], files["observations/streams.jsonl"]
         raw_id = meta.get("raw_flight_id", rid)
         if rid in seen_ids or raw_id in seen_ids or raw_hash in seen_hashes:
-            raise ValueError("Final raw identity overlaps existing or another final run")
+            raise ValueError(
+                "Final raw identity overlaps existing or another final run"
+            )
         seen_ids.add(rid)
         seen_ids.add(raw_id)
         seen_hashes.add(raw_hash)
@@ -421,15 +497,23 @@ def admit_rows(folder, planned, protected, destination):
 def run(runner):
     config, task = runner.config, runner.task
     planned = read(config["planned_cases"])["sets"]
-    if len(planned) != 1 or config["unit_attempts_max"] != 3 or config.get("pipeline_overlap"):
-        raise ValueError("One final324 set, maximum3 attempts, isolated final path required")
+    if (
+        len(planned) != 1
+        or config["unit_attempts_max"] != 3
+        or config.get("pipeline_overlap")
+    ):
+        raise ValueError(
+            "One final324 set, maximum3 attempts, isolated final path required"
+        )
     rows = planned[0]
     validate(rows)
     protected = read(config["final_protection"])
     verify(protected["sources"])
     reject_overlap(rows, protection_inputs(exclude_task=task))
     runner.update(planned_stage_count=5, final_test_scoring_authorized=False)
-    folder = runner.flight("collection", config["flight_workers"], rows, "final-collection")
+    folder = runner.flight(
+        "collection", config["flight_workers"], rows, "final-collection"
+    )
     runner.begin("final-admission", total=324, workers=1)
     admitted = admit_rows(folder, rows, protected, task.name)
     runner.finish("final-admission", dict(passed=True, completed=324))
@@ -437,9 +521,19 @@ def run(runner):
     output.mkdir(parents=True, exist_ok=False)
     consumer = external(STORE / "consumer/final-test" / task.name)
     consumer.mkdir(parents=True, exist_ok=False)
-    runner.batch("final-extract", "extract", admitted, config["io_workers"], task / "final-extract")
     runner.batch(
-        "final-preprocess", "preprocess", admitted, config["workers"], output / "canonical"
+        "final-extract",
+        "extract",
+        admitted,
+        config["io_workers"],
+        task / "final-extract",
+    )
+    runner.batch(
+        "final-preprocess",
+        "preprocess",
+        admitted,
+        config["workers"],
+        output / "canonical",
     )
     runner.batch(
         "final-quality",
@@ -450,7 +544,8 @@ def run(runner):
         canonical=output / "canonical",
     )
     quality = {
-        row["run_id"]: read(output / "quality" / row["run_id"] / "report.json") for row in admitted
+        row["run_id"]: read(output / "quality" / row["run_id"] / "report.json")
+        for row in admitted
     }
     canonical_hashes = {}
     for row in admitted:
@@ -478,13 +573,23 @@ def run(runner):
         condition_counts={
             cohort: {
                 "motion": dict(
-                    Counter(r["motion"] for r in admitted if r["final_cohort"] == cohort)
+                    Counter(
+                        r["motion"]
+                        for r in admitted
+                        if r["final_cohort"] == cohort
+                    )
                 ),
                 "environment": dict(
-                    Counter(r["environment"] for r in admitted if r["final_cohort"] == cohort)
+                    Counter(
+                        r["environment"]
+                        for r in admitted
+                        if r["final_cohort"] == cohort
+                    )
                 ),
                 "planned_mission_seconds": sum(
-                    r["mission_seconds"] for r in admitted if r["final_cohort"] == cohort
+                    r["mission_seconds"]
+                    for r in admitted
+                    if r["final_cohort"] == cohort
                 ),
             }
             for cohort in COHORTS
@@ -495,10 +600,14 @@ def run(runner):
         lineage_groups=len({row["group_id"] for row in admitted}),
         independence_basis="Distinct seeded resets between groups; each normal/anomaly pair remains correlated; no empirical independence claim",
         producer_binding=read(folder / "plan.json")["source_hashes"],
-        protection=dict(path=config["final_protection"], sha256=sha(config["final_protection"])),
+        protection=dict(
+            path=config["final_protection"],
+            sha256=sha(config["final_protection"]),
+        ),
         cases_sha256=sha(Path(config["planned_cases"])),
         collection_ledger=dict(
-            path=str(folder / "execution/ledger.json"), sha256=sha(folder / "execution/ledger.json")
+            path=str(folder / "execution/ledger.json"),
+            sha256=sha(folder / "execution/ledger.json"),
         ),
         preprocessing_package_sha256=sha(PACKAGE / "PACKAGE.json"),
         canonical_sha256=canonical_hashes,
@@ -509,12 +618,19 @@ def run(runner):
         calibration_authorized=False,
         final_test_scoring_authorized=False,
         truth_policy="Truth remains evaluator-only in source archives; canonical preprocessing uses exact six consumer files",
-        zero_target_runs=[rid for rid, q in quality.items() if not q["accepted_targets"]],
+        zero_target_runs=[
+            rid for rid, q in quality.items() if not q["accepted_targets"]
+        ],
         exposure_note="Quality airborne seconds and accepted targets are not model-scored exposure",
     )
     write(output / "sealed-manifest.json", sealed)
     write(
         output / "seal.json",
-        dict(manifest_sha256=sha(output / "sealed-manifest.json"), status=sealed["status"]),
+        dict(
+            manifest_sha256=sha(output / "sealed-manifest.json"),
+            status=sealed["status"],
+        ),
     )
-    runner.update(final_dataset_sealed=True, result=str(output / "sealed-manifest.json"))
+    runner.update(
+        final_dataset_sealed=True, result=str(output / "sealed-manifest.json")
+    )

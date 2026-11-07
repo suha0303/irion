@@ -54,11 +54,20 @@ def live_forecast(
     prepared_predictor=None,
     prepared_tail=None,
 ):
-    startup = {"function_entry_ns": time.monotonic_ns(), **(process_timing or {})}
+    startup = {
+        "function_entry_ns": time.monotonic_ns(),
+        **(process_timing or {}),
+    }
     startup["cyclic_gc_enabled"] = gc.isenabled()
-    run, bundle, out = Path(run).resolve(), Path(bundle).resolve(), Path(out).resolve()
+    run, bundle, out = (
+        Path(run).resolve(),
+        Path(bundle).resolve(),
+        Path(out).resolve(),
+    )
     if out.exists() and any(out.iterdir()) and not resume:
-        raise ValueError("live output exists; explicit resume or new output required")
+        raise ValueError(
+            "live output exists; explicit resume or new output required"
+        )
     out.mkdir(parents=True, exist_ok=True)
     runtime_config = runtime_config or {"poll_interval_ms": 20, "trace": False}
     trace_file = (out / "timing.jsonl").open("a", buffering=65536)
@@ -92,7 +101,12 @@ def live_forecast(
         "resume_count": 0,
     }
     ledger = PendingForecasts(cal["error_scale"], cal["high"])
-    journal_names = ["payloads.jsonl", "forecasts.jsonl", "decisions.jsonl", "clock.jsonl"]
+    journal_names = [
+        "payloads.jsonl",
+        "forecasts.jsonl",
+        "decisions.jsonl",
+        "clock.jsonl",
+    ]
     written = set()
     clock_consistent = True
     consumed_frames = 0
@@ -100,7 +114,10 @@ def live_forecast(
     if resume:
         startup["restore_start_ns"] = time.monotonic_ns()
         checkpoint = read_json(out / "checkpoint-live.json")
-        if checkpoint["bundle_hash"] != bundle_hash or checkpoint["run_id"] != metadata["run_id"]:
+        if (
+            checkpoint["bundle_hash"] != bundle_hash
+            or checkpoint["run_id"] != metadata["run_id"]
+        ):
             raise ValueError("live restart bundle/run mismatch")
         for name, expected in checkpoint["journal_hashes"].items():
             if sha(out / name) != expected:
@@ -110,15 +127,20 @@ def live_forecast(
 
             if prepared_tail is None:
                 raise ValueError("live shadow is required for this handover")
-            if sha(out / "handover-state.bin") != checkpoint["handover_state_sha256"]:
+            if (
+                sha(out / "handover-state.bin")
+                != checkpoint["handover_state_sha256"]
+            ):
                 raise ValueError("live handover state hash mismatch")
-            engine, tail = adopt_shadow(prepared_tail, config, metadata, checkpoint["source"])
+            engine, tail = adopt_shadow(
+                prepared_tail, config, metadata, checkpoint["source"]
+            )
             tail.trace = trace if runtime_config.get("trace") else None
             consumed = checkpoint["consumed_frames"]
             anchor = engine.frames[consumed - 1]
-            if [anchor[k] for k in ["clock_id", "segment_id", "time_us"]] != checkpoint[
-                "consumed_frame"
-            ]:
+            if [
+                anchor[k] for k in ["clock_id", "segment_id", "time_us"]
+            ] != checkpoint["consumed_frame"]:
                 raise ValueError("shadow consumed-frame prefix differs")
         elif runtime_config.get("fast_resume"):
             from .resume_state import restore_runtime
@@ -147,7 +169,11 @@ def live_forecast(
             raise ValueError("live pending state hash mismatch")
         ledger = load_pending(out / "pending.json")
         consumed_frames = checkpoint["consumed_frames"]
-        last_segment = tuple(checkpoint["last_segment"]) if checkpoint["last_segment"] else None
+        last_segment = (
+            tuple(checkpoint["last_segment"])
+            if checkpoint["last_segment"]
+            else None
+        )
         evidence = checkpoint["evidence"]
         evidence["resume_count"] += 1
         written = {
@@ -169,8 +195,19 @@ def live_forecast(
     new_forecasts = 0
     paused = False
     startup["ready_ns"] = time.monotonic_ns()
-    trace({"kind": "startup", "resume": resume, "runtime_config": runtime_config, **startup})
-    rebuild_done = not resume or bool(prepared_tail) or runtime_config.get("fast_resume", False)
+    trace(
+        {
+            "kind": "startup",
+            "resume": resume,
+            "runtime_config": runtime_config,
+            **startup,
+        }
+    )
+    rebuild_done = (
+        not resume
+        or bool(prepared_tail)
+        or runtime_config.get("fast_resume", False)
+    )
 
     def checkpoint_state():
         checkpoint_start = time.monotonic_ns()
@@ -185,8 +222,12 @@ def live_forecast(
         if paused and runtime_config.get("warm_shadow"):
             from .resume_state import save_handover_state
 
-            handover_hash = save_handover_state(tail, out / "handover-state.bin")
-        if runtime_config.get("fast_resume") and not (paused and runtime_config.get("warm_shadow")):
+            handover_hash = save_handover_state(
+                tail, out / "handover-state.bin"
+            )
+        if runtime_config.get("fast_resume") and not (
+            paused and runtime_config.get("warm_shadow")
+        ):
             from .resume_state import save_runtime
 
             state_hash = save_runtime(tail, out / "runtime-state.bin")
@@ -211,7 +252,9 @@ def live_forecast(
                 "last_segment": last_segment,
                 "runtime_state_sha256": state_hash,
                 "handover_state_sha256": handover_hash,
-                "journal_hashes": {name: sha(out / name) for name in journal_names},
+                "journal_hashes": {
+                    name: sha(out / name) for name in journal_names
+                },
             },
         )
         trace(
@@ -246,32 +289,45 @@ def live_forecast(
             ):
                 d["decision_time_us"] = after["sim_time_us"]
                 d["decision_clock_nonce"] = after["nonce"]
-                d["decision_time_semantic"] = "conservative_post_scoring_upper_bound"
+                d["decision_time_semantic"] = (
+                    "conservative_post_scoring_upper_bound"
+                )
             else:
                 d["decision_time_us"] = None
                 d["unverified_candidate_scores"] = d["scores"]
                 d["scores"] = None
                 d["state"] = "decision_timing_unverified"
                 d["episode_start"] = False
-                clock_consistent &= after is None or after["sim_time_us"] >= ready
+                clock_consistent &= (
+                    after is None or after["sim_time_us"] >= ready
+                )
             write_durable(files["decisions.jsonl"], d)
             written.add(key)
 
     try:
         if probe.query() is None:
-            raise RuntimeError("PX4 TIMESYNC unavailable; no clock substitution permitted")
+            raise RuntimeError(
+                "PX4 TIMESYNC unavailable; no clock substitution permitted"
+            )
         last_clock_query_ns = time.monotonic_ns()
         while not tail.closed:
             progress = tail.poll()
             # Drain telemetry and keep a current same-run clock response during warmup.
             interval = runtime_config.get("clock_refresh_ms")
-            if interval and time.monotonic_ns() - last_clock_query_ns >= interval * 1000000:
+            if (
+                interval
+                and time.monotonic_ns() - last_clock_query_ns
+                >= interval * 1000000
+            ):
                 probe.query()
                 last_clock_query_ns = time.monotonic_ns()
             evidence["source_grew_while_attached"] |= (
                 run / "observations/streams.jsonl"
             ).stat().st_size > start_size
-            windows = {(w["clock_id"], w["segment_id"], w["origin_us"]): w for w in engine.windows}
+            windows = {
+                (w["clock_id"], w["segment_id"], w["origin_us"]): w
+                for w in engine.windows
+            }
             # Rebuild filters from the source prefix, but never replay that prefix
             # into the restored matcher/alarm or prematurely close pending forecasts.
             for frame in engine.frames[consumed_frames:]:
@@ -318,8 +374,12 @@ def live_forecast(
                 before = probe.query()
                 preclock_done_ns = time.monotonic_ns()
                 scale = p.scaler
-                x = (feature_transform([window["X"]], config) - scale["x_mean"]) / scale["x_scale"]
-                c = (np.asarray([window["C"]]) - scale["c_mean"]) / scale["c_scale"]
+                x = (
+                    feature_transform([window["X"]], config) - scale["x_mean"]
+                ) / scale["x_scale"]
+                c = (np.asarray([window["C"]]) - scale["c_mean"]) / scale[
+                    "c_scale"
+                ]
                 compute_start = time.monotonic_ns()
                 prediction = p.physical(p.predict_scaled(x, c))[0]
                 compute_done = time.monotonic_ns()
@@ -339,7 +399,9 @@ def live_forecast(
                 write_durable(files["payloads.jsonl"], payload)
                 persist_done = time.monotonic_ns()
                 after = probe.query()
-                bounds = deadline_bounds(before, after, persist_done, t + 100000)
+                bounds = deadline_bounds(
+                    before, after, persist_done, t + 100000
+                )
                 trace(
                     {
                         "kind": "forecast_timing",
@@ -352,7 +414,9 @@ def live_forecast(
                         "payload_committed_ns": persist_done,
                         "postclock_done_ns": time.monotonic_ns(),
                         "certificate": bounds,
-                        "tail": getattr(tail, "frame_ready", {}).get((*segment, t)),
+                        "tail": getattr(tail, "frame_ready", {}).get(
+                            (*segment, t)
+                        ),
                         "resume": resume,
                     }
                 )
@@ -381,7 +445,8 @@ def live_forecast(
                 )
                 if after is not None and tail.last_mark is not None:
                     clock_consistent &= (
-                        after["sim_time_us"] >= tail.last_mark["through_available_time_us"]
+                        after["sim_time_us"]
+                        >= tail.last_mark["through_available_time_us"]
                     )
                 new_forecasts += 1
                 if stop_after is not None and new_forecasts >= stop_after:
@@ -397,7 +462,9 @@ def live_forecast(
                     time.sleep(runtime_config["poll_interval_ms"] / 1000)
                     notified = False
                 else:
-                    notified = waiter.wait(runtime_config["poll_interval_ms"] / 1000)
+                    notified = waiter.wait(
+                        runtime_config["poll_interval_ms"] / 1000
+                    )
                 trace(
                     {
                         "kind": "consumer_wait",
@@ -410,7 +477,10 @@ def live_forecast(
             ledger.advance(engine.frames[-1]["time_us"], closed=True)
             persist_decisions()
         evidence["live_verified"] = live_evidence_verified(
-            "live", evidence["initial_status"], evidence["source_grew_while_attached"], tail.closed
+            "live",
+            evidence["initial_status"],
+            evidence["source_grew_while_attached"],
+            tail.closed,
         )
         checkpoint_state()
         if tail.closed and not paused:
@@ -421,10 +491,22 @@ def live_forecast(
             waiter.close()
         for file in files.values():
             file.close()
-        trace({"kind": "process_complete", "host_ns": time.monotonic_ns(), "paused": paused})
+        trace(
+            {
+                "kind": "process_complete",
+                "host_ns": time.monotonic_ns(),
+                "paused": paused,
+            }
+        )
         trace_file.close()
-    forecasts = [json.loads(s) for s in (out / "forecasts.jsonl").read_text().splitlines()]
-    decisions = [json.loads(s) for s in (out / "decisions.jsonl").read_text().splitlines()]
+    forecasts = [
+        json.loads(s)
+        for s in (out / "forecasts.jsonl").read_text().splitlines()
+    ]
+    decisions = [
+        json.loads(s)
+        for s in (out / "decisions.jsonl").read_text().splitlines()
+    ]
     counts = Counter(f["timing_certificate"]["status"] for f in forecasts)
     result = {
         "run": str(run),
@@ -438,11 +520,14 @@ def live_forecast(
         "decisions": len(decisions),
         "unique_decisions": len({d["forecast_id"] for d in decisions}),
         "deadline_counts": dict(counts),
-        "valid_scored_decisions": sum(d["scores"] is not None for d in decisions),
+        "valid_scored_decisions": sum(
+            d["scores"] is not None for d in decisions
+        ),
         "clock_queries_this_process": probe.count,
         "clock_timeouts_this_process": probe.errors,
         "clock_consistent_with_raw_watermarks": bool(clock_consistent),
-        "all_forecasts_met_deadline": bool(forecasts) and counts["on_time"] == len(forecasts),
+        "all_forecasts_met_deadline": bool(forecasts)
+        and counts["on_time"] == len(forecasts),
         "restart_policy": "verify source identity/prefix and journal hashes; rebuild common preprocessor; retain immutable forecast/decision identities",
         "hashes": {n: sha(out / n) for n in journal_names},
         "timing_sha256": sha(out / "timing.jsonl"),

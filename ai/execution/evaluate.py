@@ -7,8 +7,11 @@ import tarfile
 from pathlib import Path
 
 import numpy as np
-
-from capstone_ai.detection_protocol import event_result, grouped_rate_interval, point_metrics
+from capstone_ai.detection_protocol import (
+    event_result,
+    grouped_rate_interval,
+    point_metrics,
+)
 from capstone_ai.detection_replay import evaluate_sealed, records
 
 from .common import MODELS, child, read, sha, verify, write
@@ -27,7 +30,10 @@ class ResidualSummary:
         if not len(residuals):
             return
         signed = np.asarray(residuals, dtype=np.float64)
-        if signed.shape != (len(residuals), 10, 4) or not np.isfinite(signed).all():
+        if (
+            signed.shape != (len(residuals), 10, 4)
+            or not np.isfinite(signed).all()
+        ):
             raise ValueError("invalid sealed residuals")
         self.count += len(signed)
         self.absolute += np.abs(signed).sum((0, 1))
@@ -36,7 +42,12 @@ class ResidualSummary:
 
     def result(self):
         if not self.count:
-            return {"scored_forecasts": 0, "mae": None, "rmse": None, "signed_bias": None}
+            return {
+                "scored_forecasts": 0,
+                "mae": None,
+                "rmse": None,
+                "signed_bias": None,
+            }
         n = self.count * 10
         return {
             "scored_forecasts": self.count,
@@ -51,7 +62,9 @@ class ResidualSummary:
 
 def forecast_errors(decisions):
     summary = ResidualSummary()
-    summary.add([d["signed_residual"] for d in decisions if d["scores"] is not None])
+    summary.add(
+        [d["signed_residual"] for d in decisions if d["scores"] is not None]
+    )
     return summary.result()
 
 
@@ -83,14 +96,19 @@ def default_protocol_manifest():
         "point_adjustment": False,
         "normal_group_bootstrap": {"seed": 17, "draws": 1000},
         "implementation_sha256": {
-            **{m.__name__: sha(m.__file__) for m in (detection, protocol, replay, inference)},
+            **{
+                m.__name__: sha(m.__file__)
+                for m in (detection, protocol, replay, inference)
+            },
             "execution.evaluate": sha(__file__),
         },
     }
 
 
 def protocol_hash(protocol):
-    payload = json.dumps(protocol, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    payload = json.dumps(
+        protocol, sort_keys=True, separators=(",", ":"), allow_nan=False
+    )
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
@@ -106,14 +124,22 @@ def event_counts(events):
         "unavailable": total - available,
         "recall_all": detected / total if total else None,
         "recall_conditional": detected / available if available else None,
-        "new_episode_recall_all": sum(e["new_episode_detected"] for e in events) / total
+        "new_episode_recall_all": sum(e["new_episode_detected"] for e in events)
+        / total
         if total
         else None,
     }
 
 
-def summarize_model(items, all_errors, common_errors, expected_total, *,
-                    normal_role="normal_dev_eval", anomaly_role="anomaly_dev"):
+def summarize_model(
+    items,
+    all_errors,
+    common_errors,
+    expected_total,
+    *,
+    normal_role="normal_dev_eval",
+    anomaly_role="anomaly_dev",
+):
     events = [e for item in items for e in item["events"]]
     normal = [r for r in items if r["role"] == normal_role]
     hours = sum(r["metrics"]["scored_seconds"] for r in normal) / 3600
@@ -133,7 +159,9 @@ def summarize_model(items, all_errors, common_errors, expected_total, *,
         values = [e[key] for e in events if e.get(key) is not None]
         delay[key] = {
             "observed_events": len(values),
-            "p50_p95_s": np.quantile(values, [0.5, 0.95]).tolist() if values else None,
+            "p50_p95_s": np.quantile(values, [0.5, 0.95]).tolist()
+            if values
+            else None,
             "interpretation": "detected events only; misses are reported separately",
         }
     result = dict(
@@ -144,21 +172,31 @@ def summarize_model(items, all_errors, common_errors, expected_total, *,
             for k in sorted({e["onset_kind"] for e in events})
         },
         by_scenario={
-            k: event_counts([e for r in items if r["scenario"] == k for e in r["events"]])
+            k: event_counts(
+                [e for r in items if r["scenario"] == k for e in r["events"]]
+            )
             for k in sorted({r["scenario"] for r in items})
         },
-        anomaly_independent_groups=len({r["group"] for r in items if r["role"] == anomaly_role}),
+        anomaly_independent_groups=len(
+            {r["group"] for r in items if r["role"] == anomaly_role}
+        ),
         delay_summary=delay,
         exposure=dict(
             operational_seconds=operational,
             scored_seconds=scored,
             coverage=scored / operational if operational else None,
-            valid_decisions=sum(r["metrics"].get("valid_decisions", 0) for r in items),
-            unscored_forecasts=sum(r["metrics"].get("unscored_forecasts", 0) for r in items),
+            valid_decisions=sum(
+                r["metrics"].get("valid_decisions", 0) for r in items
+            ),
+            unscored_forecasts=sum(
+                r["metrics"].get("unscored_forecasts", 0) for r in items
+            ),
         ),
         normal_scored_hours=hours,
         normal_episodes=alarms,
-        normal_episodes_per_hour={k: v / hours if hours else None for k, v in alarms.items()},
+        normal_episodes_per_hour={
+            k: v / hours if hours else None for k, v in alarms.items()
+        },
         zero_union_poisson95_upper_per_hour=-math.log(0.05) / hours
         if hours and not alarms["union"]
         else None,
@@ -185,7 +223,10 @@ def summarize_model(items, all_errors, common_errors, expected_total, *,
 def truth_member(row, target, progress):
     archive = row["archive"]
     path = Path(archive["path"])
-    if sha(path) != archive["sha256"] or path.stat().st_size != archive["bytes"]:
+    if (
+        sha(path) != archive["sha256"]
+        or path.stat().st_size != archive["bytes"]
+    ):
         raise ValueError("Development archive changed")
     expected = archive["members"]["evaluation/events.jsonl"]
     if expected["kind"] != "file" or not 0 <= expected["bytes"] <= 10_000_000:
@@ -196,12 +237,24 @@ def truth_member(row, target, progress):
             progress.check()
             if member.name != "evaluation/events.jsonl":
                 continue
-            if found or not member.isfile() or member.sparse or member.size != expected["bytes"]:
+            if (
+                found
+                or not member.isfile()
+                or member.sparse
+                or member.size != expected["bytes"]
+            ):
                 raise ValueError("Duplicate/invalid event member")
             found = True
-            with stream.extractfile(member) as source, target.open("xb") as output:
+            with (
+                stream.extractfile(member) as source,
+                target.open("xb") as output,
+            ):
                 output.write(source.read(10_000_001))
-    if not found or target.stat().st_size != expected["bytes"] or sha(target) != expected["sha256"]:
+    if (
+        not found
+        or target.stat().st_size != expected["bytes"]
+        or sha(target) != expected["sha256"]
+    ):
         raise ValueError("Development truth hash mismatch")
 
 
@@ -209,15 +262,23 @@ def final_protocol(source):
     """Retain the completed development protocol; only identify the final scope."""
     current = default_protocol_manifest()
     old, new = dict(source), dict(current)
-    old_impl, new_impl = dict(old.pop("implementation_sha256")), dict(new.pop("implementation_sha256"))
+    old_impl, new_impl = (
+        dict(old.pop("implementation_sha256")),
+        dict(new.pop("implementation_sha256")),
+    )
     # This module adds role/scope admission. Detector and event matching are unchanged.
     old_impl.pop("execution.evaluate")
     new_impl.pop("execution.evaluate")
     if old != new or old_impl != new_impl:
-        raise ValueError("Final test must retain the completed development protocol")
-    return {**current, "evaluation_mode": "final_test",
-            "calibration_policy": "reuse frozen normal-only calibration; never refit on final test",
-            "source_development_protocol_sha256": protocol_hash(source)}
+        raise ValueError(
+            "Final test must retain the completed development protocol"
+        )
+    return {
+        **current,
+        "evaluation_mode": "final_test",
+        "calibration_policy": "reuse frozen normal-only calibration; never refit on final test",
+        "source_development_protocol_sha256": protocol_hash(source),
+    }
 
 
 def evaluate(
@@ -236,22 +297,40 @@ def evaluate(
     final = evaluation_mode == "final_test"
     if evaluation_mode not in {"development", "final_test"}:
         raise ValueError("Unknown evaluation mode")
-    if final and (config.get("execution_scope") != "final_test_evaluation"
-                  or config.get("final_test_authorized") is not True
-                  or config.get("calibration_authorized") is not False
-                  or config.get("production_training_authorized") is not False):
-        raise ValueError("Explicit read-only final evaluation authorization required")
-    normal_role, anomaly_role = ("normal_test", "anomaly_test") if final else ("normal_dev_eval", "anomaly_dev")
-    counts = development_counts or ({normal_role: 216, anomaly_role: 108} if final
-                                   else dict(normal_dev_eval=11, anomaly_dev=12))
+    if final and (
+        config.get("execution_scope") != "final_test_evaluation"
+        or config.get("final_test_authorized") is not True
+        or config.get("calibration_authorized") is not False
+        or config.get("production_training_authorized") is not False
+    ):
+        raise ValueError(
+            "Explicit read-only final evaluation authorization required"
+        )
+    normal_role, anomaly_role = (
+        ("normal_test", "anomaly_test")
+        if final
+        else ("normal_dev_eval", "anomaly_dev")
+    )
+    counts = development_counts or (
+        {normal_role: 216, anomaly_role: 108}
+        if final
+        else dict(normal_dev_eval=11, anomaly_dev=12)
+    )
     if set(counts) != {normal_role, anomaly_role}:
         raise ValueError("Evaluation roles differ from authorized scope")
     expected_total = sum(counts.values())
     if not model_names or len(set(model_names)) != len(model_names):
         raise ValueError("Explicit unique model identities required")
-    if completion_status not in ("REPORT_READY_STOPPED", "EVALUATION_COMPLETE_PENDING_RELEASE"):
+    if completion_status not in (
+        "REPORT_READY_STOPPED",
+        "EVALUATION_COMPLETE_PENDING_RELEASE",
+    ):
         raise ValueError("Unknown evaluation completion status")
-    protocol = final_protocol(config["source_protocol"]) if final else default_protocol_manifest()
+    protocol = (
+        final_protocol(config["source_protocol"])
+        if final
+        else default_protocol_manifest()
+    )
     if "protocol" in config and config["protocol"] != protocol:
         raise ValueError("Frozen evaluation protocol or implementation changed")
     download = Path(download)
@@ -265,7 +344,12 @@ def evaluate(
         raise ValueError("Successful Slurm release required before truth join")
     seal = read(download / "result-seal.json")
     if (
-        seal.get("status") != ("FINAL_INFERENCE_COMPLETE" if final else "TRAIN_CALIBRATION_INFERENCE_COMPLETE")
+        seal.get("status")
+        != (
+            "FINAL_INFERENCE_COMPLETE"
+            if final
+            else "TRAIN_CALIBRATION_INFERENCE_COMPLETE"
+        )
         or seal.get("models") != list(model_names)
         or seal.get("final_test_used") is not final
         or seal.get("truth_join") is not False
@@ -273,15 +357,24 @@ def evaluate(
         raise ValueError("All configured sealed inference results required")
     verify(download, seal["files"])
     dataset = Path(config["dataset"])
-    if sha(dataset / "manifest.json") != config["dataset_files"]["manifest.json"]:
+    if (
+        sha(dataset / "manifest.json")
+        != config["dataset_files"]["manifest.json"]
+    ):
         raise ValueError("Dataset binding changed")
     rows = [
         r
         for r in read(dataset / "manifest.json")["runs"]
         if r["role"] in {normal_role, anomaly_role}
     ]
-    if (len(rows) != expected_total or len({r['run_id'] for r in rows}) != expected_total
-            or any(sum(r["role"] == role for r in rows) != count for role, count in counts.items())):
+    if (
+        len(rows) != expected_total
+        or len({r["run_id"] for r in rows}) != expected_total
+        or any(
+            sum(r["role"] == role for r in rows) != count
+            for role, count in counts.items()
+        )
+    ):
         raise ValueError("Development membership/count mismatch")
     output.mkdir(exist_ok=False)
     (output / "truth").mkdir()
@@ -301,18 +394,34 @@ def evaluate(
         )
         truth = output / "truth" / (row["run_id"] + ".jsonl")
         truth_provider(row, truth, progress)
-        frame_path = child(dataset, "canonical/" + row["run_id"] + "/frames.jsonl")
-        if sha(frame_path) != config["dataset_files"][str(frame_path.relative_to(dataset))]:
+        frame_path = child(
+            dataset, "canonical/" + row["run_id"] + "/frames.jsonl"
+        )
+        if (
+            sha(frame_path)
+            != config["dataset_files"][str(frame_path.relative_to(dataset))]
+        ):
             raise ValueError("Evaluation canonical changed")
         with frame_path.open() as stream:
             first = __import__("json").loads(next(stream))["time_us"]
         evidence_rows.append(
             {
-                **{k: row[k] for k in ("run_id", "role", "scenario", "group_id")},
                 **{
                     k: row[k]
-                    for k in ("scenario_parameters_snapshot", "normal_variation", "paired_case_id",
-                              "final_cohort", "pair_id", "motion", "environment", "seed")
+                    for k in ("run_id", "role", "scenario", "group_id")
+                },
+                **{
+                    k: row[k]
+                    for k in (
+                        "scenario_parameters_snapshot",
+                        "normal_variation",
+                        "paired_case_id",
+                        "final_cohort",
+                        "pair_id",
+                        "motion",
+                        "environment",
+                        "seed",
+                    )
                     if k in row
                 },
                 "observation_start_us": first,
@@ -337,13 +446,17 @@ def evaluate(
                         operational_seconds=0,
                         scored_seconds=0,
                         coverage=None,
-                        episodes={k: [] for k in ("union", "battery", "propulsion")},
+                        episodes={
+                            k: [] for k in ("union", "battery", "propulsion")
+                        },
                         reason="no_observed_airborne_exposure",
                     ),
                     point_metrics=point_metrics(records(truth), [], first),
                 )
             if row["role"] == normal_role and report["events"]:
-                raise ValueError("Normal development control has anomaly events")
+                raise ValueError(
+                    "Normal development control has anomaly events"
+                )
             for event in report["events"]:
                 event["pre_event_30_opportunities_met"] = (
                     None
@@ -371,17 +484,28 @@ def evaluate(
                 if d["scores"] is not None:
                     keyed[key] = d
             decisions_by_model[name] = keyed
-            all_residuals[name].add([d["signed_residual"] for d in keyed.values()])
-        common = set.intersection(*(set(v) for v in decisions_by_model.values()))
+            all_residuals[name].add(
+                [d["signed_residual"] for d in keyed.values()]
+            )
+        common = set.intersection(
+            *(set(v) for v in decisions_by_model.values())
+        )
         common_count += len(common)
         for name in model_names:
             common_residuals[name].add(
-                [decisions_by_model[name][k]["signed_residual"] for k in sorted(common)]
+                [
+                    decisions_by_model[name][k]["signed_residual"]
+                    for k in sorted(common)
+                ]
             )
     results = {
         name: summarize_model(
-            items, all_residuals[name].result(), common_residuals[name].result(), expected_total,
-            normal_role=normal_role, anomaly_role=anomaly_role,
+            items,
+            all_residuals[name].result(),
+            common_residuals[name].result(),
+            expected_total,
+            normal_role=normal_role,
+            anomaly_role=anomaly_role,
         )
         for name, items in per_model.items()
     }
@@ -409,8 +533,12 @@ def evaluate(
         protocol_sha256=protocol_hash(protocol),
         limitations=[
             f"single model seed{config.get('seed', 17)}",
-            "grouped final-test results; simulation only" if final else "grouped development results; simulation only",
-            "locked final test; no fitting or threshold tuning" if final else "development evaluation; no locked final test",
+            "grouped final-test results; simulation only"
+            if final
+            else "grouped development results; simulation only",
+            "locked final test; no fitting or threshold tuning"
+            if final
+            else "development evaluation; no locked final test",
         ],
     )
     write(output / "metrics.json", metrics)

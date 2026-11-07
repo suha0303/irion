@@ -16,7 +16,14 @@ RUN_UNITS = "physical_common19_pack_V_A"
 PILOT = "pilot_development_reference"
 SHORT = "short_cycle_development_reference"
 FINAL16 = "final16_development_reference"
-EVALUATION_COHORTS = {"preliminary", "development", "final", PILOT, SHORT, FINAL16}
+EVALUATION_COHORTS = {
+    "preliminary",
+    "development",
+    "final",
+    PILOT,
+    SHORT,
+    FINAL16,
+}
 FIT_ROLES = {"normal_train", "normal_validation", "normal_calibration"}
 TEST_ROLES = {"normal_test", "anomaly_test"}
 NORMAL_SCENARIOS = {
@@ -44,10 +51,14 @@ PRODUCER_FIELDS = (
 def partition(role, cohort=None):
     if role in FIT_ROLES:
         if cohort is not None and cohort != role:
-            raise ValueError("Fit/calibration role cannot be renamed into an evaluation cohort")
+            raise ValueError(
+                "Fit/calibration role cannot be renamed into an evaluation cohort"
+            )
         return role
     if role not in TEST_ROLES or cohort not in EVALUATION_COHORTS:
-        raise ValueError("Evaluation role requires explicit preliminary/development/final cohort")
+        raise ValueError(
+            "Evaluation role requires explicit preliminary/development/final cohort"
+        )
     return "evaluation:" + cohort
 
 
@@ -55,11 +66,17 @@ def validate_lineages(rows):
     owners, ids = {}, set()
     for row in rows:
         if row.get("purpose") == PILOT and row.get("cohort") != PILOT:
-            raise ValueError("Pilot purpose cannot be relabelled into a fit or final cohort")
+            raise ValueError(
+                "Pilot purpose cannot be relabelled into a fit or final cohort"
+            )
         if row.get("purpose") == SHORT and row.get("cohort") != SHORT:
-            raise ValueError("Short-cycle purpose cannot be relabelled into fit/final")
+            raise ValueError(
+                "Short-cycle purpose cannot be relabelled into fit/final"
+            )
         if row.get("purpose") == FINAL16 and row.get("cohort") != FINAL16:
-            raise ValueError("FINAL16 purpose cannot be relabelled into fit/final")
+            raise ValueError(
+                "FINAL16 purpose cannot be relabelled into fit/final"
+            )
         rid = row["run_id"]
         if not rid or rid in ids or not row["lineage"]:
             raise ValueError("Unique run IDs and explicit lineage required")
@@ -75,8 +92,12 @@ def validate_lineages(rows):
                     raise ValueError(
                         "Raw flight/retry/paired/group leakage across splits or cohorts"
                     )
-                if old_role != row["role"] and not key.startswith(("pair:", "group:")):
-                    raise ValueError("Only pair/group IDs may be shared by evaluation roles")
+                if old_role != row["role"] and not key.startswith(
+                    ("pair:", "group:")
+                ):
+                    raise ValueError(
+                        "Only pair/group IDs may be shared by evaluation roles"
+                    )
             owners[key] = scope, row["role"]
     return rows
 
@@ -87,9 +108,15 @@ def check_protection(rows, registry, *, usage):
         raise ValueError("Explicit frozen global protection registry required")
     forbidden = {}
     for entry in registry["entries"]:
-        if not entry.get("identities") or not isinstance(entry.get("forbidden_uses"), list):
-            raise ValueError("Protection entries need identities and forbidden uses")
-        if any(not isinstance(k, str) or not k for k in entry["identities"]) or any(
+        if not entry.get("identities") or not isinstance(
+            entry.get("forbidden_uses"), list
+        ):
+            raise ValueError(
+                "Protection entries need identities and forbidden uses"
+            )
+        if any(
+            not isinstance(k, str) or not k for k in entry["identities"]
+        ) or any(
             not isinstance(u, str) or not u for u in entry["forbidden_uses"]
         ):
             raise ValueError("Typed global protection identities/uses required")
@@ -98,10 +125,14 @@ def check_protection(rows, registry, *, usage):
     for row in rows:
         if row.get("cohort") == PILOT or row.get("purpose") == PILOT:
             if usage != "pilot_input_check":
-                raise ValueError("pilot_development_reference is globally no-fit/no-final")
+                raise ValueError(
+                    "pilot_development_reference is globally no-fit/no-final"
+                )
         if row.get("cohort") == SHORT or row.get("purpose") == SHORT:
             if usage != "short_cycle_input_check":
-                raise ValueError("Short-cycle input is globally no-fit/no-final")
+                raise ValueError(
+                    "Short-cycle input is globally no-fit/no-final"
+                )
         if row.get("cohort") == FINAL16 or row.get("purpose") == FINAL16:
             if usage != "final16_input_check":
                 raise ValueError("FINAL16 input is globally no-fit/no-final")
@@ -116,12 +147,17 @@ def check_protection(rows, registry, *, usage):
 
 
 def digest(value):
-    return isinstance(value, str) and re.fullmatch("[0-9a-f]{64}", value) is not None
+    return (
+        isinstance(value, str)
+        and re.fullmatch("[0-9a-f]{64}", value) is not None
+    )
 
 
 def check_producer(producer, expected):
     if expected is None:
-        raise ValueError("An explicit frozen expected producer binding is required for actual data")
+        raise ValueError(
+            "An explicit frozen expected producer binding is required for actual data"
+        )
     if not isinstance(producer, dict) or not isinstance(expected, dict):
         raise ValueError("Explicit producer binding objects required")
     for key in PRODUCER_FIELDS:
@@ -134,7 +170,9 @@ def check_producer(producer, expected):
         or producer["battery_revision"] != "cmu-vah01-baseline/1"
         or producer["propulsion_revision"] != PROPULSION_REVISION
     ):
-        raise ValueError("Current battery and joint binary propulsion policy required")
+        raise ValueError(
+            "Current battery and joint binary propulsion policy required"
+        )
 
 
 def source_evidence(row, producer):
@@ -143,8 +181,12 @@ def source_evidence(row, producer):
     if row.get("origin") != "px4_sitl":
         raise ValueError("Actual intake requires px4_sitl origin")
     health = row.get("health_eligibility", row.get("health"))
-    if health != ("abnormal" if row["role"] == "anomaly_test" else "confirmed_healthy"):
-        raise ValueError("Explicit source health eligibility required for declared role")
+    if health != (
+        "abnormal" if row["role"] == "anomaly_test" else "confirmed_healthy"
+    ):
+        raise ValueError(
+            "Explicit source health eligibility required for declared role"
+        )
     mission = row.get("mission_interval", {})
     start, end = mission.get("start_us"), mission.get("end_us_exclusive")
     member = mission.get("source", "")
@@ -153,7 +195,8 @@ def source_evidence(row, producer):
         and member.startswith("evaluation/")
         and member.endswith(".json")
         and ".." not in PurePosixPath(member).parts
-        and mission.get("boundary_kind") == "actual_native_controller_consumption"
+        and mission.get("boundary_kind")
+        == "actual_native_controller_consumption"
         and mission.get("native_policy_revision")
         in {"joint-native-consumption-c2-v1", "joint-native-consumption-c2-v2"}
     )
@@ -166,28 +209,38 @@ def source_evidence(row, producer):
         or (member != "evaluation/execution.json" and not native_interval)
         or not digest(mission.get("source_sha256"))
     ):
-        raise ValueError("Actual mission/landing execution boundaries and source hash required")
+        raise ValueError(
+            "Actual mission/landing execution boundaries and source hash required"
+        )
     keys = row.get("lineage", [])
     if any(
         not any(k.startswith(prefix) for k in keys)
         for prefix in ("run:", "pair:", "group:", "retry:", "raw-sha256:")
     ):
-        raise ValueError("Actual intake requires typed raw/pair/group/retry/hash lineage")
-    if any(not digest(k.split(":", 1)[1]) for k in keys if k.startswith("raw-sha256:")):
+        raise ValueError(
+            "Actual intake requires typed raw/pair/group/retry/hash lineage"
+        )
+    if any(
+        not digest(k.split(":", 1)[1])
+        for k in keys
+        if k.startswith("raw-sha256:")
+    ):
         raise ValueError("Valid raw source hash lineage required")
     evidence = row.get("source_evidence", {})
     if evidence.get("producer_runtime_sha256") != producer["runtime_sha256"]:
         raise ValueError("Per-run producer runtime differs from frozen binding")
     scenario = evidence.get("scenario_name", "")
     battery, propulsion = (
-        evidence.get(k, {}) for k in ("battery_selection", "propulsion_selection")
+        evidence.get(k, {})
+        for k in ("battery_selection", "propulsion_selection")
     )
     if (
         battery.get("catalog_revision") != producer["battery_revision"]
         or battery.get("catalog_sha256") != producer["catalog_sha256"]
         or battery.get("flight_policy", {}).get("revision") != BATTERY_POLICY
         or propulsion.get("catalog_revision") != PROPULSION_REVISION
-        or propulsion.get("catalog_sha256") != producer["propulsion_catalog_sha256"]
+        or propulsion.get("catalog_sha256")
+        != producer["propulsion_catalog_sha256"]
     ):
         raise ValueError("Per-run battery/propulsion catalog binding mismatch")
     battery_scenario = scenario in {
@@ -202,39 +255,69 @@ def source_evidence(row, producer):
     }
     if (
         not scenario
-        or not (battery_scenario or propulsion_scenario or scenario in NORMAL_SCENARIOS)
-        or (not battery_scenario and not propulsion_scenario and row["role"] == "anomaly_test")
+        or not (
+            battery_scenario
+            or propulsion_scenario
+            or scenario in NORMAL_SCENARIOS
+        )
+        or (
+            not battery_scenario
+            and not propulsion_scenario
+            and row["role"] == "anomaly_test"
+        )
     ):
         raise ValueError(
             "Current joint-profile scenario required; old component faults unsupported"
         )
-    initial_b, target_b = battery.get("initial_stage"), battery.get("target_stage")
-    initial_p, target_p = propulsion.get("initial_state"), propulsion.get("target_state")
-    if initial_b not in {"rpt_00", "rpt_16"} or target_b not in {"rpt_00", "rpt_16"}:
+    initial_b, target_b = (
+        battery.get("initial_stage"),
+        battery.get("target_stage"),
+    )
+    initial_p, target_p = (
+        propulsion.get("initial_state"),
+        propulsion.get("target_state"),
+    )
+    if initial_b not in {"rpt_00", "rpt_16"} or target_b not in {
+        "rpt_00",
+        "rpt_16",
+    }:
         raise ValueError("Only rpt_00/rpt_16 battery states allowed")
-    if initial_p not in {"normal", "abnormal"} or target_p not in {"normal", "abnormal"}:
+    if initial_p not in {"normal", "abnormal"} or target_p not in {
+        "normal",
+        "abnormal",
+    }:
         raise ValueError("Only joint normal/abnormal propulsion states allowed")
     dynamic = scenario.endswith(("_step", "_ramp"))
     expected_p = (
         ("normal", "abnormal")
         if propulsion_scenario and dynamic
-        else (("abnormal", "abnormal") if propulsion_scenario else ("normal", "normal"))
+        else (
+            ("abnormal", "abnormal")
+            if propulsion_scenario
+            else ("normal", "normal")
+        )
     )
     if (initial_p, target_p) != expected_p:
         raise ValueError("Propulsion initial/target states contradict scenario")
     if battery_scenario:
         expected_b = ("rpt_00", "rpt_16") if dynamic else ("rpt_16", "rpt_16")
         if (initial_b, target_b) != expected_b:
-            raise ValueError("Battery initial/target states contradict scenario")
+            raise ValueError(
+                "Battery initial/target states contradict scenario"
+            )
     elif initial_b != target_b:
-        raise ValueError("Combined propulsion scenarios require a fixed battery stage")
+        raise ValueError(
+            "Combined propulsion scenarios require a fixed battery stage"
+        )
     if row["role"] != "anomaly_test" and (
         initial_b != "rpt_00"
         or target_b != "rpt_00"
         or initial_p != "normal"
         or target_p != "normal"
     ):
-        raise ValueError("Normal membership requires both systems healthy throughout")
+        raise ValueError(
+            "Normal membership requires both systems healthy throughout"
+        )
     transitions = evidence.get("transition_evidence", {})
     for system, selected, active in (
         ("battery", battery, battery_scenario and dynamic),
@@ -251,7 +334,10 @@ def source_evidence(row, producer):
             raise ValueError("Fixed/dynamic transition selection mismatch")
         if active:
             record = transitions.get(system, {})
-            onset, end = record.get("actual_onset_us"), record.get("actual_endpoint_us")
+            onset, end = (
+                record.get("actual_onset_us"),
+                record.get("actual_endpoint_us"),
+            )
             request = record.get("requested_offset_s")
             if (
                 type(onset) is not int
@@ -263,7 +349,9 @@ def source_evidence(row, producer):
                 or request < 0
                 or record.get("clock_id") != mission["clock_id"]
             ):
-                raise ValueError("Actual onset/endpoint and requested offset/clock required")
+                raise ValueError(
+                    "Actual onset/endpoint and requested offset/clock required"
+                )
     # This derived metadata is for evaluator denominators, never model.forward.
     initial_anomaly = [
         s

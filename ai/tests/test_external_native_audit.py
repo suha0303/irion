@@ -4,11 +4,14 @@ import json
 from pathlib import Path
 
 import pytest
-from test_pilot_publisher import fixture
-
 from learning.history19 import joint_native
-from learning.history19.native_audit import RAW_MEMBERS, REVISION, verified_check
+from learning.history19.native_audit import (
+    RAW_MEMBERS,
+    REVISION,
+    verified_check,
+)
 from learning.history19.pilot import json_file, sha
+from test_pilot_publisher import fixture
 
 
 def write(path, value):
@@ -41,7 +44,10 @@ def external_fixture(folder):
             else:
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text("{}\n")
-    integrity = {n: dict(sha256=sha(raw / n), size=(raw / n).stat().st_size) for n in RAW_MEMBERS}
+    integrity = {
+        n: dict(sha256=sha(raw / n), size=(raw / n).stat().st_size)
+        for n in RAW_MEMBERS
+    }
     write(raw / "integrity.json", integrity)
     package = folder / "auditor"
     package.mkdir()
@@ -128,9 +134,13 @@ def test_explicit_external_check_keeps_original_raw_check_absent(tmp_path):
     checked, evidence = verified_check(**args)
     assert (
         checked["same_source_time_consumptions"] == 2
-        and evidence["generation"]["runtime_sha256"] == args["generation"]["runtime_sha256"]
+        and evidence["generation"]["runtime_sha256"]
+        == args["generation"]["runtime_sha256"]
     )
-    assert not (raw / joint_native.CHECK).exists() and sha(raw / "integrity.json") == before
+    assert (
+        not (raw / joint_native.CHECK).exists()
+        and sha(raw / "integrity.json") == before
+    )
 
 
 @pytest.mark.parametrize(
@@ -171,7 +181,9 @@ def test_full_gate_and_original_hashes_are_mandatory(tmp_path, damage):
     elif damage == "audit_code":
         (tmp_path / "unit/auditor/api.py").write_text("# changed auditor\n")
     elif damage == "raw_csv":
-        (args["run_path"].parent / "evaluation/joint-consumption.csv").write_text("changed\n")
+        (
+            args["run_path"].parent / "evaluation/joint-consumption.csv"
+        ).write_text("changed\n")
     else:
         args["duration_us"] = 180000000
     with pytest.raises((ValueError, KeyError)):
@@ -179,7 +191,9 @@ def test_full_gate_and_original_hashes_are_mandatory(tmp_path, damage):
 
 
 @pytest.mark.parametrize("changed", [False, True])
-def test_hash_identical_historical_auditor_location_is_explicitly_verified(tmp_path, changed):
+def test_hash_identical_historical_auditor_location_is_explicitly_verified(
+    tmp_path, changed
+):
     args = external_fixture(tmp_path / "unit")
     old = tmp_path / "unit/auditor"
     archive = tmp_path / "archive"
@@ -189,7 +203,9 @@ def test_hash_identical_historical_auditor_location_is_explicitly_verified(tmp_p
     ref = args["external_audit"]["receipt"]
     rp = Path(ref["path"])
     receipt = json_file(rp)
-    receipt["audit"]["manifest_path"] = str((archive / "manifest.json").absolute())
+    receipt["audit"]["manifest_path"] = str(
+        (archive / "manifest.json").absolute()
+    )
     fp = Path(receipt["full_gate_receipt"]["path"])
     full = json_file(fp)
     full["cpu_audit"] = receipt["audit"]

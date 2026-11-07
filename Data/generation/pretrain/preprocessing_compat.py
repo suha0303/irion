@@ -26,7 +26,9 @@ def make_preprocessor(metadata, config, metadata_sha256):
     alias = None
     if vehicle.get("battery_profile_id") == CURRENT_BATTERY_ID:
         if not re.fullmatch(r"[0-9a-f]{64}", metadata_sha256):
-            raise ValueError("Original metadata digest required for validation alias")
+            raise ValueError(
+                "Original metadata digest required for validation alias"
+            )
         expected = dict(
             profile_id="x500_reference",
             profile_revision="vtc6-4s4p",
@@ -38,7 +40,9 @@ def make_preprocessor(metadata, config, metadata_sha256):
         if metadata.get("schema") != "drone.observation.metadata/2.0" or any(
             vehicle.get(key) != value for key, value in expected.items()
         ):
-            raise ValueError("Renamed collection battery metadata/nameplate mismatch")
+            raise ValueError(
+                "Renamed collection battery metadata/nameplate mismatch"
+            )
         validation = copy.deepcopy(metadata)
         validation["vehicle"]["battery_profile_id"] = SEALED_BATTERY_ID
         alias = dict(ALIAS, metadata_sha256=metadata_sha256)
@@ -55,5 +59,9 @@ def verify_metadata_alias(summary):
     alias = summary.get("evidence", {}).get("metadata_validation_alias")
     if alias is not None:
         digest = summary["input_hashes"]["observations/metadata.json"]
-        if not re.fullmatch(r"[0-9a-f]{64}", digest) or alias != dict(ALIAS, metadata_sha256=digest):
-            raise ValueError("Metadata validation alias/input identity mismatch")
+        if not re.fullmatch(r"[0-9a-f]{64}", digest) or alias != dict(
+            ALIAS, metadata_sha256=digest
+        ):
+            raise ValueError(
+                "Metadata validation alias/input identity mismatch"
+            )

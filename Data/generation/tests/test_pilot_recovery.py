@@ -3,12 +3,13 @@
 from pathlib import Path
 
 import pytest
+from pretrain import common, pilot45, pilot_bridge, pilot_flow
 from test_pilot45 import init_fixture
 
-from pretrain import common, pilot45, pilot_bridge, pilot_flow
 
-
-def test_recovery_keeps_failed_attempt_and_exact_old_case(monkeypatch, tmp_path):
+def test_recovery_keeps_failed_attempt_and_exact_old_case(
+    monkeypatch, tmp_path
+):
     init_fixture(monkeypatch, tmp_path)
     old = pilot45.init("old", 99, single=True)
     original = common.read(old / "manifest.json")
@@ -34,30 +35,48 @@ def test_recovery_keeps_failed_attempt_and_exact_old_case(monkeypatch, tmp_path)
         tmp_path
         / "ai/reports/ai19-single-run-integration-20261107/attempt-02/result-review-01/termination-audit.json"
     )
-    common.write(audit, dict(actual_raw_runs=0, checks=dict(shared_locks_free=True)))
+    common.write(
+        audit, dict(actual_raw_runs=0, checks=dict(shared_locks_free=True))
+    )
     env = tmp_path / "environment.json"
-    common.write(env, dict(status="PASSED_NO_FLIGHT", probe=dict(run_flight_imported=True)))
+    common.write(
+        env,
+        dict(status="PASSED_NO_FLIGHT", probe=dict(run_flight_imported=True)),
+    )
     before = {str(p): common.sha(p) for p in old.rglob("*") if p.is_file()}
     monkeypatch.setattr(pilot45, "ROOT", tmp_path)
     monkeypatch.setattr(pilot45, "recovery_authorization", lambda: {})
     monkeypatch.setattr(
-        pilot45, "service_identity", lambda *args: ("owned", 0, dict(ActiveState="failed"))
+        pilot45,
+        "service_identity",
+        lambda *args: ("owned", 0, dict(ActiveState="failed")),
     )
-    new = pilot45.init("new", single=True, recovery_from=old, launch_receipt=env)
+    new = pilot45.init(
+        "new", single=True, recovery_from=old, launch_receipt=env
+    )
     newplan = common.read(new / "manifest.json")
     assert len(pilot45.validate_manifest(newplan)) == 1
     expected = dict(case, attempts_max=3)
     assert newplan["cases"] == [expected] and newplan["seed_base"] == 99
     ledger = common.read(new / "ledger.json")
-    assert ledger["attempts"][0]["number"] == 1 and not ledger["attempts"][0]["retry_allowed"]
+    assert (
+        ledger["attempts"][0]["number"] == 1
+        and not ledger["attempts"][0]["retry_allowed"]
+    )
     assert ledger["attempts"][0]["source_task"] == str(old)
     assert common.read(new / "config.json")["lineage_namespace"] == "old"
-    assert before == {str(p): common.sha(p) for p in old.rglob("*") if p.is_file()}
+    assert before == {
+        str(p): common.sha(p) for p in old.rglob("*") if p.is_file()
+    }
     with pytest.raises(pilot45.Blocked, match="replacement seed"):
-        pilot45.init("bad", 123, single=True, recovery_from=old, launch_receipt=env)
+        pilot45.init(
+            "bad", 123, single=True, recovery_from=old, launch_receipt=env
+        )
 
 
-def test_ai_projection_keeps_all45_pending_and_no_fit_guard(monkeypatch, tmp_path):
+def test_ai_projection_keeps_all45_pending_and_no_fit_guard(
+    monkeypatch, tmp_path
+):
     init_fixture(monkeypatch, tmp_path)
     task = pilot45.init("draft", 123)
     manifest = pilot_bridge.plan(task)
@@ -68,7 +87,10 @@ def test_ai_projection_keeps_all45_pending_and_no_fit_guard(monkeypatch, tmp_pat
     pilot_bridge.snapshot(task, output)
     ledger = common.read(output / "ledger.json")
     assert len(ledger["cases"]) == 45
-    assert all(c["status"] == "pending" and c["attempts"] == [] for c in ledger["cases"])
+    assert all(
+        c["status"] == "pending" and c["attempts"] == []
+        for c in ledger["cases"]
+    )
     assert all(c["case_id"].startswith("draft:") for c in manifest["cases"])
 
 
@@ -88,13 +110,20 @@ def test_missing_or_waiting_handoff_cannot_enable_flights(tmp_path):
     with pytest.raises(pilot_bridge.Pending, match="native6 missing"):
         pilot_bridge.dependencies(p)
     common.write(
-        p, dict(schema="drone-ai.pilot45.data-handoff/1", task_id=pilot45.TASK_ID, status="FAILED")
+        p,
+        dict(
+            schema="drone-ai.pilot45.data-handoff/1",
+            task_id=pilot45.TASK_ID,
+            status="FAILED",
+        ),
     )
     with pytest.raises(ValueError, match="no blind"):
         pilot_bridge.dependencies(p)
 
 
-def test_flow_wait_is_finite_and_does_not_call_llm_or_launch_without_receipt(monkeypatch, tmp_path):
+def test_flow_wait_is_finite_and_does_not_call_llm_or_launch_without_receipt(
+    monkeypatch, tmp_path
+):
     task = tmp_path / "flow"
     cfg = dict(
         flow=True,
@@ -109,7 +138,9 @@ def test_flow_wait_is_finite_and_does_not_call_llm_or_launch_without_receipt(mon
     monkeypatch.setattr(pilot_flow, "preflight", lambda *args: {})
     monkeypatch.setattr(pilot45, "resources", lambda *args: {})
     monkeypatch.setattr(
-        pilot_flow.time, "sleep", lambda *args: pytest.fail("Expired wait must stop immediately")
+        pilot_flow.time,
+        "sleep",
+        lambda *args: pytest.fail("Expired wait must stop immediately"),
     )
     with pytest.raises(RuntimeError, match="wait6h exhausted"):
         pilot_flow.worker(task)
@@ -120,7 +151,9 @@ def test_flow_wait_is_finite_and_does_not_call_llm_or_launch_without_receipt(mon
 
 
 @pytest.mark.parametrize("reuse", [False, True])
-def test_flow_executes_only_one_integration_then_one_finite45_stage(monkeypatch, tmp_path, reuse):
+def test_flow_executes_only_one_integration_then_one_finite45_stage(
+    monkeypatch, tmp_path, reuse
+):
     task = tmp_path / "flow"
     common.write(
         task / "config.json",
@@ -136,7 +169,9 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(monkeypatch,
     )
     common.write(task / "ledger.json", dict(cases={}, attempts=[], phases={}))
     (task / "operator").mkdir()
-    (task / "final-admission-regression.log").write_text("fixture control-stage proof\n")
+    (task / "final-admission-regression.log").write_text(
+        "fixture control-stage proof\n"
+    )
     common.write(task / "final-admission-regression.json", dict(exit_code=0))
     monkeypatch.setattr(pilot_flow, "HOME", tmp_path)
     monkeypatch.setattr(pilot_flow, "preflight", lambda *args: {})
@@ -144,10 +179,14 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(monkeypatch,
     monkeypatch.setattr(
         pilot_bridge,
         "dependencies",
-        lambda *args: dict(paths=dict(native_completion="actual-evidence.json")),
+        lambda *args: dict(
+            paths=dict(native_completion="actual-evidence.json")
+        ),
     )
     monkeypatch.setattr(
-        pilot_flow.native_flight, "environment_check", lambda: dict(status="PASSED_NO_FLIGHT")
+        pilot_flow.native_flight,
+        "environment_check",
+        lambda: dict(status="PASSED_NO_FLIGHT"),
     )
 
     def init(*args, **kwargs):
@@ -156,7 +195,9 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(monkeypatch,
 
     monkeypatch.setattr(pilot45, "init", init)
     monkeypatch.setattr(pilot45, "task_path", lambda path: Path(path))
-    monkeypatch.setattr(pilot45, "prepare_pilot", lambda *args, **kwargs: tmp_path / "pilot45")
+    monkeypatch.setattr(
+        pilot45, "prepare_pilot", lambda *args, **kwargs: tmp_path / "pilot45"
+    )
     phases = []
     q = dict(
         completed_raw=45,
@@ -175,7 +216,9 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(monkeypatch,
         monkeypatch.setattr(
             integration_reuse,
             "validate",
-            lambda *args: dict(quality=q, termination=dict(basis="fixture historical success")),
+            lambda *args: dict(
+                quality=q, termination=dict(basis="fixture historical success")
+            ),
         )
 
     def execute(flow, child, state):
@@ -211,7 +254,9 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(monkeypatch,
         "unloaded",
     ],
 )
-def test_successful_exited_unit_is_stopped_before_stop_hook_audit(monkeypatch, tmp_path, failure):
+def test_successful_exited_unit_is_stopped_before_stop_hook_audit(
+    monkeypatch, tmp_path, failure
+):
     import os
     from types import SimpleNamespace
 
@@ -228,7 +273,10 @@ def test_successful_exited_unit_is_stopped_before_stop_hook_audit(monkeypatch, t
         ),
     )
     common.write(child / "operator/service.json", dict(unit=unit))
-    common.write(child / "quality.json", dict(status="INTEGRATION19_QUALITY_PASSED_STOPPED"))
+    common.write(
+        child / "quality.json",
+        dict(status="INTEGRATION19_QUALITY_PASSED_STOPPED"),
+    )
     monkeypatch.setattr(pilot_flow, "ROOT", root)
     monkeypatch.setattr(pilot_flow, "HOME", root)
     commands = []
@@ -257,7 +305,10 @@ def test_successful_exited_unit_is_stopped_before_stop_hook_audit(monkeypatch, t
         original["ExecMainCode"] = "0"
     if failure == "unloaded":
         original.update(
-            LoadState="not-found", ActiveState="inactive", SubState="dead", ExecMainCode="0"
+            LoadState="not-found",
+            ActiveState="inactive",
+            SubState="dead",
+            ExecMainCode="0",
         )
 
     def command(argv, **kwargs):
@@ -280,10 +331,14 @@ def test_successful_exited_unit_is_stopped_before_stop_hook_audit(monkeypatch, t
                 ExecMainCode="0",
                 ExecStart="",
             )
-        requested = [x.split("=", 1)[1] for x in argv if x.startswith("--property=")]
+        requested = [
+            x.split("=", 1)[1] for x in argv if x.startswith("--property=")
+        ]
         return SimpleNamespace(
             returncode=0,
-            stdout="".join(k + "=" + values[k] + "\n" for k in requested if k in values),
+            stdout="".join(
+                k + "=" + values[k] + "\n" for k in requested if k in values
+            ),
         )
 
     monkeypatch.setattr(pilot45.subprocess, "run", command)
@@ -310,7 +365,9 @@ def test_successful_exited_unit_is_stopped_before_stop_hook_audit(monkeypatch, t
 
 
 @pytest.mark.parametrize("reject", [False, True])
-def test_data_pair_uses_ai_projector_for_status_passed_native_report(monkeypatch, tmp_path, reject):
+def test_data_pair_uses_ai_projector_for_status_passed_native_report(
+    monkeypatch, tmp_path, reject
+):
     # The native report intentionally has no boolean passed/AI metric keys.
     # Actual native validation is owned/tested by AI; this checks Data delegation.
     import learning.history19.pilot_connector as connector
@@ -320,7 +377,12 @@ def test_data_pair_uses_ai_projector_for_status_passed_native_report(monkeypatch
     case = dict(group_id="one-pair", paired_case_id="actual-pair-id")
     common.write(
         task / "ledger.json",
-        dict(cases={"n": dict(case=case, run=str(normal)), "a": dict(case=case, run=str(anomaly))}),
+        dict(
+            cases={
+                "n": dict(case=case, run=str(normal)),
+                "a": dict(case=case, run=str(anomaly)),
+            }
+        ),
     )
     common.write(task / "expected-producer.json", dict(fixture=True))
     policy = tmp_path / "policy.json"
@@ -365,7 +427,14 @@ def test_data_pair_uses_ai_projector_for_status_passed_native_report(monkeypatch
         assert result["normal_origin_receipt_sha256"] == "1" * 64
         assert result["native_evidence"]["sha256"] == common.sha(report)
     assert called == [
-        (report, dict(policy_path=str(policy), normal_run=str(normal), anomaly_run=str(anomaly)))
+        (
+            report,
+            dict(
+                policy_path=str(policy),
+                normal_run=str(normal),
+                anomaly_run=str(anomaly),
+            ),
+        )
     ]
 
 
@@ -373,12 +442,19 @@ def test_reuse_source_gate_only_allows_controller_fix(monkeypatch, tmp_path):
     from pretrain import integration_reuse
 
     task = tmp_path / "old"
-    control, preprocessor = tmp_path / "controller.py", tmp_path / "preprocess.py"
+    control, preprocessor = (
+        tmp_path / "controller.py",
+        tmp_path / "preprocess.py",
+    )
     control.write_text("old control")
     preprocessor.write_text("same preprocessing")
     common.write(
         task / "config.json",
-        dict(source_sha256={str(p): common.sha(p) for p in (control, preprocessor)}),
+        dict(
+            source_sha256={
+                str(p): common.sha(p) for p in (control, preprocessor)
+            }
+        ),
     )
     monkeypatch.setattr(integration_reuse, "CONTROL_FILES", {str(control)})
     control.write_text("reviewed termination correction")
@@ -433,13 +509,28 @@ def test_historical_reuse_requires_actual_cleanup_and_child_exit_evidence(
         ),
     )
     for stage in ("flight", "prepare", "audit"):
-        point = dict(exit_code=0, owner_uid=1000, cgroup=group, pid=999998, pid_start_ticks="11")
+        point = dict(
+            exit_code=0,
+            owner_uid=1000,
+            cgroup=group,
+            pid=999998,
+            pid_start_ticks="11",
+        )
         if stage == "prepare" and fault == "child_nonzero":
             point["exit_code"] = 1
         if stage == "prepare" and fault == "child_missing":
             point.pop("exit_code")
-        common.write(task / "pilot/execution/case" / (stage + "-02.request.process.json"), point)
-    monkeypatch.setattr(integration_reuse, "identity", lambda p: "10" if fault == "live" else None)
+        common.write(
+            task
+            / "pilot/execution/case"
+            / (stage + "-02.request.process.json"),
+            point,
+        )
+    monkeypatch.setattr(
+        integration_reuse,
+        "identity",
+        lambda p: "10" if fault == "live" else None,
+    )
     if fault:
         with pytest.raises(ValueError):
             integration_reuse.historical_termination(task)

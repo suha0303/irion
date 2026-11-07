@@ -25,13 +25,19 @@ def test_one_audit_and_no_preprocessing(tmp_path, monkeypatch, fails):
     r = runner.Runner(task)
     frozen = dict(runs=[dict(run_id="good"), dict(run_id="bad")])
     monkeypatch.setattr(
-        audit_recovery, "inputs", lambda p: (source / "prepared", frozen, {"good": {}}, "bad", [])
+        audit_recovery,
+        "inputs",
+        lambda p: (source / "prepared", frozen, {"good": {}}, "bad", []),
     )
-    monkeypatch.setattr(audit_recovery, "external", lambda p: tmp_path / "output")
+    monkeypatch.setattr(
+        audit_recovery, "external", lambda p: tmp_path / "output"
+    )
     calls = []
 
     def batch(name, action, rows, workers, out, *, canonical):
-        assert action == "audit" and workers == 1 and rows == [dict(run_id="bad")]
+        assert (
+            action == "audit" and workers == 1 and rows == [dict(run_id="bad")]
+        )
         assert canonical == source / "prepared/dataset/canonical"
         calls.append("one-audit")
         if fails:
@@ -58,9 +64,13 @@ def test_one_audit_and_no_preprocessing(tmp_path, monkeypatch, fails):
         r.flight("collection", 16, [], "forbidden")
 
 
-def test_quality_reuses_audit_and_dataset_without_recomputing(tmp_path, monkeypatch):
+def test_quality_reuses_audit_and_dataset_without_recomputing(
+    tmp_path, monkeypatch
+):
     task = tmp_path / "task"
-    common.write(task / "config.json", dict(mode="finish_audit", source_sha256={}))
+    common.write(
+        task / "config.json", dict(mode="finish_audit", source_sha256={})
+    )
     r = runner.Runner(task)
     old = tmp_path / "old"
     dataset = old / "dataset"
@@ -99,8 +109,16 @@ def test_quality_reuses_audit_and_dataset_without_recomputing(tmp_path, monkeypa
         assert frames[0].tolist() == [1.0]
         return dict(fixture=True)
 
-    monkeypatch.setattr(runner, "load", lambda *a: SimpleNamespace(inspect_dataset=inspect))
-    r.finish_quality(frozen, root, "prepared", dataset, audit_sources={"good": (cache, status)})
+    monkeypatch.setattr(
+        runner, "load", lambda *a: SimpleNamespace(inspect_dataset=inspect)
+    )
+    r.finish_quality(
+        frozen,
+        root,
+        "prepared",
+        dataset,
+        audit_sources={"good": (cache, status)},
+    )
     assert before == {p: p.read_bytes() for p in before}
     assert common.read(root / "handoff.json")["dataset"] == str(dataset)
     assert common.read(root / "handoff.json")["training_authorized"] is False

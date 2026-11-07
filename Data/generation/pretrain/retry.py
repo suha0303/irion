@@ -14,5 +14,12 @@ def shared_failure(exc):
     return isinstance(exc, (MemoryError, KeyboardInterrupt, SystemExit)) or (
         isinstance(exc, OSError)
         and exc.errno
-        in {errno.ENOSPC, errno.EDQUOT, errno.EROFS, errno.EIO, errno.ENOMEM, errno.ENODEV}
+        in {
+            errno.ENOSPC,
+            errno.EDQUOT,
+            errno.EROFS,
+            errno.EIO,
+            errno.ENOMEM,
+            errno.ENODEV,
+        }
     )

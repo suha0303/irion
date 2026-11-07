@@ -78,7 +78,10 @@ def make_dataset(root, rows=None):
                 history_times_us=[i * 100000 for i in range(j - 99, j + 1)],
                 target_times_us=[i * 100000 for i in range(j + 1, j + 11)],
                 context_start_us=(j - 600) * 100000,
-                X=[[f["values"][n] for n in audit.FEATURES] for f in frames[j - 99 : j + 1]],
+                X=[
+                    [f["values"][n] for n in audit.FEATURES]
+                    for f in frames[j - 99 : j + 1]
+                ],
                 C=frames[j]["context"],
             )
             windows.append(w)
@@ -87,17 +90,26 @@ def make_dataset(root, rows=None):
                 x[:, 17] /= 4
                 x[:, 18] /= 12
                 y = np.asarray(
-                    [[f["values"][n] for n in audit.TARGETS] for f in frames[j + 1 : j + 11]]
+                    [
+                        [f["values"][n] for n in audit.TARGETS]
+                        for f in frames[j + 1 : j + 11]
+                    ]
                 )
                 y[:, -1] /= 4
-                samples[role].append((x, np.asarray(w["C"]), y, row["run_id"], w["origin_us"], 0))
+                samples[role].append(
+                    (x, np.asarray(w["C"]), y, row["run_id"], w["origin_us"], 0)
+                )
                 if role == "normal_train":
                     contexts.append(w["C"])
         exclusions = [
             dict(time_us=j * 100000, segment_id=0, reasons=["context_warmup"])
             for j in range(0, 600, 10)
         ]
-        for name, values in (("frames", frames), ("windows", windows), ("exclusions", exclusions)):
+        for name, values in (
+            ("frames", frames),
+            ("windows", windows),
+            ("exclusions", exclusions),
+        ):
             jsonlines(folder / (name + ".jsonl"), values)
         summary = dict(
             run_id=row["run_id"],
@@ -121,7 +133,8 @@ def make_dataset(root, rows=None):
         )
         if role == "normal_train":
             a = np.asarray(
-                [[f["values"][n] for n in audit.FEATURES] for f in frames[2:]], dtype=np.float64
+                [[f["values"][n] for n in audit.FEATURES] for f in frames[2:]],
+                dtype=np.float64,
             )
             a[:, 17] /= 4
             a[:, 18] /= 12
@@ -132,7 +145,9 @@ def make_dataset(root, rows=None):
             root / (role + ".npz"),
             **{
                 k: np.asarray(v)
-                for k, v in zip(("X", "C", "Y", "run_id", "origin_us", "segment"), columns)
+                for k, v in zip(
+                    ("X", "C", "Y", "run_id", "origin_us", "segment"), columns
+                )
             },
         )
     x, c = np.asarray(selected), np.asarray(contexts)
@@ -169,11 +184,21 @@ def test_independent_scaler_and_accounting(tmp_path):
     result = audit.inspect_dataset(data, frozen)
     train = result["by_role"]["normal_train"]
     assert (
-        train["windows"] == 3 and train["accepted_targets"] == 2 and train["excluded_targets"] == 1
+        train["windows"] == 3
+        and train["accepted_targets"] == 2
+        and train["excluded_targets"] == 1
     )
-    assert train["warmup_frames"] == 600 and train["valid_airborne_frames"] == 619
-    assert train["observed_airborne_seconds"] == 62 and train["valid_airborne_seconds"] == 61.9
-    assert train["quality_counts"]["pack_voltage"] == {"valid": 620, "invalid": 1}
+    assert (
+        train["warmup_frames"] == 600 and train["valid_airborne_frames"] == 619
+    )
+    assert (
+        train["observed_airborne_seconds"] == 62
+        and train["valid_airborne_seconds"] == 61.9
+    )
+    assert train["quality_counts"]["pack_voltage"] == {
+        "valid": 620,
+        "invalid": 1,
+    }
     assert train["target_drop_detail"]["missing_target_frames"] == 10
     assert result["scaler_observations"]["frame_rows"] == 619
     assert result["scaler_observations"]["context_rows"] == 2
@@ -181,12 +206,20 @@ def test_independent_scaler_and_accounting(tmp_path):
         assert scaler["x_mean"][17] == pytest.approx((598 * 2 + 21 * 3) / 619)
         assert scaler["x_scale"][17] == pytest.approx((598 * 21) ** 0.5 / 619)
         assert scaler["c_mean"][0] == 4 and scaler["c_scale"][0] == 1
-        assert scaler["y_mean"][-1] != 3  # Future Y statistics must not fit the target scaler.
+        assert (
+            scaler["y_mean"][-1] != 3
+        )  # Future Y statistics must not fit the target scaler.
     assert result["npz_max_abs_error"] == 0
 
 
 @pytest.mark.parametrize(
-    "kind", ["history_weighted", "excluded_context", "future_target", "validation_contamination"]
+    "kind",
+    [
+        "history_weighted",
+        "excluded_context",
+        "future_target",
+        "validation_contamination",
+    ],
 )
 def test_wrong_scaler_rejected_even_after_rehash(tmp_path, kind):
     data = tmp_path / "dataset"
@@ -261,7 +294,10 @@ def test_nonvalid_target_drop_is_distinct_from_missing(tmp_path):
     summary.update(valid_frames=619, windows=2)
     write(folder / "summary.json", summary)
     report, samples, _ = audit.inspect_run(folder, row)
-    assert len(samples) == 1 and report["target_drop_detail"]["nonvalid_target_frames"] == 1
+    assert (
+        len(samples) == 1
+        and report["target_drop_detail"]["nonvalid_target_frames"] == 1
+    )
     assert report["target_drop_detail"]["missing_target_frames"] == 0
 
 
@@ -286,7 +322,10 @@ def test_no_airborne_dev_is_retained(tmp_path):
         ),
     )
     report, accepted, selected = audit.inspect_run(folder, row)
-    assert report["airborne_envelope_seconds"] == 0 and report["accepted_targets"] == 0
+    assert (
+        report["airborne_envelope_seconds"] == 0
+        and report["accepted_targets"] == 0
+    )
     assert accepted == selected == []
 
 
@@ -295,7 +334,11 @@ def test_ridge_actual_dimensions_and_cpu_headroom(tmp_path):
     frozen = make_dataset(data)
     dims = audit.inspect_dataset(data, frozen)["dimensions"]
     pending = audit.memory_assessment(dims, None)
-    assert pending["D"] == 1907 and pending["K"] == 40 and pending["one_gram_bytes"] == 32
+    assert (
+        pending["D"] == 1907
+        and pending["K"] == 40
+        and pending["one_gram_bytes"] == 32
+    )
     assert not pending["memory_audit_passed"]
     evidence = dict(
         hostname="DIS01",
@@ -307,8 +350,8 @@ def test_ridge_actual_dimensions_and_cpu_headroom(tmp_path):
     )
     result = audit.memory_assessment(dims, evidence)
     assert result["memory_audit_passed"] and not result["peak_rss_measured"]
-    assert not audit.memory_assessment(dims, {**evidence, "available_bytes": 1024**3})[
-        "memory_audit_passed"
-    ]
+    assert not audit.memory_assessment(
+        dims, {**evidence, "available_bytes": 1024**3}
+    )["memory_audit_passed"]
     with pytest.raises(ValueError):
         audit.memory_assessment(dims, {**evidence, "hostname": "ABRM02"})

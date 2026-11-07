@@ -47,16 +47,27 @@ def config_check(cfg):
     source_revision = cfg.get("source_comparison_revision", comparison.REVISION)
     if source_revision not in {comparison.REVISION, study.REVISION}:
         raise ValueError("Unknown preserved comparison revision")
-    expected_models = list(study.MODELS if source_revision == study.REVISION else comparison.MODELS)
+    expected_models = list(
+        study.MODELS if source_revision == study.REVISION else comparison.MODELS
+    )
     baseline = cfg.get("baseline_reference")
     if baseline is not None:
-        if (source_revision != study.REVISION or not isinstance(baseline, dict)
-                or set(baseline) != {"source", "files", "models", "config_sha256", "seal_sha256"}
-                or baseline["models"] != list(BASELINES)
-                or not isinstance(baseline["files"], dict) or not baseline["files"]
-                or baseline["files"].get("input/config.json") != baseline["config_sha256"]
-                or baseline["files"].get("compute/result-seal.json") != baseline["seal_sha256"]):
-            raise ValueError("Two explicitly bound preserved baselines required")
+        if (
+            source_revision != study.REVISION
+            or not isinstance(baseline, dict)
+            or set(baseline)
+            != {"source", "files", "models", "config_sha256", "seal_sha256"}
+            or baseline["models"] != list(BASELINES)
+            or not isinstance(baseline["files"], dict)
+            or not baseline["files"]
+            or baseline["files"].get("input/config.json")
+            != baseline["config_sha256"]
+            or baseline["files"].get("compute/result-seal.json")
+            != baseline["seal_sha256"]
+        ):
+            raise ValueError(
+                "Two explicitly bound preserved baselines required"
+            )
         # This is a read-only cross-node provenance path, not selected output storage.
         # A source's login-node st_dev policy is not portable to the compute node.
         # Preparation admits the original storage; checked() verifies frozen hashes.
@@ -85,22 +96,32 @@ def config_check(cfg):
         development_counts=dict(normal_dev_eval=128, anomaly_dev=144),
         normal_counts=dict(normal_validation=104, normal_calibration=104),
     )
-    if any(type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()):
-        raise ValueError("Post-training-only authorization/configuration mismatch")
-    if diagnostic and (
-        cfg.get("all_model_calibration_fresh") is not True or "numerical_policy" in cfg
+    if any(
+        type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()
     ):
-        raise ValueError("Diagnostic-only requires fresh inputs without an acceptance policy")
+        raise ValueError(
+            "Post-training-only authorization/configuration mismatch"
+        )
+    if diagnostic and (
+        cfg.get("all_model_calibration_fresh") is not True
+        or "numerical_policy" in cfg
+    ):
+        raise ValueError(
+            "Diagnostic-only requires fresh inputs without an acceptance policy"
+        )
     if "numerical_policy" in cfg:
         from .replay_validation import _validate_policy
 
         _validate_policy(cfg["numerical_policy"])
         if (
             cfg.get("all_model_calibration_fresh") is not True
-            or cfg["numerical_policy"]["batch_size"] != cfg.get("prediction_batch_size")
+            or cfg["numerical_policy"]["batch_size"]
+            != cfg.get("prediction_batch_size")
             or cfg["numerical_policy"]["require_same_batch_exact"] is not True
         ):
-            raise ValueError("Common numerical policy requires fresh calibration for every model")
+            raise ValueError(
+                "Common numerical policy requires fresh calibration for every model"
+            )
     if "sensitivity_policy" in cfg or "sensitivity_plan" in cfg:
         from .sensitivity_metrics import validate_policy
 
@@ -112,20 +133,29 @@ def config_check(cfg):
             or cfg.get("prediction_batch_size") != 256
             or not isinstance(cfg.get("sensitivity_plan"), dict)
         ):
-            raise ValueError("Sensitivity gate requires one uniform fresh full comparison")
+            raise ValueError(
+                "Sensitivity gate requires one uniform fresh full comparison"
+            )
     if "parallel_replay_workers" in cfg and (
-        type(cfg["parallel_replay_workers"]) is not int or cfg["parallel_replay_workers"] not in {2, 4, 8}
+        type(cfg["parallel_replay_workers"]) is not int
+        or cfg["parallel_replay_workers"] not in {2, 4, 8}
         or cfg.get("all_model_calibration_fresh") is not True
-        or cfg.get("prediction_batch_size") != 256 or "sensitivity_policy" not in cfg
-        or diagnostic or cfg.get("continuation")
+        or cfg.get("prediction_batch_size") != 256
+        or "sensitivity_policy" not in cfg
+        or diagnostic
+        or cfg.get("continuation")
     ):
-        raise ValueError("Parallel replay requires2/4/8 CPU workers and uniform fresh sensitivity-gated inputs")
+        raise ValueError(
+            "Parallel replay requires2/4/8 CPU workers and uniform fresh sensitivity-gated inputs"
+        )
     if "parallel_replay_benchmark" in cfg:
         from .parallel_replay import validate_benchmark_plan
 
         validate_benchmark_plan(cfg["parallel_replay_benchmark"])
         if cfg.get("parallel_replay_workers") != 8:
-            raise ValueError("2/4/8 comparison requires the frozen maximum8-worker budget")
+            raise ValueError(
+                "2/4/8 comparison requires the frozen maximum8-worker budget"
+            )
     for key in ("wall_hours", "evaluation_hours", "queue_hours"):
         if type(cfg.get(key)) is not int or not 1 <= cfg[key] <= 168:
             raise ValueError("Explicit finite hours required: " + key)
@@ -150,26 +180,37 @@ def config_check(cfg):
         or cfg.get("reuse_calibration") != {}
         or "continuation" in cfg
     ):
-        raise ValueError("Fresh calibration requires all models from scratch without reuse")
+        raise ValueError(
+            "Fresh calibration requires all models from scratch without reuse"
+        )
     for value in reuse.values():
         if set(value.get("files", {})) != {
             "calibration.json",
             "normal-residuals.json",
             "normal-residuals.npz",
         }:
-            raise ValueError("Complete normal-only calibration evidence required")
+            raise ValueError(
+                "Complete normal-only calibration evidence required"
+            )
 
 
 def profile_check(profile):
     if any(
         profile["slurm"].get(k) != v
         for k, v in dict(
-            partition="p02", node="DIS01", nodes=1, ntasks=1, gpus=1, memory_gib=64
+            partition="p02",
+            node="DIS01",
+            nodes=1,
+            ntasks=1,
+            gpus=1,
+            memory_gib=64,
         ).items()
     ):
         raise ValueError("Only p02/DIS01, one GPU and64GiB are authorized")
     if profile["slurm"].get("cpus") not in {4, 6, 10}:
-        raise ValueError("CPU budget must match2/4/8 replay workers plus2 producer slots")
+        raise ValueError(
+            "CPU budget must match2/4/8 replay workers plus2 producer slots"
+        )
     if profile["runtime_profile"] != "mamba25":
         raise ValueError("Explicit existing mamba25 environment required")
 
@@ -184,32 +225,54 @@ def training_preparation_proof(source, cfg, authorization):
         if authorization.get("execution_scope") != "training_only":
             raise ValueError("Source training authorization scope changed")
         prepared = read(source / "prepared.json")
-        if (sha(source / "input/inventory.json") != prepared["input_inventory_sha256"]
-                or sha(source / "server-profile.json") != prepared["server_profile_sha256"]):
+        if (
+            sha(source / "input/inventory.json")
+            != prepared["input_inventory_sha256"]
+            or sha(source / "server-profile.json")
+            != prepared["server_profile_sha256"]
+        ):
             raise ValueError("Source preparation binding changed")
         return ["prepared.json"]
     from . import study
 
-    forbidden = ("learning_rate_search_authorized", "calibration_authorized",
-                 "evaluation_authorized", "final_test_authorized", "automatic_retry",
-                 "next_round_authorized", "llm_monitoring", "llm_auto_resume")
-    if (cfg.get("revision") != study.REVISION
-            or cfg.get("source") != str(source / "input")
-            or cfg.get("main_training_authorized") is not True
-            or authorization.get("main_training_authorized") is not True
-            or any(authorization.get(k) is not False for k in forbidden)
-            or authorization.get("old_lr_selection_sha256") != cfg.get("learning_rate_selection_sha256")
-            or any(authorization.get(k) != cfg.get(k) for k in ("seed", "batch_size", "precision"))
-            or authorization.get("epochs_max") != cfg.get("epochs")
-            or authorization.get("patience") != cfg.get("early_stopping_patience")):
+    forbidden = (
+        "learning_rate_search_authorized",
+        "calibration_authorized",
+        "evaluation_authorized",
+        "final_test_authorized",
+        "automatic_retry",
+        "next_round_authorized",
+        "llm_monitoring",
+        "llm_auto_resume",
+    )
+    if (
+        cfg.get("revision") != study.REVISION
+        or cfg.get("source") != str(source / "input")
+        or cfg.get("main_training_authorized") is not True
+        or authorization.get("main_training_authorized") is not True
+        or any(authorization.get(k) is not False for k in forbidden)
+        or authorization.get("old_lr_selection_sha256")
+        != cfg.get("learning_rate_selection_sha256")
+        or any(
+            authorization.get(k) != cfg.get(k)
+            for k in ("seed", "batch_size", "precision")
+        )
+        or authorization.get("epochs_max") != cfg.get("epochs")
+        or authorization.get("patience") != cfg.get("early_stopping_patience")
+    ):
         raise ValueError("Signed training-only preparation binding changed")
-    for name, key in (("worker.py", "worker_sha256"), ("control.py", "controller_sha256"),
-                      ("server-profile.json", "source_profile_sha256")):
+    for name, key in (
+        ("worker.py", "worker_sha256"),
+        ("control.py", "controller_sha256"),
+        ("server-profile.json", "source_profile_sha256"),
+    ):
         if sha(child(source, name)) != authorization.get(key):
             raise ValueError("Signed training runner changed: " + name)
     profile_check(read(source / "server-profile.json"))
     source_binding = cfg.get("binding", {}).get("sources", {})
-    if not source_binding or read(source / "input/inventory.json").get("config.json") != sha(source / "input/config.json"):
+    if not source_binding or read(source / "input/inventory.json").get(
+        "config.json"
+    ) != sha(source / "input/config.json"):
         raise ValueError("Missing signed config/source inventory")
     verify(source / "input", source_binding)
     return ["worker.py", "control.py"]
@@ -233,14 +296,22 @@ def source_proof(source):
         or submission.get("job_id") != release.get("job_id")
         or any(
             complete.get(k) is not False
-            for k in ("calibration_started", "evaluation_started", "next_round_authorized")
+            for k in (
+                "calibration_started",
+                "evaluation_started",
+                "next_round_authorized",
+            )
         )
     ):
-        raise ValueError("A successfully released own training-only completion is required")
+        raise ValueError(
+            "A successfully released own training-only completion is required"
+        )
     cfg = read(source / "input/config.json")
     comparison.config_check(cfg)
     if comparison.execution_scope(cfg) != "training_only":
-        raise ValueError("Source must be the independently completed training-only attempt")
+        raise ValueError(
+            "Source must be the independently completed training-only attempt"
+        )
     authorization = read(source / "authorization.json")
     if (
         authorization.get("config_sha256") != sha(source / "input/config.json")
@@ -252,7 +323,8 @@ def source_proof(source):
     verify(source / "input", read(source / "input/inventory.json"))
     seal = read(source / "compute/result-seal.json")
     if (
-        sha(source / "compute/result-seal.json") != complete["compute_seal_sha256"]
+        sha(source / "compute/result-seal.json")
+        != complete["compute_seal_sha256"]
         or sha(source / "training-report.txt") != complete["report_sha256"]
         or seal.get("config_sha256") != sha(source / "input/config.json")
         or seal.get("status") != "TRAINING_COMPLETE"
@@ -268,7 +340,9 @@ def source_proof(source):
             )
         )
     ):
-        raise ValueError("Source training result seal differs from completed training-only scope")
+        raise ValueError(
+            "Source training result seal differs from completed training-only scope"
+        )
     verify(source / "compute", seal["files"])
     names = [
         "completion.json",
@@ -291,14 +365,28 @@ def baseline_source_proof(source_cfg, baseline):
     from . import study
 
     cfg, seal, files = source_proof(baseline)
-    if (source_cfg.get("revision") != study.REVISION
-            or cfg.get("revision") != comparison.REVISION
-            or any(name not in cfg["models"] for name in BASELINES)
-            or any(cfg.get(k) != source_cfg.get(k) for k in
-                   ("upstream", "source_dataset_sha256", "dataset_files", "handoff_sha256"))
-            or any(cfg.get("binding", {}).get(k) != source_cfg.get("binding", {}).get(k)
-                   for k in ("data", "scaler"))):
-        raise ValueError("Baseline dataset/train-scaler binding differs from neural training")
+    if (
+        source_cfg.get("revision") != study.REVISION
+        or cfg.get("revision") != comparison.REVISION
+        or any(name not in cfg["models"] for name in BASELINES)
+        or any(
+            cfg.get(k) != source_cfg.get(k)
+            for k in (
+                "upstream",
+                "source_dataset_sha256",
+                "dataset_files",
+                "handoff_sha256",
+            )
+        )
+        or any(
+            cfg.get("binding", {}).get(k)
+            != source_cfg.get("binding", {}).get(k)
+            for k in ("data", "scaler")
+        )
+    ):
+        raise ValueError(
+            "Baseline dataset/train-scaler binding differs from neural training"
+        )
     for name in BASELINES:
         scaler = seal["files"].get("models/" + name + "/scaler.npz")
         if not scaler or scaler != source_cfg["binding"]["scaler"]:
@@ -309,13 +397,18 @@ def baseline_source_proof(source_cfg, baseline):
 def dataset_binding(upstream, cfg, receipt):
     """Bind only the already admitted normal calibration and development inputs."""
     seal = read(upstream / "evidence/dataset-seal.json")
-    if seal != cfg["dataset_files"] or cfg["source_dataset_sha256"] != receipt["dataset"]["sha256"]:
+    if (
+        seal != cfg["dataset_files"]
+        or cfg["source_dataset_sha256"] != receipt["dataset"]["sha256"]
+    ):
         raise ValueError("Source dataset differs from portable receipt")
     if (
         receipt.get("status") != "PORTABLE_DATASET_VERIFIED"
         or receipt.get("final_test_included") is not False
     ):
-        raise ValueError("Only verified development-only portable input is allowed")
+        raise ValueError(
+            "Only verified development-only portable input is allowed"
+        )
     verify(
         upstream,
         {
@@ -336,7 +429,9 @@ def dataset_binding(upstream, cfg, receipt):
     expected_truth = {}
     for row in dev:
         value = row["archive"]["members"]["evaluation/events.jsonl"]
-        expected_truth[row["run_id"] + ".jsonl"] = {k: value[k] for k in ("bytes", "sha256")}
+        expected_truth[row["run_id"] + ".jsonl"] = {
+            k: value[k] for k in ("bytes", "sha256")
+        }
     if receipt["evaluator_truth"]["members"] != expected_truth:
         raise ValueError("Development truth index differs from sealed data")
     chosen = {}
@@ -347,7 +442,9 @@ def dataset_binding(upstream, cfg, receipt):
             "scaler.npz",
             "normal_validation.npz",
             "normal_calibration.npz",
-        } or (len(parts) >= 3 and parts[0] == "canonical" and parts[1] in dev_ids):
+        } or (
+            len(parts) >= 3 and parts[0] == "canonical" and parts[1] in dev_ids
+        ):
             chosen["dataset/" + name] = digest
     # Full input hashes are checked once by the calibration worker before inference.
     return chosen
@@ -366,7 +463,9 @@ def calibration_continuation(previous, cfg):
         "completion.json",
     )
     if any((previous / name).exists() for name in forbidden):
-        raise ValueError("Prior evaluation/truth exposure forbids this calibration continuation")
+        raise ValueError(
+            "Prior evaluation/truth exposure forbids this calibration continuation"
+        )
     controller = read(previous / "controller.json")
     record = read(previous / "calibrate-submission.json")
     release = read(previous / "release.json")
@@ -376,9 +475,12 @@ def calibration_continuation(previous, cfg):
         or record.get("phase") != "calibrate"
         or record.get("job_id") != release.get("job_id")
         or release.get("released") is not True
-        or release.get("slurm_state", "").partition(" ")[0] not in operator.TERMINAL - {"COMPLETED"}
+        or release.get("slurm_state", "").partition(" ")[0]
+        not in operator.TERMINAL - {"COMPLETED"}
     ):
-        raise ValueError("A stopped, released own calibration attempt is required")
+        raise ValueError(
+            "A stopped, released own calibration attempt is required"
+        )
     actual = operator.snapshot(record)
     if (
         actual.get("released") is not True
@@ -386,7 +488,9 @@ def calibration_continuation(previous, cfg):
         or actual.get("exit_code") != release.get("exit_code")
         or operator.own_queue()
     ):
-        raise ValueError("Actual prior allocation release and empty own queue required")
+        raise ValueError(
+            "Actual prior allocation release and empty own queue required"
+        )
     for key in (
         "source_training",
         "source_training_config_sha256",
@@ -408,7 +512,9 @@ def calibration_continuation(previous, cfg):
         return {k: v for k, v in value.items() if k != "implementation_sha256"}
 
     if semantic(old["protocol"]) != semantic(cfg["protocol"]):
-        raise ValueError("Continuation must retain the original detection/evaluation criteria")
+        raise ValueError(
+            "Continuation must retain the original detection/evaluation criteria"
+        )
     proof_names = (
         "input/config.json",
         "input/inventory.json",
@@ -421,7 +527,11 @@ def calibration_continuation(previous, cfg):
     )
     proof_files = {name: sha(previous / name) for name in proof_names}
     reused, files, incomplete = {}, {}, []
-    required = ("calibration.json", "normal-residuals.json", "normal-residuals.npz")
+    required = (
+        "calibration.json",
+        "normal-residuals.json",
+        "normal-residuals.npz",
+    )
     for name in cfg["models"]:
         folder = previous / "compute/calibration" / name
         present = [child(folder, part).is_file() for part in required]
@@ -436,19 +546,27 @@ def calibration_continuation(previous, cfg):
             evidence.get("schema") != "drone-ai.normal-residual-evidence/1"
             or evidence.get("model") != name
             or evidence.get("file") != "normal-residuals.npz"
-            or evidence.get("roles") != ["normal_validation", "normal_calibration"]
+            or evidence.get("roles")
+            != ["normal_validation", "normal_calibration"]
             or evidence.get("truth_used") is not False
             or evidence.get("sha256") != sha(folder / "normal-residuals.npz")
-            or evidence.get("calibration_sha256") != sha(folder / "calibration.json")
+            or evidence.get("calibration_sha256")
+            != sha(folder / "calibration.json")
             or evidence.get("bundle_integrity_sha256") != bundle_sha
             or fitted.get("bundle_integrity_sha256") != bundle_sha
-            or evidence.get("dataset_manifest_sha256") != cfg["dataset_files"]["manifest.json"]
+            or evidence.get("dataset_manifest_sha256")
+            != cfg["dataset_files"]["manifest.json"]
         ):
-            raise ValueError("Normal calibration evidence binding changed: " + name)
+            raise ValueError(
+                "Normal calibration evidence binding changed: " + name
+            )
         hashes = {part: sha(folder / part) for part in required}
         reused[name] = dict(files=hashes, source_attempt=str(previous))
         files.update(
-            {"calibration/" + name + "/" + part: digest for part, digest in hashes.items()}
+            {
+                "calibration/" + name + "/" + part: digest
+                for part, digest in hashes.items()
+            }
         )
     return dict(
         source_attempt=str(previous),
@@ -467,7 +585,10 @@ def calibration_continuation(previous, cfg):
 def copy_normal_calibration(previous, root, continuation):
     """Copy only verified normal evidence, never previous development run directories."""
     for name, digest in continuation["source_calibration_files"].items():
-        source, target = child(previous / "compute", name), child(root / "compute", name)
+        source, target = (
+            child(previous / "compute", name),
+            child(root / "compute", name),
+        )
         target.parent.mkdir(parents=True, exist_ok=True)
         with source.open("rb") as src, target.open("xb") as dst:
             shutil.copyfileobj(src, dst, length=1024 * 1024)
@@ -505,11 +626,17 @@ def prepare(args):
             "--sensitivity-policy requires fresh calibration and excludes other numerical modes"
         )
     if (diagnostic or policy_path is not None) and not fresh_calibration:
-        raise ValueError("Diagnostic/common policy requires --fresh-calibration")
+        raise ValueError(
+            "Diagnostic/common policy requires --fresh-calibration"
+        )
     if diagnostic and policy_path is not None:
-        raise ValueError("Diagnostic-only records evidence without selecting a policy")
+        raise ValueError(
+            "Diagnostic-only records evidence without selecting a policy"
+        )
     if fresh_calibration and getattr(args, "continue_from", None) is not None:
-        raise ValueError("--fresh-calibration and --continue-from are mutually exclusive")
+        raise ValueError(
+            "--fresh-calibration and --continue-from are mutually exclusive"
+        )
     # Validate file inputs before copying any model or creating an attempt directory.
     if policy_path is not None:
         from .replay_validation import _validate_policy
@@ -519,36 +646,62 @@ def prepare(args):
         from .sensitivity_metrics import validate_policy
 
         sensitivity_policy = read_policy_file(sensitivity_path, validate_policy)
-    source, root = external_root(args.source), remote_path(external_root(args.root))
+    source, root = (
+        external_root(args.source),
+        remote_path(external_root(args.root)),
+    )
     bundle = external_root(args.bundle)
     previous = getattr(args, "continue_from", None)
     previous = external_root(previous) if previous is not None else None
     if root.exists():
-        raise FileExistsError("New output required; existing evidence is never overwritten")
+        raise FileExistsError(
+            "New output required; existing evidence is never overwritten"
+        )
     profile = load(args.profile)
     profile_check(profile)
     source_cfg, source_seal, source_files = source_proof(source)
     baseline_source = getattr(args, "baseline_source", None)
-    baseline_source = external_root(baseline_source) if baseline_source is not None else None
+    baseline_source = (
+        external_root(baseline_source) if baseline_source is not None else None
+    )
     model_sources = [(source, source_cfg["models"], source_seal)]
     model_names = list(source_cfg["models"])
     baseline_reference = None
     if baseline_source is not None:
-        _, baseline_seal, baseline_files = baseline_source_proof(source_cfg, baseline_source)
+        _, baseline_seal, baseline_files = baseline_source_proof(
+            source_cfg, baseline_source
+        )
         model_sources.append((baseline_source, BASELINES, baseline_seal))
         model_names.extend(BASELINES)
-        baseline_reference = dict(source=str(baseline_source), files=baseline_files,
-                                  models=list(BASELINES),
-                                  config_sha256=baseline_files["input/config.json"],
-                                  seal_sha256=baseline_files["compute/result-seal.json"])
+        baseline_reference = dict(
+            source=str(baseline_source),
+            files=baseline_files,
+            models=list(BASELINES),
+            config_sha256=baseline_files["input/config.json"],
+            seal_sha256=baseline_files["compute/result-seal.json"],
+        )
     upstream = external_root(source_cfg["upstream"])
-    protected_inputs = ((source, upstream, bundle) + ((previous,) if previous else ())
-                        + ((baseline_source,) if baseline_source else ()))
+    protected_inputs = (
+        (source, upstream, bundle)
+        + ((previous,) if previous else ())
+        + ((baseline_source,) if baseline_source else ())
+    )
     for protected in protected_inputs:
-        if root == protected or root.is_relative_to(protected) or protected.is_relative_to(root):
-            raise ValueError("Post-training output must be separate from all preserved inputs")
-    if Path(profile["dataset_root"]) != upstream or Path(profile["output_root"]) != root:
-        raise ValueError("Profile must bind the preserved upstream and new output root")
+        if (
+            root == protected
+            or root.is_relative_to(protected)
+            or protected.is_relative_to(root)
+        ):
+            raise ValueError(
+                "Post-training output must be separate from all preserved inputs"
+            )
+    if (
+        Path(profile["dataset_root"]) != upstream
+        or Path(profile["output_root"]) != root
+    ):
+        raise ValueError(
+            "Profile must bind the preserved upstream and new output root"
+        )
     receipt = read(bundle / "receipt.json")
     needed_inputs = dataset_binding(upstream, source_cfg, receipt)
     from execution.prepare import npz_headers
@@ -556,13 +709,17 @@ def prepare(args):
     raw_bytes = sum(
         value["bytes"]
         for role in ("normal_validation", "normal_calibration")
-        for value in npz_headers(upstream / "dataset" / (role + ".npz")).values()
+        for value in npz_headers(
+            upstream / "dataset" / (role + ".npz")
+        ).values()
     )
     # Historical normalization uses float64. Bound raw arrays, normalized copies,
     # residuals/BLAS/replay, then retain the runtime1GiB reserve inside the request.
     required_bytes = max(16 * 1024**3, 4 * raw_bytes + 8 * 1024**3)
     if required_bytes > 64 * 1024**3:
-        raise MemoryError("Calibration arrays plus reserve exceed fixed64GiB allocation")
+        raise MemoryError(
+            "Calibration arrays plus reserve exceed fixed64GiB allocation"
+        )
     truth_ref = receipt["evaluator_truth"]
     truth_archive = child(bundle, truth_ref["path"])
     if (
@@ -579,7 +736,13 @@ def prepare(args):
         progress.update(status="RUNNING", stage="freeze_post_training_inputs")
         write(root / "server-profile.json", profile)
         inputs = root / "input"
-        for folder in ("execution", "learning", "pipeline", "src/capstone_ai", "console"):
+        for folder in (
+            "execution",
+            "learning",
+            "pipeline",
+            "src/capstone_ai",
+            "console",
+        ):
             for path in (ROOT / "ai" / folder).rglob("*.py"):
                 target = inputs / path.relative_to(ROOT)
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -596,7 +759,9 @@ def prepare(args):
             for name in names:
                 prefix = "models/" + name + "/"
                 expected = {
-                    k[len(prefix) :]: v for k, v in model_seal["files"].items() if k.startswith(prefix)
+                    k[len(prefix) :]: v
+                    for k, v in model_seal["files"].items()
+                    if k.startswith(prefix)
                 }
                 if not expected or "integrity.json" not in expected:
                     raise ValueError("Missing sealed exported bundle: " + name)
@@ -604,7 +769,10 @@ def prepare(args):
                 for filename, digest in expected.items():
                     target = child(root / "compute/models" / name, filename)
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(child(model_source / "compute/models" / name, filename), target)
+                    shutil.copy2(
+                        child(model_source / "compute/models" / name, filename),
+                        target,
+                    )
                     if sha(target) != digest:
                         raise ValueError("Copied model bundle changed")
                     models["models/" + name + "/" + filename] = digest
@@ -642,7 +810,9 @@ def prepare(args):
             source_training=str(source),
             source_training_files=source_files,
             source_training_config_sha256=source_files["input/config.json"],
-            source_training_seal_sha256=source_files["compute/result-seal.json"],
+            source_training_seal_sha256=source_files[
+                "compute/result-seal.json"
+            ],
             upstream=str(upstream),
             evaluation_input_files=needed_inputs,
             dataset_files=source_cfg["dataset_files"],
@@ -660,12 +830,15 @@ def prepare(args):
             cfg["baseline_reference"] = baseline_reference
         if previous is not None:
             cfg.update(
-                prediction_batch_size=256, verify_prediction_batch=True, all_model_replay_fresh=True
+                prediction_batch_size=256,
+                verify_prediction_batch=True,
+                all_model_replay_fresh=True,
             )
             continuation = calibration_continuation(previous, cfg)
             copy_normal_calibration(previous, root, continuation)
             cfg.update(
-                continuation=continuation, reuse_calibration=continuation["reuse_calibration"]
+                continuation=continuation,
+                reuse_calibration=continuation["reuse_calibration"],
             )
             write(inputs / "continuation.json", continuation)
         if fresh_calibration:
@@ -686,20 +859,30 @@ def prepare(args):
         if policy_path is not None:
             cfg["numerical_policy"] = numerical_policy
             write(inputs / "numerical-policy.json", cfg["numerical_policy"])
-            cfg["numerical_policy_sha256"] = sha(inputs / "numerical-policy.json")
+            cfg["numerical_policy_sha256"] = sha(
+                inputs / "numerical-policy.json"
+            )
         if sensitivity_path is not None:
             from .sensitivity_data import build_plan, verify_selection_layout
 
             cfg["sensitivity_policy"] = sensitivity_policy
-            cfg["sensitivity_plan"] = build_plan(upstream / "dataset/manifest.json")
+            cfg["sensitivity_plan"] = build_plan(
+                upstream / "dataset/manifest.json"
+            )
             write(
                 inputs / "sensitivity-layout.json",
-                verify_selection_layout(cfg["sensitivity_plan"], upstream / "dataset"),
+                verify_selection_layout(
+                    cfg["sensitivity_plan"], upstream / "dataset"
+                ),
             )
             write(inputs / "sensitivity-policy.json", cfg["sensitivity_policy"])
             write(inputs / "sensitivity-plan.json", cfg["sensitivity_plan"])
-            cfg["sensitivity_policy_sha256"] = sha(inputs / "sensitivity-policy.json")
-            cfg["sensitivity_plan_sha256"] = sha(inputs / "sensitivity-plan.json")
+            cfg["sensitivity_policy_sha256"] = sha(
+                inputs / "sensitivity-policy.json"
+            )
+            cfg["sensitivity_plan_sha256"] = sha(
+                inputs / "sensitivity-plan.json"
+            )
         if getattr(args, "parallel_replay_workers", None) is not None:
             cfg["parallel_replay_workers"] = args.parallel_replay_workers
         if getattr(args, "benchmark_parallel", False):
@@ -743,7 +926,9 @@ def prepare(args):
         )
         progress.update(status="AUTHORIZED_NOT_STARTED", stage="stopped")
     except BaseException as exc:
-        progress.update(status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}")
+        progress.update(
+            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}"
+        )
         raise
 
 
@@ -767,7 +952,10 @@ def checked(root):
     ):
         raise ValueError("Post-training authorization binding changed")
     profile_check(runtime_profile(root, required=True))
-    if runtime_profile(root, required=True).get("slurm", {}).get("cpus", 4) != cfg["cpus"]:
+    if (
+        runtime_profile(root, required=True).get("slurm", {}).get("cpus", 4)
+        != cfg["cpus"]
+    ):
         raise ValueError("Frozen CPU allocation/profile differs")
     verify(Path(cfg["source_training"]), cfg["source_training_files"])
     if cfg.get("baseline_reference"):
@@ -775,7 +963,8 @@ def checked(root):
         verify(Path(baseline["source"]), baseline["files"])
     verify(root / "compute", cfg["model_files"])
     if "numerical_policy" in cfg and (
-        sha(root / "input/numerical-policy.json") != cfg["numerical_policy_sha256"]
+        sha(root / "input/numerical-policy.json")
+        != cfg["numerical_policy_sha256"]
         or read(root / "input/numerical-policy.json") != cfg["numerical_policy"]
     ):
         raise ValueError("Frozen common numerical policy changed")
@@ -786,7 +975,9 @@ def checked(root):
                 raise ValueError("Frozen common sensitivity inputs changed")
     if cfg.get("continuation"):
         continuation = cfg["continuation"]
-        verify(Path(continuation["source_attempt"]), continuation["source_files"])
+        verify(
+            Path(continuation["source_attempt"]), continuation["source_files"]
+        )
         verify(root / "compute", continuation["source_calibration_files"])
     return root, cfg
 
@@ -794,14 +985,18 @@ def checked(root):
 def start(root):
     root, cfg = checked(root)
     approved_python = python_for(root, required=True)
-    if Path(sys.executable).resolve() != Path(approved_python).resolve() or os.environ.get(
-        "SLURM_JOB_ID"
-    ):
-        raise ValueError("Start with the selected server Python on the login node")
+    if Path(sys.executable).resolve() != Path(
+        approved_python
+    ).resolve() or os.environ.get("SLURM_JOB_ID"):
+        raise ValueError(
+            "Start with the selected server Python on the login node"
+        )
     if (root / "controller.claim").exists():
         raise ValueError("Attempt already claimed; no automatic retry")
     with (root / "start.claim").open("x") as stream:
-        stream.write("Single controller launch; never retry an unknown launch outcome.\n")
+        stream.write(
+            "Single controller launch; never retry an unknown launch outcome.\n"
+        )
     name = "drone-ai-" + root.name
     command = (
         "export PYTHONPATH="
@@ -810,36 +1005,58 @@ def start(root):
         + shlex.quote(str(root / "server-profile.json"))
         + "; export PYTHONDONTWRITEBYTECODE=1; exec "
         + shlex.join(
-            [approved_python, "-B", "-m", "learning.post_training", "control", "--root", str(root)]
+            [
+                approved_python,
+                "-B",
+                "-m",
+                "learning.post_training",
+                "control",
+                "--root",
+                str(root),
+            ]
         )
         + " >> "
         + shlex.quote(str(root / "controller.log"))
         + " 2>&1"
     )
-    subprocess.run(["tmux", "new-session", "-d", "-s", name, command], check=True)
+    subprocess.run(
+        ["tmux", "new-session", "-d", "-s", name, command], check=True
+    )
     print("Finite post-training controller started in server tmux: " + name)
 
 
 def submit(root, phase, cfg):
     root, frozen = checked(root)
     if cfg != frozen:
-        raise ValueError("Submission configuration differs from frozen authorization")
-    permitted = {"diagnose"} if cfg.get("numerical_diagnostic_only") else {"calibrate", "evaluate"}
+        raise ValueError(
+            "Submission configuration differs from frozen authorization"
+        )
+    permitted = (
+        {"diagnose"}
+        if cfg.get("numerical_diagnostic_only")
+        else {"calibrate", "evaluate"}
+    )
     if phase not in permitted:
         raise ValueError("Only calibration and evaluation are authorized")
     with SUBMIT_LOCK.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if operator.own_queue():
-            raise ValueError("Own pending/running job exists; no concurrent GPU submission")
+            raise ValueError(
+                "Own pending/running job exists; no concurrent GPU submission"
+            )
         if phase == "evaluate":
             operator.require_success(read(root / "release.json"))
             seal_check(root, cfg)
         with (root / (phase + "-submitted.claim")).open("x") as stream:
-            stream.write("One submission; unknown outcome must never be retried.\n")
+            stream.write(
+                "One submission; unknown outcome must never be retried.\n"
+            )
         script = root / (phase + "-job.sh")
         script.write_text(
             "#!/bin/bash\nset -euo pipefail\nexport PYTHONPATH="
-            + shlex.quote(str(root / "input/ai") + ":" + str(root / "input/ai/src"))
+            + shlex.quote(
+                str(root / "input/ai") + ":" + str(root / "input/ai/src")
+            )
             + "\nexport DRONE_AI_PROFILE="
             + shlex.quote(str(root / "server-profile.json"))
             + "\nexport PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
@@ -857,7 +1074,11 @@ def submit(root, phase, cfg):
             )
             + "\n"
         )
-        hours = cfg["wall_hours"] if phase != "evaluate" else cfg["evaluation_hours"]
+        hours = (
+            cfg["wall_hours"]
+            if phase != "evaluate"
+            else cfg["evaluation_hours"]
+        )
         argv = [
             "sbatch",
             "--parsable",
@@ -883,8 +1104,15 @@ def submit(root, phase, cfg):
         response = operator.command(argv)
         identifier = response.split(";")[0]
         if not identifier.isdigit():
-            raise ValueError("Unknown submission outcome; no retry: " + response)
-        record = dict(job_id=identifier, uid=os.getuid(), phase=phase, submitted=time.time())
+            raise ValueError(
+                "Unknown submission outcome; no retry: " + response
+            )
+        record = dict(
+            job_id=identifier,
+            uid=os.getuid(),
+            phase=phase,
+            submitted=time.time(),
+        )
         write(root / (phase + "-submission.json"), record)
         return record
 
@@ -899,9 +1127,12 @@ def seal_check(root, cfg):
         or seal.get("training_repeated") is not False
         or seal.get("truth_join") is not False
         or seal.get("final_test_used") is not False
-        or seal.get("source_training_seal_sha256") != cfg["source_training_seal_sha256"]
+        or seal.get("source_training_seal_sha256")
+        != cfg["source_training_seal_sha256"]
     ):
-        raise ValueError("Complete calibration/inference seal required before truth join")
+        raise ValueError(
+            "Complete calibration/inference seal required before truth join"
+        )
     return seal
 
 
@@ -952,13 +1183,16 @@ def wait_files(root, phase, state, cfg):
                     raise ValueError("Unexpected evaluator completion status")
                 read(root / "evaluation/metrics.json")
             state.update(
-                file_visibility="VISIBLE", file_visibility_waited_s=time.monotonic() - started
+                file_visibility="VISIBLE",
+                file_visibility_waited_s=time.monotonic() - started,
             )
             write(root / "controller.json", state)
             return
         except FileNotFoundError:
             if time.monotonic() >= deadline:
-                raise RuntimeError("Released output not visible within120seconds; no retry")
+                raise RuntimeError(
+                    "Released output not visible within120seconds; no retry"
+                )
             state.update(
                 file_visibility="WAITING",
                 file_visibility_waited_s=time.monotonic() - started,
@@ -972,10 +1206,15 @@ def control(root):
     root, cfg = checked(root)
     if os.environ.get("SLURM_JOB_ID") or not os.environ.get("TMUX"):
         raise ValueError("Finite controller must run in server login-node tmux")
-    if Path(sys.executable).resolve() != Path(python_for(root, required=True)).resolve():
+    if (
+        Path(sys.executable).resolve()
+        != Path(python_for(root, required=True)).resolve()
+    ):
         raise ValueError("Selected server Python required")
     with (root / "controller.claim").open("x") as stream:
-        stream.write("One approved post-training continuation, no automatic retry.\n")
+        stream.write(
+            "One approved post-training continuation, no automatic retry.\n"
+        )
     state = dict(
         status="RUNNING",
         stage="submission",
@@ -992,7 +1231,9 @@ def control(root):
     phase = None
     try:
         phases = (
-            ("diagnose",) if cfg.get("numerical_diagnostic_only") else ("calibrate", "evaluate")
+            ("diagnose",)
+            if cfg.get("numerical_diagnostic_only")
+            else ("calibrate", "evaluate")
         )
         for phase in phases:
             # Never let a preceding released job stand in for a new, unknown
@@ -1001,15 +1242,24 @@ def control(root):
             state.update(stage=phase, allocation_released=False)
             write(root / "controller.json", state)
             record = submit(root, phase, cfg)
-            state.update(stage=phase, job_id=record["job_id"], allocation_released=False)
+            state.update(
+                stage=phase, job_id=record["job_id"], allocation_released=False
+            )
             write(root / "controller.json", state)
             budget = {
                 **cfg,
-                "wall_hours": cfg["wall_hours"] if phase != "evaluate" else cfg["evaluation_hours"],
+                "wall_hours": cfg["wall_hours"]
+                if phase != "evaluate"
+                else cfg["evaluation_hours"],
             }
             release = operator.wait_release(root, record, state, budget)
             write(
-                root / ("evaluation-release.json" if phase == "evaluate" else "release.json"),
+                root
+                / (
+                    "evaluation-release.json"
+                    if phase == "evaluate"
+                    else "release.json"
+                ),
                 release,
             )
             operator.require_success(release)
@@ -1019,14 +1269,18 @@ def control(root):
             diagnostic_seal_check(root, cfg)
             checked(root)
             if operator.own_queue():
-                raise ValueError("Own queue remains nonempty at diagnostic completion")
+                raise ValueError(
+                    "Own queue remains nonempty at diagnostic completion"
+                )
             write(
                 root / "completion.json",
                 dict(
                     status="DIAGNOSTIC_READY_STOPPED",
                     finished=time.time(),
                     diagnostic_release=read(root / "release.json"),
-                    diagnostic_seal_sha256=sha(root / "compute/diagnostic-seal.json"),
+                    diagnostic_seal_sha256=sha(
+                        root / "compute/diagnostic-seal.json"
+                    ),
                     training_repeated=False,
                     calibration_started=False,
                     inference_started=False,
@@ -1036,7 +1290,11 @@ def control(root):
                     llm_calls=0,
                 ),
             )
-            state.update(status="DIAGNOSTIC_READY_STOPPED", stage="stopped", finished=time.time())
+            state.update(
+                status="DIAGNOSTIC_READY_STOPPED",
+                stage="stopped",
+                finished=time.time(),
+            )
             write(root / "controller.json", state)
             return
         verify(root / "compute", seal_check(root, cfg)["files"])
@@ -1117,7 +1375,9 @@ def require_fresh_calibration_inputs(root, cfg):
         or "continuation" in cfg
         or any(path.exists() or path.is_symlink() for path in artifacts)
     ):
-        raise ValueError("Fresh calibration must start without calibration or reuse artifacts")
+        raise ValueError(
+            "Fresh calibration must start without calibration or reuse artifacts"
+        )
 
 
 def calibrate_worker(root, *, diagnostic_only=False):
@@ -1142,12 +1402,22 @@ def calibrate_worker(root, *, diagnostic_only=False):
     try:
         require_fresh_calibration_inputs(root, cfg)
         progress.update(stage="resource_admission", round=cfg["revision"])
-        environment = check(root / "input/ai", out, phase, job_prefix="drone-ai-")
-        if cfg.get("parallel_replay_workers") and int(environment["job"]["NumCPUs"]) < cfg["cpus"]:
-            raise RuntimeError("Allocated CPU count differs from parallel replay budget")
+        environment = check(
+            root / "input/ai", out, phase, job_prefix="drone-ai-"
+        )
+        if (
+            cfg.get("parallel_replay_workers")
+            and int(environment["job"]["NumCPUs"]) < cfg["cpus"]
+        ):
+            raise RuntimeError(
+                "Allocated CPU count differs from parallel replay budget"
+            )
         snapshot = memory_snapshot()
         required = cfg["memory_required_bytes"]
-        admitted = not snapshot.get("errors") and snapshot["available_bytes"] >= required
+        admitted = (
+            not snapshot.get("errors")
+            and snapshot["available_bytes"] >= required
+        )
         write(
             out / "host-memory-admission.json",
             dict(
@@ -1159,7 +1429,9 @@ def calibrate_worker(root, *, diagnostic_only=False):
             ),
         )
         if not admitted:
-            raise MemoryError("Calibration memory admission failed; see host-memory-admission.json")
+            raise MemoryError(
+                "Calibration memory admission failed; see host-memory-admission.json"
+            )
         progress.update(stage="verify_calibration_development_inputs")
         verify(
             upstream,
@@ -1168,7 +1440,11 @@ def calibrate_worker(root, *, diagnostic_only=False):
                 for key, value in cfg["evaluation_input_files"].items()
                 if not diagnostic_only
                 or key
-                in {"dataset/normal_validation.npz", "dataset/scaler.npz", "dataset/manifest.json"}
+                in {
+                    "dataset/normal_validation.npz",
+                    "dataset/scaler.npz",
+                    "dataset/manifest.json",
+                }
             },
         )
         telemetry = Telemetry(out)
@@ -1184,7 +1460,9 @@ def calibrate_worker(root, *, diagnostic_only=False):
                 with project_lock("cuda"), backend("cuda"):
                     selection = benchmark_workers(upstream, out, cfg, progress)
                 selected_workers = selection["selected_workers"]
-            development_context = ParallelDevelopment(selected_workers, progress)
+            development_context = ParallelDevelopment(
+                selected_workers, progress
+            )
         with project_lock("cuda"), development_context as development_executor:
             if diagnostic_only:
                 preflight_models(
@@ -1208,7 +1486,9 @@ def calibrate_worker(root, *, diagnostic_only=False):
                     preserve_normal_residuals=True,
                     reuse_calibration=cfg.get("reuse_calibration", {}),
                     prediction_batch_size=cfg.get("prediction_batch_size", 1),
-                    verify_prediction_batch=cfg.get("verify_prediction_batch", False),
+                    verify_prediction_batch=cfg.get(
+                        "verify_prediction_batch", False
+                    ),
                     numerical_policy=cfg.get("numerical_policy"),
                     sensitivity_plan=cfg.get("sensitivity_plan"),
                     sensitivity_policy=cfg.get("sensitivity_policy"),
@@ -1220,7 +1500,8 @@ def calibrate_worker(root, *, diagnostic_only=False):
         files = {
             str(p.relative_to(out)): sha(p)
             for p in out.rglob("*")
-            if p.is_file() and p.name not in {"progress.json", "result-seal.json"}
+            if p.is_file()
+            and p.name not in {"progress.json", "result-seal.json"}
         }
         if diagnostic_only:
             write(
@@ -1236,7 +1517,9 @@ def calibrate_worker(root, *, diagnostic_only=False):
                     truth_join=False,
                 ),
             )
-            progress.update(status="DIAGNOSTIC_COMPLETE_PENDING_RELEASE", stage="stopped")
+            progress.update(
+                status="DIAGNOSTIC_COMPLETE_PENDING_RELEASE", stage="stopped"
+            )
             return
         write(
             out / "result-seal.json",
@@ -1257,17 +1540,28 @@ def calibrate_worker(root, *, diagnostic_only=False):
                 next_round_authorized=False,
                 prediction_batch_size=cfg.get("prediction_batch_size", 1),
                 all_model_replay_fresh=cfg.get("all_model_replay_fresh", True),
-                all_model_calibration_fresh=cfg.get("all_model_calibration_fresh", False),
-                normal_calibration_reused=list(cfg.get("reuse_calibration", {})),
+                all_model_calibration_fresh=cfg.get(
+                    "all_model_calibration_fresh", False
+                ),
+                normal_calibration_reused=list(
+                    cfg.get("reuse_calibration", {})
+                ),
                 prior_inference_reused=False,
-                all_model_sensitivity_passed=bool(cfg.get("sensitivity_policy")),
+                all_model_sensitivity_passed=bool(
+                    cfg.get("sensitivity_policy")
+                ),
                 diagnostic_calibration_reused=False,
             ),
         )
-        progress.update(status="CALIBRATION_INFERENCE_COMPLETE_PENDING_RELEASE", stage="stopped")
+        progress.update(
+            status="CALIBRATION_INFERENCE_COMPLETE_PENDING_RELEASE",
+            stage="stopped",
+        )
     except BaseException as exc:
         progress.update(
-            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}", automatic_retry=False
+            status="FAILED_STOPPED",
+            reason=f"{type(exc).__name__}: {exc}",
+            automatic_retry=False,
         )
         raise
     finally:
@@ -1297,9 +1591,14 @@ def extract_truth(root, cfg, progress):
                 or not member.isfile()
                 or member.sparse
             ):
-                raise ValueError("Unexpected, duplicate or nonregular truth member")
+                raise ValueError(
+                    "Unexpected, duplicate or nonregular truth member"
+                )
             expected = ref["members"][member.name]
-            if member.size != expected["bytes"] or not 0 <= member.size <= 10_000_000:
+            if (
+                member.size != expected["bytes"]
+                or not 0 <= member.size <= 10_000_000
+            ):
                 raise ValueError("Truth member size mismatch")
             path = child(target, member.name)
             with stream.extractfile(member) as source, path.open("xb") as dest:
@@ -1322,7 +1621,9 @@ def evaluate_worker(root):
     root, cfg = checked(root)
     if cfg.get("numerical_diagnostic_only"):
         raise ValueError("Diagnostic-only attempt cannot evaluate")
-    progress = Progress(root / "evaluation-progress.json", hours=cfg["evaluation_hours"] - 0.1)
+    progress = Progress(
+        root / "evaluation-progress.json", hours=cfg["evaluation_hours"] - 0.1
+    )
     signal.signal(signal.SIGTERM, stop_signal)
     signal.signal(signal.SIGINT, stop_signal)
     try:
@@ -1331,7 +1632,9 @@ def evaluate_worker(root):
         verify(root / "compute", seal["files"])
         runtime_out = root / "evaluation-runtime"
         runtime_out.mkdir(exist_ok=False)
-        check(root / "input/ai", runtime_out, "evaluate", job_prefix="drone-ai-")
+        check(
+            root / "input/ai", runtime_out, "evaluate", job_prefix="drone-ai-"
+        )
         extract_truth(root, cfg, progress)
 
         def truth_provider(row, target, budget):
@@ -1340,7 +1643,10 @@ def evaluate_worker(root):
                 raise ValueError("Development truth only")
             expected = row["archive"]["members"]["evaluation/events.jsonl"]
             source = child(root / "truth", row["run_id"] + ".jsonl")
-            if source.stat().st_size != expected["bytes"] or sha(source) != expected["sha256"]:
+            if (
+                source.stat().st_size != expected["bytes"]
+                or sha(source) != expected["sha256"]
+            ):
                 raise ValueError("Truth binding changed")
             shutil.copyfile(source, target)
 
@@ -1355,10 +1661,14 @@ def evaluate_worker(root):
                 development_counts=cfg["development_counts"],
                 completion_status="EVALUATION_COMPLETE_PENDING_RELEASE",
             )
-        progress.update(status="EVALUATION_COMPLETE_PENDING_RELEASE", stage="stopped")
+        progress.update(
+            status="EVALUATION_COMPLETE_PENDING_RELEASE", stage="stopped"
+        )
     except BaseException as exc:
         progress.update(
-            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}", automatic_retry=False
+            status="FAILED_STOPPED",
+            reason=f"{type(exc).__name__}: {exc}",
+            automatic_retry=False,
         )
         raise
 
@@ -1369,12 +1679,22 @@ def main():
     p = sub.add_parser("prepare")
     p.add_argument("--root", type=Path, required=True)
     p.add_argument("--source", type=Path, required=True)
-    p.add_argument("--baseline-source", type=Path,
-                   help="Preserved training-only comparison supplying persistence/ridge; no refit")
-    p.add_argument("--parallel-replay-workers", type=int, choices=[2, 4, 8],
-                   help="Bounded GPU producer plus2/4/8 CPU replay workers; batch256 unchanged")
-    p.add_argument("--benchmark-parallel", action="store_true",
-                   help="Use actual GPU/normal data to select one uniform2/4/8-worker setting")
+    p.add_argument(
+        "--baseline-source",
+        type=Path,
+        help="Preserved training-only comparison supplying persistence/ridge; no refit",
+    )
+    p.add_argument(
+        "--parallel-replay-workers",
+        type=int,
+        choices=[2, 4, 8],
+        help="Bounded GPU producer plus2/4/8 CPU replay workers; batch256 unchanged",
+    )
+    p.add_argument(
+        "--benchmark-parallel",
+        action="store_true",
+        help="Use actual GPU/normal data to select one uniform2/4/8-worker setting",
+    )
     p.add_argument("--bundle", type=Path, required=True)
     p.add_argument("--profile", required=True)
     p.add_argument("--calibration-hours", type=int, default=24)
@@ -1417,7 +1737,9 @@ def main():
             "control": control,
             "calibrate": calibrate_worker,
             "evaluate": evaluate_worker,
-            "diagnose": lambda root: calibrate_worker(root, diagnostic_only=True),
+            "diagnose": lambda root: calibrate_worker(
+                root, diagnostic_only=True
+            ),
         }[args.action](args.root)
 
 

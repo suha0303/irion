@@ -1,6 +1,11 @@
 """User-operated MAIN/LR input preparation only. No jobs, models, training or deletion."""
 
-from .aggregate import aggregate, audit_aggregate, load_shared_scaler, whole_manifest_paths
+from .aggregate import (
+    aggregate,
+    audit_aggregate,
+    load_shared_scaler,
+    whole_manifest_paths,
+)
 from .cases import audit_case
 from .contract import check_scope, prepare_policy
 from .rejection import check_quality_rejection, publish_quality_rejection

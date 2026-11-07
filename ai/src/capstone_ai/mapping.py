@@ -30,8 +30,14 @@ BINDINGS = {
     "specific_force": ("vehicle_acceleration", {"xyz": "m/s^2"}),
     "climb_rate": ("vehicle_local_position", {"vz": "m/s"}),
     "climb_rate_target": ("vehicle_local_position_setpoint", {"vz": "m/s"}),
-    "pack_voltage_current": ("battery_status", {"voltage_v": "V", "current_a": "A"}),
-    "operating_state": ("vehicle_status", {"arming_state": "enum", "nav_state": "enum"}),
+    "pack_voltage_current": (
+        "battery_status",
+        {"voltage_v": "V", "current_a": "A"},
+    ),
+    "operating_state": (
+        "vehicle_status",
+        {"arming_state": "enum", "nav_state": "enum"},
+    ),
     "landed_state": ("vehicle_land_detected", {"landed": "boolean_as_number"}),
 }
 
@@ -50,7 +56,11 @@ def validate_metadata(m, config):
     errors = []
     if m.get("schema") != "drone.observation.metadata/2.0":
         errors.append("metadata schema")
-    if m["frames"] != {"body": "FRD", "navigation": "NED", "quaternion": "wxyz_body_to_navigation"}:
+    if m["frames"] != {
+        "body": "FRD",
+        "navigation": "NED",
+        "quaternion": "wxyz_body_to_navigation",
+    }:
         errors.append("unsupported frame; explicit source conversion required")
     if m.get("conversion_history"):
         errors.append("already converted source is not the native PX4 profile")
@@ -62,7 +72,10 @@ def validate_metadata(m, config):
     ):
         errors.append("X500 motor mapping")
     expected_capacity = capacity_ah(config)
-    if v["nominal_series_cells"] != 4 or v["nominal_capacity_ah"] != expected_capacity:
+    if (
+        v["nominal_series_cells"] != 4
+        or v["nominal_capacity_ah"] != expected_capacity
+    ):
         errors.append("unsupported nameplate")
     if expected_capacity == 12 and (
         v.get("battery_profile_id") != "vtc6_4s4p_r3_long15"
@@ -88,9 +101,14 @@ def validate_metadata(m, config):
         if b.get("topic") != topic or b.get("source") != "px4.uorb":
             errors.append(role + ": missing binding")
         for field, unit in units.items():
-            if b.get("units", {}).get(field) != unit or field not in b.get("fields", []):
+            if b.get("units", {}).get(field) != unit or field not in b.get(
+                "fields", []
+            ):
                 errors.append(role + ": " + field + " unit/field mismatch")
-    if m["clock"]["unit"] != "us" or m["clock"]["mode"] not in {"capture_replay", "source_replay"}:
+    if m["clock"]["unit"] != "us" or m["clock"]["mode"] not in {
+        "capture_replay",
+        "source_replay",
+    }:
         errors.append("clock")
     if errors:
         raise ValueError("profile_incomplete: " + "; ".join(errors))
@@ -148,7 +166,11 @@ def mapped(event, metadata):
         else:
             out.update(roll=(None, quality), pitch=(None, quality))
     elif topic in {"vehicle_local_position", "vehicle_local_position_setpoint"}:
-        name = "climb_rate" if topic == "vehicle_local_position" else "climb_target"
+        name = (
+            "climb_rate"
+            if topic == "vehicle_local_position"
+            else "climb_target"
+        )
         add(name, "vz", factor=-1)
         if topic == "vehicle_local_position" and f.get("z_valid") != 1:
             out[name] = (None, "invalid")

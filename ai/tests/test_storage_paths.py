@@ -10,8 +10,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 import x500_storage as paths
+
 from pretrain import cli, collection, common
 
 
@@ -40,7 +40,9 @@ def test_selected_storage_stops_on_replaced_device_and_rejects_links(tmp_path):
         paths.capture(root / ".." / "escape")
 
 
-def test_task_storage_is_frozen_into_plan_and_independent_launch(tmp_path, monkeypatch):
+def test_task_storage_is_frozen_into_plan_and_independent_launch(
+    tmp_path, monkeypatch
+):
     root = tmp_path / "custom storage"
     home = tmp_path / "home"
     task = home / "tasks/fixture"
@@ -53,7 +55,9 @@ def test_task_storage_is_frozen_into_plan_and_independent_launch(tmp_path, monke
     common.write(task / "config.json", config)
     (task / "config.sha256").write_text(common.sha(task / "config.json"))
     cases = collection.cases(8_000_000, "balanced300")["cases"]
-    folder = collection.plan(task, "collection", 16, cases, "local", export_workers=4)
+    folder = collection.plan(
+        task, "collection", 16, cases, "local", export_workers=4
+    )
     plan = common.read(folder / "plan.json")
     assert Path(plan["external_output"]).is_relative_to(root / "archives")
     assert plan["storage_policy"] == config["storage_policy"]
@@ -65,25 +69,36 @@ def test_task_storage_is_frozen_into_plan_and_independent_launch(tmp_path, monke
     with pytest.raises(c.Stop, match="Selected storage"):
         c.validate_storage_selection(
             dict(
-                plan, storage_policy=dict(plan["storage_policy"], root=str(tmp_path / "elsewhere"))
+                plan,
+                storage_policy=dict(
+                    plan["storage_policy"], root=str(tmp_path / "elsewhere")
+                ),
             )
         )
     # The actual collector space guard must not call its legacy X31-only checker.
     c.check_output_storage(
         plan,
         Path(plan["external_output"]),
-        SimpleNamespace(check_mount=lambda p: pytest.fail("Legacy mount checker")),
+        SimpleNamespace(
+            check_mount=lambda p: pytest.fail("Legacy mount checker")
+        ),
     )
     monkeypatch.setattr(cli, "HOME", home)
     commands = []
-    monkeypatch.setattr(cli.subprocess, "run", lambda command, **kw: commands.append(command))
+    monkeypatch.setattr(
+        cli.subprocess, "run", lambda command, **kw: commands.append(command)
+    )
     cli.start(task)
     assert "--setenv=X500_STORAGE_ROOT=" + str(root) in commands[0]
     frozen_policy = next(
-        s.split("=", 2)[2] for s in commands[0] if s.startswith("--setenv=X500_STORAGE_POLICY=")
+        s.split("=", 2)[2]
+        for s in commands[0]
+        if s.startswith("--setenv=X500_STORAGE_POLICY=")
     )
     assert json.loads(frozen_policy) == config["storage_policy"]
-    assert not root.exists()  # Planning/submission stub never creates or collects data.
+    assert (
+        not root.exists()
+    )  # Planning/submission stub never creates or collects data.
 
 
 def test_real_extraction_worker_uses_custom_disk_without_x31(tmp_path):
@@ -106,7 +121,9 @@ def test_real_extraction_worker_uses_custom_disk_without_x31(tmp_path):
             member.size = len(body)
             tar.addfile(member, io.BytesIO(body))
             members[name] = dict(
-                kind="file", bytes=len(body), sha256=hashlib.sha256(body).hexdigest()
+                kind="file",
+                bytes=len(body),
+                sha256=hashlib.sha256(body).hexdigest(),
             )
             if name in names:
                 files[name] = members[name]["sha256"]
@@ -129,16 +146,33 @@ def test_real_extraction_worker_uses_custom_disk_without_x31(tmp_path):
         status=str(tmp_path / "status.json"),
     )
     common.write(tmp_path / "request.json", request)
-    config = dict(external_storage=str(root), storage_policy=paths.capture(root))
+    config = dict(
+        external_storage=str(root), storage_policy=paths.capture(root)
+    )
     result = subprocess.run(
-        [str(common.PYTHON), "-B", "-m", "pretrain.worker", str(tmp_path / "request.json")],
-        env={**os.environ, **paths.environment(config), "PYTHONPATH": common.pythonpath()},
+        [
+            str(common.PYTHON),
+            "-B",
+            "-m",
+            "pretrain.worker",
+            str(tmp_path / "request.json"),
+        ],
+        env={
+            **os.environ,
+            **paths.environment(config),
+            "PYTHONPATH": common.pythonpath(),
+        },
         capture_output=True,
         text=True,
         timeout=20,
     )
     assert result.returncode == 0, result.stderr
     status = common.read(request["status"])
-    assert status["status"] == "COMPLETE" and status["result"]["truth_extracted"] is False
-    assert {str(p.relative_to(target)) for p in target.rglob("*") if p.is_file()} == set(names)
+    assert (
+        status["status"] == "COMPLETE"
+        and status["result"]["truth_extracted"] is False
+    )
+    assert {
+        str(p.relative_to(target)) for p in target.rglob("*") if p.is_file()
+    } == set(names)
     assert {name: common.sha(target / name) for name in names} == files

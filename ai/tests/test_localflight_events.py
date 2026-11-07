@@ -1,7 +1,6 @@
 import os
 
 import pytest
-
 from localflight.bin_reader import open_bin
 from localflight.flight_events import summarize
 
@@ -24,11 +23,17 @@ def audit():
 
 def test_split_primary_zero_and_preserve_unknown_health():
     result = summarize(audit())
-    assert [(i["start_us"], i["end_us"], i["imu_instance"]) for i in result["intervals"]] == [
+    assert [
+        (i["start_us"], i["end_us"], i["imu_instance"])
+        for i in result["intervals"]
+    ] == [
         (1_000_000, 20_000_000, 1),
         (20_000_000, 40_000_000, 0),
     ]
-    assert result["health"] == "unknown" and result["error_counts"][0]["count"] == 1
+    assert (
+        result["health"] == "unknown"
+        and result["error_counts"][0]["count"] == 1
+    )
 
 
 @pytest.mark.parametrize("change", ["version", "reversal", "truncated"])

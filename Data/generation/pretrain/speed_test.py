@@ -7,25 +7,48 @@ from pathlib import Path
 
 import numpy as np
 
-from .common import ROOT, STORE, external, package_imports, read, runs_root, sha, write
+from .common import (
+    ROOT,
+    STORE,
+    external,
+    package_imports,
+    read,
+    runs_root,
+    sha,
+    write,
+)
 from .speed_metrics import PROTOCOL
 from .speed_metrics import metrics as matched_metrics
 
 
 def metrics(canonical, record):
-    frames = [json.loads(line) for line in (canonical / "frames.jsonl").read_text().splitlines()]
+    frames = [
+        json.loads(line)
+        for line in (canonical / "frames.jsonl").read_text().splitlines()
+    ]
     summary = read(canonical / "summary.json")
     names = summary["feature_order"]
     airborne = [f for f in frames if f["operating_state"] == "airborne"]
     origin = airborne[0]["time_us"]
-    valid = [f for f in airborne if all(f["quality"][name] == "valid" for name in names)]
+    valid = [
+        f
+        for f in airborne
+        if all(f["quality"][name] == "valid" for name in names)
+    ]
     time = np.asarray([(f["time_us"] - origin) / 1e6 for f in valid])
     grid = np.arange(20.0, 110.01, 0.1)
     if len(time) < 2 or time[0] > grid[0] or time[-1] < grid[-1]:
-        raise ValueError("Insufficient common matched-flight comparison interval")
+        raise ValueError(
+            "Insufficient common matched-flight comparison interval"
+        )
     values = np.asarray([[f["values"][name] for name in names] for f in valid])
-    aligned = np.stack([np.interp(grid, time, values[:, i]) for i in range(len(names))], axis=1)
-    if any(b["time_us"] - a["time_us"] != 100000 for a, b in zip(frames, frames[1:])):
+    aligned = np.stack(
+        [np.interp(grid, time, values[:, i]) for i in range(len(names))], axis=1
+    )
+    if any(
+        b["time_us"] - a["time_us"] != 100000
+        for a, b in zip(frames, frames[1:])
+    ):
         raise ValueError("Canonical10Hz information grid changed")
     return dict(
         features=names,
@@ -44,9 +67,16 @@ def compare(base, repeat, candidate):
     for trial in (repeat, candidate):
         if any(
             base.get(key) != trial.get(key)
-            for key in ("features", "config", "protocol", "comparison_intervals")
+            for key in (
+                "features",
+                "config",
+                "protocol",
+                "comparison_intervals",
+            )
         ):
-            raise ValueError("Feature/transform/comparison interval contract changed with speed")
+            raise ValueError(
+                "Feature/transform/comparison interval contract changed with speed"
+            )
         if set(base["topic_quality"]) != set(trial["topic_quality"]):
             raise ValueError("Comparison topic set changed")
     a, b, c = [np.asarray(x["aligned"]) for x in (base, repeat, candidate)]
@@ -75,22 +105,31 @@ def compare(base, repeat, candidate):
         refs = [x["topic_quality"][topic] for x in (base, repeat)]
 
         def rate(s):
-            duration = s["duration_us"] if "duration_us" in s else s["last"] - s["first"]
+            duration = (
+                s["duration_us"]
+                if "duration_us" in s
+                else s["last"] - s["first"]
+            )
             return s["count"] / (duration / 1e6)
 
         low, high = min(map(rate, refs)) * 0.95, max(map(rate, refs)) * 1.05
         raw[topic] = dict(
             rate_hz=rate(stats),
             reference_rate_hz=[rate(r) for r in refs],
-            covered=stats.get("covered", True) and all(r.get("covered", True) for r in refs),
+            covered=stats.get("covered", True)
+            and all(r.get("covered", True) for r in refs),
             max_gap_us=stats["max_gap_us"],
             reference_max_gap_us=[r["max_gap_us"] for r in refs],
             rate_passed=low <= rate(stats) <= high,
-            gap_passed=stats["max_gap_us"] <= max(r["max_gap_us"] for r in refs) + 1000,
+            gap_passed=stats["max_gap_us"]
+            <= max(r["max_gap_us"] for r in refs) + 1000,
         )
     coverage = (
         candidate["valid_airborne_fraction"]
-        >= min(base["valid_airborne_fraction"], repeat["valid_airborne_fraction"]) - 0.01
+        >= min(
+            base["valid_airborne_fraction"], repeat["valid_airborne_fraction"]
+        )
+        - 0.01
     )
     windows = (
         min(base["windows"], repeat["windows"]) * 0.98
@@ -102,12 +141,17 @@ def compare(base, repeat, candidate):
             np.all(candidate_rmse <= allowed)
             and coverage
             and windows
-            and all(v["rate_passed"] and v["gap_passed"] and v["covered"] for v in raw.values())
+            and all(
+                v["rate_passed"] and v["gap_passed"] and v["covered"]
+                for v in raw.values()
+            )
         ),
         bitwise_equal=bool(np.array_equal(a, c)),
         coverage_passed=coverage,
         windows_passed=windows,
-        baseline_repeat_rmse=dict(zip(base["features"], baseline_rmse.tolist())),
+        baseline_repeat_rmse=dict(
+            zip(base["features"], baseline_rmse.tolist())
+        ),
         candidate_rmse=dict(zip(base["features"], candidate_rmse.tolist())),
         allowed_rmse=dict(zip(base["features"], allowed.tolist())),
         topic_quality=raw,
@@ -128,7 +172,8 @@ def _run(runner):
     single = runner.config["speed_test"].get("candidate_only", False)
     baseline = runner.c.candidate_baseline(runner.config)[0] if single else None
     basis = dict(
-        candidate_only=single, baseline_review=runner.config["speed_test"].get("baseline_review")
+        candidate_only=single,
+        baseline_review=runner.config["speed_test"].get("baseline_review"),
     )
     runner.update(
         planned_stage_count=3 * len(runner.config["speed_test"]["factors"]),
@@ -148,7 +193,9 @@ def _run(runner):
             retries=0,
         )
         folder = runner.flight("benchmark", 1, [row], label)
-        record = next(iter(read(folder / "execution/ledger.json")["cases"].values()))
+        record = next(
+            iter(read(folder / "execution/ledger.json")["cases"].values())
+        )
         raw = runs_root(ROOT) / record["run_id"]
         world = ET.parse(raw / "reference/world.sdf")
         if (
@@ -159,9 +206,18 @@ def _run(runner):
         row.update(
             run_id=record["run_id"],
             path=str(raw),
-            files={name: record["export"]["members"][name]["sha256"] for name in RAW_FILES},
+            files={
+                name: record["export"]["members"][name]["sha256"]
+                for name in RAW_FILES
+            },
         )
-        runner.batch(label + "-preprocess", "preprocess", [row], 1, output / label / "canonical")
+        runner.batch(
+            label + "-preprocess",
+            "preprocess",
+            [row],
+            1,
+            output / label / "canonical",
+        )
         runner.batch(
             label + "-audit",
             "audit",
@@ -180,11 +236,18 @@ def _run(runner):
         )
         if single or index >= 2:
             refs = baseline["results"] if single else results
-            result["comparison"] = compare(refs[0]["measured"], refs[1]["measured"], measured)
+            result["comparison"] = compare(
+                refs[0]["measured"], refs[1]["measured"], measured
+            )
         results.append(result)
         write(
             output / "results.json",
-            dict(status="RUNNING", results=results, production_speed_changed=False, **basis),
+            dict(
+                status="RUNNING",
+                results=results,
+                production_speed_changed=False,
+                **basis,
+            ),
         )
         if (single or index >= 2) and not result["comparison"]["passed"]:
             write(
@@ -203,7 +266,9 @@ def _run(runner):
     write(
         output / "results.json",
         dict(
-            status="SPEED_CANDIDATE_COMPLETE_STOPPED" if single else "SPEED_PILOT_COMPLETE_STOPPED",
+            status="SPEED_CANDIDATE_COMPLETE_STOPPED"
+            if single
+            else "SPEED_PILOT_COMPLETE_STOPPED",
             results=results,
             production_speed_changed=False,
             production_default=2,
@@ -242,17 +307,29 @@ def review(task, output):
         or cfg.get("speed_test", {}).get("factors") != [2, 2, 4, 8]
     ):
         raise ValueError("Stopped finite speed-test source required")
-    if sha(task / "config.json") != (task / "config.sha256").read_text().strip():
+    if (
+        sha(task / "config.json")
+        != (task / "config.sha256").read_text().strip()
+    ):
         raise ValueError("Original configuration changed")
     from x500_storage import task_root
 
-    old = task_root(read(task / "config.json")) / "speed-tests" / task.name / "results.json"
+    old = (
+        task_root(read(task / "config.json"))
+        / "speed-tests"
+        / task.name
+        / "results.json"
+    )
     old_hash = sha(old)
     prior = read(old)
     if len(prior["results"]) < 3:
-        raise ValueError("Two baseline repetitions and at least one candidate required")
+        raise ValueError(
+            "Two baseline repetitions and at least one candidate required"
+        )
     if output.is_relative_to(task) or output.is_relative_to(old.parent):
-        raise ValueError("Review output must be separate from original evidence")
+        raise ValueError(
+            "Review output must be separate from original evidence"
+        )
     output.mkdir(parents=True, exist_ok=False)
     from .speed_metrics import INTERVALS
 
@@ -264,7 +341,10 @@ def review(task, output):
             rationale="Fixed steady mission window;60s context entirely within mission. Selected before review computation; no error tolerances widened.",
             implementation_sha256={
                 p.name: sha(p)
-                for p in (Path(__file__), Path(__file__).with_name("speed_metrics.py"))
+                for p in (
+                    Path(__file__),
+                    Path(__file__).with_name("speed_metrics.py"),
+                )
             },
             new_flights_authorized=False,
         ),
@@ -274,7 +354,10 @@ def review(task, output):
         for index, trial in enumerate(prior["results"]):
             ledger_path = task / f"speed-{index + 1:02}/execution/ledger.json"
             ledger = read(ledger_path)
-            if ledger["status"] != "COLLECTED_PENDING_QUALITY_STOPPED" or len(ledger["cases"]) != 1:
+            if (
+                ledger["status"] != "COLLECTED_PENDING_QUALITY_STOPPED"
+                or len(ledger["cases"]) != 1
+            ):
                 raise ValueError("Complete single-flight evidence required")
             record = next(iter(ledger["cases"].values()))
             if (
@@ -282,7 +365,9 @@ def review(task, output):
                 or record["status"] != "ARCHIVED_PENDING_QUALITY"
             ):
                 raise ValueError("Original trial identity/status changed")
-            measured = matched_metrics(Path(trial["measured"]["canonical"]), record)
+            measured = matched_metrics(
+                Path(trial["measured"]["canonical"]), record
+            )
             result = dict(
                 requested_factor=trial["requested_factor"],
                 measured=measured,
@@ -336,9 +421,18 @@ def review(task, output):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Re-evaluate a stopped speed task, no new flights")
+    parser = argparse.ArgumentParser(
+        description="Re-evaluate a stopped speed task, no new flights"
+    )
     parser.add_argument("task", type=Path)
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
     report = review(args.task, args.output)
-    print(json.dumps(dict(status=report["status"], result=str(args.output / "results.json"))))
+    print(
+        json.dumps(
+            dict(
+                status=report["status"],
+                result=str(args.output / "results.json"),
+            )
+        )
+    )

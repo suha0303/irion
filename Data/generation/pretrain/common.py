@@ -20,7 +20,9 @@ ADMISSION = RESOURCES / "admission"
 PYTHON = ROOT / "Data/generation/.venv/bin/python"
 PRODUCER_MANIFEST = SIMULATION / "artifacts/runtime-manifest.json"
 CHOICES = (1, 2, 4, 8, 16)
-MAX_FLIGHT_WORKERS = 16  # PX4 instance/port contract: 0..15; CPU counts are unrestricted.
+MAX_FLIGHT_WORKERS = (
+    16  # PX4 instance/port contract: 0..15; CPU counts are unrestricted.
+)
 TASK_WALL_SECONDS = 7 * 24 * 3600
 COLLECTION_WAIT_BUDGETS = dict(
     flight_wall_s=14400,
@@ -33,7 +35,10 @@ COLLECTION_WAIT_BUDGETS = dict(
 # local-20261015-100232 measured preprocess peak1.401GB per900s run.
 # Audit has no measured peak yet;1.5GB is a conservative planning assumption.
 CPU_WORKER_BYTES = dict(
-    verify=64_000_000, extract=100_000_000, preprocess=1_500_000_000, audit=1_500_000_000
+    verify=64_000_000,
+    extract=100_000_000,
+    preprocess=1_500_000_000,
+    audit=1_500_000_000,
 )
 
 
@@ -77,13 +82,17 @@ def sha(path):
 
 def runtime_identity():
     executable = Path(sys.executable).resolve()
-    return dict(executable=str(executable), sha256=sha(executable), version=sys.version)
+    return dict(
+        executable=str(executable), sha256=sha(executable), version=sys.version
+    )
 
 
 def verify_runtime(config):
     expected = config.get("python_runtime")
     if expected is not None and expected != runtime_identity():
-        raise ValueError("Python runtime changed since task preparation; create a new task")
+        raise ValueError(
+            "Python runtime changed since task preparation; create a new task"
+        )
 
 
 def now():
@@ -98,7 +107,10 @@ def load(name, path):
 
 
 def collector():
-    return load("pretrain_collector", ROOT / "Data/generation/tools/collect_long_runs.py")
+    return load(
+        "pretrain_collector",
+        ROOT / "Data/generation/tools/collect_long_runs.py",
+    )
 
 
 def producer_manifest():
@@ -109,7 +121,9 @@ def producer_manifest():
     collection_config.assert_frozen()
     path = collection_config.producer_lock_path()
     if path != PRODUCER_MANIFEST:
-        raise ValueError("Current producer runtime manifest required; run ./Data/generation/drone-data setup --simulation")
+        raise ValueError(
+            "Current producer runtime manifest required; run ./Data/generation/drone-data setup --simulation"
+        )
     record = read(path)
     if any(
         record.get(key) != expected
@@ -121,7 +135,9 @@ def producer_manifest():
             "source_manifest": "config/producer-sources.json",
         }.items()
     ):
-        raise ValueError("Producer runtime identity mismatch; run ./Data/generation/drone-data doctor")
+        raise ValueError(
+            "Producer runtime identity mismatch; run ./Data/generation/drone-data doctor"
+        )
     if not record.get("files"):
         raise ValueError("Producer runtime inventory is empty")
     return record
@@ -132,7 +148,9 @@ def producer_sources():
     record = producer_manifest()
     files = dict(record["files"])
     files["config/producer-sources.json"] = record["source_manifest_sha256"]
-    files[str(PRODUCER_MANIFEST.relative_to(SIMULATION))] = sha(PRODUCER_MANIFEST)
+    files[str(PRODUCER_MANIFEST.relative_to(SIMULATION))] = sha(
+        PRODUCER_MANIFEST
+    )
     for name, digest in files.items():
         relative = Path(name)
         path = SIMULATION / relative
@@ -151,15 +169,22 @@ def package_imports():
     """Select the hash-locked preprocessing_core/preprocessing_tools package paths."""
     import sys
 
-    sys.dont_write_bytecode = True  # The sealed package must never gain __pycache__ files.
-    for p in reversed((PACKAGE / "wrapper", PACKAGE / "ai", PACKAGE / "ai/src")):
+    sys.dont_write_bytecode = (
+        True  # The sealed package must never gain __pycache__ files.
+    )
+    for p in reversed(
+        (PACKAGE / "wrapper", PACKAGE / "ai", PACKAGE / "ai/src")
+    ):
         sys.path.insert(0, str(p))
 
 
 def verify(files):
     for name, digest in files.items():
         path = Path(name)
-        if any(p.is_symlink() for p in (path, *path.parents)) or sha(path) != digest:
+        if (
+            any(p.is_symlink() for p in (path, *path.parents))
+            or sha(path) != digest
+        ):
             raise ValueError("Source/input changed: " + name)
 
 
@@ -176,7 +201,9 @@ def identity(pid):
 
 
 def overlap(records):
-    events = [(r["started"], 1) for r in records] + [(r["finished"], -1) for r in records]
+    events = [(r["started"], 1) for r in records] + [
+        (r["finished"], -1) for r in records
+    ]
     active = peak = 0
     for _, delta in sorted(events):
         active += delta
@@ -199,7 +226,8 @@ class Budget:
 def admission(workers, peak_per_worker, available):
     required = int(workers * peak_per_worker * 1.25 + 256_000_000)
     return dict(
-        passed=required <= 8_000_000_000 and available - required >= 4_000_000_000,
+        passed=required <= 8_000_000_000
+        and available - required >= 4_000_000_000,
         estimated_bytes=required,
         available_bytes=available,
         basis="1.25 * worker peak RSS * workers +256MB; >=4GB free, <=8GB own RAM",
@@ -209,7 +237,11 @@ def admission(workers, peak_per_worker, available):
 def runs_root(root=None):
     """The frozen simulator owns temporary raw runs; final datasets use STORE."""
     root = Path(root) if root is not None else ROOT
-    return root / "simulation/runs" if (root / "simulation").is_dir() else root / "runs"
+    return (
+        root / "simulation/runs"
+        if (root / "simulation").is_dir()
+        else root / "runs"
+    )
 
 
 def pythonpath():

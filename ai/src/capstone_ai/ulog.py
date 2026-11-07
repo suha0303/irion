@@ -37,14 +37,19 @@ def decode(path, metadata):
         topic = data.name
         if topic not in fields_by_topic:
             continue
-        timestamp_field = "timestamp_sample" if topic in SAMPLE_TOPICS else "timestamp"
+        timestamp_field = (
+            "timestamp_sample" if topic in SAMPLE_TOPICS else "timestamp"
+        )
         for i, sample in enumerate(data.data[timestamp_field]):
             fields: dict[str, Any] = {}
             quality = {}
             value: Any
             for field in fields_by_topic[topic]:
                 if topic in ARRAYS and field == ARRAYS[topic][0]:
-                    value = [float(data.data[f"{field}[{j}]"][i]) for j in range(ARRAYS[topic][1])]
+                    value = [
+                        float(data.data[f"{field}[{j}]"][i])
+                        for j in range(ARRAYS[topic][1])
+                    ]
                     good = all(math.isfinite(v) for v in value)
                     value = [v if math.isfinite(v) else None for v in value]
                 else:
@@ -69,7 +74,13 @@ def decode(path, metadata):
                 }
             )
     events.sort(
-        key=lambda e: (e["available_time_us"], e["source"], e["topic"], e["instance"], e["seq"])
+        key=lambda e: (
+            e["available_time_us"],
+            e["source"],
+            e["topic"],
+            e["instance"],
+            e["seq"],
+        )
     )
     return events
 
@@ -80,7 +91,9 @@ def parity(run, out):
     info = read_json(run / "run.json")
     path = run / info["native_logs"][0]
     native = decode(path, metadata)
-    index = {(e["topic"], e["instance"], e["sample_time_us"]): e for e in native}
+    index = {
+        (e["topic"], e["instance"], e["sample_time_us"]): e for e in native
+    }
     matched: Counter[str] = Counter()
     unmatched: Counter[str] = Counter()
     max_error = 0.0

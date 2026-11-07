@@ -22,9 +22,15 @@ class StudySpec:
     revision: str = STUDY_REVISION
 
     def validate(self):
-        if self.name not in {"lstm", "transformer"} or self.revision != STUDY_REVISION:
+        if (
+            self.name not in {"lstm", "transformer"}
+            or self.revision != STUDY_REVISION
+        ):
             raise ValueError("Unknown study model")
-        if any(type(value) is not int for value in (self.hidden, self.layers, self.heads)):
+        if any(
+            type(value) is not int
+            for value in (self.hidden, self.layers, self.heads)
+        ):
             raise ValueError("Model dimensions must be integers")
         if self.hidden < 8 or not 1 <= self.layers <= 8:
             raise ValueError("Invalid model size")
@@ -39,13 +45,22 @@ class StudySpec:
 class InterLayerNormStack(nn.Module):
     def __init__(self, inputs, spec):
         super().__init__()
-        self.layers = nn.ModuleList([
-            nn.LSTM(inputs if i == 0 else spec.hidden, spec.hidden, batch_first=True)
-            for i in range(spec.layers)
-        ])
-        self.norms = nn.ModuleList([
-            nn.LayerNorm(spec.hidden, eps=NORM_EPS) for _ in range(spec.layers - 1)
-        ])
+        self.layers = nn.ModuleList(
+            [
+                nn.LSTM(
+                    inputs if i == 0 else spec.hidden,
+                    spec.hidden,
+                    batch_first=True,
+                )
+                for i in range(spec.layers)
+            ]
+        )
+        self.norms = nn.ModuleList(
+            [
+                nn.LayerNorm(spec.hidden, eps=NORM_EPS)
+                for _ in range(spec.layers - 1)
+            ]
+        )
         for layer in self.layers:
             for name, parameter in layer.named_parameters():
                 if name.startswith("weight_ih"):
@@ -58,7 +73,7 @@ class InterLayerNormStack(nn.Module):
                     nn.init.zeros_(parameter)
             # The two native biases are added. Initialize only one forget slice to+1.
             with torch.no_grad():
-                layer.bias_ih_l0[spec.hidden:2 * spec.hidden].fill_(1)
+                layer.bias_ih_l0[spec.hidden : 2 * spec.hidden].fill_(1)
 
     def forward(self, x):
         for index, layer in enumerate(self.layers):
@@ -87,7 +102,9 @@ class LSTMForecast(nn.Module):
     def forward(self, history, context):
         _, hidden = self.encoder(history)
         latent = self.fuse(torch.cat([hidden, context], -1))
-        lead = self.lead(self.lead_ids).unsqueeze(0).expand(len(history), -1, -1)
+        lead = (
+            self.lead(self.lead_ids).unsqueeze(0).expand(len(history), -1, -1)
+        )
         x = torch.cat([latent.unsqueeze(1).expand(-1, 10, -1), lead], -1)
         output, _ = self.decoder(x)
         return self.head(output)
@@ -98,7 +115,9 @@ class PostEncoderLayer(nn.Module):
         super().__init__()
         self.attention = nn.MultiheadAttention(hidden, heads, batch_first=True)
         self.feedforward = nn.Sequential(
-            nn.Linear(hidden, 2 * hidden), nn.GELU(), nn.Linear(2 * hidden, hidden)
+            nn.Linear(hidden, 2 * hidden),
+            nn.GELU(),
+            nn.Linear(2 * hidden, hidden),
         )
         self.norm1 = nn.LayerNorm(hidden, eps=NORM_EPS)
         self.norm2 = nn.LayerNorm(hidden, eps=NORM_EPS)
@@ -112,10 +131,16 @@ class PostEncoderLayer(nn.Module):
 class PostDecoderLayer(nn.Module):
     def __init__(self, hidden, heads):
         super().__init__()
-        self.self_attention = nn.MultiheadAttention(hidden, heads, batch_first=True)
-        self.cross_attention = nn.MultiheadAttention(hidden, heads, batch_first=True)
+        self.self_attention = nn.MultiheadAttention(
+            hidden, heads, batch_first=True
+        )
+        self.cross_attention = nn.MultiheadAttention(
+            hidden, heads, batch_first=True
+        )
         self.feedforward = nn.Sequential(
-            nn.Linear(hidden, 2 * hidden), nn.GELU(), nn.Linear(2 * hidden, hidden)
+            nn.Linear(hidden, 2 * hidden),
+            nn.GELU(),
+            nn.Linear(2 * hidden, hidden),
         )
         self.norm1 = nn.LayerNorm(hidden, eps=NORM_EPS)
         self.norm2 = nn.LayerNorm(hidden, eps=NORM_EPS)
@@ -124,7 +149,9 @@ class PostDecoderLayer(nn.Module):
     def forward(self, x, memory):
         attended = self.self_attention(x, x, x, need_weights=False)[0]
         x = self.norm1(x + attended)
-        attended = self.cross_attention(x, memory, memory, need_weights=False)[0]
+        attended = self.cross_attention(x, memory, memory, need_weights=False)[
+            0
+        ]
         x = self.norm2(x + attended)
         return self.norm3(x + self.feedforward(x))
 
@@ -135,8 +162,12 @@ class TransformerForecast(nn.Module):
         self.spec = spec.validate()
         h = spec.hidden
         self.project, self.context = nn.Linear(19, h), nn.Linear(6, h)
-        self.encoder = nn.ModuleList([PostEncoderLayer(h, spec.heads) for _ in range(spec.layers)])
-        self.decoder = nn.ModuleList([PostDecoderLayer(h, spec.heads) for _ in range(spec.layers)])
+        self.encoder = nn.ModuleList(
+            [PostEncoderLayer(h, spec.heads) for _ in range(spec.layers)]
+        )
+        self.decoder = nn.ModuleList(
+            [PostDecoderLayer(h, spec.heads) for _ in range(spec.layers)]
+        )
         self.queries, self.head = nn.Embedding(10, h), nn.Linear(h, 4)
         for name, parameter in self.named_parameters():
             if parameter.ndim > 1:
@@ -148,7 +179,10 @@ class TransformerForecast(nn.Module):
         position = torch.arange(100).unsqueeze(1)
         div = torch.exp(torch.arange(0, h, 2) * (-math.log(10000.0) / h))
         pe = torch.zeros(100, h)
-        pe[:, 0::2], pe[:, 1::2] = torch.sin(position * div), torch.cos(position * div[:h // 2])
+        pe[:, 0::2], pe[:, 1::2] = (
+            torch.sin(position * div),
+            torch.cos(position * div[: h // 2]),
+        )
         self.register_buffer("position_encoding", pe, persistent=False)
         self.register_buffer("query_ids", torch.arange(10), persistent=False)
 
@@ -159,7 +193,11 @@ class TransformerForecast(nn.Module):
         memory = torch.cat([encoded, self.context(context).unsqueeze(1)], 1)
         for layer in self.encoder:
             memory = layer(memory)
-        queries = self.queries(self.query_ids).unsqueeze(0).expand(len(history), -1, -1)
+        queries = (
+            self.queries(self.query_ids)
+            .unsqueeze(0)
+            .expand(len(history), -1, -1)
+        )
         for layer in self.decoder:
             queries = layer(queries, memory)
         return self.head(queries)

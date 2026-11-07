@@ -18,7 +18,9 @@ def check(root, out, stage, job_prefix="drone-ai-"):
     job_id = os.environ.get("SLURM_JOB_ID", "")
     if not job_id.isdigit():
         raise ValueError("Slurm allocation required before CUDA import")
-    raw = subprocess.check_output(["scontrol", "show", "job", "-o", job_id], text=True)
+    raw = subprocess.check_output(
+        ["scontrol", "show", "job", "-o", job_id], text=True
+    )
     job = dict(re.findall(r"(?:^|\s)([A-Za-z][A-Za-z0-9_]*)=(\S+)", raw))
     if job.get("JobName") != job_prefix + stage:
         raise ValueError("unexpected round job name")
@@ -30,7 +32,9 @@ def check(root, out, stage, job_prefix="drone-ai-"):
     )
     checks = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(checks)
-    checks.validate_allocation(job, os.environ, socket.gethostname(), nodes, os.getuid())
+    checks.validate_allocation(
+        job, os.environ, socket.gethostname(), nodes, os.getuid()
+    )
     own = subprocess.check_output(
         ["squeue", "-h", "-u", str(os.getuid()), "-o", "%A"], text=True
     ).split()
@@ -46,11 +50,17 @@ def check(root, out, stage, job_prefix="drone-ai-"):
     if Path(sys.executable).resolve() != Path(profile["python"]).resolve():
         raise ValueError("Selected profile Python executable required")
     if versions != expected or sys.version_info[:2] != (3, 10):
-        raise ValueError("Selected package/Python profile mismatch; installation forbidden")
+        raise ValueError(
+            "Selected package/Python profile mismatch; installation forbidden"
+        )
     import torch
 
     available, count = torch.cuda.is_available(), torch.cuda.device_count()
-    props = torch.cuda.get_device_properties(0) if available and count == 1 else None
+    props = (
+        torch.cuda.get_device_properties(0)
+        if available and count == 1
+        else None
+    )
     checks.validate_torch_environment(
         sys.version_info,
         torch.__version__,
@@ -82,6 +92,8 @@ def check(root, out, stage, job_prefix="drone-ai-"):
             version = importlib.metadata.version(name)
         except importlib.metadata.PackageNotFoundError:
             version = None
-        evidence["optional_inventory_not_used_by_drone_raw_path"][name] = version
+        evidence["optional_inventory_not_used_by_drone_raw_path"][name] = (
+            version
+        )
     write(Path(out) / "environment.json", evidence)
     return evidence

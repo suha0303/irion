@@ -14,10 +14,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from safetensors.torch import save_file
-
 from capstone_ai.training import loss, seed_all
 from execution.common import write
+from safetensors.torch import save_file
 
 from .models import STUDY_REVISION, make_model
 
@@ -27,7 +26,13 @@ def backend(device):
     matmul_tf32 = torch.backends.cuda.matmul.allow_tf32
     before = {
         k: getattr(torch.backends.cudnn, k)
-        for k in ("enabled", "benchmark", "benchmark_limit", "deterministic", "allow_tf32")
+        for k in (
+            "enabled",
+            "benchmark",
+            "benchmark_limit",
+            "deterministic",
+            "allow_tf32",
+        )
     }
     # Explicit reproducibility policy; restore global flags even after a failed step.
     try:
@@ -55,12 +60,18 @@ class Batches:
     def __init__(self, arrays, batch_size, device):
         self.device = torch.device(device)
         self.data = {
-            k: torch.from_numpy(np.ascontiguousarray(arrays[k], dtype=np.float32))
+            k: torch.from_numpy(
+                np.ascontiguousarray(arrays[k], dtype=np.float32)
+            )
             for k in ("X", "C", "Y")
         }
         n = len(self.data["X"])
         if n == 0 or any(
-            len(v) != n or any(not torch.isfinite(v[i : i + 512]).all() for i in range(0, n, 512))
+            len(v) != n
+            or any(
+                not torch.isfinite(v[i : i + 512]).all()
+                for i in range(0, n, 512)
+            )
             for v in self.data.values()
         ):
             raise ValueError("Empty, mismatched or nonfinite fit input")
@@ -74,7 +85,11 @@ class Batches:
         self.buffers = (
             [
                 {
-                    k: torch.empty((batch_size, *v.shape[1:]), dtype=torch.float32, pin_memory=True)
+                    k: torch.empty(
+                        (batch_size, *v.shape[1:]),
+                        dtype=torch.float32,
+                        pin_memory=True,
+                    )
                     for k, v in self.data.items()
                 }
                 for _ in range(2)
@@ -93,11 +108,14 @@ class Batches:
         slot = self.slot
         self.slot = (slot + 1) % 2
         if self.events[slot] is not None:
-            self.events[slot].synchronize()  # Buffer lifetime, not a per-tensor device-wide sync.
+            self.events[
+                slot
+            ].synchronize()  # Buffer lifetime, not a per-tensor device-wide sync.
         for k, v in self.data.items():
             torch.index_select(v, 0, ids, out=self.buffers[slot][k][: len(ids)])
         result = [
-            v[: len(ids)].to(self.device, non_blocking=True) for v in self.buffers[slot].values()
+            v[: len(ids)].to(self.device, non_blocking=True)
+            for v in self.buffers[slot].values()
         ]
         event = torch.cuda.Event()
         event.record(torch.cuda.current_stream())
@@ -132,7 +150,9 @@ def state_rng():
         python=random.getstate(),
         numpy=np.random.get_state(),
         cpu=torch.get_rng_state(),
-        cuda=torch.cuda.get_rng_state_all() if torch.cuda.is_initialized() else [],
+        cuda=torch.cuda.get_rng_state_all()
+        if torch.cuda.is_initialized()
+        else [],
     )
 
 
@@ -174,7 +194,9 @@ def _run_fit(
     spec.validate()
     study = spec.revision == STUDY_REVISION
     if study != (optimization is not None):
-        raise ValueError("The normalization study requires its explicit optimization policy")
+        raise ValueError(
+            "The normalization study requires its explicit optimization policy"
+        )
     if study:
         from .optimization import WarmupCosine, make_optimizer, validate
 
@@ -186,24 +208,42 @@ def _run_fit(
     ):
         raise ValueError("Sealed data/scaler/source binding required")
     folder = Path(folder)
-    environment = {"device": device, "torch": str(torch.__version__), "numpy": np.__version__}
+    environment = {
+        "device": device,
+        "torch": str(torch.__version__),
+        "numpy": np.__version__,
+    }
     if device == "cuda":
         if not gpu_authorized:
             raise ValueError("Separate explicit GPU training approval required")
         from pipeline.runtime import check
 
-        if progress is None or os.environ.get("CUBLAS_WORKSPACE_CONFIG") != ":4096:8":
-            raise ValueError("CUDA requires an explicit budget and fixed CUBLAS workspace policy")
+        if (
+            progress is None
+            or os.environ.get("CUBLAS_WORKSPACE_CONFIG") != ":4096:8"
+        ):
+            raise ValueError(
+                "CUDA requires an explicit budget and fixed CUBLAS workspace policy"
+            )
         if runtime_stage not in {"fit", "benchmark"}:
             raise ValueError("Unknown CUDA purpose")
         verified = check(
-            Path(__file__).resolve().parents[1], folder, runtime_stage, job_prefix="drone-ai-"
+            Path(__file__).resolve().parents[1],
+            folder,
+            runtime_stage,
+            job_prefix="drone-ai-",
         )
         # Job IDs change between fresh-process resume tests; bind numerical environment instead.
         environment.update(
             {
                 k: verified[k]
-                for k in ("versions", "cuda", "cudnn_version", "gpu_name", "gpu_memory")
+                for k in (
+                    "versions",
+                    "cuda",
+                    "cudnn_version",
+                    "gpu_name",
+                    "gpu_memory",
+                )
             }
         )
     cfg = dict(
@@ -220,10 +260,17 @@ def _run_fit(
     if study:
         cfg["optimization"] = optimization
     seed_all(seed)
-    tb, vb = Batches(train, batch_size, device), Batches(validation, batch_size, device)
+    tb, vb = (
+        Batches(train, batch_size, device),
+        Batches(validation, batch_size, device),
+    )
     steps = (tb.count + batch_size - 1) // batch_size
     total_steps = epochs * steps
-    schedule = WarmupCosine(total_steps, learning_rate, optimization) if study else None
+    schedule = (
+        WarmupCosine(total_steps, learning_rate, optimization)
+        if study
+        else None
+    )
     warmup = schedule.warmup if study else 0
     with backend(device):
         model = make_model(spec)
@@ -231,17 +278,31 @@ def _run_fit(
             digest = hashlib.sha256()
             for name, parameter in model.state_dict().items():
                 digest.update(name.encode())
-                digest.update(str((tuple(parameter.shape), parameter.dtype)).encode())
-                digest.update(memoryview(parameter.detach().contiguous().numpy()).cast("B"))
+                digest.update(
+                    str((tuple(parameter.shape), parameter.dtype)).encode()
+                )
+                digest.update(
+                    memoryview(parameter.detach().contiguous().numpy()).cast(
+                        "B"
+                    )
+                )
             initial_hash = digest.hexdigest()
-            write(folder / "initialization.json", dict(
-                seed=seed, state_sha256=initial_hash, model_spec=asdict(spec),
-                weights_from_previous_training=False,
-            ))
+            write(
+                folder / "initialization.json",
+                dict(
+                    seed=seed,
+                    state_sha256=initial_hash,
+                    model_spec=asdict(spec),
+                    weights_from_previous_training=False,
+                ),
+            )
         model = model.to(device)
         optimizer = (
             make_optimizer(model.parameters(), learning_rate, optimization)
-            if study else torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+            if study
+            else torch.optim.AdamW(
+                model.parameters(), lr=learning_rate, weight_decay=1e-5
+            )
         )
         completed_steps, stale_epochs = 0, 0
         history = []
@@ -271,11 +332,22 @@ def _run_fit(
             if study:
                 completed_steps = ck["completed_optimizer_steps"]
                 stale_epochs = ck["early_stop_bad_epochs"]
-                if ck["initial_state_sha256"] != initial_hash or completed_steps != start * steps:
-                    raise ValueError("Initial weights or optimizer-step position changed")
-            finished_patience = stale_epochs >= patience if study else start - 1 - best_epoch >= patience
+                if (
+                    ck["initial_state_sha256"] != initial_hash
+                    or completed_steps != start * steps
+                ):
+                    raise ValueError(
+                        "Initial weights or optimizer-step position changed"
+                    )
+            finished_patience = (
+                stale_epochs >= patience
+                if study
+                else start - 1 - best_epoch >= patience
+            )
             if start >= epochs or finished_patience:
-                raise ValueError("Checkpoint already finished its approved epochs/early stopping")
+                raise ValueError(
+                    "Checkpoint already finished its approved epochs/early stopping"
+                )
             restore_rng(ck["rng"], device)
         for epoch in range(start, epochs):
             if progress is not None:
@@ -316,8 +388,11 @@ def _run_fit(
                         epochs=epochs,
                         done=epoch * steps + i + 1,
                         total=epochs * steps,
-                        phase_eta_s=(time.monotonic() - started) / (i + 1) * (steps - i - 1),
-                        train_loss=float(total) / min((i + 1) * batch_size, tb.count),
+                        phase_eta_s=(time.monotonic() - started)
+                        / (i + 1)
+                        * (steps - i - 1),
+                        train_loss=float(total)
+                        / min((i + 1) * batch_size, tb.count),
                     )
                     last_report = time.monotonic()
             train_loss = float(total) / tb.count
@@ -327,26 +402,39 @@ def _run_fit(
             valid_flags = torch.ones((), device=device, dtype=torch.bool)
             vt = time.monotonic()
             if progress is not None:
-                progress.update(stage="validation", done=0, total=vb.count, phase_eta_s=None)
+                progress.update(
+                    stage="validation", done=0, total=vb.count, phase_eta_s=None
+                )
             with torch.no_grad():
                 for offset in range(0, vb.count, batch_size):
                     if progress is not None:
                         progress.check()
-                    x, c, y = vb.get(torch.arange(offset, min(offset + batch_size, vb.count)))
+                    x, c, y = vb.get(
+                        torch.arange(offset, min(offset + batch_size, vb.count))
+                    )
                     value = loss(model(x, c), y)
                     val_total.add_(value.to(torch.float64) * len(x))
                     valid_flags.logical_and_(torch.isfinite(value))
                     if progress is not None:
-                        progress.update(force=False, done=min(offset + batch_size, vb.count))
+                        progress.update(
+                            force=False, done=min(offset + batch_size, vb.count)
+                        )
             if not bool(valid_flags):
                 raise ValueError("Nonfinite validation loss")
             score = float(val_total) / vb.count
             improved = score < best
             if improved:
                 best, best_epoch = score, epoch
-                best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+                best_state = {
+                    k: v.detach().cpu().clone()
+                    for k, v in model.state_dict().items()
+                }
             if study:
-                stale_epochs = 0 if improved or epoch * steps < warmup else stale_epochs + 1
+                stale_epochs = (
+                    0
+                    if improved or epoch * steps < warmup
+                    else stale_epochs + 1
+                )
             history.append(
                 dict(
                     epoch=epoch + 1,
@@ -378,8 +466,11 @@ def _run_fit(
                 rng=state_rng(),
             )
             if study:
-                ck.update(completed_optimizer_steps=completed_steps,
-                          early_stop_bad_epochs=stale_epochs, initial_state_sha256=initial_hash)
+                ck.update(
+                    completed_optimizer_steps=completed_steps,
+                    early_stop_bad_epochs=stale_epochs,
+                    initial_state_sha256=initial_hash,
+                )
             temp = folder / "last.tmp"
             torch.save(ck, temp)
             temp.replace(folder / "last.pt")
@@ -395,18 +486,30 @@ def _run_fit(
                     done=epoch + 1,
                     total=epochs,
                     phase_eta_s=None,
-                    **(dict(learning_rate=current_rate, optimizer=optimization["optimizer"],
-                            optimizer_steps=completed_steps, schedule_steps=total_steps)
-                       if study else {}),
+                    **(
+                        dict(
+                            learning_rate=current_rate,
+                            optimizer=optimization["optimizer"],
+                            optimizer_steps=completed_steps,
+                            schedule_steps=total_steps,
+                        )
+                        if study
+                        else {}
+                    ),
                 )
             if stop_after_epoch is not None and epoch + 1 >= stop_after_epoch:
                 break
-            if (stale_epochs >= patience if study else epoch - best_epoch >= patience):
+            if (
+                stale_epochs >= patience
+                if study
+                else epoch - best_epoch >= patience
+            ):
                 break
         if best_state is None:
             raise ValueError("No trained model")
         save_file(
-            {k: v.contiguous() for k, v in best_state.items()}, str(folder / "model.safetensors")
+            {k: v.contiguous() for k, v in best_state.items()},
+            str(folder / "model.safetensors"),
         )
         write(folder / "model-spec.json", asdict(spec))
         write(folder / "config.json", cfg)

@@ -9,9 +9,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def schedule():
-    tree = ast.parse((ROOT / "simulation/sim/src/capstone_sim/runner.py").read_text())
+    tree = ast.parse(
+        (ROOT / "simulation/sim/src/capstone_sim/runner.py").read_text()
+    )
     function = next(
-        n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "run_flight"
+        n
+        for n in tree.body
+        if isinstance(n, ast.FunctionDef) and n.name == "run_flight"
     )
     block = next(
         n
@@ -29,10 +33,17 @@ def schedule():
         n
         for n in block.body
         if isinstance(n, ast.Assign)
-        and any(isinstance(t, ast.Name) and t.id.startswith("next_send") for t in n.targets)
+        and any(
+            isinstance(t, ast.Name) and t.id.startswith("next_send")
+            for t in n.targets
+        )
     )
-    return compile(ast.Expression(block.test), "real_command_guard", "eval"), compile(
-        ast.Module(body=[update], type_ignores=[]), "real_command_deadline", "exec"
+    return compile(
+        ast.Expression(block.test), "real_command_guard", "eval"
+    ), compile(
+        ast.Module(body=[update], type_ignores=[]),
+        "real_command_deadline",
+        "exec",
     )
 
 

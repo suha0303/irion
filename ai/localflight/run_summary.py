@@ -33,7 +33,11 @@ def evidence(metadata, times, ranges):
     end = interval.get("end_us", int(times[-1]) + STEP)
     context = metadata.get("run_context") or source_context({}, start, end)
     spans = [
-        dict(start_us=int(times[a]), end_us=int(times[b - 1]) + STEP, frames=b - a)
+        dict(
+            start_us=int(times[a]),
+            end_us=int(times[b - 1]) + STEP,
+            frames=b - a,
+        )
         for a, b in ranges
     ]
     excluded = list(timing.get("excluded_intervals", []))
@@ -45,7 +49,9 @@ def evidence(metadata, times, ranges):
                 reason="not_selected" if row["usable"] else "too_short",
             )
         )
-    if not timing.get("excluded_intervals") and timing.get("missing_or_stale_frames", 0):
+    if not timing.get("excluded_intervals") and timing.get(
+        "missing_or_stale_frames", 0
+    ):
         # Old manifests know counts but not the location/reason of every missing frame.
         excluded.append(dict(start_us=start, end_us=end, reason="unclassified"))
     notes = list(context["notes"])
@@ -57,7 +63,9 @@ def evidence(metadata, times, ranges):
         notes.append(
             "동기점으로 보정한 시각입니다. 원본 전체 범위와 같은 시계임을 확정하지 않아 전체 사용률은 보류합니다."
         )
-    return dict(context=dict(context, notes=notes), spans=spans, exclusions=excluded)
+    return dict(
+        context=dict(context, notes=notes), spans=spans, exclusions=excluded
+    )
 
 
 def partition(context, spans, exclusions):
@@ -101,7 +109,14 @@ def partition(context, spans, exclusions):
         ):
             result[-1]["end_us"] = b
         else:
-            result.append(dict(start_us=a, end_us=b, reason=row["reason"], missing_features=fields))
+            result.append(
+                dict(
+                    start_us=a,
+                    end_us=b,
+                    reason=row["reason"],
+                    missing_features=fields,
+                )
+            )
     return result
 
 
@@ -118,9 +133,15 @@ def aggregate(analyses, *, context=None, spans=None, exclusions=None):
     if spans is None:
         spans = [s for a in analyses for s in a["run_evidence"]["spans"]]
     if exclusions is None:
-        exclusions = [r for a in analyses for r in a["run_evidence"]["exclusions"]]
+        exclusions = [
+            r for a in analyses for r in a["run_evidence"]["exclusions"]
+        ]
     timeline = partition(context, spans, exclusions)
-    used = sum(r["end_us"] - r["start_us"] for r in timeline if r["reason"] == "analyzed")
+    used = sum(
+        r["end_us"] - r["start_us"]
+        for r in timeline
+        if r["reason"] == "analyzed"
+    )
     total = context["end_us"] - context["start_us"]
     models = []
     for mid in dict.fromkeys(a["model_id"] for a in analyses):
@@ -147,7 +168,9 @@ def aggregate(analyses, *, context=None, spans=None, exclusions=None):
             for key in ("rmse", "persistence_rmse"):
                 row[key] = np.sqrt(
                     np.average(
-                        np.array([a["metrics"][key] for a in parts]) ** 2, axis=0, weights=weights
+                        np.array([a["metrics"][key] for a in parts]) ** 2,
+                        axis=0,
+                        weights=weights,
                     )
                 ).tolist()
         else:
@@ -161,7 +184,10 @@ def aggregate(analyses, *, context=None, spans=None, exclusions=None):
                     float(
                         np.sqrt(
                             np.average(
-                                [s["metrics"]["pack_voltage_rmse"] ** 2 for s in segments],
+                                [
+                                    s["metrics"]["pack_voltage_rmse"] ** 2
+                                    for s in segments
+                                ],
                                 weights=weights,
                             )
                         )
@@ -170,7 +196,9 @@ def aggregate(analyses, *, context=None, spans=None, exclusions=None):
             )
         models.append(row)
     suspect = any(m["segment_counts"]["suspect"] for m in models)
-    unavailable = not models or any(m["segment_counts"]["unavailable"] for m in models)
+    unavailable = not models or any(
+        m["segment_counts"]["unavailable"] for m in models
+    )
     partial = used < total or not context["extent_known"]
     status = (
         "suspect"

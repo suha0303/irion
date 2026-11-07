@@ -6,7 +6,6 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
-
 from execution.common import read, sha, write
 from execution.prepare import npz_headers
 
@@ -19,8 +18,19 @@ COUNTS = dict(
     anomaly_dev=144,
 )
 VARIANTS = [
-    dict(id=f"{name}_h{hidden}_l{layers}_s0", name=name, hidden=hidden, layers=layers, heads=heads)
-    for hidden, layers, heads in ((64, 2, 4), (128, 2, 4), (128, 4, 4), (256, 4, 8))
+    dict(
+        id=f"{name}_h{hidden}_l{layers}_s0",
+        name=name,
+        hidden=hidden,
+        layers=layers,
+        heads=heads,
+    )
+    for hidden, layers, heads in (
+        (64, 2, 4),
+        (128, 2, 4),
+        (128, 4, 4),
+        (256, 4, 8),
+    )
     for name in ("lstm", "transformer")
 ]
 MODELS = ["persistence", "ridge_forecast", *[v["id"] for v in VARIANTS]]
@@ -39,7 +49,9 @@ def execution_scope(cfg):
         raise ValueError("Unknown comparison execution scope")
     if scope == "training_only":
         if not is_comparison(cfg):
-            raise ValueError("Training-only scope requires the 1200-run comparison")
+            raise ValueError(
+                "Training-only scope requires the 1200-run comparison"
+            )
         if (
             cfg.get("calibration_authorized") is not False
             or cfg.get("evaluation_authorized") is not False
@@ -47,8 +59,13 @@ def execution_scope(cfg):
             raise ValueError(
                 "Training-only scope must explicitly prohibit calibration and evaluation"
             )
-    elif any(cfg.get(key) is False for key in ("calibration_authorized", "evaluation_authorized")):
-        raise ValueError("Full comparison requires its post-training phases to be authorized")
+    elif any(
+        cfg.get(key) is False
+        for key in ("calibration_authorized", "evaluation_authorized")
+    ):
+        raise ValueError(
+            "Full comparison requires its post-training phases to be authorized"
+        )
     return scope
 
 
@@ -88,8 +105,12 @@ def config_check(cfg, *, require_approval=True):
     if cfg.get("revision") == study.REVISION:
         fixed = study.configure(fixed)
         if scope != "training_only" or "dropout" in cfg:
-            raise ValueError("The new study is training-only and has no Dropout setting")
-    if any(type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()):
+            raise ValueError(
+                "The new study is training-only and has no Dropout setting"
+            )
+    if any(
+        type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()
+    ):
         raise ValueError("R6 comparison configuration mismatch")
     if type(cfg.get("production_training_authorized")) is not bool:
         raise ValueError("Explicit training authorization required")
@@ -100,11 +121,20 @@ def config_check(cfg, *, require_approval=True):
             raise ValueError("Explicit finite hours budget required: " + key)
     evaluation_hours = cfg.get("evaluation_hours")
     if type(evaluation_hours) is not int or (
-        evaluation_hours != 0 if scope == "training_only" else not 1 <= evaluation_hours <= 168
+        evaluation_hours != 0
+        if scope == "training_only"
+        else not 1 <= evaluation_hours <= 168
     ):
-        raise ValueError("Evaluation budget must be zero for training-only, otherwise within1..168")
-    if cfg.get("memory", {}).get("estimated_host_peak_bytes", 2**63) + 1024**3 > 64 * 1024**3:
-        raise MemoryError("Estimated peak plus reserve exceeds fixed64GiB request")
+        raise ValueError(
+            "Evaluation budget must be zero for training-only, otherwise within1..168"
+        )
+    if (
+        cfg.get("memory", {}).get("estimated_host_peak_bytes", 2**63) + 1024**3
+        > 64 * 1024**3
+    ):
+        raise MemoryError(
+            "Estimated peak plus reserve exceeds fixed64GiB request"
+        )
 
 
 def admission(upstream):
@@ -127,7 +157,9 @@ def admission(upstream):
         or q.get("final_test_used") is not False
         or q.get("train_only_scaler_verified") is not True
     ):
-        raise ValueError("Verified1200-run common train-only scaler handoff required")
+        raise ValueError(
+            "Verified1200-run common train-only scaler handoff required"
+        )
     dataset = upstream / "dataset"
     frozen = read(upstream / "evidence/frozen-manifest.json")
     seal = read(upstream / "evidence/dataset-seal.json")
@@ -159,7 +191,10 @@ def admission(upstream):
     headers = {}
     for role in ("normal_train", "normal_validation", "normal_calibration"):
         path = dataset / (role + ".npz")
-        if sha(path) != seal[path.name] or manifest["hashes"][path.name] != seal[path.name]:
+        if (
+            sha(path) != seal[path.name]
+            or manifest["hashes"][path.name] != seal[path.name]
+        ):
             raise ValueError("Fit archive changed")
         headers[role] = npz_headers(path)
         n = headers[role]["X"]["shape"][0]
@@ -169,8 +204,12 @@ def admission(upstream):
         ):
             raise ValueError("Forecast shape/window count mismatch")
         with np.load(path, allow_pickle=False) as arrays:
-            if set(arrays["run_id"]) != {r["run_id"] for r in rows if r["role"] == role}:
-                raise ValueError("Array run membership differs from frozen role")
+            if set(arrays["run_id"]) != {
+                r["run_id"] for r in rows if r["role"] == role
+            }:
+                raise ValueError(
+                    "Array run membership differs from frozen role"
+                )
     if sha(dataset / "scaler.npz") != seal["scaler.npz"]:
         raise ValueError("Common scaler changed")
     return rows, seal, headers
@@ -234,8 +273,12 @@ def normalized_mmap(dataset, role, scaler, cache, progress, chunk=512):
                     body = stream.read(count * width * dtype.itemsize)
                     if len(body) != count * width * dtype.itemsize:
                         raise ValueError("Truncated fit member")
-                    block = np.frombuffer(body, dtype=dtype).reshape(count, *shape[1:])
-                    normalized = (block - scaler[scale + "_mean"]) / scaler[scale + "_scale"]
+                    block = np.frombuffer(body, dtype=dtype).reshape(
+                        count, *shape[1:]
+                    )
+                    normalized = (block - scaler[scale + "_mean"]) / scaler[
+                        scale + "_scale"
+                    ]
                     if not np.isfinite(normalized).all():
                         raise ValueError("Nonfinite normalized fit input")
                     out[offset : offset + count] = normalized
@@ -253,5 +296,8 @@ def normalized_mmap(dataset, role, scaler, cache, progress, chunk=512):
             # Keep array completion visible even if the last chunk was throttled.
             progress.update(done=shape[0], total=shape[0])
             result[key] = out
-    write(cache / "ready.json", dict(source_sha256=expected, dtype="float32", chunk=chunk))
+    write(
+        cache / "ready.json",
+        dict(source_sha256=expected, dtype="float32", chunk=chunk),
+    )
     return result

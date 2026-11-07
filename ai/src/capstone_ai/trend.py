@@ -7,7 +7,11 @@ def comparison_gate(previous, current):
     reasons = []
     if current.get("replacement_event") or any(
         previous.get(k) != current.get(k)
-        for k in ["vehicle_instance_id", "battery_instance_id", "propulsion_assembly_ids"]
+        for k in [
+            "vehicle_instance_id",
+            "battery_instance_id",
+            "propulsion_assembly_ids",
+        ]
     ):
         reasons.append("asset_replacement_or_identity_change")
     continuity = [previous.get("continuity"), current.get("continuity")]
@@ -15,7 +19,10 @@ def comparison_gate(previous, current):
         reasons.append("independent_reset")
     elif any(x != "same_asset_future" for x in continuity):
         reasons.append("insufficient_continuity")
-    a, b = previous.get("comparable_operation", {}), current.get("comparable_operation", {})
+    a, b = (
+        previous.get("comparable_operation", {}),
+        current.get("comparable_operation", {}),
+    )
     required = {"mission", "ambient_temperature_k"}
     if (
         not required.issubset(a)

@@ -22,7 +22,11 @@ def benchmark(bundle, *, repeats=5, threads=2):
         runtime = Runtime(entry["id"], catalog=catalog, threads=threads)
         load_seconds = time.perf_counter() - started
         frames = 100 if entry["task"] == "forecast" else 4800
-        a = np.random.default_rng(0).normal(0, 0.1, (1, frames, 19)).astype("f4")
+        a = (
+            np.random.default_rng(0)
+            .normal(0, 0.1, (1, frames, 19))
+            .astype("f4")
+        )
         lengths = None if frames == 100 else np.array([frames], dtype="i8")
         first = runtime.predict_scaled(a, lengths)
         durations = []
@@ -31,7 +35,9 @@ def benchmark(bundle, *, repeats=5, threads=2):
             started = time.perf_counter()
             actual = runtime.predict_scaled(a, lengths)
             durations.append(time.perf_counter() - started)
-            max_difference = max(max_difference, float(np.max(np.abs(actual - first))))
+            max_difference = max(
+                max_difference, float(np.max(np.abs(actual - first)))
+            )
         rows.append(
             dict(
                 id=entry["id"],

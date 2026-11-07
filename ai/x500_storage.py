@@ -33,15 +33,22 @@ def capture(root):
     if root.parts[1:2] == ("media",) and len(root.parts) >= 4:
         mount = Path(*root.parts[:4])
         if not mount.is_mount():
-            raise ValueError("Mounted external storage unavailable: " + str(mount))
+            raise ValueError(
+                "Mounted external storage unavailable: " + str(mount)
+            )
     elif root.parts[1:2] == ("mnt",) and len(root.parts) >= 3:
         mount = Path(*root.parts[:3])
         if not mount.is_mount():
-            raise ValueError("Mounted external storage unavailable: " + str(mount))
+            raise ValueError(
+                "Mounted external storage unavailable: " + str(mount)
+            )
     existing = next(p for p in (root, *root.parents) if p.exists())
     mount = next(p for p in (existing, *existing.parents) if p.is_mount())
     return dict(
-        schema="x500.storage/1", root=str(root), mount=str(mount), device=existing.stat().st_dev
+        schema="x500.storage/1",
+        root=str(root),
+        mount=str(mount),
+        device=existing.stat().st_dev,
     )
 
 
@@ -52,7 +59,9 @@ def guard(path, policy=None):
     if not path.is_relative_to(root):
         raise ValueError("Path outside selected storage root")
     if not mount.is_mount() or mount.stat().st_dev != policy["device"]:
-        raise ValueError("Selected storage filesystem unavailable/changed; no fallback")
+        raise ValueError(
+            "Selected storage filesystem unavailable/changed; no fallback"
+        )
     existing = next(p for p in (path, *path.parents) if p.exists())
     if existing.stat().st_dev != policy["device"]:
         raise ValueError("Selected storage device changed; no fallback")

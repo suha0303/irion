@@ -8,7 +8,6 @@ release gate. Retain the historical allclose statistic for traceability.
 from pathlib import Path
 
 import numpy as np
-
 from capstone_ai.detection_protocol import score_sequence
 from learning.run_health19.scoring import Calibration, components
 
@@ -21,7 +20,9 @@ def check(bundle, dataset):
     with (dataset / "online-index.jsonl").open() as f:
         import json
 
-        reference = next(r for r in map(json.loads, f) if r["role"] == "normal_validation")
+        reference = next(
+            r for r in map(json.loads, f) if r["role"] == "normal_validation"
+        )
     manifest_path = Path(reference["manifest"]["path"])
     if digest(manifest_path) != reference["manifest"]["sha256"]:
         raise ValueError("Validation metadata changed")
@@ -48,20 +49,30 @@ def check(bundle, dataset):
     for entry in catalog.list():
         runtime = Runtime(entry["id"], catalog=catalog)
         s, params = runtime.scaler, runtime.entry["calibration"]
-        expected_path = catalog.checked(f"models/{entry['id']}/evaluation/predictions/{rid}.npz")
+        expected_path = catalog.checked(
+            f"models/{entry['id']}/evaluation/predictions/{rid}.npz"
+        )
         with np.load(expected_path, allow_pickle=False) as z:
             reference_values = dict(z)
         if entry["task"] == "forecast":
             x = ((online["X"] - s["x_mean"]) / s["x_scale"]).astype("f4")
             actual = np.concatenate(
-                [runtime.predict_scaled(x[i : i + 32]) for i in range(0, len(x), 32)]
+                [
+                    runtime.predict_scaled(x[i : i + 32])
+                    for i in range(0, len(x), 32)
+                ]
             )
             expected = reference_values["prediction_scaled"]
             y = ((online["Y"] - s["y_mean"]) / s["y_scale"]).astype("f4")
 
             def decisions(pred):
-                errors = (y - pred) ** 2 / np.array(params["reference_error_scale_scaled"])
-                scores = np.stack([errors[:, :, :3].mean((1, 2)), errors[:, :, 3].mean(1)], axis=1)
+                errors = (y - pred) ** 2 / np.array(
+                    params["reference_error_scale_scaled"]
+                )
+                scores = np.stack(
+                    [errors[:, :, :3].mean((1, 2)), errors[:, :, 3].mean(1)],
+                    axis=1,
+                )
                 return score_sequence(
                     scores,
                     np.repeat(rid, len(scores)),
@@ -72,7 +83,8 @@ def check(bundle, dataset):
 
             a, b = decisions(actual), decisions(expected)
             alarms_equal = all(
-                (i["alarm_active"], i["episode_start"]) == (j["alarm_active"], j["episode_start"])
+                (i["alarm_active"], i["episode_start"])
+                == (j["alarm_active"], j["episode_start"])
                 for i, j in zip(a, b)
             )
         else:
@@ -80,22 +92,26 @@ def check(bundle, dataset):
             physical[:, 17] /= 4
             physical[:, 18] /= 12
             x = ((physical - s["x_mean"]) / s["x_scale"]).astype("f4")
-            pred = runtime.predict_scaled(x[None], np.array([len(x)], dtype="i8"))[0]
+            pred = runtime.predict_scaled(
+                x[None], np.array([len(x)], dtype="i8")
+            )[0]
             actual = pred * s["x_scale"][17] + s["x_mean"][17]
             expected = reference_values["predicted_cell_v"]
             threshold = Calibration(**params)
 
             def alarm(p):
-                return threshold.decide(components(p, physical[:, 17], cell_voltage_scale=1))[
-                    "alarm"
-                ]
+                return threshold.decide(
+                    components(p, physical[:, 17], cell_voltage_scale=1)
+                )["alarm"]
 
             alarms_equal = alarm(actual) == alarm(expected)
         rows.append(
             dict(
                 id=entry["id"],
                 max_abs=float(np.max(np.abs(actual - expected))),
-                allclose=bool(np.allclose(actual, expected, atol=1e-6, rtol=1e-5)),
+                allclose=bool(
+                    np.allclose(actual, expected, atol=1e-6, rtol=1e-5)
+                ),
                 alarm_equal=alarms_equal,
                 outputs=int(actual.size),
             )

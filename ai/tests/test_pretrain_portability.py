@@ -11,7 +11,9 @@ import pytest
 from pretrain import cli, common
 
 
-def test_current_inventory_rejects_tampering_and_path_escape(tmp_path, monkeypatch):
+def test_current_inventory_rejects_tampering_and_path_escape(
+    tmp_path, monkeypatch
+):
     native = tmp_path / "simulation"
     source = native / "config/producer-sources.json"
     common.write(source, dict(sources={}))
@@ -42,7 +44,9 @@ def test_systemd_cleanup_preserves_arguments_with_spaces_and_specifiers():
     command = cli.systemd_command(
         ["/tmp/clone with spaces/$name%/python", "-B", '/tmp/quote"name/task']
     )
-    assert command == ('"/tmp/clone with spaces/$$name%%/python" "-B" "/tmp/quote\\"name/task"')
+    assert command == (
+        '"/tmp/clone with spaces/$$name%%/python" "-B" "/tmp/quote\\"name/task"'
+    )
 
 
 def test_relocated_preprocess_assemble_and_audit_without_torch(tmp_path):
@@ -52,13 +56,21 @@ def test_relocated_preprocess_assemble_and_audit_without_torch(tmp_path):
     shutil.copytree(
         source,
         clone / "Data/generation",
-        ignore=shutil.ignore_patterns(".venv", "__pycache__", ".pytest_cache", ".ruff_cache"),
+        ignore=shutil.ignore_patterns(
+            ".venv", "__pycache__", ".pytest_cache", ".ruff_cache"
+        ),
     )
     (clone / "ai").mkdir()
-    shutil.copy2(common.ROOT / "ai/x500_storage.py", clone / "ai/x500_storage.py")
-    fixture = common.load("portable_raw_fixture", common.ROOT / "ai/tests/test_preprocessing.py")
+    shutil.copy2(
+        common.ROOT / "ai/x500_storage.py", clone / "ai/x500_storage.py"
+    )
+    fixture = common.load(
+        "portable_raw_fixture", common.ROOT / "ai/tests/test_preprocessing.py"
+    )
     rows = []
-    for index, role in enumerate(("normal_train", "normal_validation", "normal_calibration")):
+    for index, role in enumerate(
+        ("normal_train", "normal_validation", "normal_calibration")
+    ):
         rid = f"{index + 1:032x}"
         run = clone / "Data/consumer" / rid
         metadata = copy.deepcopy(fixture.META)
@@ -71,9 +83,12 @@ def test_relocated_preprocess_assemble_and_audit_without_torch(tmp_path):
         )
         common.write(run / "observations/metadata.json", metadata)
         common.write(
-            run / "run.json", dict(run_id=rid, origin="synthetic_fixture", status="completed")
+            run / "run.json",
+            dict(run_id=rid, origin="synthetic_fixture", status="completed"),
         )
-        common.write(run / "reference/source_lock.json", dict(synthetic_fixture=True))
+        common.write(
+            run / "reference/source_lock.json", dict(synthetic_fixture=True)
+        )
         events = list(fixture.events(72))
         for event in events:
             event["run_id"] = rid
@@ -94,7 +109,11 @@ def test_relocated_preprocess_assemble_and_audit_without_torch(tmp_path):
             + "\n"
         )
         (run / "observations/diagnostics.jsonl").touch()
-        files = {str(p.relative_to(run)): common.sha(p) for p in run.rglob("*") if p.is_file()}
+        files = {
+            str(p.relative_to(run)): common.sha(p)
+            for p in run.rglob("*")
+            if p.is_file()
+        }
         rows.append(dict(run_id=rid, role=role, path=str(run), files=files))
     common.write(clone / "rows.json", rows)
     script = r"""
@@ -146,7 +165,16 @@ else:
     for action, count in (("preprocess", 3), ("audit", 3), ("assemble", 1)):
         for index in range(count):
             result = subprocess.run(
-                [str(common.PYTHON), "-I", "-B", "-c", script, str(clone), action, str(index)],
+                [
+                    str(common.PYTHON),
+                    "-I",
+                    "-B",
+                    "-c",
+                    script,
+                    str(clone),
+                    action,
+                    str(index),
+                ],
                 cwd=clone,
                 env=env,
                 capture_output=True,

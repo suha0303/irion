@@ -23,7 +23,9 @@ from .common import (
 def regular(path):
     path = Path(path).absolute()
     if not path.is_file() or any(p.is_symlink() for p in (path, *path.parents)):
-        raise ValueError("Regular, unlinked recovery input required: " + str(path))
+        raise ValueError(
+            "Regular, unlinked recovery input required: " + str(path)
+        )
     return path
 
 
@@ -35,7 +37,9 @@ def capsule_row(source, store, label, row, pins):
     root = store / "streamed/pretrain" / source.name
     receipt_path = regular(root / "runs" / rid / "receipt.json")
     receipt = read(receipt_path)
-    expected_row = dict(row, path=str(store / "consumer/pretrain" / source.name / label / rid))
+    expected_row = dict(
+        row, path=str(store / "consumer/pretrain" / source.name / label / rid)
+    )
     if (
         receipt.get("status") != "RUN_CAPSULE_VERIFIED"
         or receipt.get("task") != str(source)
@@ -43,10 +47,15 @@ def capsule_row(source, store, label, row, pins):
         or receipt.get("row") != expected_row
         or receipt.get("raw_archive_sha256") != row["archive"]["sha256"]
     ):
-        raise ValueError("Capsule receipt differs from original frozen run: " + rid)
+        raise ValueError(
+            "Capsule receipt differs from original frozen run: " + rid
+        )
     artifact = receipt["artifact"]
     archive = regular(root / "runs" / rid / "artifacts.tar.xz")
-    if artifact["path"] != str(archive) or archive.stat().st_size != artifact["bytes"]:
+    if (
+        artifact["path"] != str(archive)
+        or archive.stat().st_size != artifact["bytes"]
+    ):
         raise ValueError("Capsule archive missing/replaced: " + rid)
     if not re.fullmatch(r"[0-9a-f]{64}", artifact["sha256"]):
         raise ValueError("Invalid capsule archive digest")
@@ -81,11 +90,15 @@ def capsule_row(source, store, label, row, pins):
         ("scenario.json", "evaluation/scenario.json"),
     ):
         ref = row["archive"]["members"][original]
-        if members["identity/" + name] != {key: ref[key] for key in ("bytes", "sha256")}:
+        if members["identity/" + name] != {
+            key: ref[key] for key in ("bytes", "sha256")
+        }:
             raise ValueError("Capsule identity differs from original archive")
     statuses = {}
     for action in ("preprocess", "audit"):
-        path = regular(source / "units" / (label + "-" + action) / (rid + ".status.json"))
+        path = regular(
+            source / "units" / (label + "-" + action) / (rid + ".status.json")
+        )
         status = read(path)
         if (
             status.get("status") != "COMPLETE"
@@ -100,8 +113,10 @@ def capsule_row(source, store, label, row, pins):
         receipt["audit_status_sha256"] != pins[str(audit_path)]
         or members["audit/status.json"]["sha256"] != pins[str(audit_path)]
         or members["audit/status.json"]["bytes"] != audit_path.stat().st_size
-        or members["audit/numeric.npz"]["sha256"] != statuses["audit"]["result"]["numeric_sha256"]
-        or members["audit/report.json"]["sha256"] != statuses["audit"]["result"]["report_sha256"]
+        or members["audit/numeric.npz"]["sha256"]
+        != statuses["audit"]["result"]["numeric_sha256"]
+        or members["audit/report.json"]["sha256"]
+        != statuses["audit"]["result"]["report_sha256"]
     ):
         raise ValueError("Capsule audit does not match completed source audit")
     outputs = statuses["preprocess"]["result"]["output_hashes"]
@@ -109,7 +124,9 @@ def capsule_row(source, store, label, row, pins):
         members["canonical/" + name + ".jsonl"]["sha256"] != digest
         for name, digest in outputs.items()
     ):
-        raise ValueError("Capsule canonical outputs differ from completed preprocessing")
+        raise ValueError(
+            "Capsule canonical outputs differ from completed preprocessing"
+        )
     if row["role"] in {"normal_dev_eval", "anomaly_dev"}:
         event = regular(root / "evaluator-only" / (rid + ".jsonl"))
         expected = row["archive"]["members"]["evaluation/events.jsonl"]
@@ -126,7 +143,9 @@ def capsule_row(source, store, label, row, pins):
     pins[str(receipt_path)] = sha(receipt_path)
     return dict(
         expected_row,
-        compact_source=dict(receipt=str(receipt_path), sha256=pins[str(receipt_path)]),
+        compact_source=dict(
+            receipt=str(receipt_path), sha256=pins[str(receipt_path)]
+        ),
         raw_retained=False,
         raw_retirement_journal=str(receipt_path.parent / "cleanup.json"),
     ), sum(member["bytes"] for member in members.values())
@@ -143,7 +162,13 @@ def inputs(source):
     regular(source / "config.json")
     if source.parent != HOME / "tasks":
         raise ValueError("Registered local source task required")
-    verify({str(source / "config.json"): regular(source / "config.sha256").read_text().strip()})
+    verify(
+        {
+            str(source / "config.json"): regular(source / "config.sha256")
+            .read_text()
+            .strip()
+        }
+    )
     config = read(source / "config.json")
     state = read(regular(source / "operator/state.json"))
     cpu = read(regular(source / "operator/processing-state.json"))
@@ -155,7 +180,9 @@ def inputs(source):
         or cpu.get("status") != "PROCESSING_COMPLETE"
         or cpu.get("stream_completed") != config.get("collection_run_count")
     ):
-        raise ValueError("Stopped streaming task with all CPU capsules complete required")
+        raise ValueError(
+            "Stopped streaming task with all CPU capsules complete required"
+        )
     for record in (state, cpu):
         if (
             record.get("pid_start_ticks")
@@ -170,7 +197,8 @@ def inputs(source):
     immutable = {
         p: digest
         for p, digest in config["source_sha256"].items()
-        if Path(p).is_relative_to(PACKAGE) or Path(p) == RESOURCES / "protected-inventory.json"
+        if Path(p).is_relative_to(PACKAGE)
+        or Path(p) == RESOURCES / "protected-inventory.json"
     }
     if (
         str(PACKAGE / "preprocessing.json") not in immutable
@@ -199,7 +227,9 @@ def inputs(source):
     all_rows, parts, seen, restore_bytes = [], [], set(), 0
     for set_index, cases in enumerate(planned):
         rows, refs, template = [], [], None
-        for index, batch in enumerate(homogeneous_batches(cases, config["flight_workers"])):
+        for index, batch in enumerate(
+            homogeneous_batches(cases, config["flight_workers"])
+        ):
             label = f"stream-{set_index + 1:03}-{index + 1:03}"
             folder = source / label
             frozen_dir = folder / "fragment-freeze"
@@ -225,25 +255,34 @@ def inputs(source):
                 or ledger.get("failed_cases")
                 or ledger.get("stop_reason")
                 or set(ledger["cases"]) != {c["case_id"] for c in batch}
-                or fragment.get("status") != "VERIFIED_FRAGMENT_PENDING_GLOBAL_SPLIT"
+                or fragment.get("status")
+                != "VERIFIED_FRAGMENT_PENDING_GLOBAL_SPLIT"
                 or fragment["original_ledger_sha256"] != pins[str(paths[1])]
                 or fragment["ledger_sha256"]
                 != pins[str(frozen_dir / "verified-fragment-ledger.json")]
-                or fragment["cases_sha256"] != pins[str(frozen_dir / "cases.json")]
-                or fragment["plan_sha256"] != pins[str(frozen_dir / "collection-plan.json")]
-                or fragment["revision_lock"] != read(frozen_dir / "required-revision.json")
+                or fragment["cases_sha256"]
+                != pins[str(frozen_dir / "cases.json")]
+                or fragment["plan_sha256"]
+                != pins[str(frozen_dir / "collection-plan.json")]
+                or fragment["revision_lock"]
+                != read(frozen_dir / "required-revision.json")
                 or fragment["revision_lock"]["preprocessing_sha256"]
                 != immutable[str(PACKAGE / "preprocessing.json")]
                 or fragment["protected_inventory_sha256"]
                 != immutable[str(RESOURCES / "protected-inventory.json")]
                 or len(fragment["runs"]) != len(batch)
             ):
-                raise ValueError("Source fragment/ledger binding mismatch: " + label)
+                raise ValueError(
+                    "Source fragment/ledger binding mismatch: " + label
+                )
             by_case = {row["case_id"]: row for row in fragment["runs"]}
             if set(by_case) != {c["case_id"] for c in batch}:
                 raise ValueError("Fragment case membership mismatch")
             for case in batch:
-                record, row = ledger["cases"][case["case_id"]], by_case[case["case_id"]]
+                record, row = (
+                    ledger["cases"][case["case_id"]],
+                    by_case[case["case_id"]],
+                )
                 exported = record["export"]
                 if (
                     record.get("case") != case
@@ -255,10 +294,15 @@ def inputs(source):
                     or row["archive"]
                     != {
                         "path": exported["archive"],
-                        **{k: exported[k] for k in ("bytes", "sha256", "members")},
+                        **{
+                            k: exported[k]
+                            for k in ("bytes", "sha256", "members")
+                        },
                     }
                 ):
-                    raise ValueError("Frozen run differs from completed collection")
+                    raise ValueError(
+                        "Frozen run differs from completed collection"
+                    )
                 recovered, size = capsule_row(source, store, label, row, pins)
                 seen.add(row["run_id"])
                 rows.append(recovered)
@@ -267,7 +311,11 @@ def inputs(source):
                 template = fragment
             elif any(
                 fragment[key] != template[key]
-                for key in ("revision", "revision_lock", "protected_inventory_sha256")
+                for key in (
+                    "revision",
+                    "revision_lock",
+                    "protected_inventory_sha256",
+                )
             ):
                 raise ValueError("Mixed fragment source/protection revisions")
             refs.append(dict(path=str(paths[2]), sha256=pins[str(paths[2])]))
@@ -296,7 +344,9 @@ def inputs(source):
         case_sets=groups,
     )
     if len(seen) != config["collection_run_count"]:
-        raise ValueError("Recovered capsule count differs from approved collection")
+        raise ValueError(
+            "Recovered capsule count differs from approved collection"
+        )
     return dict(
         source=str(source),
         config=config,
@@ -313,7 +363,9 @@ def create_recovery(source, name):
 
     admitted = inputs(source)
     original = admitted["config"]
-    args = cli.parser().parse_args(["init", "--name", name, "--mode", "collect"])
+    args = cli.parser().parse_args(
+        ["init", "--name", name, "--mode", "collect"]
+    )
     args.storage_root = task_root(original)
     args.storage_profile = "compact"
     for key in (
@@ -370,7 +422,9 @@ def create_recovery(source, name):
         external_additional_bytes_max=required,
         scope="Restore existing verified capsules; assemble one train-only scaler, independently verify, package and stop. No collection/training/automatic retry; preserve source task and capsules.",
     )
-    config["source_sha256"].update({str(planned): sha(planned), str(manifest): sha(manifest)})
+    config["source_sha256"].update(
+        {str(planned): sha(planned), str(manifest): sha(manifest)}
+    )
     write(task / "config.json", config)
     (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
     return task
@@ -399,12 +453,16 @@ def run(runner):
         parts.append((folder, frozen))
     runner.finish(
         "capsule-admission",
-        dict(passed=True, runs=expected["run_count"], source_task_preserved=True),
+        dict(
+            passed=True, runs=expected["run_count"], source_task_preserved=True
+        ),
     )
     runner.begin("combine", workers=1)
     frozen = combine_frozen(runner.task, parts)
     runner.finish("combine", dict(passed=True, runs=len(frozen["runs"])))
-    prepared = external(STORE / "processed/pretrain" / runner.task.name / "prepared")
+    prepared = external(
+        STORE / "processed/pretrain" / runner.task.name / "prepared"
+    )
     prepared.mkdir(parents=True, exist_ok=False)
     write(prepared / "frozen-manifest.json", frozen)
 
@@ -420,7 +478,11 @@ def run(runner):
     budget = RecoveryBudget()
     audits = restore_capsules(runner, frozen["runs"], prepared, budget)
     runner.finalize_prepared(
-        frozen, prepared, "prepared", runner.config["workers"], preaudited=audits
+        frozen,
+        prepared,
+        "prepared",
+        runner.config["workers"],
+        preaudited=audits,
     )
     runner.begin("recovery-retire", workers=1)
     portable = prepared.parent / "prepared-portable"
@@ -429,7 +491,9 @@ def run(runner):
         ref = receipt[key]
         path = portable / ref["path"]
         if sha(path) != ref["sha256"]:
-            raise ValueError("New portable archive changed; preserve working data")
+            raise ValueError(
+                "New portable archive changed; preserve working data"
+            )
         verify_bundle(path, ref["members"], budget)
     # Only this fresh task's working copies may be retired. Source capsules remain intact.
     paths = [prepared / "dataset", prepared / "audit-work"]
@@ -451,7 +515,9 @@ def run(runner):
             source_capsules_preserved=True,
         ),
     )
-    runner.finish("recovery-retire", dict(passed=True, source_capsules_preserved=True))
+    runner.finish(
+        "recovery-retire", dict(passed=True, source_capsules_preserved=True)
+    )
     runner.update(
         portable_dataset=str(portable),
         dataset_requires_restore=True,

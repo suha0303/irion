@@ -8,10 +8,17 @@ from learning.history19.joint_native import ORIGIN, WIND_CLOCK, check_policy
 from learning.history19.pilot import ROOT, json_file, regular, sha
 
 TASK = "MAIN_COLLECTION_CONNECTION_20261107"
-AUTH = ROOT / "ai/reports/collection-hardening-20261108/attempt-01/authorization.json"
+AUTH = (
+    ROOT
+    / "ai/reports/collection-hardening-20261108/attempt-01/authorization.json"
+)
 AUTH_SHA256 = "3a1e5d7952af7eb38ec0bf1f5afb5cc97200b3413d79a31f4960d18db470933f"
 COUNTS = dict(
-    normal_train=540, normal_validation=81, normal_calibration=81, development=243, final=729
+    normal_train=540,
+    normal_validation=81,
+    normal_calibration=81,
+    development=243,
+    final=729,
 )
 
 
@@ -31,13 +38,16 @@ def authorization():
         value.get("task_id") != TASK
         or scope.get("menu2_cases") != 1674
         or scope.get("main_cohorts") != COUNTS
-        or scope.get("lr_subset_roles") != dict(normal_train=81, normal_validation=27)
+        or scope.get("lr_subset_roles")
+        != dict(normal_train=81, normal_validation=27)
         or scope.get("mission_seconds") != 480
         or scope.get("training_or_model_forward_or_GPU") is not False
         or scope.get("final729_locked_for_performance") is not True
         or scope.get("prior_pilot_data_reuse") is not False
     ):
-        raise ValueError("Explicit unchanged MAIN1674/LR108/no-model authority required")
+        raise ValueError(
+            "Explicit unchanged MAIN1674/LR108/no-model authority required"
+        )
     return value
 
 
@@ -56,14 +66,23 @@ def check_scope():
         or Counter(c["cohort"] for c in cases) != COUNTS
         or len(lr["cases"]) != len(lr_ids)
         or len(lr_ids) != 108
-        or Counter(c["role"] for c in lr["cases"]) != dict(normal_train=81, normal_validation=27)
+        or Counter(c["role"] for c in lr["cases"])
+        != dict(normal_train=81, normal_validation=27)
         or any(c != by_id.get(c["case_id"]) for c in lr["cases"])
-        or any(c.get("duration") != 480 or c.get("attempts_max") != 3 for c in cases)
+        or any(
+            c.get("duration") != 480 or c.get("attempts_max") != 3
+            for c in cases
+        )
         or len({c["group_id"] for c in cases}) != 1350
-        or len({c["group_id"] for c in cases if c["category"] == "anomaly"}) != 324
+        or len({c["group_id"] for c in cases if c["category"] == "anomaly"})
+        != 324
     ):
-        raise ValueError("Frozen1674 split/groups or same-role108 subset differs")
-    return dict(authorization=auth, main=main, lr=lr, cases=by_id, lr_ids=lr_ids)
+        raise ValueError(
+            "Frozen1674 split/groups or same-role108 subset differs"
+        )
+    return dict(
+        authorization=auth, main=main, lr=lr, cases=by_id, lr_ids=lr_ids
+    )
 
 
 def write_new(path, value):
@@ -77,11 +96,15 @@ def write_new(path, value):
     return dict(path=str(path), sha256=sha(path))
 
 
-def prepare_policy(native_policy_path, producer_binding_path, output, *, fixture_only=False):
+def prepare_policy(
+    native_policy_path, producer_binding_path, output, *, fixture_only=False
+):
     scope = check_scope()
     auth = scope["authorization"]
     if (auth.get("fixture_only") is True) is not fixture_only:
-        raise ValueError("Synthetic policy requires an explicit isolated fixture authority")
+        raise ValueError(
+            "Synthetic policy requires an explicit isolated fixture authority"
+        )
     native = json_file(native_policy_path)
     check_policy(native, duration_profile="standard480")
     producer = json_file(producer_binding_path)
@@ -91,7 +114,9 @@ def prepare_policy(native_policy_path, producer_binding_path, output, *, fixture
         auth["producer"]["source_sha256"],
         auth["producer"]["runtime_sha256"],
     ) or native["revision"] != "joint-native-consumption-c2-v2":
-        raise ValueError("Independent current-v2 collection producer binding required")
+        raise ValueError(
+            "Independent current-v2 collection producer binding required"
+        )
     value = dict(
         schema="drone-ai.paired-source-clock-policy/1",
         status="FROZEN",
@@ -111,7 +136,9 @@ def prepare_policy(native_policy_path, producer_binding_path, output, *, fixture
         posthoc_adjustment=False,
         producer=producer,
         native_policy_sha256=sha(regular(native_policy_path)),
-        native_consumption_max_gap_us=native["acceptance"]["native_consumption_max_gap_us"],
+        native_consumption_max_gap_us=native["acceptance"][
+            "native_consumption_max_gap_us"
+        ],
         native_receipt_schema="drone.joint-phase-native-receipt/1",
         mission_source=ORIGIN,
         wind_model_clock=WIND_CLOCK,
@@ -144,10 +171,14 @@ def validate_policy(policy, native_policy_path):
         or policy.get("frozen_plans") != auth["frozen_plans"]
         or policy.get("duration_profile") != "standard480"
         or policy.get("native_adapter") != "joint-native-consumption-c2-v2"
-        or policy.get("native_policy_sha256") != sha(regular(native_policy_path))
-        or policy.get("native_consumption_max_gap_us", 40000) != native["acceptance"]["native_consumption_max_gap_us"]
-        or policy["producer"]["source_manifest_sha256"] != auth["producer"]["source_sha256"]
-        or policy["producer"]["runtime_sha256"] != auth["producer"]["runtime_sha256"]
+        or policy.get("native_policy_sha256")
+        != sha(regular(native_policy_path))
+        or policy.get("native_consumption_max_gap_us", 40000)
+        != native["acceptance"]["native_consumption_max_gap_us"]
+        or policy["producer"]["source_manifest_sha256"]
+        != auth["producer"]["source_sha256"]
+        or policy["producer"]["runtime_sha256"]
+        != auth["producer"]["runtime_sha256"]
         or policy.get("fixture_only") is not (auth.get("fixture_only") is True)
     ):
         raise ValueError("Independent MAIN480 execution policy differs")
@@ -163,7 +194,9 @@ def case_key(case_id):
 def check_case_record(row, case):
     for key in ("role", "cohort", "purpose"):
         if row.get(key) != case[key]:
-            raise ValueError("Frozen collection role/cohort/purpose changed: " + key)
+            raise ValueError(
+                "Frozen collection role/cohort/purpose changed: " + key
+            )
     if case_key(row.get("case_id")) != case["case_id"]:
         raise ValueError("Run does not belong to the frozen logical case")
     namespace = row["case_id"][: -len(case["case_id"])]
@@ -189,6 +222,9 @@ def read_protection(value, identities=None):
             if len(line) > 65536:
                 raise ValueError("Protection JSONL entry exceeds64KiB")
             row = json.loads(line)
-            if identities is None or set(row.get("identities", [])) & identities:
+            if (
+                identities is None
+                or set(row.get("identities", [])) & identities
+            ):
                 entries.append(row)
     return dict(schema="drone-ai.global-protection/1", entries=entries)

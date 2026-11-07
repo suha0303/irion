@@ -8,7 +8,11 @@ from pathlib import Path
 
 MODELS = ("persistence", "ridge_forecast", "lstm", "transformer")
 COUNTS = dict(
-    normal_train=63, normal_validation=9, normal_calibration=9, normal_dev_eval=11, anomaly_dev=12
+    normal_train=63,
+    normal_validation=9,
+    normal_calibration=9,
+    normal_dev_eval=11,
+    anomaly_dev=12,
 )
 ROOT = Path(__file__).resolve().parents[2]
 STORE = ROOT / "Data"
@@ -30,7 +34,9 @@ def runtime_profile(root=None, *, required=False):
     candidates = []
     if root is not None:
         base = Path(root)
-        candidates.extend((base / "server-profile.json", base.parent / "server-profile.json"))
+        candidates.extend(
+            (base / "server-profile.json", base.parent / "server-profile.json")
+        )
     if selected:
         candidates.append(Path(selected))
     for candidate in candidates:
@@ -39,7 +45,9 @@ def runtime_profile(root=None, *, required=False):
 
             return load(candidate)
     if required:
-        raise ValueError("An explicit server profile is required; set DRONE_AI_PROFILE")
+        raise ValueError(
+            "An explicit server profile is required; set DRONE_AI_PROFILE"
+        )
     return None
 
 
@@ -56,7 +64,9 @@ def write(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + f".{os.getpid()}.tmp")
-    temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
+    temporary.write_text(
+        json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+    )
     temporary.replace(path)
 
 
@@ -102,7 +112,10 @@ def config_check(cfg):
         wall_hours=12,
         queue_hours=24,
     )
-    if any(type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in expected.items()):
+    if any(
+        type(cfg.get(k)) is not type(v) or cfg[k] != v
+        for k, v in expected.items()
+    ):
         raise ValueError("Fixed four-model seed17 configuration mismatch")
 
 
@@ -112,13 +125,19 @@ def _memory_mounts(membership, mountinfo):
     for line in mountinfo.splitlines():
         left, right = line.split(" - ", 1)
         before, after = left.split(), right.split()
-        if after[0] == "cgroup2" or (after[0] == "cgroup" and "memory" in after[2].split(",")):
+        if after[0] == "cgroup2" or (
+            after[0] == "cgroup" and "memory" in after[2].split(",")
+        ):
 
             def decode(text):
                 # mountinfo escapes whitespace and backslashes.
-                return re.sub(r"\\([0-7]{3})", lambda match: chr(int(match[1], 8)), text)
+                return re.sub(
+                    r"\\([0-7]{3})", lambda match: chr(int(match[1], 8)), text
+                )
 
-            mounts.append((after[0], Path(decode(before[3])), Path(decode(before[4]))))
+            mounts.append(
+                (after[0], Path(decode(before[3])), Path(decode(before[4])))
+            )
     for line in membership.splitlines():
         _, controllers, relative = line.split(":", 2)
         version = "cgroup2" if controllers == "" else "cgroup"
@@ -127,9 +146,15 @@ def _memory_mounts(membership, mountinfo):
         relative = Path(relative)
         if not relative.is_absolute() or ".." in relative.parts:
             raise ValueError("Invalid memory cgroup membership")
-        candidates = [m for m in mounts if m[0] == version and relative.is_relative_to(m[1])]
+        candidates = [
+            m
+            for m in mounts
+            if m[0] == version and relative.is_relative_to(m[1])
+        ]
         if not candidates:
-            raise ValueError("Memory cgroup mount is not visible for " + str(relative))
+            raise ValueError(
+                "Memory cgroup mount is not visible for " + str(relative)
+            )
         for _, mount_root, mount in candidates:
             yield version, mount, mount / relative.relative_to(mount_root)
 
@@ -149,7 +174,13 @@ def _cache_credit(folder, version, current):
                 raise ValueError("Negative or duplicate memory.stat counter")
             result["stats"][key] = value
         if version == "cgroup2":
-            names = ("inactive_file", "file", "file_dirty", "file_writeback", "shmem")
+            names = (
+                "inactive_file",
+                "file",
+                "file_dirty",
+                "file_writeback",
+                "shmem",
+            )
             result["stats_scope"] = "hierarchical"
         else:
             hierarchy = (folder / "memory.use_hierarchy").read_text().strip()
@@ -158,14 +189,25 @@ def _cache_credit(folder, version, current):
                 raise ValueError("Unknown v1 hierarchy accounting")
             prefix = "total_" if hierarchy == "1" else ""
             names = tuple(
-                prefix + name for name in ("inactive_file", "cache", "dirty", "writeback", "shmem")
+                prefix + name
+                for name in (
+                    "inactive_file",
+                    "cache",
+                    "dirty",
+                    "writeback",
+                    "shmem",
+                )
             )
             result["stats_scope"] = "hierarchical" if prefix else "local"
-        inactive, file_bytes, dirty, writeback, shmem = (result["stats"][k] for k in names)
+        inactive, file_bytes, dirty, writeback, shmem = (
+            result["stats"][k] for k in names
+        )
         result["credited_cache_bytes"] = max(
             0, min(current, inactive, file_bytes) - dirty - writeback - shmem
         )
-        result["basis"] = "max(0, min(current,inactive_file,file_cache)-dirty-writeback-shmem)"
+        result["basis"] = (
+            "max(0, min(current,inactive_file,file_cache)-dirty-writeback-shmem)"
+        )
     except (OSError, ValueError, KeyError) as exc:
         result["stats_error"] = str(exc)
     return result
@@ -188,7 +230,8 @@ def memory_snapshot(proc_root=Path("/proc")):
     )
     try:
         fields = dict(
-            line.split(":", 1) for line in (proc_root / "meminfo").read_text().splitlines()
+            line.split(":", 1)
+            for line in (proc_root / "meminfo").read_text().splitlines()
         )
         available = int(fields["MemAvailable"].split()[0]) * 1024
         if available < 0:
@@ -200,7 +243,9 @@ def memory_snapshot(proc_root=Path("/proc")):
         seen = set()
         for version, mount, folder in _memory_mounts(membership, mountinfo):
             if not folder.is_dir():
-                raise ValueError("Memory cgroup directory is not visible: " + str(folder))
+                raise ValueError(
+                    "Memory cgroup directory is not visible: " + str(folder)
+                )
             while folder.is_relative_to(mount):
                 key = (version, str(folder))
                 if key not in seen:
@@ -210,12 +255,19 @@ def memory_snapshot(proc_root=Path("/proc")):
                         if version == "cgroup2"
                         else ("memory.limit_in_bytes", "memory.usage_in_bytes")
                     )
-                    limit_path, current_path = folder / limit_name, folder / current_name
+                    limit_path, current_path = (
+                        folder / limit_name,
+                        folder / current_name,
+                    )
                     if limit_path.exists() or current_path.exists():
                         row = dict(path=str(folder), version=version)
                         result["cgroups"].append(row)
                         # v2 root has current/stat but no limit; its bound is node MemAvailable.
-                        if not limit_path.exists() and folder == mount and version == "cgroup2":
+                        if (
+                            not limit_path.exists()
+                            and folder == mount
+                            and version == "cgroup2"
+                        ):
                             row["limit_bytes"] = None
                             row["current_bytes"] = int(current_path.read_text())
                         else:
@@ -223,18 +275,27 @@ def memory_snapshot(proc_root=Path("/proc")):
                             limit = None if text == "max" else int(text)
                             current = int(current_path.read_text())
                             if current < 0 or (limit is not None and limit < 0):
-                                raise ValueError("Negative cgroup memory counter")
+                                raise ValueError(
+                                    "Negative cgroup memory counter"
+                                )
                             row.update(
                                 limit_bytes=limit,
                                 current_bytes=current,
                                 **_cache_credit(folder, version, current),
                             )
                             if limit is not None:
-                                row["raw_headroom_bytes"] = max(0, limit - current)
-                                row["available_bytes"] = max(
-                                    0, limit - current + row["credited_cache_bytes"]
+                                row["raw_headroom_bytes"] = max(
+                                    0, limit - current
                                 )
-                                available = min(available, row["available_bytes"])
+                                row["available_bytes"] = max(
+                                    0,
+                                    limit
+                                    - current
+                                    + row["credited_cache_bytes"],
+                                )
+                                available = min(
+                                    available, row["available_bytes"]
+                                )
                 if folder == mount:
                     break
                 folder = folder.parent
@@ -285,7 +346,9 @@ class Progress:
         self.state.update(fields)
         if force or time.monotonic() - self.last >= 2:
             self.last = time.monotonic()
-            self.state.update(updated=time.time(), elapsed_s=time.time() - self.started)
+            self.state.update(
+                updated=time.time(), elapsed_s=time.time() - self.started
+            )
             write(self.path, self.state)
 
     def check(self):
@@ -293,7 +356,14 @@ class Progress:
             raise TimeoutError("Finite wall budget exhausted; no retry")
         snapshot = memory_snapshot()
         if snapshot["available_bytes"] < 1024**3:
-            evidence = self.path.with_name(self.path.stem + "-memory-failure.json")
-            write(evidence, dict(required_bytes=1024**3, passed=False, snapshot=snapshot))
+            evidence = self.path.with_name(
+                self.path.stem + "-memory-failure.json"
+            )
+            write(
+                evidence,
+                dict(required_bytes=1024**3, passed=False, snapshot=snapshot),
+            )
             self.state["memory_failure"] = str(evidence)
-            raise MemoryError("Less than1GiB available job/host RAM; stop without retry")
+            raise MemoryError(
+                "Less than1GiB available job/host RAM; stop without retry"
+            )

@@ -14,7 +14,11 @@ from pretrain import common, composition, storage, streaming
 def source(tmp_path, monkeypatch):
     import x500_storage
 
-    home, store, package = tmp_path / "operations", tmp_path / "store", tmp_path / "package"
+    home, store, package = (
+        tmp_path / "operations",
+        tmp_path / "store",
+        tmp_path / "package",
+    )
     resources = tmp_path / "resources"
     source = home / "tasks/source"
     source.mkdir(parents=True)
@@ -25,9 +29,13 @@ def source(tmp_path, monkeypatch):
     monkeypatch.setattr(recovery, "PACKAGE", package)
     monkeypatch.setattr(recovery, "RESOURCES", resources)
     monkeypatch.setattr(x500_storage, "guard", lambda p, policy=None: Path(p))
-    monkeypatch.setattr(composition, "validate_roles", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        composition, "validate_roles", lambda *args, **kwargs: None
+    )
     rid, label = "a" * 32, "stream-001-001"
-    case = dict(case_id="case-one", role="normal_train", seed=17, mission_seconds=900)
+    case = dict(
+        case_id="case-one", role="normal_train", seed=17, mission_seconds=900
+    )
     ref = dict(kind="file", bytes=3, sha256="a" * 64)
     original = dict(
         path="retired.tar.gz",
@@ -43,7 +51,9 @@ def source(tmp_path, monkeypatch):
             )
         },
     )
-    revision = dict(preprocessing_sha256=common.sha(package / "preprocessing.json"))
+    revision = dict(
+        preprocessing_sha256=common.sha(package / "preprocessing.json")
+    )
     row = dict(
         case,
         run_id=rid,
@@ -54,7 +64,8 @@ def source(tmp_path, monkeypatch):
         revision_lock=revision,
     )
     exported = dict(
-        archive=original["path"], **{k: original[k] for k in ("bytes", "sha256", "members")}
+        archive=original["path"],
+        **{k: original[k] for k in ("bytes", "sha256", "members")},
     )
     ledger = dict(
         status="COLLECTED_PENDING_QUALITY_STOPPED",
@@ -85,24 +96,33 @@ def source(tmp_path, monkeypatch):
         ledger_sha256=common.sha(frozen_dir / "verified-fragment-ledger.json"),
         cases_sha256=common.sha(frozen_dir / "cases.json"),
         plan_sha256=common.sha(frozen_dir / "collection-plan.json"),
-        protected_inventory_sha256=common.sha(resources / "protected-inventory.json"),
+        protected_inventory_sha256=common.sha(
+            resources / "protected-inventory.json"
+        ),
     )
     common.write(frozen_dir / "frozen-fragment.json", fragment)
     output_hashes = dict.fromkeys(("frames", "windows", "exclusions"), "c" * 64)
     statuses = {}
     for action in ("preprocess", "audit"):
-        path = source / "units" / (label + "-" + action) / (rid + ".status.json")
+        path = (
+            source / "units" / (label + "-" + action) / (rid + ".status.json")
+        )
         result = (
             dict(output_hashes=output_hashes)
             if action == "preprocess"
             else dict(numeric_sha256="d" * 64, report_sha256="e" * 64)
         )
-        common.write(path, dict(status="COMPLETE", action=action, run_id=rid, result=result))
+        common.write(
+            path,
+            dict(status="COMPLETE", action=action, run_id=rid, result=result),
+        )
         statuses[action] = path
     root = store / "streamed/pretrain/source/runs" / rid
     root.mkdir(parents=True)
     artifact = root / "artifacts.tar.xz"
-    artifact.write_bytes(b"fixture artifact, deliberately not read during metadata admission")
+    artifact.write_bytes(
+        b"fixture artifact, deliberately not read during metadata admission"
+    )
     members = {
         "canonical/" + name + ".jsonl": dict(bytes=3, sha256=digest)
         for name, digest in output_hashes.items()
@@ -116,10 +136,12 @@ def source(tmp_path, monkeypatch):
         ("scenario.json", "evaluation/scenario.json"),
     ):
         members["identity/" + name] = {
-            k: original["members"][original_name][k] for k in ("bytes", "sha256")
+            k: original["members"][original_name][k]
+            for k in ("bytes", "sha256")
         }
     members["audit/status.json"] = dict(
-        bytes=statuses["audit"].stat().st_size, sha256=common.sha(statuses["audit"])
+        bytes=statuses["audit"].stat().st_size,
+        sha256=common.sha(statuses["audit"]),
     )
     members["audit/numeric.npz"] = dict(bytes=3, sha256="d" * 64)
     members["audit/report.json"] = dict(bytes=3, sha256="e" * 64)
@@ -138,7 +160,9 @@ def source(tmp_path, monkeypatch):
             ),
             audit_status_sha256=common.sha(statuses["audit"]),
             raw_archive_sha256=original["sha256"],
-            row=dict(row, path=str(store / "consumer/pretrain/source" / label / rid)),
+            row=dict(
+                row, path=str(store / "consumer/pretrain/source" / label / rid)
+            ),
             event_path=None,
         ),
     )
@@ -196,20 +220,24 @@ def source(tmp_path, monkeypatch):
     )
 
 
-def test_metadata_admission_preserves_source_and_defers_large_archive_hash(source, monkeypatch):
+def test_metadata_admission_preserves_source_and_defers_large_archive_hash(
+    source, monkeypatch
+):
     before = {p: p.read_bytes() for p in source.path.rglob("*") if p.is_file()}
     real_sha = recovery.sha
 
     def metadata_sha(path):
-        assert Path(path).suffix != ".xz", "large archive must be verified only when restored"
+        assert Path(path).suffix != ".xz", (
+            "large archive must be verified only when restored"
+        )
         return real_sha(path)
 
     monkeypatch.setattr(recovery, "sha", metadata_sha)
     result = recovery.inputs(source.path)
     assert len(result["parts"][0]["frozen"]["runs"]) == 1
-    assert result["parts"][0]["frozen"]["runs"][0]["compact_source"]["receipt"] == str(
-        source.receipt
-    )
+    assert result["parts"][0]["frozen"]["runs"][0]["compact_source"][
+        "receipt"
+    ] == str(source.receipt)
     assert str(source.archive) not in result["source_pins"]
     assert before == {p: p.read_bytes() for p in before}
 
@@ -241,17 +269,24 @@ def test_invalid_capsule_evidence_rejected(source, kind, tmp_path):
     elif kind == "audit_digest":
         receipt["audit_status_sha256"] = "0" * 64
     elif kind == "canonical_digest":
-        receipt["artifact"]["members"]["canonical/windows.jsonl"]["sha256"] = "0" * 64
+        receipt["artifact"]["members"]["canonical/windows.jsonl"]["sha256"] = (
+            "0" * 64
+        )
     elif kind == "identity_digest":
         receipt["artifact"]["members"]["identity/run.json"]["sha256"] = "0" * 64
     elif kind == "inventory":
-        receipt["artifact"]["members"]["../escape"] = dict(bytes=0, sha256="0" * 64)
+        receipt["artifact"]["members"]["../escape"] = dict(
+            bytes=0, sha256="0" * 64
+        )
     elif kind == "ledger":
         data = common.read(source.ledger)
         data["failed_cases"] = ["case-one"]
         common.write(source.ledger, data)
     elif kind == "unfinished":
-        common.write(source.status["audit"], dict(status="FAILED", run_id="a" * 32, action="audit"))
+        common.write(
+            source.status["audit"],
+            dict(status="FAILED", run_id="a" * 32, action="audit"),
+        )
     elif kind == "duplicate":
         data = common.read(source.fragment)
         data["runs"].append(copy.deepcopy(data["runs"][0]))
@@ -272,7 +307,9 @@ def test_live_source_rejected(source, monkeypatch):
         recovery.inputs(source.path)
 
 
-def test_new_task_freezes_preserved_inputs_without_collection(source, tmp_path, monkeypatch):
+def test_new_task_freezes_preserved_inputs_without_collection(
+    source, tmp_path, monkeypatch
+):
     from pretrain import cli
 
     created = tmp_path / "new"
@@ -281,32 +318,53 @@ def test_new_task_freezes_preserved_inputs_without_collection(source, tmp_path, 
     def create(args):
         assert args.workers == args.io_workers == args.audit_workers == 4
         assert args.use_available_ram and args.use_swap
-        common.write(created / "config.json", dict(source_sha256={}, workers=args.workers))
+        common.write(
+            created / "config.json",
+            dict(source_sha256={}, workers=args.workers),
+        )
         return created
 
     monkeypatch.setattr(cli, "create", create)
-    monkeypatch.setattr(recovery.shutil, "disk_usage", lambda _: SimpleNamespace(free=10**15))
+    monkeypatch.setattr(
+        recovery.shutil, "disk_usage", lambda _: SimpleNamespace(free=10**15)
+    )
     before = source.path.joinpath("operator/state.json").read_bytes()
     assert recovery.create_recovery(source.path, "new") == created
     config = common.read(created / "config.json")
-    assert config["mode"] == "recover_capsules" and config["unit_attempts_max"] == 1
-    assert not config["collection_authorized"] and not config["training_authorized"]
+    assert (
+        config["mode"] == "recover_capsules"
+        and config["unit_attempts_max"] == 1
+    )
+    assert (
+        not config["collection_authorized"]
+        and not config["training_authorized"]
+    )
     assert not config["pipeline_overlap"]
     assert source.path.joinpath("operator/state.json").read_bytes() == before
-    assert common.read(created / "recovery-inputs.json")["source_capsules_preserved"]
+    assert common.read(created / "recovery-inputs.json")[
+        "source_capsules_preserved"
+    ]
 
 
-def test_real_restore_and_final_package_keep_source_capsule(tmp_path, monkeypatch):
+def test_real_restore_and_final_package_keep_source_capsule(
+    tmp_path, monkeypatch
+):
     fixture = common.load(
-        "recovery_stream_fixture", common.ROOT / "ai/tests/test_pretrain_streaming.py"
+        "recovery_stream_fixture",
+        common.ROOT / "ai/tests/test_pretrain_streaming.py",
     )
     f = fixture.setup_run(tmp_path, monkeypatch)
     row = f.pipeline.capsule(f.row, f.chunk, f.label, f.folder)
-    original_capsule = Path(common.read(row["compact_source"]["receipt"])["artifact"]["path"])
+    original_capsule = Path(
+        common.read(row["compact_source"]["receipt"])["artifact"]["path"]
+    )
     original_hash = common.sha(original_capsule)
     task = tmp_path / "fresh-task"
     task.mkdir()
-    common.write(task / "recovery-inputs.json", dict(source_pins={}, restore_bytes=0, run_count=1))
+    common.write(
+        task / "recovery-inputs.json",
+        dict(source_pins={}, restore_bytes=0, run_count=1),
+    )
     r = SimpleNamespace(
         task=task,
         state={},
@@ -324,7 +382,11 @@ def test_real_restore_and_final_package_keep_source_capsule(tmp_path, monkeypatc
     monkeypatch.setattr(
         recovery,
         "inputs",
-        lambda _: dict(source_pins={}, restore_bytes=0, parts=[dict(cases=[], frozen=frozen)]),
+        lambda _: dict(
+            source_pins={},
+            restore_bytes=0,
+            parts=[dict(cases=[], frozen=frozen)],
+        ),
     )
     from pretrain import collection
 
@@ -342,9 +404,16 @@ def test_real_restore_and_final_package_keep_source_capsule(tmp_path, monkeypatc
         (dataset / "normal_train.npz").write_bytes(b"fixture")
         common.write(
             prepared / "dataset-seal.json",
-            {str(p.relative_to(dataset)): common.sha(p) for p in dataset.rglob("*") if p.is_file()},
+            {
+                str(p.relative_to(dataset)): common.sha(p)
+                for p in dataset.rglob("*")
+                if p.is_file()
+            },
         )
-        common.write(prepared / "quality.json", dict(passed=True, train_only_scaler_verified=True))
+        common.write(
+            prepared / "quality.json",
+            dict(passed=True, train_only_scaler_verified=True),
+        )
         common.write(
             prepared / "handoff.json",
             dict(
@@ -352,16 +421,23 @@ def test_real_restore_and_final_package_keep_source_capsule(tmp_path, monkeypatc
                 dataset=str(dataset),
                 dataset_seal_sha256=common.sha(prepared / "dataset-seal.json"),
                 quality_sha256=common.sha(prepared / "quality.json"),
-                frozen_manifest_sha256=common.sha(prepared / "frozen-manifest.json"),
+                frozen_manifest_sha256=common.sha(
+                    prepared / "frozen-manifest.json"
+                ),
             ),
         )
         storage.pack(prepared, prepared.parent / "prepared-portable")
 
     r.finalize_prepared = finalize
     recovery.run(r)
-    assert original_capsule.exists() and common.sha(original_capsule) == original_hash
+    assert (
+        original_capsule.exists()
+        and common.sha(original_capsule) == original_hash
+    )
     assert r.state["dataset_requires_restore"] is True
-    assert common.read(r.state["result"])["status"] == "PORTABLE_DATASET_VERIFIED"
+    assert (
+        common.read(r.state["result"])["status"] == "PORTABLE_DATASET_VERIFIED"
+    )
     prepared = streaming.STORE / "processed/pretrain" / task.name / "prepared"
     assert not (prepared / "dataset").exists()
     assert not (prepared / "audit-work").exists()
@@ -369,16 +445,21 @@ def test_real_restore_and_final_package_keep_source_capsule(tmp_path, monkeypatc
 
 def test_archive_corruption_is_rejected_before_assembly(tmp_path, monkeypatch):
     fixture = common.load(
-        "recovery_corrupt_fixture", common.ROOT / "ai/tests/test_pretrain_streaming.py"
+        "recovery_corrupt_fixture",
+        common.ROOT / "ai/tests/test_pretrain_streaming.py",
     )
     f = fixture.setup_run(tmp_path, monkeypatch)
     row = f.pipeline.capsule(f.row, f.chunk, f.label, f.folder)
-    artifact = Path(common.read(row["compact_source"]["receipt"])["artifact"]["path"])
+    artifact = Path(
+        common.read(row["compact_source"]["receipt"])["artifact"]["path"]
+    )
     artifact.write_bytes(b"corrupt")
     prepared = tmp_path / "restore"
     prepared.mkdir()
     f.runner.begin = lambda *a, **kw: None
-    f.runner.finish = lambda *a, **kw: pytest.fail("corrupt restore reported completion")
+    f.runner.finish = lambda *a, **kw: pytest.fail(
+        "corrupt restore reported completion"
+    )
     with pytest.raises(ValueError, match="archive changed"):
         streaming.restore_capsules(f.runner, [row], prepared, common.Budget())
     assert artifact.exists()

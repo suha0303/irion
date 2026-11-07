@@ -8,12 +8,23 @@ from learning.admission19 import check_producer
 from learning.history19.pilot import ROOT, json_file, regular, sha
 
 from .cases import reference, verify_source_snapshot
-from .contract import TASK, bound, case_key, check_scope, validate_policy, write_new
+from .contract import (
+    TASK,
+    bound,
+    case_key,
+    check_scope,
+    validate_policy,
+    write_new,
+)
 
-ERROR = "Joint native consumption: Incomplete actual reference consumption coverage"
+ERROR = (
+    "Joint native consumption: Incomplete actual reference consumption coverage"
+)
 
 
-def _inspect(evidence_root, *, case_id, producer, policy_bundle, assessment_ref):
+def _inspect(
+    evidence_root, *, case_id, producer, policy_bundle, assessment_ref
+):
     plans = check_scope()
     case = plans["cases"][case_key(case_id)]
     policy = json_file(policy_bundle["paired_policy"])
@@ -21,7 +32,10 @@ def _inspect(evidence_root, *, case_id, producer, policy_bundle, assessment_ref)
     validate_policy(policy, policy_bundle["native_policy"])
     check_producer(policy["producer"], producer)
     raw = Path(evidence_root).absolute()
-    state, scenario = json_file(raw / "run.json"), json_file(raw / "evaluation/scenario.json")
+    state, scenario = (
+        json_file(raw / "run.json"),
+        json_file(raw / "evaluation/scenario.json"),
+    )
     fixture = policy.get("fixture_only") is True
     if state.get("status") != "completed" or state.get("origin") != (
         "synthetic_unit_fixture" if fixture else "px4_sitl"
@@ -33,7 +47,9 @@ def _inspect(evidence_root, *, case_id, producer, policy_bundle, assessment_ref)
         or scenario.get("name") != case["scenario"]
         or scenario.get("requested_duration_s") != 480
     ):
-        raise ValueError("MAIN rejected raw does not match original source/case/seed")
+        raise ValueError(
+            "MAIN rejected raw does not match original source/case/seed"
+        )
     if not fixture:
         verify_source_snapshot(raw, producer)
     integrity = json_file(raw / "integrity.json")
@@ -51,7 +67,9 @@ def _inspect(evidence_root, *, case_id, producer, policy_bundle, assessment_ref)
     for name in members:
         path = regular(raw / name)
         if integrity[name] != dict(sha256=sha(path), size=path.stat().st_size):
-            raise ValueError("Rejected raw differs from original closing integrity")
+            raise ValueError(
+                "Rejected raw differs from original closing integrity"
+            )
         refs[name] = reference(path)
     start_receipt = json_file(raw / "evaluation/joint-origin.json")
     end_receipt = json_file(raw / "evaluation/joint-landing.json")
@@ -87,7 +105,9 @@ def _inspect(evidence_root, *, case_id, producer, policy_bundle, assessment_ref)
         or assessment.get("missing_data_passed") is not True
         or assessment.get("instance_isolation_passed") is not True
     ):
-        raise ValueError("Only the known official native-gap rejection is retryable")
+        raise ValueError(
+            "Only the known official native-gap rejection is retryable"
+        )
     prior = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
@@ -102,7 +122,9 @@ def _inspect(evidence_root, *, case_id, producer, policy_bundle, assessment_ref)
                     "Unknown native failure cannot authorize quality reflight"
                 ) from error
         else:
-            raise ValueError("Valid native raw cannot be quality-rejected for reflight")
+            raise ValueError(
+                "Valid native raw cannot be quality-rejected for reflight"
+            )
     finally:
         sys.dont_write_bytecode = prior
     start = json_file(raw / "evaluation/joint-origin.json")["actual_start_us"]
@@ -124,7 +146,9 @@ def _inspect(evidence_root, *, case_id, producer, policy_bundle, assessment_ref)
         or not start + 480000000 <= previous <= end <= start + 480100000
         or maximum <= gap_limit
     ):
-        raise ValueError("Native gap alone, with complete4801reference/fullmission, required")
+        raise ValueError(
+            "Native gap alone, with complete4801reference/fullmission, required"
+        )
     return dict(
         schema="drone-ai.collection19.quality-rejection/1",
         task_id=TASK,
@@ -146,7 +170,12 @@ def _inspect(evidence_root, *, case_id, producer, policy_bundle, assessment_ref)
         physical_run=refs["run.json"],
         refs=refs,
         raw_integrity=reference(raw / "integrity.json"),
-        measured=dict(max_gap_us=maximum, gaps_over_limit=over, reference_rows_seen=4801, gap_limit_us=gap_limit),
+        measured=dict(
+            max_gap_us=maximum,
+            gaps_over_limit=over,
+            reference_rows_seen=4801,
+            gap_limit_us=gap_limit,
+        ),
         fixture_only=fixture,
         actual_data_verified=not fixture,
         authorizes_flight=False,
@@ -166,17 +195,24 @@ def publish_quality_rejection(
     return write_new(output, value)
 
 
-def verify_quality_rejection(ref, attempt, producer, policy_bundle=None, *, case_id=None):
+def verify_quality_rejection(
+    ref, attempt, producer, policy_bundle=None, *, case_id=None
+):
     value = json_file(bound(ref))
     if attempt.get("status") not in {"completed", "quality_rejected"} or (
         case_id is not None and case_key(case_id) != value["case_id"]
     ):
-        raise ValueError("Physical COMPLETED or logical case cannot be disguised during retry")
+        raise ValueError(
+            "Physical COMPLETED or logical case cannot be disguised during retry"
+        )
     if policy_bundle is None:
         policy_bundle = {
-            key: str(bound(value["policy_refs"][key])) for key in ("paired_policy", "native_policy")
+            key: str(bound(value["policy_refs"][key]))
+            for key in ("paired_policy", "native_policy")
         }
-        policy_bundle["origin_relative_path"] = value["policy_refs"]["origin_relative_path"]
+        policy_bundle["origin_relative_path"] = value["policy_refs"][
+            "origin_relative_path"
+        ]
     expected = _inspect(
         value["evidence_root"],
         case_id=value["case_id"],

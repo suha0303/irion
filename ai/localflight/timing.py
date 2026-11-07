@@ -37,11 +37,15 @@ class ClockAudit:
                     dict(
                         start_us=stamp,
                         end_us=stamp,
-                        boundary="clock_reversal" if delta < 0 else "recording_gap",
+                        boundary="clock_reversal"
+                        if delta < 0
+                        else "recording_gap",
                     )
                 )
         else:
-            s["spans"].append(dict(start_us=stamp, end_us=stamp, boundary="start"))
+            s["spans"].append(
+                dict(start_us=stamp, end_us=stamp, boundary="start")
+            )
         s["last_us"] = stamp
         s["samples"] += 1
         s["spans"][-1]["end_us"] = stamp
@@ -107,23 +111,37 @@ def clock_maps(settings):
     if settings is None:
         return {}
     if not isinstance(settings, dict) or len(settings) > 32:
-        raise ValueError("Clock corrections must be a dictionary of at most 32 streams")
+        raise ValueError(
+            "Clock corrections must be a dictionary of at most 32 streams"
+        )
     result = {}
     for key, item in settings.items():
-        if not isinstance(item.get("evidence"), str) or not item["evidence"].strip():
-            raise ValueError("Clock correction requires synchronization evidence")
+        if (
+            not isinstance(item.get("evidence"), str)
+            or not item["evidence"].strip()
+        ):
+            raise ValueError(
+                "Clock correction requires synchronization evidence"
+            )
         pairs = np.asarray(item.get("anchors_us"), dtype="f8")
         if pairs.ndim != 2 or pairs.shape[1] != 2 or not 2 <= len(pairs) <= 100:
-            raise ValueError("Use 2..100 [source_us, common_us] synchronization anchors")
+            raise ValueError(
+                "Use 2..100 [source_us, common_us] synchronization anchors"
+            )
         if (
             not np.isfinite(pairs).all()
             or np.any(pairs < 0)
             or not np.all(np.diff(pairs[:, 0]) > 0)
             or not np.all(np.diff(pairs[:, 1]) > 0)
         ):
-            raise ValueError("Synchronization anchors must be finite, nonnegative and increasing")
+            raise ValueError(
+                "Synchronization anchors must be finite, nonnegative and increasing"
+            )
         x, y = pairs[:, 0], pairs[:, 1]
-        slope = float(np.dot(x - x.mean(), y - y.mean()) / np.dot(x - x.mean(), x - x.mean()))
+        slope = float(
+            np.dot(x - x.mean(), y - y.mean())
+            / np.dot(x - x.mean(), x - x.mean())
+        )
         offset = float(y.mean() - slope * x.mean())
         result[key] = dict(
             scale=slope,
@@ -143,7 +161,9 @@ def corrected_time(key, stamp, maps):
         return int(stamp)
     m = maps[key]
     if not m["source_range_us"][0] <= stamp <= m["source_range_us"][1]:
-        return None  # No extrapolation beyond observed synchronization evidence.
+        return (
+            None  # No extrapolation beyond observed synchronization evidence.
+        )
     value = round(m["scale"] * int(stamp) + m["offset_us"])
     if value < 0:
         raise ValueError("Clock correction produced a negative timestamp")
@@ -154,7 +174,9 @@ def split_streams(streams, maps):
     """Order monotonic streams only; the adapter must resolve physical reset boundaries."""
     unknown = set(maps) - set(streams)
     if unknown:
-        raise ValueError("Unknown clock correction streams: " + ", ".join(sorted(unknown)))
+        raise ValueError(
+            "Unknown clock correction streams: " + ", ".join(sorted(unknown))
+        )
     events, report = [], {}
     for key, records in streams.items():
         previous = None
@@ -163,7 +185,9 @@ def split_streams(streams, maps):
         clipped = 0
         for available, sample, values in records:
             # Preserve first duplicate: a later record cannot replace past information.
-            if previous is not None and (available < previous[0] or sample < previous[1]):
+            if previous is not None and (
+                available < previous[0] or sample < previous[1]
+            ):
                 raise ValueError(
                     f"{key}: clock reversal needs a source-order epoch boundary; cannot align topic arrays by reset count"
                 )
@@ -171,12 +195,17 @@ def split_streams(streams, maps):
                 duplicates += 1
                 continue
             previous = available, sample
-            a, s = corrected_time(key, available, maps), corrected_time(key, sample, maps)
+            a, s = (
+                corrected_time(key, available, maps),
+                corrected_time(key, sample, maps),
+            )
             if a is None or s is None:
                 clipped += 1
                 continue
             if s > a or s < 0:
-                raise ValueError(f"{key}: sample time exceeds availability time")
+                raise ValueError(
+                    f"{key}: sample time exceeds availability time"
+                )
             kept.append((a, s, values))
         events.extend(kept)
         report[key] = dict(

@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from execution import common
 from learning import lifecycle
 
@@ -24,7 +23,9 @@ def fixture(tmp_path, version=2, host=128, mount_root="/"):
     (proc / "self/cgroup").write_text(membership)
     encoded = str(mount).replace(" ", "\\040")
     suffix = "cgroup2 cgroup2 rw" if version == 2 else "cgroup cgroup rw,memory"
-    (proc / "self/mountinfo").write_text(f"1 0 0:1 {mount_root} {encoded} rw - {suffix}\n")
+    (proc / "self/mountinfo").write_text(
+        f"1 0 0:1 {mount_root} {encoded} rw - {suffix}\n"
+    )
     return proc, mount, group
 
 
@@ -57,14 +58,22 @@ def counters(
         )
     else:
         values = dict(
-            inactive_file=inactive, cache=file, dirty=dirty, writeback=writeback, shmem=shmem
+            inactive_file=inactive,
+            cache=file,
+            dirty=dirty,
+            writeback=writeback,
+            shmem=shmem,
         )
         values.update({"total_" + k: v for k, v in list(values.items())})
         (group / "memory.use_hierarchy").write_text(hierarchy)
-    (group / "memory.stat").write_text("".join(f"{k} {v * GIB}\n" for k, v in values.items()))
+    (group / "memory.stat").write_text(
+        "".join(f"{k} {v * GIB}\n" for k, v in values.items())
+    )
 
 
-def test_inactive_read_cache_preserves_64g_limit_without_false_1g_headroom(tmp_path):
+def test_inactive_read_cache_preserves_64g_limit_without_false_1g_headroom(
+    tmp_path,
+):
     proc, _, group = fixture(tmp_path)
     counters(group, inactive=59, file=60)
     result = common.memory_snapshot(proc)
@@ -91,8 +100,12 @@ def test_anonymous_pressure_is_not_excused_by_file_cache_policy(tmp_path):
     assert result["cgroups"][0]["credited_cache_bytes"] == 0
 
 
-@pytest.mark.parametrize("host,parent_limit,expected", [(128, 20, 10), (8, 100, 8)])
-def test_host_and_every_parent_cap_still_apply(tmp_path, host, parent_limit, expected):
+@pytest.mark.parametrize(
+    "host,parent_limit,expected", [(128, 20, 10), (8, 100, 8)]
+)
+def test_host_and_every_parent_cap_still_apply(
+    tmp_path, host, parent_limit, expected
+):
     proc, _, group = fixture(tmp_path, host=host)
     counters(group, inactive=59, file=60)
     counters(group.parent, limit=parent_limit, used=10)
@@ -111,9 +124,12 @@ def test_rebased_mount_root_and_unlimited_leaf_still_use_parent(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "change", ["absent", "missing_counter", "malformed", "negative", "duplicate"]
+    "change",
+    ["absent", "missing_counter", "malformed", "negative", "duplicate"],
 )
-def test_missing_or_invalid_statistics_never_assume_reclaimable_cache(tmp_path, change):
+def test_missing_or_invalid_statistics_never_assume_reclaimable_cache(
+    tmp_path, change
+):
     proc, _, group = fixture(tmp_path)
     counters(group, inactive=59, file=60)
     path = group / "memory.stat"
@@ -138,7 +154,9 @@ def test_v1_hierarchical_usage_uses_total_statistics(tmp_path):
     counters(group, version=1, inactive=59, file=60)
     path = group / "memory.stat"
     path.write_text(
-        path.read_text().replace("inactive_file " + str(59 * GIB) + "\n", "inactive_file 0\n", 1)
+        path.read_text().replace(
+            "inactive_file " + str(59 * GIB) + "\n", "inactive_file 0\n", 1
+        )
     )
     result = common.memory_snapshot(proc)
     assert result["available_bytes"] == 60 * GIB
@@ -174,7 +192,9 @@ def test_unreadable_limit_pair_is_not_unrestricted_host_memory(tmp_path):
     assert result["available_bytes"] == 0 and result["errors"]
 
 
-def test_cache_credit_never_exceeds_usage_or_makes_headroom_exceed_limit(tmp_path):
+def test_cache_credit_never_exceeds_usage_or_makes_headroom_exceed_limit(
+    tmp_path,
+):
     proc, _, group = fixture(tmp_path)
     counters(group, used=2, inactive=1000, file=1000)
     result = common.memory_snapshot(proc)
@@ -184,8 +204,14 @@ def test_cache_credit_never_exceeds_usage_or_makes_headroom_exceed_limit(tmp_pat
 
 def test_progress_failure_saves_the_same_snapshot_once(tmp_path, monkeypatch):
     calls = []
-    snapshot = {"available_bytes": GIB - 1, "node_available_bytes": 100 * GIB, "cgroups": []}
-    monkeypatch.setattr(common, "memory_snapshot", lambda: calls.append(1) or snapshot)
+    snapshot = {
+        "available_bytes": GIB - 1,
+        "node_available_bytes": 100 * GIB,
+        "cgroups": [],
+    }
+    monkeypatch.setattr(
+        common, "memory_snapshot", lambda: calls.append(1) or snapshot
+    )
     progress = common.Progress(tmp_path / "progress.json")
     with pytest.raises(MemoryError):
         progress.check()
@@ -194,7 +220,9 @@ def test_progress_failure_saves_the_same_snapshot_once(tmp_path, monkeypatch):
     assert proof["passed"] is False and len(calls) == 1
 
 
-def test_lifecycle_rejection_records_snapshot_before_failing(tmp_path, monkeypatch):
+def test_lifecycle_rejection_records_snapshot_before_failing(
+    tmp_path, monkeypatch
+):
     cfg = {
         "revision": lifecycle.comparison.REVISION,
         "wall_hours": 48,
@@ -203,19 +231,31 @@ def test_lifecycle_rejection_records_snapshot_before_failing(tmp_path, monkeypat
     }
     common.write(tmp_path / "input/inventory.json", {})
     monkeypatch.setattr(
-        lifecycle, "paths", lambda root: (root, cfg, root / "upstream", root / "compute")
+        lifecycle,
+        "paths",
+        lambda root: (root, cfg, root / "upstream", root / "compute"),
     )
     monkeypatch.setattr(lifecycle, "verify", lambda *a: None)
     monkeypatch.setattr(lifecycle, "check", lambda *a, **k: {"fixture": True})
     calls = []
-    snapshot = {"available_bytes": 47 * GIB, "node_available_bytes": 100 * GIB, "cgroups": []}
-    monkeypatch.setattr(lifecycle, "memory_snapshot", lambda: calls.append(1) or snapshot)
+    snapshot = {
+        "available_bytes": 47 * GIB,
+        "node_available_bytes": 100 * GIB,
+        "cgroups": [],
+    }
+    monkeypatch.setattr(
+        lifecycle, "memory_snapshot", lambda: calls.append(1) or snapshot
+    )
     monkeypatch.setattr(lifecycle.signal, "signal", lambda *a: None)
     monkeypatch.setattr(
-        lifecycle, "Telemetry", lambda *a: pytest.fail("No GPU benchmark or training")
+        lifecycle,
+        "Telemetry",
+        lambda *a: pytest.fail("No GPU benchmark or training"),
     )
     with pytest.raises(MemoryError, match="available"):
         lifecycle.fit_worker(tmp_path)
-    proof = json.loads((tmp_path / "compute/host-memory-admission.json").read_text())
+    proof = json.loads(
+        (tmp_path / "compute/host-memory-admission.json").read_text()
+    )
     assert proof["snapshot"] == snapshot and proof["required_bytes"] == 49 * GIB
     assert proof["passed"] is False and len(calls) == 1

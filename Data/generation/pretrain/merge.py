@@ -39,12 +39,19 @@ def merge_records(parts):
             frozen.get("status") != "DATA_FROZEN"
             or frozen.get("collection_profile") != "balanced300"
             or frozen.get("revision") != first["revision"]
-            or frozen["protected_inventory_sha256"] != first["protected_inventory_sha256"]
-            or any(frozen["revision_lock"][key] != shared[key] for key in COMMON)
+            or frozen["protected_inventory_sha256"]
+            != first["protected_inventory_sha256"]
+            or any(
+                frozen["revision_lock"][key] != shared[key] for key in COMMON
+            )
         ):
-            raise ValueError("Incompatible source physics/preprocessing/protection revision")
+            raise ValueError(
+                "Incompatible source physics/preprocessing/protection revision"
+            )
         if any(row["role"] not in ROLES for row in frozen["runs"]):
-            raise ValueError("Only training/validation/calibration/development roles may merge")
+            raise ValueError(
+                "Only training/validation/calibration/development roles may merge"
+            )
         rows.extend(copy.deepcopy(frozen["runs"]))
         cases.extend(copy.deepcopy(part["cases"]))
         groups.extend(copy.deepcopy(frozen["collection_set_case_ids"]))
@@ -89,12 +96,18 @@ def inputs(bundles):
             or receipt.get("final_test_included") is not False
             or quality.get("passed") is not True
             or quality.get("train_only_scaler_verified") is not True
-            or state.get("status") != "PRETRAIN_COMPACT_READY_STOPPED_RESTORE_REQUIRED"
+            or state.get("status")
+            != "PRETRAIN_COMPACT_READY_STOPPED_RESTORE_REQUIRED"
         ):
-            raise ValueError("Completed independently verified portable source required")
+            raise ValueError(
+                "Completed independently verified portable source required"
+            )
         for name in ("frozen-manifest.json", "quality.json"):
             p = prepared / name
-            if sha(p) != receipt["dataset"]["members"]["evidence/" + name]["sha256"]:
+            if (
+                sha(p)
+                != receipt["dataset"]["members"]["evidence/" + name]["sha256"]
+            ):
                 raise ValueError("Source evidence differs from portable seal")
         cases_path = task / "cases.json"
         if sha(cases_path) != frozen["cases_sha256"]:
@@ -115,16 +128,24 @@ def inputs(bundles):
             if row["role"] in {"normal_dev_eval", "anomaly_dev"}:
                 p = Path(row["compact_source"]["receipt"])
                 if sha(p) != row["compact_source"]["sha256"]:
-                    raise ValueError("Original development event receipt changed")
+                    raise ValueError(
+                        "Original development event receipt changed"
+                    )
                 event = Path(read(p)["event_path"])
                 expected = row["archive"]["members"]["evaluation/events.jsonl"]
-                if event.stat().st_size != expected["bytes"] or sha(event) != expected["sha256"]:
+                if (
+                    event.stat().st_size != expected["bytes"]
+                    or sha(event) != expected["sha256"]
+                ):
                     raise ValueError("Original development event changed")
                 paths.extend([p, event])
         pins.update({str(p): sha(p) for p in paths})
         parts.append(
             dict(
-                bundle=str(bundle), receipt=receipt, frozen=frozen, cases=read(cases_path)["cases"]
+                bundle=str(bundle),
+                receipt=receipt,
+                frozen=frozen,
+                cases=read(cases_path)["cases"],
             )
         )
     frozen, cases = merge_records(parts)
@@ -137,7 +158,9 @@ def create(bundles, name):
     parts, frozen, cases, pins = inputs(bundles)
     required = sum(p["receipt"]["uncompressed_dataset_bytes"] for p in parts)
     if shutil.disk_usage(STORE).free < 3 * required + 50_000_000_000:
-        raise ValueError("Insufficient external scratch space for bounded offline merge")
+        raise ValueError(
+            "Insufficient external scratch space for bounded offline merge"
+        )
     args = cli.parser().parse_args(
         [
             "init",
@@ -177,7 +200,10 @@ def create(bundles, name):
             profile="balanced300",
             execution_started=False,
             scope="Existing source cases only; no collection authorized",
-            sets=[[by_id[key] for key in group] for group in frozen["collection_set_case_ids"]],
+            sets=[
+                [by_id[key] for key in group]
+                for group in frozen["collection_set_case_ids"]
+            ],
         ),
     )
     config["source_sha256"][str(planned)] = sha(planned)
@@ -186,7 +212,10 @@ def create(bundles, name):
     (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
     write(
         task / "cases.json",
-        dict(cases=cases, collection_set_case_ids=frozen["collection_set_case_ids"]),
+        dict(
+            cases=cases,
+            collection_set_case_ids=frozen["collection_set_case_ids"],
+        ),
     )
     write(
         task / "merge-admission.json",
@@ -226,7 +255,8 @@ def run(runner):
                     dataset_sha256=p["receipt"]["dataset"]["sha256"],
                     receipt_sha256=sha(Path(p["bundle"]) / "receipt.json"),
                     frozen_manifest_sha256=sha(
-                        Path(p["bundle"]).parent / "prepared/frozen-manifest.json"
+                        Path(p["bundle"]).parent
+                        / "prepared/frozen-manifest.json"
                     ),
                 )
                 for p in parts
@@ -257,7 +287,9 @@ def run(runner):
 
     for index, part in enumerate(parts):
         target = root / ("source-restore-" + str(index + 1))
-        restore(part["bundle"], target, budget=RestoreBudget(), progress=progress)
+        restore(
+            part["bundle"], target, budget=RestoreBudget(), progress=progress
+        )
         archived = read(target / "evidence/frozen-manifest.json")
         if archived != part["frozen"]:
             raise ValueError("Restored source freeze differs from admission")
@@ -271,7 +303,10 @@ def run(runner):
     runner.finish(
         "merge-restore",
         dict(
-            passed=True, completed=total, source_datasets=len(parts), preprocessing_repeated=False
+            passed=True,
+            completed=total,
+            source_datasets=len(parts),
+            preprocessing_repeated=False,
         ),
     )
     runner.finalize_prepared(frozen, prepared, "merged", 4)
@@ -281,12 +316,22 @@ def run(runner):
     for key in ("dataset", "evaluator_truth"):
         ref = receipt[key]
         if sha(portable / ref["path"]) != ref["sha256"]:
-            raise ValueError("New portable merge archive changed; preserve working data")
+            raise ValueError(
+                "New portable merge archive changed; preserve working data"
+            )
         verify_bundle(portable / ref["path"], ref["members"], Budget())
     paths = [prepared / "dataset", prepared / "audit-work"]
-    paths += [root / ("source-restore-" + str(i + 1)) for i in range(len(parts))]
+    paths += [
+        root / ("source-restore-" + str(i + 1)) for i in range(len(parts))
+    ]
     allowed = {str(p): tree_stamp(p) for p in paths}
-    retire_owned(paths, allowed, portable / "working-cleanup.json", proof=receipt, budget=Budget())
+    retire_owned(
+        paths,
+        allowed,
+        portable / "working-cleanup.json",
+        proof=receipt,
+        budget=Budget(),
+    )
     write(
         prepared / "handoff.json",
         dict(
@@ -297,7 +342,9 @@ def run(runner):
             archived_handoff_sha256=receipt["source_handoff_sha256"],
         ),
     )
-    runner.finish("merge-retire", dict(passed=True, source_bundles_preserved=True))
+    runner.finish(
+        "merge-retire", dict(passed=True, source_bundles_preserved=True)
+    )
     runner.update(
         portable_dataset=str(portable),
         dataset_requires_restore=True,

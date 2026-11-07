@@ -2,7 +2,6 @@ import copy
 
 import numpy as np
 import pytest
-
 from localflight.catalog import MODEL_IDS, Catalog
 from localflight.profiles import eligibility, list_profiles, save_profile
 from localflight.runtime import Runtime
@@ -52,12 +51,16 @@ def test_catalog_exact_set_and_tamper_detection(tmp_path):
     with pytest.raises(ValueError, match="Unknown"):
         catalog.entry("../../model")
     catalog.manifest = copy.deepcopy(catalog.manifest)
-    catalog.manifest["files"]["models/forecast_lstm_h64_l2/model.safetensors"] = "0" * 64
+    catalog.manifest["files"][
+        "models/forecast_lstm_h64_l2/model.safetensors"
+    ] = "0" * 64
     with pytest.raises(ValueError, match="integrity"):
         catalog.entry("forecast_lstm_h64_l2")
 
 
-@pytest.mark.parametrize("model_id", ["forecast_lstm_h64_l2", "forecast_transformer_h64_l2"])
+@pytest.mark.parametrize(
+    "model_id", ["forecast_lstm_h64_l2", "forecast_transformer_h64_l2"]
+)
 def test_runtime_cpu_restore_and_input_gate(model_id):
     runtime = Runtime(model_id)
     a = np.zeros((1, 100, 19), dtype="f4")
@@ -74,6 +77,9 @@ def test_runtime_cpu_restore_and_input_gate(model_id):
 def test_run_health_requires_complete_unpadded_run():
     runtime = Runtime("run_health_lstm_h64_l2")
     a = np.zeros((1, 101, 19), dtype="f4")
-    assert runtime.predict_scaled(a, np.array([101], dtype="i8")).shape == (1, 101)
+    assert runtime.predict_scaled(a, np.array([101], dtype="i8")).shape == (
+        1,
+        101,
+    )
     with pytest.raises(ValueError, match="Exact"):
         runtime.predict_scaled(a, np.array([100], dtype="i8"))

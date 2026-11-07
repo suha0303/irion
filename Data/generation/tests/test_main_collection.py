@@ -6,7 +6,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 from pretrain import cli, common, main_storage, pilot45, pilot_parallel
 from pretrain import main_collection as main
 
@@ -24,7 +23,8 @@ def test_frozen_main_contains_lr_once_and_all_approved_roles():
             assert any(
                 c in chunk
                 and any(
-                    n["group_id"] == c["group_id"] and n["category"] == "paired_normal"
+                    n["group_id"] == c["group_id"]
+                    and n["category"] == "paired_normal"
                     for n in chunk
                 )
                 for chunk in chunks
@@ -32,11 +32,15 @@ def test_frozen_main_contains_lr_once_and_all_approved_roles():
 
 
 @pytest.mark.parametrize("choice,scope", [("1", "lr108"), ("2", "main")])
-def test_real_menu_dispatches_selected_finite_scope_once(monkeypatch, choice, scope):
+def test_real_menu_dispatches_selected_finite_scope_once(
+    monkeypatch, choice, scope
+):
     calls = []
     task = Path("fixture-task")
     monkeypatch.setattr("builtins.input", lambda _: choice)
-    monkeypatch.setattr(main, "user_start", lambda selected: calls.append(selected) or task)
+    monkeypatch.setattr(
+        main, "user_start", lambda selected: calls.append(selected) or task
+    )
     monkeypatch.setattr(cli, "watch", lambda selected: calls.append(selected))
     cli.menu()
     assert calls == [scope, task]
@@ -46,29 +50,40 @@ def test_menu_can_open_existing_screen_without_submitting(monkeypatch):
     calls = []
     monkeypatch.setattr(cli, "choose", lambda *a: "3")
     monkeypatch.setattr(cli, "existing_task", lambda: calls.append("existing"))
-    monkeypatch.setattr(main, "user_start", lambda *a: pytest.fail("No resubmission"))
+    monkeypatch.setattr(
+        main, "user_start", lambda *a: pytest.fail("No resubmission")
+    )
     cli.menu()
     assert calls == ["existing"]
 
 
 @pytest.mark.parametrize("no_watch", [False, True])
-def test_direct_collection_opens_screen_only_when_requested(monkeypatch, tmp_path, no_watch):
+def test_direct_collection_opens_screen_only_when_requested(
+    monkeypatch, tmp_path, no_watch
+):
     calls = []
-    monkeypatch.setattr(main, "user_start", lambda *a, **k: calls.append("submitted") or tmp_path)
-    monkeypatch.setattr(cli, "watch", lambda path: calls.append(("screen", path)))
+    monkeypatch.setattr(
+        main,
+        "user_start",
+        lambda *a, **k: calls.append("submitted") or tmp_path,
+    )
+    monkeypatch.setattr(
+        cli, "watch", lambda path: calls.append(("screen", path))
+    )
     monkeypatch.setattr(main.sys.stdin, "isatty", lambda: True)
     monkeypatch.setattr(main.sys.stdout, "isatty", lambda: True)
     main.main(["collect", "main"] + (["--no-watch"] if no_watch else []))
     assert calls == ["submitted"] + ([] if no_watch else [("screen", tmp_path)])
 
 
-def test_prepare_creates_archive_progress_parent_before_real_archive(monkeypatch, tmp_path):
+def test_prepare_creates_archive_progress_parent_before_real_archive(
+    monkeypatch, tmp_path
+):
     from pretrain import ai19, main_views
 
     ai19.ai_modules()
     common.package_imports()
     from learning import admission19
-
     from pretrain import archive
 
     class ArchiveCompleted(Exception):
@@ -79,7 +94,10 @@ def test_prepare_creates_archive_progress_parent_before_real_archive(monkeypatch
     for name in ai19.CONSUMER:
         common.write(raw / name, {})
     (raw / "observations.txt").write_text("fixture observations\n")
-    expected, protection = tmp_path / "expected.json", tmp_path / "protection.json"
+    expected, protection = (
+        tmp_path / "expected.json",
+        tmp_path / "protection.json",
+    )
     common.write(expected, {})
     common.write(protection, {})
     output = tmp_path / "processed/physical-01/attempt-01"
@@ -91,7 +109,10 @@ def test_prepare_creates_archive_progress_parent_before_real_archive(monkeypatch
     monkeypatch.setattr(
         ai19,
         "admit",
-        lambda *a, **k: (dict(path=str(raw)), dict(mission_interval={}, assessment={})),
+        lambda *a, **k: (
+            dict(path=str(raw)),
+            dict(mission_interval={}, assessment={}),
+        ),
     )
     monkeypatch.setattr(main_views.pilot19, "source_evidence", lambda *a: {})
     common.write(raw / "evaluation/scenario.json", {})
@@ -103,15 +124,25 @@ def test_prepare_creates_archive_progress_parent_before_real_archive(monkeypatch
         saved = common.read(cache)
         assert Path(saved["archive"]["archive"]).is_file()
         assert (
-            common.read(output / "archive-evidence/archive-progress.json")["status"] == "COMPLETED"
+            common.read(output / "archive-evidence/archive-progress.json")[
+                "status"
+            ]
+            == "COMPLETED"
         )
-        assert (output / "archive-evidence/archive-verify-progress.json").is_file()
+        assert (
+            output / "archive-evidence/archive-verify-progress.json"
+        ).is_file()
         raise ArchiveCompleted
 
     monkeypatch.setattr(archive, "extract_consumer", after_archive)
     with pytest.raises(ArchiveCompleted):
         main_views.prepare(
-            dict(cohort="normal_train", purpose="train", path=str(raw), execution_task="fixture"),
+            dict(
+                cohort="normal_train",
+                purpose="train",
+                path=str(raw),
+                execution_task="fixture",
+            ),
             output,
             expected,
             cache,
@@ -123,7 +154,8 @@ def test_prepare_creates_archive_progress_parent_before_real_archive(monkeypatch
 
 
 @pytest.mark.parametrize(
-    "message,expected_calls", [("Case child exit1; fixture", 3), ("Available RAM below1GB", 1)]
+    "message,expected_calls",
+    [("Case child exit1; fixture", 3), ("Available RAM below1GB", 1)],
 )
 def test_explicit_unit_failure_retries_wrapped_exit_but_not_parent_resource_stop(
     monkeypatch, tmp_path, message, expected_calls
@@ -134,7 +166,9 @@ def test_explicit_unit_failure_retries_wrapped_exit_but_not_parent_resource_stop
     c = main.Campaign(task)
     entry = c.ledger["cases"][rows[0]["case_id"]]
     raw = str(tmp_path / "valid-raw")
-    entry.update(run=raw, attempts=[dict(number=1, state="COMPLETED", run_id="fixture")])
+    entry.update(
+        run=raw, attempts=[dict(number=1, state="COMPLETED", run_id="fixture")]
+    )
     calls = []
 
     def fail(job):
@@ -160,7 +194,10 @@ def test_explicit_unit_failure_retries_wrapped_exit_but_not_parent_resource_stop
     assert len(calls) == expected_calls
     assert entry["run"] == raw and len(entry["attempts"]) == 1
     if expected_calls == 3:
-        assert entry["status"] == "UNAVAILABLE" and entry["processing_attempts"] == 3
+        assert (
+            entry["status"] == "UNAVAILABLE"
+            and entry["processing_attempts"] == 3
+        )
 
 
 def runtime(monkeypatch, tmp_path, count=17):
@@ -187,7 +224,9 @@ def runtime(monkeypatch, tmp_path, count=17):
     monkeypatch.setattr(pilot_parallel, "ROOT", tmp_path)
     monkeypatch.setattr(pilot_parallel, "check_ports", lambda *a: None)
     monkeypatch.setattr(
-        pilot45, "collector", lambda: SimpleNamespace(check_instance_socket=lambda i: None)
+        pilot45,
+        "collector",
+        lambda: SimpleNamespace(check_instance_socket=lambda i: None),
     )
     monkeypatch.setattr(pilot45, "register", lambda *a: None)
     common.write(task / "config.json", cfg)
@@ -218,7 +257,9 @@ def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
         if j["action"] == "flight":
             n = counts[cid] = counts.get(cid, 0) + 1
             failed = cid == rows[0]["case_id"] and n <= failures
-            rid = hashlib.md5((cid + str(n)).encode(), usedforsecurity=False).hexdigest()
+            rid = hashlib.md5(
+                (cid + str(n)).encode(), usedforsecurity=False
+            ).hexdigest()
             raw = tmp_path / "simulation/runs" / rid
             common.write(
                 raw / "run.json",
@@ -234,7 +275,9 @@ def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
             common.write(
                 raw / "evaluation/scenario.json",
                 dict(
-                    name=c["scenario"], seed=c["seed"], operation_variation=c["operation_variation"]
+                    name=c["scenario"],
+                    seed=c["seed"],
+                    operation_variation=c["operation_variation"],
                 ),
             )
             common.write(
@@ -263,12 +306,19 @@ def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
         elif j["action"] == "audit":
             common.write(
                 j["receipt"],
-                dict(export_receipt_sha256=common.sha(Path(j["output"]) / "receipt.json")),
+                dict(
+                    export_receipt_sha256=common.sha(
+                        Path(j["output"]) / "receipt.json"
+                    )
+                ),
             )
         elif j["action"] == "commit":
             p = tmp_path / "commits" / (cid + ".json")
             common.write(p, dict(fixture_only=True))
-            common.write(j["receipt"], dict(commit=dict(path=str(p), sha256=common.sha(p))))
+            common.write(
+                j["receipt"],
+                dict(commit=dict(path=str(p), sha256=common.sha(p))),
+            )
         elif j["action"] == "aggregate":
             common.write(j["receipt"], dict(fixture_only=True))
         else:
@@ -295,7 +345,10 @@ def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
             and c.state["status"] == "MAIN19_INCOMPLETE_STOPPED"
         )
         assert not any(action == "aggregate" for action, cid in events)
-    index = [json.loads(line) for line in (task / "exports.jsonl").read_text().splitlines()]
+    index = [
+        json.loads(line)
+        for line in (task / "exports.jsonl").read_text().splitlines()
+    ]
     assert len(index) == 17
     assert index[0]["status"] == ("accepted" if failures == 1 else "failed")
     assert not list((tmp_path / "simulation/runs").glob("*/px4"))
@@ -303,13 +356,24 @@ def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
 
 @pytest.mark.parametrize(
     "reason",
-    ["disk full", "integrity mismatch", "source changed", "contract mismatch", "MemoryError"],
+    [
+        "disk full",
+        "integrity mismatch",
+        "source changed",
+        "contract mismatch",
+        "MemoryError",
+    ],
 )
 def test_shared_failures_are_never_retried(tmp_path, reason):
     raw = tmp_path / "run"
-    common.write(raw / "run.json", dict(status="failed", primary_failure=dict(reason=reason)))
+    common.write(
+        raw / "run.json",
+        dict(status="failed", primary_failure=dict(reason=reason)),
+    )
     result = dict(status="failed", run=str(raw), reason=reason)
-    assert main.retryable(result, 1) is False and result.get("main_shared_failure")
+    assert main.retryable(result, 1) is False and result.get(
+        "main_shared_failure"
+    )
 
 
 def storage_fixture(monkeypatch, tmp_path):
@@ -335,7 +399,9 @@ def storage_fixture(monkeypatch, tmp_path):
     common.write(out / "receipt.json", prepared)
     common.write(out / "frames.jsonl", {"fixture_only": True})
     audit = task / "audit.json"
-    common.write(audit, dict(export_receipt_sha256=common.sha(out / "receipt.json")))
+    common.write(
+        audit, dict(export_receipt_sha256=common.sha(out / "receipt.json"))
+    )
     common.write(
         task / "pilot/execution/case/archive-cache.json",
         dict(
@@ -358,8 +424,18 @@ def storage_fixture(monkeypatch, tmp_path):
         audit_receipt=str(audit),
         online_available=True,
         run_available=True,
-        attempts=[dict(number=1, state="COMPLETED", run_id=raw.name, parent_attempt_id=None)],
-        files={str(p): common.sha(p) for p in [out / "receipt.json", out / "frames.jsonl", audit]},
+        attempts=[
+            dict(
+                number=1,
+                state="COMPLETED",
+                run_id=raw.name,
+                parent_attempt_id=None,
+            )
+        ],
+        files={
+            str(p): common.sha(p)
+            for p in [out / "receipt.json", out / "frames.jsonl", audit]
+        },
     )
     target = store / "capsules/main19/current/case"
     protected = tmp_path / "protected"
@@ -367,8 +443,12 @@ def storage_fixture(monkeypatch, tmp_path):
     return task, entry, target, raw, archive, consumer, protected
 
 
-def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(monkeypatch, tmp_path):
-    task, e, target, raw, archive, consumer, protected = storage_fixture(monkeypatch, tmp_path)
+def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(
+    monkeypatch, tmp_path
+):
+    task, e, target, raw, archive, consumer, protected = storage_fixture(
+        monkeypatch, tmp_path
+    )
     actual = main_storage.pack_files
 
     def crash(sources, path, budget):
@@ -378,7 +458,11 @@ def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(monkeypat
     monkeypatch.setattr(main_storage, "pack_files", crash)
     with pytest.raises(RuntimeError):
         main_storage.commit(task, e, target, set())
-    assert raw.exists() and archive.exists() and not (target / "capsule.tar.xz").exists()
+    assert (
+        raw.exists()
+        and archive.exists()
+        and not (target / "capsule.tar.xz").exists()
+    )
     monkeypatch.setattr(main_storage, "pack_files", actual)
     main_storage.commit(task, e, target, set())
     assert (
@@ -391,8 +475,12 @@ def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(monkeypat
     main_storage.committed(target / "commit.json")
 
 
-def test_interrupted_deletion_has_durable_intent_and_exact_resume(monkeypatch, tmp_path):
-    task, e, target, raw, archive, consumer, protected = storage_fixture(monkeypatch, tmp_path)
+def test_interrupted_deletion_has_durable_intent_and_exact_resume(
+    monkeypatch, tmp_path
+):
+    task, e, target, raw, archive, consumer, protected = storage_fixture(
+        monkeypatch, tmp_path
+    )
     actual = main_storage.retire_owned
 
     def crash(paths, allowed, journal, **kwargs):
@@ -403,14 +491,22 @@ def test_interrupted_deletion_has_durable_intent_and_exact_resume(monkeypatch, t
     with pytest.raises(RuntimeError):
         main_storage.commit(task, e, target, set())
     assert not raw.exists() and archive.exists() and consumer.exists()
-    assert common.read(target / "cleanup-current.json")["in_progress"] == str(raw)
+    assert common.read(target / "cleanup-current.json")["in_progress"] == str(
+        raw
+    )
     monkeypatch.setattr(main_storage, "retire_owned", actual)
     main_storage.commit(task, e, target, set())
-    assert not archive.exists() and not consumer.exists() and protected.read_text() == "prior data"
+    assert (
+        not archive.exists()
+        and not consumer.exists()
+        and protected.read_text() == "prior data"
+    )
     assert len(common.read(target / "cleanup.json")["deleted"]) == 3
 
 
-def test_worker_preflight_failure_is_visible_without_any_dispatch(monkeypatch, tmp_path):
+def test_worker_preflight_failure_is_visible_without_any_dispatch(
+    monkeypatch, tmp_path
+):
     import os
 
     task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
@@ -424,7 +520,9 @@ def test_worker_preflight_failure_is_visible_without_any_dispatch(monkeypatch, t
 
     monkeypatch.setattr(main, "preflight", blocked)
     monkeypatch.setattr(
-        pilot45, "child", lambda *a, **k: pytest.fail("No child on preflight failure")
+        pilot45,
+        "child",
+        lambda *a, **k: pytest.fail("No child on preflight failure"),
     )
     with pytest.raises(ValueError, match="preflight"):
         main.worker(task)
@@ -432,7 +530,9 @@ def test_worker_preflight_failure_is_visible_without_any_dispatch(monkeypatch, t
     assert state["status"] == "BLOCKED_STOPPED" and "source" in state["reason"]
 
 
-def test_real_subprocess_shared_errno_survives_wrapped_child_error(monkeypatch, tmp_path):
+def test_real_subprocess_shared_errno_survives_wrapped_child_error(
+    monkeypatch, tmp_path
+):
     import subprocess
 
     task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
@@ -444,7 +544,14 @@ def test_real_subprocess_shared_errno_survives_wrapped_child_error(monkeypatch, 
     entry = common.read(task / "cases" / (rows[0]["case_id"] + ".json"))
     entry.update(
         run=str(raw),
-        attempts=[dict(number=1, state="COMPLETED", run_id=raw.name, parent_attempt_id=None)],
+        attempts=[
+            dict(
+                number=1,
+                state="COMPLETED",
+                run_id=raw.name,
+                parent_attempt_id=None,
+            )
+        ],
     )
     common.write(task / "cases" / (rows[0]["case_id"] + ".json"), entry)
     c = main.Campaign(task)
@@ -467,14 +574,18 @@ m.case_entry(p)
         text=True,
     )
     assert result.returncode != 0
-    assert Path(job["request"]).with_suffix(".failure.json").exists(), result.stderr
+    assert Path(job["request"]).with_suffix(".failure.json").exists(), (
+        result.stderr
+    )
     failure = common.read(Path(job["request"]).with_suffix(".failure.json"))
     assert failure["failure_scope"] == "shared" and failure["errno"] == 28
     calls = []
 
     def wrapped(*args, **kwargs):
         calls.append(1)
-        raise RuntimeError("Case child exit1; original errno is only in its receipt")
+        raise RuntimeError(
+            "Case child exit1; original errno is only in its receipt"
+        )
 
     monkeypatch.setattr(c, "begin_processing", lambda case: job)
     monkeypatch.setattr(c, "process", wrapped)
@@ -483,10 +594,15 @@ m.case_entry(p)
     with ThreadPoolExecutor(max_workers=4) as pool:
         with pytest.raises(pilot45.Blocked):
             c.process_batch(rows, pool)
-    assert calls == [1] and entry["run"] == c.ledger["cases"][rows[0]["case_id"]]["run"]
+    assert (
+        calls == [1]
+        and entry["run"] == c.ledger["cases"][rows[0]["case_id"]]["run"]
+    )
 
 
-@pytest.mark.parametrize("quality_failures,transform_failures", [(1, 0), (3, 0), (0, 2)])
+@pytest.mark.parametrize(
+    "quality_failures,transform_failures", [(1, 0), (3, 0), (0, 2)]
+)
 def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
     monkeypatch, tmp_path, quality_failures, transform_failures
 ):
@@ -522,7 +638,9 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
             common.write(
                 raw / "evaluation/scenario.json",
                 dict(
-                    name=c["scenario"], seed=c["seed"], operation_variation=c["operation_variation"]
+                    name=c["scenario"],
+                    seed=c["seed"],
+                    operation_variation=c["operation_variation"],
                 ),
             )
             common.write(j["receipt"], dict(run=str(raw), status="completed"))
@@ -531,16 +649,25 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
             if len(native) <= quality_failures:
                 q = Path(request).with_suffix(".quality-fixture.json")
                 common.write(
-                    q, dict(fixture_only=True, run_id=native[-1], physical_status="completed")
+                    q,
+                    dict(
+                        fixture_only=True,
+                        run_id=native[-1],
+                        physical_status="completed",
+                    ),
                 )
                 common.write(
                     Path(request).with_suffix(".failure.json"),
                     dict(
                         failure_scope="quality_rejection",
-                        quality_rejection=dict(path=str(q), sha256=common.sha(q)),
+                        quality_rejection=dict(
+                            path=str(q), sha256=common.sha(q)
+                        ),
                     ),
                 )
-                raise RuntimeError("Case child exit1: official rejection fixture")
+                raise RuntimeError(
+                    "Case child exit1: official rejection fixture"
+                )
             if len(prepare) <= transform_failures:
                 raise RuntimeError("Independent conversion fixture error")
             out = Path(j["output"])
@@ -558,12 +685,19 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
         elif action == "audit":
             common.write(
                 j["receipt"],
-                dict(export_receipt_sha256=common.sha(Path(j["output"]) / "receipt.json")),
+                dict(
+                    export_receipt_sha256=common.sha(
+                        Path(j["output"]) / "receipt.json"
+                    )
+                ),
             )
         elif action == "commit":
             q = tmp_path / "committed.json"
             common.write(q, dict(fixture_only=True))
-            common.write(j["receipt"], dict(commit=dict(path=str(q), sha256=common.sha(q))))
+            common.write(
+                j["receipt"],
+                dict(commit=dict(path=str(q), sha256=common.sha(q))),
+            )
         elif action == "aggregate":
             common.write(j["receipt"], dict(fixture_only=True))
         else:
@@ -573,20 +707,35 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
     c = main.Campaign(task)
     c.run()
     e = c.ledger["cases"][rows[0]["case_id"]]
-    assert len(native) == (1 if not quality_failures else min(quality_failures + 1, 3))
+    assert len(native) == (
+        1 if not quality_failures else min(quality_failures + 1, 3)
+    )
     assert all(a["state"] == "COMPLETED" for a in e["attempts"])
     for i, a in enumerate(e["attempts"]):
         assert a["parent_attempt_id"] == (native[i - 1] if i else None)
-    projected = common.read(task / "case-ledgers" / (rows[0]["case_id"] + ".json"))
-    assert sum(a["status"] == "quality_rejected" for a in projected["attempts"]) == quality_failures
+    projected = common.read(
+        task / "case-ledgers" / (rows[0]["case_id"] + ".json")
+    )
+    assert (
+        sum(a["status"] == "quality_rejected" for a in projected["attempts"])
+        == quality_failures
+    )
     if quality_failures == 3:
-        assert e["status"] == "UNAVAILABLE" and c.state["status"] == "MAIN19_INCOMPLETE_STOPPED"
+        assert (
+            e["status"] == "UNAVAILABLE"
+            and c.state["status"] == "MAIN19_INCOMPLETE_STOPPED"
+        )
     else:
         assert e["status"] == "COMMITTED"
     if transform_failures:
         assert prepare == [native[0]] * 3
     for rid in native[:quality_failures]:
-        assert common.read(tmp_path / "simulation/runs" / rid / "run.json")["status"] == "completed"
+        assert (
+            common.read(tmp_path / "simulation/runs" / rid / "run.json")[
+                "status"
+            ]
+            == "completed"
+        )
 
 
 @pytest.mark.parametrize(
@@ -605,10 +754,16 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
         "owner_invocation",
     ],
 )
-def test_input_pass_is_not_final_stopped_without_actual_exit_and_cleanup(change):
+def test_input_pass_is_not_final_stopped_without_actual_exit_and_cleanup(
+    change,
+):
     import os
 
-    cfg = dict(mode="main19", owner_uid=os.getuid(), service_unit="drone-pretrain-test.service")
+    cfg = dict(
+        mode="main19",
+        owner_uid=os.getuid(),
+        service_unit="drone-pretrain-test.service",
+    )
     state = dict(
         status="MAIN19_INPUTS_PASSED_TERMINATING",
         invocation_id="a" * 32,
@@ -643,7 +798,10 @@ def test_input_pass_is_not_final_stopped_without_actual_exit_and_cleanup(change)
     )
     if change == "gc":
         properties.update(
-            LoadState="not-found", InvocationID="", ExecMainCode="0", Result="success"
+            LoadState="not-found",
+            InvocationID="",
+            ExecMainCode="0",
+            Result="success",
         )
     elif change == "cleanup":
         proof["passed"] = False
@@ -662,11 +820,18 @@ def test_input_pass_is_not_final_stopped_without_actual_exit_and_cleanup(change)
     elif change == "owner_invocation":
         owner["invocation_id"] = "b" * 32
     assert main.termination_verified(
-        cfg, state, proof, properties, owner, processes_released=change != "live_owner"
+        cfg,
+        state,
+        proof,
+        properties,
+        owner,
+        processes_released=change != "live_owner",
     ) is (change in {None, "gc"})
 
 
-@pytest.mark.parametrize("broken", [None, "worker_exit", "owner_hash", "submission"])
+@pytest.mark.parametrize(
+    "broken", [None, "worker_exit", "owner_hash", "submission"]
+)
 def test_collected_unit_gc_requires_bound_real_exit_and_released_owner(
     monkeypatch, tmp_path, broken
 ):
@@ -692,7 +857,11 @@ def test_collected_unit_gc_requires_bound_real_exit_and_released_owner(
     common.write(cleanup, dict(status="CLEANUP_COMPLETE"))
     common.write(
         task / "operator/service.json",
-        dict(unit=unit, owner_uid=os.getuid(), config_sha256=owner["config_sha256"]),
+        dict(
+            unit=unit,
+            owner_uid=os.getuid(),
+            config_sha256=owner["config_sha256"],
+        ),
     )
     proof = dict(
         passed=True,
@@ -702,7 +871,9 @@ def test_collected_unit_gc_requires_bound_real_exit_and_released_owner(
         worker_exit_code="exited",
         worker_exit_status="0",
         config_sha256=owner["config_sha256"],
-        worker_identity=dict(path=str(owner_path), sha256=common.sha(owner_path)),
+        worker_identity=dict(
+            path=str(owner_path), sha256=common.sha(owner_path)
+        ),
         cleanup_sha256=common.sha(cleanup),
         cleanup_report=dict(path=str(cleanup), sha256=common.sha(cleanup)),
     )
@@ -741,12 +912,16 @@ def test_collected_unit_gc_requires_bound_real_exit_and_released_owner(
     monkeypatch.setattr(main, "worker_processes_released", lambda _: True)
     monkeypatch.setattr(pilot_parallel, "released", lambda: None)
     assert main.reconcile_termination(task)["status"] == (
-        "MAIN19_INPUTS_PASSED_STOPPED" if broken is None else "MAIN19_INPUTS_PASSED_TERMINATING"
+        "MAIN19_INPUTS_PASSED_STOPPED"
+        if broken is None
+        else "MAIN19_INPUTS_PASSED_TERMINATING"
     )
 
 
 @pytest.mark.parametrize("linked", ["freeze", "source", "alias"])
-def test_same_bytes_symlink_cannot_be_a_main_handoff_input(monkeypatch, tmp_path, linked):
+def test_same_bytes_symlink_cannot_be_a_main_handoff_input(
+    monkeypatch, tmp_path, linked
+):
     monkeypatch.setattr(main, "ROOT", tmp_path)
     source = tmp_path / "ai/source.py"
     source.parent.mkdir()
@@ -773,7 +948,9 @@ def test_same_bytes_symlink_cannot_be_a_main_handoff_input(monkeypatch, tmp_path
         main.dependencies(handoff)
 
 
-def test_scope_checkpoint_reuses_main_after_lr_failure_and_rejects_changed_bytes(tmp_path):
+def test_scope_checkpoint_reuses_main_after_lr_failure_and_rejects_changed_bytes(
+    tmp_path,
+):
     task = tmp_path / "task"
     cfg = dict(external_storage=str(tmp_path / "store"), policy_bundle={})
     common.write(task / "config.json", cfg)
@@ -807,7 +984,10 @@ def test_scope_checkpoint_reuses_main_after_lr_failure_and_rejects_changed_bytes
     with pytest.raises(RuntimeError):
         main.aggregate_scope(task, cfg, "lr108", job, aggregate)
     job["aggregate_attempt"] = 2
-    assert main.aggregate_scope(task, cfg, "main", job, aggregate)["reused"] is True
+    assert (
+        main.aggregate_scope(task, cfg, "main", job, aggregate)["reused"]
+        is True
+    )
     main.aggregate_scope(task, cfg, "lr108", job, aggregate)
     assert calls == ["main", "lr108", "lr108"]
     (Path(first["output"]) / "array.npz").write_bytes(b"changed")
@@ -815,7 +995,9 @@ def test_scope_checkpoint_reuses_main_after_lr_failure_and_rejects_changed_bytes
         main.aggregate_scope(task, cfg, "main", job, aggregate)
 
 
-def test_main_status_reuses_eight_by_two_grid_and_actual_progress_keys(monkeypatch, tmp_path):
+def test_main_status_reuses_eight_by_two_grid_and_actual_progress_keys(
+    monkeypatch, tmp_path
+):
     cfg = dict(scope="main", planned_cases=1674)
     common.write(tmp_path / "config.json", cfg)
     state = dict(
@@ -833,7 +1015,12 @@ def test_main_status_reuses_eight_by_two_grid_and_actual_progress_keys(monkeypat
             for i in range(16)
         ],
         aggregate_progress=[
-            dict(dataset_scope="main", stage="train_statistics", done=4, total=540)
+            dict(
+                dataset_scope="main",
+                stage="train_statistics",
+                done=4,
+                total=540,
+            )
         ],
     )
     monkeypatch.setattr(main, "identity", lambda _: "x")
@@ -844,10 +1031,14 @@ def test_main_status_reuses_eight_by_two_grid_and_actual_progress_keys(monkeypat
     assert "train_statistics · 4/540" in text and '{"' not in text
 
 
-def test_detailed_screen_keeps_all_lanes_and_honest_stage_progress(monkeypatch, tmp_path):
+def test_detailed_screen_keeps_all_lanes_and_honest_stage_progress(
+    monkeypatch, tmp_path
+):
     from pretrain.display import screen
 
-    common.write(tmp_path / "config.json", dict(scope="main", planned_cases=1674))
+    common.write(
+        tmp_path / "config.json", dict(scope="main", planned_cases=1674)
+    )
     state = dict(
         status="RUNNING",
         pid=123,
@@ -861,7 +1052,11 @@ def test_detailed_screen_keeps_all_lanes_and_honest_stage_progress(monkeypatch, 
         batch=2,
         batches=105,
         stage="collection",
-        resources=dict(available_bytes=12e9, owned_tree_rss_bytes=2e9, disk_free_bytes=450e9),
+        resources=dict(
+            available_bytes=12e9,
+            owned_tree_rss_bytes=2e9,
+            disk_free_bytes=450e9,
+        ),
         active=[
             dict(
                 instance=i,
@@ -898,8 +1093,12 @@ def test_detailed_screen_keeps_all_lanes_and_honest_stage_progress(monkeypatch, 
     assert "q/Ctrl+C" in fitted
 
 
-def test_stopped_screen_freezes_elapsed_and_does_not_claim_live_work(monkeypatch, tmp_path):
-    common.write(tmp_path / "config.json", dict(scope="main", planned_cases=1674))
+def test_stopped_screen_freezes_elapsed_and_does_not_claim_live_work(
+    monkeypatch, tmp_path
+):
+    common.write(
+        tmp_path / "config.json", dict(scope="main", planned_cases=1674)
+    )
     state = dict(
         status="BLOCKED_STOPPED",
         started=100,
@@ -917,17 +1116,30 @@ def test_stopped_screen_freezes_elapsed_and_does_not_claim_live_work(monkeypatch
     assert "전체 검산·실제 종료 확인" not in text
 
 
-def test_unknown_worker_keeps_screen_available_without_child_log(monkeypatch, tmp_path):
-    common.write(tmp_path / "config.json", dict(scope="main", planned_cases=1674))
-    state = dict(status="RUNNING", pid=123, pid_start_ticks="old", active=[dict(instance=0)])
+def test_unknown_worker_keeps_screen_available_without_child_log(
+    monkeypatch, tmp_path
+):
+    common.write(
+        tmp_path / "config.json", dict(scope="main", planned_cases=1674)
+    )
+    state = dict(
+        status="RUNNING",
+        pid=123,
+        pid_start_ticks="old",
+        active=[dict(instance=0)],
+    )
     monkeypatch.setattr(main, "identity", lambda _: None)
     monkeypatch.setattr(main, "reconcile_termination", lambda _: state)
     text = main.render(tmp_path)
     assert "UNKNOWN_NOT_RUNNING" in text and "전체 미완료 · 중지" in text
 
 
-def test_stopped_screen_shows_recorded_child_cause_not_only_wrapper(monkeypatch, tmp_path):
-    common.write(tmp_path / "config.json", dict(scope="main", planned_cases=1674))
+def test_stopped_screen_shows_recorded_child_cause_not_only_wrapper(
+    monkeypatch, tmp_path
+):
+    common.write(
+        tmp_path / "config.json", dict(scope="main", planned_cases=1674)
+    )
     log = tmp_path / "pilot/execution/case/prepare-01.log"
     common.write(
         log.with_suffix(".request.failure.json"),
@@ -936,24 +1148,34 @@ def test_stopped_screen_shows_recorded_child_cause_not_only_wrapper(monkeypatch,
             failure_reason="archive-evidence parent missing",
         ),
     )
-    state = dict(status="BLOCKED_STOPPED", reason="Case child exit1", active=[dict(log=str(log))])
+    state = dict(
+        status="BLOCKED_STOPPED",
+        reason="Case child exit1",
+        active=[dict(log=str(log))],
+    )
     monkeypatch.setattr(main, "reconcile_termination", lambda _: state)
     text = main.render(tmp_path)
     assert "FileNotFoundError: archive-evidence parent missing" in text
     assert str(log) in text
 
 
-@pytest.mark.parametrize("command,immediate", [("stop", False), ("cancel", True)])
+@pytest.mark.parametrize(
+    "command,immediate", [("stop", False), ("cancel", True)]
+)
 def test_main_stop_and_cancel_address_only_the_requested_owned_task(
     monkeypatch, tmp_path, command, immediate
 ):
     calls = []
-    monkeypatch.setattr(pilot45, "stop", lambda task, **kw: calls.append((task, kw)))
+    monkeypatch.setattr(
+        pilot45, "stop", lambda task, **kw: calls.append((task, kw))
+    )
     main.main([command, str(tmp_path)])
     assert calls == [(tmp_path, dict(immediate=immediate))]
 
 
-def test_explicit_resume_recovers_known_completed_raw_without_a_new_flight(monkeypatch, tmp_path):
+def test_explicit_resume_recovers_known_completed_raw_without_a_new_flight(
+    monkeypatch, tmp_path
+):
     task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
     case = rows[0]
     monkeypatch.setattr(pilot45, "task_path", lambda path: Path(path))
@@ -965,11 +1187,15 @@ def test_explicit_resume_recovers_known_completed_raw_without_a_new_flight(monke
     monkeypatch.setattr(pilot_parallel, "released", lambda: None)
     monkeypatch.setattr(main.subprocess, "run", lambda *a, **k: None)
     calls = []
-    monkeypatch.setattr(cli, "start", lambda selected, **kw: calls.append((selected, kw)))
+    monkeypatch.setattr(
+        cli, "start", lambda selected, **kw: calls.append((selected, kw))
+    )
     monkeypatch.setattr(
         pilot45,
         "child",
-        lambda *a, **k: pytest.fail("Resume reconciliation must not dispatch a flight"),
+        lambda *a, **k: pytest.fail(
+            "Resume reconciliation must not dispatch a flight"
+        ),
     )
     common.write(task / "operator/state.json", dict(status="USER_STOPPED"))
     raw = tmp_path / "simulation/runs" / ("e" * 32)
@@ -1010,22 +1236,28 @@ def test_explicit_resume_recovers_known_completed_raw_without_a_new_flight(monke
     folder = task / "pilot/execution" / case["case_id"]
     receipt = folder / "known-completed.json"
     common.write(receipt, dict(status="completed", run=str(raw)))
-    common.write(folder / "flight-01.request.json", dict(case=case, receipt=str(receipt)))
+    common.write(
+        folder / "flight-01.request.json", dict(case=case, receipt=str(receipt))
+    )
     main.resume(task)
     saved = common.read(record)
     assert saved["run"] == str(raw) and len(saved["attempts"]) == 1
     assert saved["attempts"][0]["state"] == "COMPLETED"
     assert calls == [(task, dict(pilot_resume=True))]
-    assert common.read(task / "operator/resume-request.json")["config_sha256"] == common.sha(
-        task / "config.json"
-    )
+    assert common.read(task / "operator/resume-request.json")[
+        "config_sha256"
+    ] == common.sha(task / "config.json")
 
 
 def test_budget_is_standalone_and_separates_extrapolation_from_actual_measurements():
     value = main.storage_budget(1674)
     assert value["raw_all_cases_extrapolation_bytes"] > 1_000_000_000_000
-    assert value["permanent_point_estimate_bytes"] < value["permanent_planning_upper_bytes"]
     assert (
-        value["required_initial_free_bytes"] == value["peak_growth_planning_bytes"] + 50_000_000_000
+        value["permanent_point_estimate_bytes"]
+        < value["permanent_planning_upper_bytes"]
+    )
+    assert (
+        value["required_initial_free_bytes"]
+        == value["peak_growth_planning_bytes"] + 50_000_000_000
     )
     assert value["measured_basis"]["runtime_requires_prior_tasks"] is False

@@ -47,13 +47,18 @@ def neural_fit(name, cfg, train, val, folder, resume=None, stop_after=None):
     device = device_for(cfg["device"])
     seed_all(cfg["seed"])
     model = make_model(name, cfg["hidden"]).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg["learning_rate"], weight_decay=1e-5)
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=cfg["learning_rate"], weight_decay=1e-5
+    )
     data_hash = hashlib.sha256()
     for split in [train, val]:
         for key in ["X", "C", "Y"]:
             data_hash.update(np.ascontiguousarray(split[key]).tobytes())
     data_signature = data_hash.hexdigest()
-    source_hashes = {n: sha(Path(__file__).with_name(n)) for n in ["training.py", "models.py"]}
+    source_hashes = {
+        n: sha(Path(__file__).with_name(n))
+        for n in ["training.py", "models.py"]
+    }
     start, best, history = 0, float("inf"), []
     best_state = copy.deepcopy(model.state_dict())
     if resume:
@@ -92,7 +97,10 @@ def neural_fit(name, cfg, train, val, folder, resume=None, stop_after=None):
             if not torch.isfinite(value):
                 raise ValueError("nonfinite training loss")
             value.backward()
-            if not all(p.grad is None or torch.isfinite(p.grad).all() for p in model.parameters()):
+            if not all(
+                p.grad is None or torch.isfinite(p.grad).all()
+                for p in model.parameters()
+            ):
                 raise ValueError("nonfinite gradient")
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
@@ -101,13 +109,22 @@ def neural_fit(name, cfg, train, val, folder, resume=None, stop_after=None):
         with torch.no_grad():
             vloss = sum(
                 loss(
-                    model(vx[i : i + cfg["batch_size"]], vc[i : i + cfg["batch_size"]]),
+                    model(
+                        vx[i : i + cfg["batch_size"]],
+                        vc[i : i + cfg["batch_size"]],
+                    ),
                     vy[i : i + cfg["batch_size"]],
                 ).item()
                 * len(vx[i : i + cfg["batch_size"]])
                 for i in range(0, len(vx), cfg["batch_size"])
             ) / len(vx)
-        history.append({"epoch": epoch, "train_loss": total / len(x), "validation_loss": vloss})
+        history.append(
+            {
+                "epoch": epoch,
+                "train_loss": total / len(x),
+                "validation_loss": vloss,
+            }
+        )
         if vloss < best:
             best = vloss
             best_state = copy.deepcopy(model.state_dict())
@@ -121,7 +138,9 @@ def neural_fit(name, cfg, train, val, folder, resume=None, stop_after=None):
             "history": history,
             "config": cfg,
             "torch_rng": torch.get_rng_state(),
-            "cuda_rng": torch.cuda.get_rng_state_all() if device.type == "cuda" else [],
+            "cuda_rng": torch.cuda.get_rng_state_all()
+            if device.type == "cuda"
+            else [],
             "source_hashes": source_hashes,
             "numpy_rng": np.random.get_state(),
             "python_rng": random.getstate(),
@@ -135,7 +154,9 @@ def neural_fit(name, cfg, train, val, folder, resume=None, stop_after=None):
         if stop_after is not None and epoch + 1 >= stop_after:
             break
         best_epoch = min(history, key=lambda r: r["validation_loss"])["epoch"]
-        if epoch - best_epoch >= cfg.get("early_stopping_patience", cfg["epochs"]):
+        if epoch - best_epoch >= cfg.get(
+            "early_stopping_patience", cfg["epochs"]
+        ):
             break
     model.load_state_dict(best_state)
     model.eval()
@@ -157,7 +178,12 @@ def neural_fit(name, cfg, train, val, folder, resume=None, stop_after=None):
 
 def flat(data):
     return np.concatenate(
-        [data["X"].reshape(len(data["X"]), -1), data["C"], np.ones((len(data["X"]), 1))], axis=1
+        [
+            data["X"].reshape(len(data["X"]), -1),
+            data["C"],
+            np.ones((len(data["X"]), 1)),
+        ],
+        axis=1,
     )
 
 
@@ -166,10 +192,14 @@ def train_models(config_path):
     dataset = Path(cfg["dataset"])
     out = Path(cfg["output"])
     if (out / "comparison_training.json").exists():
-        raise ValueError("training revision exists; choose a new output directory")
+        raise ValueError(
+            "training revision exists; choose a new output directory"
+        )
     out.mkdir(parents=True, exist_ok=True)
     scaler = dict(np.load(dataset / "scaler.npz"))
-    train, val = [normalized(dataset, s, scaler) for s in ["train", "validation"]]
+    train, val = [
+        normalized(dataset, s, scaler) for s in ["train", "validation"]
+    ]
     result = {}
     for name in ["persistence", "ridge_forecast", "lstm", "transformer"]:
         folder = out / name
@@ -185,18 +215,28 @@ def train_models(config_path):
             v = flat(val)
             best = float("inf")
             for alpha in [1.0, 10.0, 100.0]:
-                coefficients = x.T @ np.linalg.solve(x @ x.T + alpha * np.eye(len(x)), y)
+                coefficients = x.T @ np.linalg.solve(
+                    x @ x.T + alpha * np.eye(len(x)), y
+                )
                 prediction = (v @ coefficients).reshape(val["Y"].shape)
                 error = (prediction - val["Y"]) ** 2
                 value = 0.5 * error[..., :3].mean() + 0.5 * error[..., 3].mean()
-                history.append({"alpha": alpha, "validation_loss": float(value)})
+                history.append(
+                    {"alpha": alpha, "validation_loss": float(value)}
+                )
                 if value < best:
                     best = value
                     best_coefficients = coefficients
                     chosen = alpha
-            np.savez(folder / "ridge.npz", coefficients=best_coefficients, alpha=chosen)
+            np.savez(
+                folder / "ridge.npz",
+                coefficients=best_coefficients,
+                alpha=chosen,
+            )
         shutil.copyfile(dataset / "scaler.npz", folder / "scaler.npz")
-        shutil.copyfile(dataset / "manifest.json", folder / "training_manifest.json")
+        shutil.copyfile(
+            dataset / "manifest.json", folder / "training_manifest.json"
+        )
         dump(
             folder / "model.json",
             {
@@ -210,7 +250,9 @@ def train_models(config_path):
         )
         dump(
             folder / "preprocessing.json",
-            read_json(cfg.get("preprocessing", "ai/configs/preprocessing.json")),
+            read_json(
+                cfg.get("preprocessing", "ai/configs/preprocessing.json")
+            ),
         )
         dump(
             folder / "forecast_contract.json",
@@ -265,36 +307,57 @@ class Predictor:
         self.scaler = dict(np.load(self.folder / "scaler.npz"))
         if self.name in {"lstm", "transformer"}:
             revision = self.metadata.get("model_revision")
-            if revision in {"explicit_dropout_v1", "interlayer_norm_no_dropout"}:
+            if revision in {
+                "explicit_dropout_v1",
+                "interlayer_norm_no_dropout",
+            }:
                 from learning.models import ModelSpec, StudySpec
                 from learning.models import make_model as make_next_model
 
-                spec_class = ModelSpec if revision == "explicit_dropout_v1" else StudySpec
-                spec = spec_class(**read_json(self.folder / "model-spec.json")).validate()
-                if spec.name != self.name or spec.hidden != self.metadata["hidden"]:
+                spec_class = (
+                    ModelSpec
+                    if revision == "explicit_dropout_v1"
+                    else StudySpec
+                )
+                spec = spec_class(
+                    **read_json(self.folder / "model-spec.json")
+                ).validate()
+                if (
+                    spec.name != self.name
+                    or spec.hidden != self.metadata["hidden"]
+                ):
                     raise ValueError("Versioned model metadata mismatch")
                 self.model = make_next_model(spec).to(self.device)
             elif revision is None:
-                self.model = make_model(self.name, self.metadata["hidden"]).to(self.device)
+                self.model = make_model(self.name, self.metadata["hidden"]).to(
+                    self.device
+                )
             else:
                 raise ValueError("Unsupported model revision")
-            self.model.load_state_dict(load_file(str(self.folder / "model.safetensors")))
+            self.model.load_state_dict(
+                load_file(str(self.folder / "model.safetensors"))
+            )
             self.model.eval()
         elif self.name == "ridge_forecast":
-            self.coefficients = np.load(self.folder / "ridge.npz")["coefficients"]
+            self.coefficients = np.load(self.folder / "ridge.npz")[
+                "coefficients"
+            ]
 
     def predict_scaled(self, x, c):
         if self.name == "persistence":
             indices = [FEATURES.index(n) for n in TARGETS]
             return np.repeat(x[:, -1, indices][:, None, :], 10, axis=1)
         if self.name == "ridge_forecast":
-            return (flat({"X": x, "C": c}) @ self.coefficients).reshape(-1, 10, 4)
+            return (flat({"X": x, "C": c}) @ self.coefficients).reshape(
+                -1, 10, 4
+            )
         with torch.no_grad():
             batch = self.metadata["config"]["batch_size"]
             return np.concatenate(
                 [
                     self.model(
-                        tensor(x[i : i + batch], self.device), tensor(c[i : i + batch], self.device)
+                        tensor(x[i : i + batch], self.device),
+                        tensor(c[i : i + batch], self.device),
                     )
                     .cpu()
                     .numpy()

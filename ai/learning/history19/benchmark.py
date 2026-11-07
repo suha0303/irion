@@ -7,7 +7,6 @@ import time
 from pathlib import Path
 
 import torch
-
 from capstone_ai.training import loss, seed_all
 from execution.common import write
 
@@ -33,14 +32,18 @@ def _validation_timing(model, arrays, batch_size, device, progress):
         for offset in range(0, batches.count, batch_size):
             if progress is not None:
                 progress.check()
-            x, y = batches.get(torch.arange(offset, min(offset + batch_size, batches.count)))
+            x, y = batches.get(
+                torch.arange(offset, min(offset + batch_size, batches.count))
+            )
             value = loss(model(x), y)
             total.add_(value.to(torch.float64) * len(x))
             finite.logical_and_(torch.isfinite(value))
             if progress is not None:
                 progress.update(
                     force=False,
-                    benchmark_validation_done=min(offset + batch_size, batches.count),
+                    benchmark_validation_done=min(
+                        offset + batch_size, batches.count
+                    ),
                     benchmark_validation_total=batches.count,
                 )
         if not bool(finite):
@@ -60,13 +63,29 @@ def _validation_timing(model, arrays, batch_size, device, progress):
         full_validation=True,
         disposable_weights=True,
         detection_performance_measured=False,
-        includes=["loader gather/read", "GPU transfer when CUDA", "forward", "loss aggregation"],
-        excludes=["backward", "optimizer", "calibration", "development evaluation"],
+        includes=[
+            "loader gather/read",
+            "GPU transfer when CUDA",
+            "forward",
+            "loss aggregation",
+        ],
+        excludes=[
+            "backward",
+            "optimizer",
+            "calibration",
+            "development evaluation",
+        ],
     )
 
 
 def estimate_fit_budget(
-    rows, *, train_windows, validation_windows, epochs, elapsed_seconds, wall_hours
+    rows,
+    *,
+    train_windows,
+    validation_windows,
+    epochs,
+    elapsed_seconds,
+    wall_hours,
 ):
     """Measured-time projection, with explicit assumptions, before fresh main fits.
 
@@ -74,14 +93,21 @@ def estimate_fit_budget(
     still stops the job. Early stopping is never assumed to make an over-budget run fit.
     """
     if not rows or any(
-        type(v) is not int or v < 1 for v in (train_windows, validation_windows, epochs)
+        type(v) is not int or v < 1
+        for v in (train_windows, validation_windows, epochs)
     ):
-        raise ValueError("Nonempty measurements and positive window/epoch counts required")
+        raise ValueError(
+            "Nonempty measurements and positive window/epoch counts required"
+        )
     if (
-        not all(math.isfinite(v) and v >= 0 for v in (elapsed_seconds, wall_hours))
+        not all(
+            math.isfinite(v) and v >= 0 for v in (elapsed_seconds, wall_hours)
+        )
         or not wall_hours
     ):
-        raise ValueError("Finite elapsed time and positive wall budget required")
+        raise ValueError(
+            "Finite elapsed time and positive wall budget required"
+        )
     estimates = []
     for row in rows:
         validation = row.get("validation") or {}
@@ -96,12 +122,19 @@ def estimate_fit_budget(
             or type(row.get("batch")) is not int
             or row["batch"] < 1
         ):
-            raise ValueError("Full-data CUDA training/validation timing evidence required")
+            raise ValueError(
+                "Full-data CUDA training/validation timing evidence required"
+            )
         if any(
-            not math.isfinite(v) or v <= 0 for v in (row["step_seconds"], validation["seconds"])
+            not math.isfinite(v) or v <= 0
+            for v in (row["step_seconds"], validation["seconds"])
         ):
             raise ValueError("Finite positive measured timings required")
-        train_seconds = epochs * math.ceil(train_windows / row["batch"]) * row["step_seconds"]
+        train_seconds = (
+            epochs
+            * math.ceil(train_windows / row["batch"])
+            * row["step_seconds"]
+        )
         validation_seconds = epochs * validation["seconds"]
         estimates.append(
             dict(
@@ -114,7 +147,9 @@ def estimate_fit_budget(
                 measured_epoch_validation_seconds=validation["seconds"],
             )
         )
-    projected = sum(v["train_seconds"] + v["validation_seconds"] for v in estimates)
+    projected = sum(
+        v["train_seconds"] + v["validation_seconds"] for v in estimates
+    )
     factor, fixed_reserve = 1.25, 3600
     total = elapsed_seconds + projected * factor + fixed_reserve
     return dict(
@@ -132,7 +167,11 @@ def estimate_fit_budget(
             "25% timing margin plus one-hour unmeasured baseline/checkpoint/I/O reserve",
             "Already elapsed normalization, memory/resume and timing gates included once",
         ],
-        excluded_stages=["calibration", "development inference", "development evaluation"],
+        excluded_stages=[
+            "calibration",
+            "development inference",
+            "development evaluation",
+        ],
         automatic_budget_extension=False,
     )
 
@@ -158,7 +197,9 @@ def _measure(
     folder.mkdir(parents=True, exist_ok=False)
     if device not in {"cpu", "cuda"} or steps < 1 or warmup < 0:
         raise ValueError("Invalid benchmark")
-    if (spec.revision == "history19_interlayer_norm_sgd_v1") != (optimization is not None):
+    if (spec.revision == "history19_interlayer_norm_sgd_v1") != (
+        optimization is not None
+    ):
         raise ValueError("Study benchmark requires the actual optimizer policy")
     if optimization is None or optimization.get("optimizer") != "sgd":
         raise ValueError("History19 benchmark requires SGD")
@@ -169,17 +210,26 @@ def _measure(
     ):
         raise ValueError("Explicit finite unique batch list required")
     if any(b > len(arrays["X"]) for b in candidates):
-        raise ValueError("Cannot claim requested batch larger than representative dataset")
+        raise ValueError(
+            "Cannot claim requested batch larger than representative dataset"
+        )
     if device == "cuda":
         if not gpu_authorized or progress is None:
-            raise ValueError("Separate explicit GPU benchmark approval/budget required")
+            raise ValueError(
+                "Separate explicit GPU benchmark approval/budget required"
+            )
         if os.environ.get("CUBLAS_WORKSPACE_CONFIG") != ":4096:8":
             raise ValueError("Fixed CUDA workspace policy required")
         from pipeline.runtime import check
 
         if runtime_stage not in {"benchmark", "fit"}:
             raise ValueError("Unknown benchmark allocation purpose")
-        check(Path(__file__).resolve().parents[2], folder, runtime_stage, job_prefix="drone-ai-")
+        check(
+            Path(__file__).resolve().parents[2],
+            folder,
+            runtime_stage,
+            job_prefix="drone-ai-",
+        )
     results = []
     try:
         for batch_size in candidates:
@@ -199,8 +249,12 @@ def _measure(
                 if optimization is not None:
                     from ..optimization import WarmupCosine, make_optimizer
 
-                    optimizer = make_optimizer(model.parameters(), learning_rate, optimization)
-                    schedule = WarmupCosine(warmup + steps, learning_rate, optimization)
+                    optimizer = make_optimizer(
+                        model.parameters(), learning_rate, optimization
+                    )
+                    schedule = WarmupCosine(
+                        warmup + steps, learning_rate, optimization
+                    )
                 order = torch.randperm(batches.count)
                 if device == "cuda":
                     torch.cuda.synchronize()
@@ -219,7 +273,9 @@ def _measure(
                     if cursor == batches.count:
                         order = torch.randperm(batches.count)
                         cursor = 0
-                    ids = order[cursor : min(cursor + batch_size, batches.count)]
+                    ids = order[
+                        cursor : min(cursor + batch_size, batches.count)
+                    ]
                     cursor += len(ids)
                     x, y = batches.get(ids)
                     if optimization is not None:
@@ -229,7 +285,9 @@ def _measure(
                     safe_step(model, optimizer, x, y)
                     if progress is not None:
                         progress.update(
-                            force=False, benchmark_step=index + 1, benchmark_steps=warmup + steps
+                            force=False,
+                            benchmark_step=index + 1,
+                            benchmark_steps=warmup + steps,
                         )
                     if index >= warmup:
                         measured_samples += len(ids)
@@ -237,12 +295,18 @@ def _measure(
                     torch.cuda.synchronize()
                 elapsed = time.monotonic() - started
                 validation_result = (
-                    _validation_timing(model, validation, batch_size, device, progress)
+                    _validation_timing(
+                        model, validation, batch_size, device, progress
+                    )
                     if validation is not None
                     else None
                 )
-                peak = torch.cuda.max_memory_reserved() if device == "cuda" else 0
-                free_after = torch.cuda.mem_get_info()[0] if device == "cuda" else 0
+                peak = (
+                    torch.cuda.max_memory_reserved() if device == "cuda" else 0
+                )
+                free_after = (
+                    torch.cuda.mem_get_info()[0] if device == "cuda" else 0
+                )
                 passed = (
                     (peak <= 0.85 * free_before and free_after >= 4 * 1024**3)
                     if device == "cuda"
@@ -271,7 +335,8 @@ def _measure(
                         "forward",
                         "backward",
                         "gradient checks/clipping",
-                        (optimization["optimizer"] if optimization else "AdamW") + " optimizer",
+                        (optimization["optimizer"] if optimization else "AdamW")
+                        + " optimizer",
                     ],
                     excludes=[
                         "archive restore",
@@ -296,7 +361,9 @@ def _measure(
                 results.append(row)
                 write(folder / "measurements.json", results)
                 if not passed:
-                    raise MemoryError("Memory admission failed; no smaller-batch retry")
+                    raise MemoryError(
+                        "Memory admission failed; no smaller-batch retry"
+                    )
                 del model, optimizer, x, y
             del batches
             gc.collect()
@@ -313,7 +380,9 @@ def _measure(
     except BaseException as exc:
         write(
             folder / "failure.json",
-            dict(status="FAILED_STOPPED", reason=str(exc), automatic_retry=False),
+            dict(
+                status="FAILED_STOPPED", reason=str(exc), automatic_retry=False
+            ),
         )
         raise
 

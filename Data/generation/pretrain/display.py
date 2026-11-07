@@ -64,7 +64,9 @@ def flight_cards(workers, duration):
         "cold": "저온",
     }
     cards = []
-    for lane, item in sorted(lanes.items(), key=lambda pair: str(pair[0]).zfill(2)):
+    for lane, item in sorted(
+        lanes.items(), key=lambda pair: str(pair[0]).zfill(2)
+    ):
         name = item["scenario"].removesuffix("_normal")
         name = aliases.get(name, name[:8])
         flight = item.get("flight", {})
@@ -98,7 +100,12 @@ def screen(text, columns, rows):
     )
     while len(lines) > rows:
         index = next(
-            (i for prefix in optional for i, line in enumerate(lines) if line.startswith(prefix)),
+            (
+                i
+                for prefix in optional
+                for i, line in enumerate(lines)
+                if line.startswith(prefix)
+            ),
             None,
         )
         if index is None:

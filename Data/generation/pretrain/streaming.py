@@ -33,7 +33,13 @@ def tree_stamp(path):
 
     def visit(p):
         s = p.lstat()
-        result[str(p)] = [s.st_dev, s.st_ino, s.st_mode, s.st_size, s.st_mtime_ns]
+        result[str(p)] = [
+            s.st_dev,
+            s.st_ino,
+            s.st_mode,
+            s.st_size,
+            s.st_mtime_ns,
+        ]
         if stat.S_ISLNK(s.st_mode):
             # PX4 creates etc/test_data links. Record the link, never traverse its target.
             result[str(p)].append(os.readlink(p))
@@ -50,12 +56,18 @@ def retire_owned(paths, allowed, journal, *, proof, budget):
     """All ownership/stability checks precede any deletion. No wildcard deletion."""
     user_approved_write = (
         proof.get("status") == "RUN_CAPSULE_WRITTEN"
-        and proof.get("storage_policy") == "single_xz0_write_no_readback_user_20261108"
+        and proof.get("storage_policy")
+        == "single_xz0_write_no_readback_user_20261108"
         and proof.get("artifact", {}).get("readback_verified") is False
     )
-    if (proof.get("status") not in {"RUN_CAPSULE_VERIFIED", "PORTABLE_DATASET_VERIFIED"}
-            and not user_approved_write):
-        raise ValueError("Verified recoverable artifact required before retirement")
+    if (
+        proof.get("status")
+        not in {"RUN_CAPSULE_VERIFIED", "PORTABLE_DATASET_VERIFIED"}
+        and not user_approved_write
+    ):
+        raise ValueError(
+            "Verified recoverable artifact required before retirement"
+        )
     verified = []
     for path in paths:
         budget.check()
@@ -64,9 +76,11 @@ def retire_owned(paths, allowed, journal, *, proof, budget):
             raise ValueError("Unowned/replaced cleanup target: " + str(path))
         verified.append(path)
     state = dict(
-        status="RETIRING_OWN_OUTPUTS_AFTER_WRITE" if user_approved_write
+        status="RETIRING_OWN_OUTPUTS_AFTER_WRITE"
+        if user_approved_write
         else "RETIRING_VERIFIED_OWN_OUTPUTS",
-        paths=[str(p) for p in verified], deleted=[],
+        paths=[str(p) for p in verified],
+        deleted=[],
     )
     write(journal, state)
     for path in verified:
@@ -77,8 +91,11 @@ def retire_owned(paths, allowed, journal, *, proof, budget):
             path.unlink()
         state["deleted"].append(str(path))
         write(journal, state)
-    state["status"] = ("OWN_OUTPUTS_RETIRED_AFTER_WRITE" if user_approved_write
-                       else "VERIFIED_OWN_OUTPUTS_RETIRED")
+    state["status"] = (
+        "OWN_OUTPUTS_RETIRED_AFTER_WRITE"
+        if user_approved_write
+        else "VERIFIED_OWN_OUTPUTS_RETIRED"
+    )
     write(journal, state)
     return state
 
@@ -102,7 +119,8 @@ def fragment_freeze(runner, folder, approved):
     selected = [
         c
         for c in original
-        if ledger["cases"].get(c["case_id"], {}).get("status") == "ARCHIVED_PENDING_QUALITY"
+        if ledger["cases"].get(c["case_id"], {}).get("status")
+        == "ARCHIVED_PENDING_QUALITY"
     ]
     if not selected:
         return None, []
@@ -134,7 +152,10 @@ def fragment_freeze(runner, folder, approved):
     module = load("pretrain_admission_fragment", ADMISSION / "freeze.py")
 
     def check_cases(cases):
-        if cases != selected or not 1 <= len(cases) <= runner.config["flight_workers"]:
+        if (
+            cases != selected
+            or not 1 <= len(cases) <= runner.config["flight_workers"]
+        ):
             raise ValueError("Invalid bounded fragment membership")
 
     def check_rows(rows, cases, protected):
@@ -175,7 +196,9 @@ def restore_capsules(runner, rows, prepared, budget):
         target = prepared / ("restore-" + row["run_id"])
         target.mkdir()
         verify_bundle(ref["path"], ref["members"], budget, target)
-        (target / "canonical").rename(prepared / "canonical-work" / row["run_id"])
+        (target / "canonical").rename(
+            prepared / "canonical-work" / row["run_id"]
+        )
         (target / "audit").rename(prepared / "audit-work" / row["run_id"])
         status = prepared / "audit-work" / row["run_id"] / "status.json"
         if sha(status) != receipt["audit_status_sha256"]:
@@ -185,7 +208,10 @@ def restore_capsules(runner, rows, prepared, budget):
         shutil.rmtree(target)
         runner.resources()
         runner.update(done=i + 1)
-    runner.finish("prepared-restore", dict(verified_runs=len(rows), preprocessing_repeated=False))
+    runner.finish(
+        "prepared-restore",
+        dict(verified_runs=len(rows), preprocessing_repeated=False),
+    )
     return audit_sources
 
 
@@ -202,7 +228,9 @@ class Pipeline:
             )
         self.root = external(STORE / "streamed/pretrain" / self.task.name)
         self.root.mkdir(parents=True, exist_ok=False)
-        self.baseline = {p.name for p in (runs_root(ROOT)).iterdir() if p.is_dir()}
+        self.baseline = {
+            p.name for p in (runs_root(ROOT)).iterdir() if p.is_dir()
+        }
         write(
             self.root / "ownership.json",
             dict(
@@ -217,18 +245,25 @@ class Pipeline:
         if not rows:
             return []
         try:
-            result = self.r.batch(label, action, rows, workers, output, **kwargs)
+            result = self.r.batch(
+                label, action, rows, workers, output, **kwargs
+            )
         except RuntimeError:
             p = self.task / "units" / label / "result.json"
             if not p.exists():
                 raise
             result = read(p)
-            if result.get("failure_kind") == "resource" or result["completed"] + result[
-                "failed"
-            ] != len(rows):
+            if result.get("failure_kind") == "resource" or result[
+                "completed"
+            ] + result["failed"] != len(rows):
                 raise
             for failure in result["failure_records"]:
-                status = read(self.task / "units" / label / (failure["run_id"] + ".status.json"))
+                status = read(
+                    self.task
+                    / "units"
+                    / label
+                    / (failure["run_id"] + ".status.json")
+                )
                 if (
                     failure["exit_code"] in {-9, -15, -2, 137, 143, 130}
                     or status.get("failure_scope") == "shared"
@@ -245,10 +280,13 @@ class Pipeline:
             or rid in self.baseline
             or raw.parent != runs_root(ROOT)
         ):
-            raise ValueError("Only new current-task UUID originals may be retired")
+            raise ValueError(
+                "Only new current-task UUID originals may be retired"
+            )
         archive = Path(row["archive"]["path"])
         if (
-            archive.parent != Path(read(folder / "plan.json")["external_output"])
+            archive.parent
+            != Path(read(folder / "plan.json")["external_output"])
             or archive.name != rid + ".tar.gz"
         ):
             raise ValueError("Archive does not belong to this fragment")
@@ -258,23 +296,34 @@ class Pipeline:
             chunk / "audit" / rid,
         )
         if (
-            consumer.parent != STORE / "consumer/pretrain" / self.task.name / label
+            consumer.parent
+            != STORE / "consumer/pretrain" / self.task.name / label
             or not chunk.is_relative_to(self.root)
         ):
             raise ValueError("Consumer/canonical ownership mismatch")
-        status_path = self.task / "units" / (label + "-audit") / (rid + ".status.json")
+        status_path = (
+            self.task / "units" / (label + "-audit") / (rid + ".status.json")
+        )
         status = read(status_path)
         if status.get("status") != "COMPLETE" or status.get("run_id") != rid:
             raise ValueError("Independent completed run audit required")
         summary = read(canonical / "summary.json")
-        preprocessing = read(self.task / "units" / (label + "-preprocess") / (rid + ".status.json"))
+        preprocessing = read(
+            self.task
+            / "units"
+            / (label + "-preprocess")
+            / (rid + ".status.json")
+        )
         if (
             summary["input_hashes"] != row["files"]
             or summary["config"] != read(PACKAGE / "preprocessing.json")
             or preprocessing.get("status") != "COMPLETE"
-            or preprocessing["result"]["output_hashes"] != summary["output_hashes"]
+            or preprocessing["result"]["output_hashes"]
+            != summary["output_hashes"]
         ):
-            raise ValueError("Preprocessing receipt differs from audited canonical")
+            raise ValueError(
+                "Preprocessing receipt differs from audited canonical"
+            )
         verify(
             {
                 str(canonical / (name + ".jsonl")): digest
@@ -287,17 +336,28 @@ class Pipeline:
                 str(audit / "report.json"): status["result"]["report_sha256"],
             }
         )
-        if sha(raw / "run.json") != row["archive"]["members"]["run.json"]["sha256"]:
+        if (
+            sha(raw / "run.json")
+            != row["archive"]["members"]["run.json"]["sha256"]
+        ):
             raise ValueError("Local run identity changed")
         paths = [raw, archive, consumer, canonical, audit]
         owned = {str(p): tree_stamp(p) for p in paths}
         target = self.root / "runs" / rid
         target.mkdir(parents=True)
-        sources = {"canonical/" + p.name: p for p in canonical.iterdir() if p.is_file()}
-        sources.update({"audit/" + p.name: p for p in audit.iterdir() if p.is_file()})
+        sources = {
+            "canonical/" + p.name: p for p in canonical.iterdir() if p.is_file()
+        }
+        sources.update(
+            {"audit/" + p.name: p for p in audit.iterdir() if p.is_file()}
+        )
         sources["audit/status.json"] = status_path
         # Preserve the exact small identity bytes that were checked against the raw archive.
-        for name in ["run.json", "reference/source_lock.json", "observations/metadata.json"]:
+        for name in [
+            "run.json",
+            "reference/source_lock.json",
+            "observations/metadata.json",
+        ]:
             saved = target / "identity" / name
             saved.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(consumer / name, saved)
@@ -334,12 +394,17 @@ class Pipeline:
         self.r.resources()
         # A successful retry retires only its current successful UUID; failed attempts stay untouched.
         retired = retire_owned(
-            paths, owned, target / "cleanup.json", proof=receipt, budget=self.budget
+            paths,
+            owned,
+            target / "cleanup.json",
+            proof=receipt,
+            budget=self.budget,
         )
         row = dict(
             row,
             compact_source=dict(
-                receipt=str(target / "receipt.json"), sha256=sha(target / "receipt.json")
+                receipt=str(target / "receipt.json"),
+                sha256=sha(target / "receipt.json"),
             ),
             raw_retained=False,
             raw_retirement_journal=str(target / "cleanup.json"),
@@ -354,7 +419,9 @@ class Pipeline:
     def process_chunk(self, rows, label, folder):
         chunk = self.root / label
         chunk.mkdir()
-        consumer = external(STORE / "consumer/pretrain" / self.task.name / label)
+        consumer = external(
+            STORE / "consumer/pretrain" / self.task.name / label
+        )
         consumer.mkdir(parents=True, exist_ok=False)
         rows = [dict(row, path=str(consumer / row["run_id"])) for row in rows]
         rows = self.batch(
@@ -365,7 +432,11 @@ class Pipeline:
             chunk / "extract-evidence",
         )
         rows = self.batch(
-            label + "-preprocess", "preprocess", rows, self.r.config["workers"], chunk / "canonical"
+            label + "-preprocess",
+            "preprocess",
+            rows,
+            self.r.config["workers"],
+            chunk / "canonical",
         )
         rows = self.batch(
             label + "-audit",
@@ -380,7 +451,10 @@ class Pipeline:
         for i, row in enumerate(rows):
             kept.append(self.capsule(row, chunk, label, folder))
             self.r.update(done=i + 1)
-        self.r.finish(label + "-capsules", dict(verified_runs=len(kept), originals_retired=True))
+        self.r.finish(
+            label + "-capsules",
+            dict(verified_runs=len(kept), originals_retired=True),
+        )
         return kept
 
     def restore(self, rows, prepared):
@@ -394,17 +468,28 @@ class Pipeline:
             ref = receipt[key]
             path = portable / ref["path"]
             if sha(path) != ref["sha256"]:
-                raise ValueError("Final portable archive changed; keep working data")
+                raise ValueError(
+                    "Final portable archive changed; keep working data"
+                )
             verify_bundle(path, ref["members"], self.budget)
         paths = [prepared / "dataset"]
         # Delete only successful restored caches, leaving any failed attempt trees in place.
         paths += [prepared / "audit-work" / row["run_id"] for row in rows]
-        paths += [Path(read(row["compact_source"]["receipt"])["artifact"]["path"]) for row in rows]
-        if not prepared.is_relative_to(external(STORE / "processed/pretrain" / self.task.name)):
+        paths += [
+            Path(read(row["compact_source"]["receipt"])["artifact"]["path"])
+            for row in rows
+        ]
+        if not prepared.is_relative_to(
+            external(STORE / "processed/pretrain" / self.task.name)
+        ):
             raise ValueError("Final dataset is not owned by this task")
         owned = {str(p): tree_stamp(p) for p in paths}
         retire_owned(
-            paths, owned, portable / "working-cleanup.json", proof=receipt, budget=self.budget
+            paths,
+            owned,
+            portable / "working-cleanup.json",
+            proof=receipt,
+            budget=self.budget,
         )
         write(
             portable / "retention-plan.json",
@@ -428,7 +513,9 @@ class Pipeline:
                 training_authorized=False,
             ),
         )
-        self.r.finish("prepared-retire", dict(passed=True, dataset_requires_restore=True))
+        self.r.finish(
+            "prepared-retire", dict(passed=True, dataset_requires_restore=True)
+        )
         self.r.update(
             portable_dataset=str(portable),
             dataset_requires_restore=True,
@@ -451,7 +538,8 @@ def run(runner):
         planned_stage_count=sum(map(len, groups)) * 6 + 7,
         stream_total=sum(map(len, planned)),
         stream_completed=0,
-        bounded_raw_runs=width * (2 if runner.config.get("pipeline_overlap") else 1),
+        bounded_raw_runs=width
+        * (2 if runner.config.get("pipeline_overlap") else 1),
     )
     outcomes = None
     if runner.config.get("pipeline_overlap"):
@@ -472,10 +560,13 @@ def run(runner):
                     runner.flight("collection", width, chunk_cases, label)
                 except IncompleteCollection:
                     pass  # Completed originals still receive verified per-run handling.
-                runner.begin(label + "-freeze", total=len(chunk_cases), workers=1)
+                runner.begin(
+                    label + "-freeze", total=len(chunk_cases), workers=1
+                )
                 output, rows = fragment_freeze(runner, folder, cases)
                 runner.finish(
-                    label + "-freeze", dict(verified_runs=len(rows), whole_dataset_admitted=False)
+                    label + "-freeze",
+                    dict(verified_runs=len(rows), whole_dataset_admitted=False),
                 )
                 if rows:
                     rows = pipeline.process_chunk(rows, label, folder)
@@ -520,16 +611,23 @@ def run(runner):
             ),
         )
         raise RuntimeError(
-            "Finite streaming collection incomplete; no dataset admission: " + ", ".join(missing)
+            "Finite streaming collection incomplete; no dataset admission: "
+            + ", ".join(missing)
         )
     runner.begin("combine", workers=1)
     frozen = combine_frozen(runner.task, parts)
     runner.finish("combine", dict(passed=True, runs=len(frozen["runs"])))
-    prepared = external(STORE / "processed/pretrain" / runner.task.name / "prepared")
+    prepared = external(
+        STORE / "processed/pretrain" / runner.task.name / "prepared"
+    )
     prepared.mkdir(parents=True)
     write(prepared / "frozen-manifest.json", frozen)
     audits = pipeline.restore(frozen["runs"], prepared)
     runner.finalize_prepared(
-        frozen, prepared, "prepared", runner.config["workers"], preaudited=audits
+        frozen,
+        prepared,
+        "prepared",
+        runner.config["workers"],
+        preaudited=audits,
     )
     pipeline.retire_final(prepared, frozen["runs"])

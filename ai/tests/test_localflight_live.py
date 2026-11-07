@@ -2,7 +2,6 @@ import json
 
 import numpy as np
 import pytest
-
 from localflight.live import Mapper, completed, decode, validate
 from localflight.prepare import causal_frames
 from localflight.prepared import load
@@ -20,7 +19,9 @@ def request():
             series_cells=4,
             capacity_ah=12,
             battery_id="fixture",
-            motor_channels=dict(front_right=1, front_left=2, rear_right=3, rear_left=4),
+            motor_channels=dict(
+                front_right=1, front_left=2, rear_right=3, rear_left=4
+            ),
             output_min=1000,
             output_max=2000,
             mapping_evidence="synthetic fixture",
@@ -46,7 +47,12 @@ def samples(seconds=13, start_ns=1000000000):
             (
                 "ATTITUDE",
                 dict(
-                    time_boot_ms=ms, roll=0, pitch=0, rollspeed=0.01, pitchspeed=0.02, yawspeed=0.03
+                    time_boot_ms=ms,
+                    roll=0,
+                    pitch=0,
+                    rollspeed=0.01,
+                    pitchspeed=0.02,
+                    yawspeed=0.03,
                 ),
             ),
             (
@@ -61,7 +67,14 @@ def samples(seconds=13, start_ns=1000000000):
             ),
             (
                 "HIGHRES_IMU",
-                dict(time_usec=ms * 1000, id=0, fields_updated=7, xacc=0, yacc=0, zacc=-9.81),
+                dict(
+                    time_usec=ms * 1000,
+                    id=0,
+                    fields_updated=7,
+                    xacc=0,
+                    yacc=0,
+                    zacc=-9.81,
+                ),
             ),
             ("LOCAL_POSITION_NED", dict(time_boot_ms=ms, vz=-1)),
             (
@@ -70,9 +83,18 @@ def samples(seconds=13, start_ns=1000000000):
             ),
             (
                 "SERVO_OUTPUT_RAW",
-                dict(time_usec=ms * 1000, port=0, **{f"servo{i}_raw": 1400 for i in range(1, 5)}),
+                dict(
+                    time_usec=ms * 1000,
+                    port=0,
+                    **{f"servo{i}_raw": 1400 for i in range(1, 5)},
+                ),
             ),
-            ("BATTERY_STATUS", dict(id=0, voltages=[4000] * 4 + [65535] * 6, current_battery=800)),
+            (
+                "BATTERY_STATUS",
+                dict(
+                    id=0, voltages=[4000] * 4 + [65535] * 6, current_battery=800
+                ),
+            ),
         ]
         for name, fields in rows:
             yield dict(
@@ -92,27 +114,38 @@ def test_units_masks_instances_and_unknowns():
     p = r["profile"]
     assert validate(r)["origin"] == "synthetic_unit_fixture"
     assert (
-        decode("POSITION_TARGET_LOCAL_NED", dict(vz=2, type_mask=32, coordinate_frame=1), p, r)[
-            "climb_target"
-        ]
+        decode(
+            "POSITION_TARGET_LOCAL_NED",
+            dict(vz=2, type_mask=32, coordinate_frame=1),
+            p,
+            r,
+        )["climb_target"]
         is None
     )
     assert (
-        decode("POSITION_TARGET_LOCAL_NED", dict(vz=2, type_mask=0, coordinate_frame=8), p, r)[
-            "climb_target"
-        ]
+        decode(
+            "POSITION_TARGET_LOCAL_NED",
+            dict(vz=2, type_mask=0, coordinate_frame=8),
+            p,
+            r,
+        )["climb_target"]
         is None
     )
     assert decode("BATTERY_STATUS", dict(id=1), p, r) == {}
     assert decode(
-        "BATTERY_STATUS", dict(id=0, voltages=[16000] + [65535] * 9, current_battery=-1), p, r
+        "BATTERY_STATUS",
+        dict(id=0, voltages=[16000] + [65535] * 9, current_battery=-1),
+        p,
+        r,
     ) == dict(pack_voltage=16, pack_current=None)
-    assert decode("HIGHRES_IMU", dict(id=0, fields_updated=2, yacc=2), p, r) == dict(
-        specific_force_y=2
-    )
+    assert decode(
+        "HIGHRES_IMU", dict(id=0, fields_updated=2, yacc=2), p, r
+    ) == dict(specific_force_y=2)
     r["imu_message"] = "SCALED_IMU2"
     assert (
-        decode("SCALED_IMU2", dict(xacc=0, yacc=0, zacc=-1000), p, r)["specific_force_z"]
+        decode("SCALED_IMU2", dict(xacc=0, yacc=0, zacc=-1000), p, r)[
+            "specific_force_z"
+        ]
         == -9.80665
     )
     r["profile"]["autopilot"] = "ardupilot"
@@ -158,7 +191,9 @@ def test_end_report_runs_real_cpu_without_health_claim(tmp_path):
     events = [e for row in rows for e in mapper.accept(row)]
     journal = tmp_path / "journal.jsonl"
     journal.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
-    result = completed(events, journal, tmp_path / "out", r, "synthetic_unit_fixture")
+    result = completed(
+        events, journal, tmp_path / "out", r, "synthetic_unit_fixture"
+    )
     assert result["status"] == "complete" and result["health_verdict"] is None
     analysis = result["analyses"][0]["analysis"]
     assert analysis["metrics"]["frames"] >= 110

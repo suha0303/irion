@@ -8,7 +8,14 @@ import pytest
 from pretrain import common, speed_metrics, speed_test
 
 
-def fixture(tmp_path, monkeypatch, name, start_seconds, anchor_seconds, missing_raw=False):
+def fixture(
+    tmp_path,
+    monkeypatch,
+    name,
+    start_seconds,
+    anchor_seconds,
+    missing_raw=False,
+):
     monkeypatch.setattr(speed_metrics, "ROOT", tmp_path)
     rid = name
     raw = tmp_path / "runs" / rid
@@ -54,7 +61,9 @@ def fixture(tmp_path, monkeypatch, name, start_seconds, anchor_seconds, missing_
         )
         for t in range(start_seconds * 1_000_000, 152_000_001, 100_000)
     ]
-    (canonical / "frames.jsonl").write_text("".join(json.dumps(f) + "\n" for f in frames))
+    (canonical / "frames.jsonl").write_text(
+        "".join(json.dumps(f) + "\n" for f in frames)
+    )
     windows = []
     for t in range((start_seconds + 60) * 1_000_000, 151_000_000, 1_000_000):
         windows.append(
@@ -64,10 +73,14 @@ def fixture(tmp_path, monkeypatch, name, start_seconds, anchor_seconds, missing_
                 origin_us=t,
                 context_start_us=t - 60_000_000,
                 history_times_us=list(range(t - 9_900_000, t + 1, 100_000)),
-                target_times_us=list(range(t + 100_000, t + 1_000_001, 100_000)),
+                target_times_us=list(
+                    range(t + 100_000, t + 1_000_001, 100_000)
+                ),
             )
         )
-    (canonical / "windows.jsonl").write_text("".join(json.dumps(w) + "\n" for w in windows))
+    (canonical / "windows.jsonl").write_text(
+        "".join(json.dumps(w) + "\n" for w in windows)
+    )
     members = {
         n: dict(sha256=common.sha(raw / n))
         for n in ["evaluation/execution.json", "observations/streams.jsonl"]
@@ -81,11 +94,14 @@ def fixture(tmp_path, monkeypatch, name, start_seconds, anchor_seconds, missing_
             frames=len(frames),
             windows=len(windows),
             input_hashes={
-                "observations/streams.jsonl": members["observations/streams.jsonl"]["sha256"]
+                "observations/streams.jsonl": members[
+                    "observations/streams.jsonl"
+                ]["sha256"]
             },
             config=dict(context_us=60_000_000),
             output_hashes={
-                n: common.sha(canonical / (n + ".jsonl")) for n in ["frames", "windows"]
+                n: common.sha(canonical / (n + ".jsonl"))
+                for n in ["frames", "windows"]
             },
         ),
     )
@@ -97,10 +113,15 @@ def fixture(tmp_path, monkeypatch, name, start_seconds, anchor_seconds, missing_
     return speed_metrics.metrics(canonical, record)
 
 
-def test_startup_and_anchor_phase_do_not_change_mission_window_count(tmp_path, monkeypatch):
+def test_startup_and_anchor_phase_do_not_change_mission_window_count(
+    tmp_path, monkeypatch
+):
     a = fixture(tmp_path, monkeypatch, "a", 1, 10.020)
     b = fixture(tmp_path, monkeypatch, "b", 7, 12.028)
-    assert a["whole_run_diagnostic"]["windows"] != b["whole_run_diagnostic"]["windows"]
+    assert (
+        a["whole_run_diagnostic"]["windows"]
+        != b["whole_run_diagnostic"]["windows"]
+    )
     assert a["windows"] == b["windows"] == 50
     assert (
         a["topic_quality"]["battery_status"]["count"]

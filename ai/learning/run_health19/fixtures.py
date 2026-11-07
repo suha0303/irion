@@ -14,7 +14,9 @@ def normal_runs(role, count, *, seed=0):
         x = rng.normal(0, 0.05, (n, 19))
         current = 20 + 2 * np.sin(t / 2) + rng.normal(0, 0.2, n)
         x[:, :4] = 0.5 + 0.002 * current[:, None] + rng.normal(0, 0.005, (n, 4))
-        x[:, 17] = 4 * (4.1 - 0.002 * current - 0.0001 * t + rng.normal(0, 0.001, n))
+        x[:, 17] = 4 * (
+            4.1 - 0.002 * current - 0.0001 * t + rng.normal(0, 0.001, n)
+        )
         x[:, 18] = current
         name = f"synthetic-{role}-{seed}-{i}"
         result.append(

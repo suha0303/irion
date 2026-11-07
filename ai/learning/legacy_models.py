@@ -17,9 +17,16 @@ class ModelSpec:
     revision: str = "explicit_dropout_v1"
 
     def validate(self):
-        if self.name not in {"lstm", "transformer"} or self.revision != "explicit_dropout_v1":
+        if (
+            self.name not in {"lstm", "transformer"}
+            or self.revision != "explicit_dropout_v1"
+        ):
             raise ValueError("Unknown model/revision")
-        if self.hidden < 8 or not 1 <= self.layers <= 8 or not 0 <= self.dropout < 1:
+        if (
+            self.hidden < 8
+            or not 1 <= self.layers <= 8
+            or not 0 <= self.dropout < 1
+        ):
             raise ValueError("Invalid model size/dropout")
         if self.heads < 1 or self.hidden % self.heads:
             raise ValueError("Hidden width must divide evenly into heads")
@@ -35,7 +42,11 @@ class ExplicitDropoutStack(nn.Module):
         self.layers = nn.ModuleList(
             [
                 nn.LSTM(
-                    inputs if i == 0 else spec.hidden, spec.hidden, 1, batch_first=True, dropout=0
+                    inputs if i == 0 else spec.hidden,
+                    spec.hidden,
+                    1,
+                    batch_first=True,
+                    dropout=0,
                 )
                 for i in range(spec.layers)
             ]
@@ -65,7 +76,9 @@ class LSTMForecast(nn.Module):
     def forward(self, history, context):
         _, hidden = self.encoder(history)
         latent = self.fuse(torch.cat([hidden, context], -1))
-        lead = self.lead(self.lead_ids).unsqueeze(0).expand(len(history), -1, -1)
+        lead = (
+            self.lead(self.lead_ids).unsqueeze(0).expand(len(history), -1, -1)
+        )
         x = torch.cat([latent.unsqueeze(1).expand(-1, 10, -1), lead], -1)
         output, _ = self.decoder(x)
         return self.head(output)
@@ -78,11 +91,23 @@ class TransformerForecast(nn.Module):
         h = spec.hidden
         self.project, self.context = nn.Linear(19, h), nn.Linear(6, h)
         encoder = nn.TransformerEncoderLayer(
-            h, spec.heads, 2 * h, spec.dropout, activation="gelu", batch_first=True
+            h,
+            spec.heads,
+            2 * h,
+            spec.dropout,
+            activation="gelu",
+            batch_first=True,
         )
-        self.encoder = nn.TransformerEncoder(encoder, spec.layers, enable_nested_tensor=False)
+        self.encoder = nn.TransformerEncoder(
+            encoder, spec.layers, enable_nested_tensor=False
+        )
         decoder = nn.TransformerDecoderLayer(
-            h, spec.heads, 2 * h, spec.dropout, activation="gelu", batch_first=True
+            h,
+            spec.heads,
+            2 * h,
+            spec.dropout,
+            activation="gelu",
+            batch_first=True,
         )
         self.decoder = nn.TransformerDecoder(decoder, spec.layers)
         self.queries, self.head = nn.Embedding(10, h), nn.Linear(h, 4)
@@ -93,7 +118,10 @@ class TransformerForecast(nn.Module):
         position = torch.arange(100).unsqueeze(1)
         div = torch.exp(torch.arange(0, h, 2) * (-math.log(10000.0) / h))
         pe = torch.zeros(100, h)
-        pe[:, 0::2], pe[:, 1::2] = torch.sin(position * div), torch.cos(position * div[: h // 2])
+        pe[:, 0::2], pe[:, 1::2] = (
+            torch.sin(position * div),
+            torch.cos(position * div[: h // 2]),
+        )
         self.register_buffer("position_encoding", pe, persistent=False)
         self.register_buffer("query_ids", torch.arange(10), persistent=False)
 
@@ -101,10 +129,18 @@ class TransformerForecast(nn.Module):
         if history.shape[1:] != (100, 19):
             raise ValueError("Fixed history100/features19 required")
         encoded = self.project(history) + self.position_encoding
-        memory = self.encoder(torch.cat([encoded, self.context(context).unsqueeze(1)], 1))
-        queries = self.queries(self.query_ids).unsqueeze(0).expand(len(history), -1, -1)
+        memory = self.encoder(
+            torch.cat([encoded, self.context(context).unsqueeze(1)], 1)
+        )
+        queries = (
+            self.queries(self.query_ids)
+            .unsqueeze(0)
+            .expand(len(history), -1, -1)
+        )
         return self.head(self.decoder(queries, memory))
 
 
 def make_model(spec):
-    return (LSTMForecast if spec.validate().name == "lstm" else TransformerForecast)(spec)
+    return (
+        LSTMForecast if spec.validate().name == "lstm" else TransformerForecast
+    )(spec)

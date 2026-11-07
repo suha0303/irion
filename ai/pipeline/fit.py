@@ -5,14 +5,13 @@ import hashlib
 import random
 from pathlib import Path
 
-import numpy as np
-import torch
-from safetensors.torch import load_file, save_file
-
 import capstone_ai.models as model_source
 import capstone_ai.training as training_source
+import numpy as np
+import torch
 from capstone_ai.models import device_for, make_model
 from capstone_ai.training import loss, seed_all
+from safetensors.torch import load_file, save_file
 
 from . import backend as backend_source
 from .backend import (
@@ -50,23 +49,48 @@ def training_state(model, optimizer, device):
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "torch_rng": torch.get_rng_state(),
-        "cuda_rng": torch.cuda.get_rng_state_all() if device.type == "cuda" else [],
+        "cuda_rng": torch.cuda.get_rng_state_all()
+        if device.type == "cuda"
+        else [],
         "numpy_rng": np.random.get_state(),
         "python_rng": random.getstate(),
     }
 
 
 def neural_fit(
-    config, train, validation, folder, budget, resume=None, stop_after=None, diagnostic_prefix=None
+    config,
+    train,
+    validation,
+    folder,
+    budget,
+    resume=None,
+    stop_after=None,
+    diagnostic_prefix=None,
 ):
     # Covers construction/.to, train, validation, export, and restored-model inference.
     with backend_scope(config):
         return _fit(
-            config, train, validation, folder, budget, resume, stop_after, diagnostic_prefix
+            config,
+            train,
+            validation,
+            folder,
+            budget,
+            resume,
+            stop_after,
+            diagnostic_prefix,
         )
 
 
-def _fit(config, train, validation, folder, budget, resume, stop_after, diagnostic_prefix):
+def _fit(
+    config,
+    train,
+    validation,
+    folder,
+    budget,
+    resume,
+    stop_after,
+    diagnostic_prefix,
+):
     """Only LSTM; research caller fixes config, lifecycle caller fixes its separate fixture."""
     folder = Path(folder)
     device = device_for(config["device"])
@@ -76,7 +100,9 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
     model = make_model("lstm", config["hidden"]).to(device)
     check_model(model, device)
     environment = execution_environment(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config["learning_rate"], weight_decay=1e-5)
+    optimizer = torch.optim.AdamW(
+        model.parameters(), lr=config["learning_rate"], weight_decay=1e-5
+    )
     signature = data_signature(train, validation)
     sources = {
         "fit.py": sha(__file__),
@@ -99,12 +125,24 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
         np.random.set_state(checkpoint["numpy_rng"])
         random.setstate(checkpoint["python_rng"])
         start, best, best_epoch, history, best_state = [
-            checkpoint[k] for k in ("next_epoch", "best", "best_epoch", "history", "best_state")
+            checkpoint[k]
+            for k in (
+                "next_epoch",
+                "best",
+                "best_epoch",
+                "history",
+                "best_state",
+            )
         ]
         if diagnostic_prefix:
             # Re-read actual restored objects and generators, not a copy of the input checkpoint.
-            restored_boundary = {**checkpoint, **training_state(model, optimizer, device)}
-            torch.save(restored_boundary, folder / (diagnostic_prefix + "-restored.pt"))
+            restored_boundary = {
+                **checkpoint,
+                **training_state(model, optimizer, device),
+            }
+            torch.save(
+                restored_boundary, folder / (diagnostic_prefix + "-restored.pt")
+            )
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats()
     for epoch in range(start, config["epochs"]):
@@ -112,7 +150,9 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
         model.train()
         order = torch.randperm(len(train["X"]))
         total = 0.0
-        for batch_index, indices in enumerate(order.split(config["batch_size"])):
+        for batch_index, indices in enumerate(
+            order.split(config["batch_size"])
+        ):
             budget.check()
             x, c, y = batch(train, indices.numpy(), device)
             check_model(model, device)
@@ -138,7 +178,8 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
                     raise ValueError("nonfinite training loss")
                 value.backward()
                 if not all(
-                    p.grad is None or torch.isfinite(p.grad).all() for p in model.parameters()
+                    p.grad is None or torch.isfinite(p.grad).all()
+                    for p in model.parameters()
                 ):
                     raise ValueError("nonfinite gradient")
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -160,7 +201,9 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
         with torch.no_grad():
             for i in range(0, len(validation["X"]), config["batch_size"]):
                 budget.check()
-                x, c, y = batch(validation, slice(i, i + config["batch_size"]), device)
+                x, c, y = batch(
+                    validation, slice(i, i + config["batch_size"]), device
+                )
                 check_model(model, device)
                 with trace_batch(
                     folder,
@@ -175,11 +218,19 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
         if not np.isfinite(vloss):
             raise ValueError("nonfinite validation loss")
         history.append(
-            {"epoch": epoch, "train_loss": total / len(train["X"]), "validation_loss": vloss}
+            {
+                "epoch": epoch,
+                "train_loss": total / len(train["X"]),
+                "validation_loss": vloss,
+            }
         )
         improved = best_update(vloss, best)
         if improved:
-            best, best_epoch, best_state = vloss, epoch, copy.deepcopy(model.state_dict())
+            best, best_epoch, best_state = (
+                vloss,
+                epoch,
+                copy.deepcopy(model.state_dict()),
+            )
         checkpoint = {
             "schema": SCHEMA,
             "environment": environment,
@@ -196,7 +247,9 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
             "history": history,
             "config": config,
             "torch_rng": torch.get_rng_state(),
-            "cuda_rng": torch.cuda.get_rng_state_all() if device.type == "cuda" else [],
+            "cuda_rng": torch.cuda.get_rng_state_all()
+            if device.type == "cuda"
+            else [],
             "numpy_rng": np.random.get_state(),
             "python_rng": random.getstate(),
             "data_order": order.tolist(),
@@ -213,7 +266,9 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
         budget.check()
         if stop_after is not None and epoch + 1 >= stop_after:
             break
-        if epoch - best_epoch >= config.get("early_stopping_patience", config["epochs"]):
+        if epoch - best_epoch >= config.get(
+            "early_stopping_patience", config["epochs"]
+        ):
             break
     model.load_state_dict(best_state)
     model.eval()
@@ -229,7 +284,11 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
     with (
         torch.no_grad(),
         trace_batch(
-            folder, str(diagnostic_prefix) + "-save-load", device, False, bool(diagnostic_prefix)
+            folder,
+            str(diagnostic_prefix) + "-save-load",
+            device,
+            False,
+            bool(diagnostic_prefix),
         ),
     ):
         x, c, _ = batch(validation, slice(0, 2), device)
@@ -242,7 +301,9 @@ def _fit(config, train, validation, folder, budget, resume, stop_after, diagnost
         "history": history,
         "selected_epoch": best_epoch,
         "save_load_max_abs": difference,
-        "peak_cuda_bytes": torch.cuda.max_memory_allocated() if device.type == "cuda" else None,
+        "peak_cuda_bytes": torch.cuda.max_memory_allocated()
+        if device.type == "cuda"
+        else None,
     }
     write(folder / "fit.json", result)
     return result

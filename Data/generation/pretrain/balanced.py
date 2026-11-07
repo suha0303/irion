@@ -34,7 +34,9 @@ def environment(spec, scenario, index, count, design_seed, seed):
         gust_sigma=(0, 0.12),
     )
     if scenario == "cold_normal":
-        ranges.update(soc=(0.9, 0.95), temperature=(283.15, 291.15), payload=(0, 0.05))
+        ranges.update(
+            soc=(0.9, 0.95), temperature=(283.15, 291.15), payload=(0, 0.05)
+        )
     elif scenario == "low_soc_normal":
         ranges.update(soc=(0.4, 0.5), payload=(0, 0.05), speed=(0, 0.4))
     elif scenario == "payload_normal":
@@ -49,7 +51,11 @@ def environment(spec, scenario, index, count, design_seed, seed):
         u = random.Random(seed + 1543 * k).random()
         values[key] = low + (high - low) * (bins[index] + u) / count
     speed, direction = values.pop("speed"), values.pop("direction")
-    result.update(values, wind_e=speed * math.cos(direction), wind_n=speed * math.sin(direction))
+    result.update(
+        values,
+        wind_e=speed * math.cos(direction),
+        wind_n=speed * math.sin(direction),
+    )
     return result
 
 
@@ -59,7 +65,9 @@ def cases(seed_base):
     from capstone_sim.normal_variation import sample
 
     templates = read(RESOURCES / "case_manifest.json")["cases"]
-    normal = {c["scenario"]: c for c in templates if c["role"] == "normal_train"}
+    normal = {
+        c["scenario"]: c for c in templates if c["role"] == "normal_train"
+    }
     conditions = sorted(normal)
     rng = random.Random(seed_base ^ 300)
     rows = []
@@ -69,8 +77,12 @@ def cases(seed_base):
         count = sum(quota)
         order = [conditions[i % 9] for i in range(count)]
         if role != "normal_train":
-            order = conditions * 2 + [conditions[(i + role_index * 3) % 9] for i in range(8)]
-        modes = ["basic"] * quota[0] + ["mixed"] * quota[1] + ["random"] * quota[2]
+            order = conditions * 2 + [
+                conditions[(i + role_index * 3) % 9] for i in range(8)
+            ]
+        modes = (
+            ["basic"] * quota[0] + ["mixed"] * quota[1] + ["random"] * quota[2]
+        )
         if role == "normal_train":
             reserved = ["basic"] * 9 + ["mixed"] * 9 + ["random"] * 9
             rest = (
@@ -93,7 +105,9 @@ def cases(seed_base):
                 scenario,
                 indices[scenario],
                 totals[scenario],
-                seed_base + role_index * 10000 + conditions.index(scenario) * 101,
+                seed_base
+                + role_index * 10000
+                + conditions.index(scenario) * 101,
                 seed,
             )
             indices[scenario] += 1
@@ -104,14 +118,20 @@ def cases(seed_base):
                 group_id=f"B300-normal-{seed}",
                 composition_seed=seed_base,
                 path_mode=mode,
-                normal_variation=build(spec, mode, seed, row["mission_seconds"], basic_index),
+                normal_variation=build(
+                    spec, mode, seed, row["mission_seconds"], basic_index
+                ),
             )
             if mode == "basic":
                 basic_index += 1
             rows.append(row)
-    anomaly = {c["scenario"]: c for c in templates if c["role"] == "anomaly_dev"}
+    anomaly = {
+        c["scenario"]: c for c in templates if c["role"] == "anomaly_dev"
+    }
     control = next(
-        c for c in templates if c["role"] == "normal_dev_eval" and c["mission_seconds"] == 480
+        c
+        for c in templates
+        if c["role"] == "normal_dev_eval" and c["mission_seconds"] == 480
     )
     for pair in range(6):
         seed = seed_base + 258 + pair
@@ -132,8 +152,12 @@ def cases(seed_base):
 
 
 def validate(cases_record):
-    if len(cases_record) != 300 or Counter(c["role"] for c in cases_record) != Counter(ROLES):
+    if len(cases_record) != 300 or Counter(
+        c["role"] for c in cases_record
+    ) != Counter(ROLES):
         raise ValueError("Balanced300 requires roles180/26/26/32/36")
     base = cases_record[0].get("composition_seed")
     if type(base) is not int or cases_record != cases(base):
-        raise ValueError("Balanced300 membership/paths differ from frozen deterministic design")
+        raise ValueError(
+            "Balanced300 membership/paths differ from frozen deterministic design"
+        )

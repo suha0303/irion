@@ -16,15 +16,20 @@ def test_real_300_manifest_groups_same_duration_without_changing_split_or_seed()
     groups = flow.homogeneous_batches(rows, 16)
     assert rows == original
     assert {g[0]["mission_seconds"] for g in groups} == {900, 480, 180}
-    assert all(len({c["mission_seconds"] for c in g}) == 1 and len(g) <= 16 for g in groups)
+    assert all(
+        len({c["mission_seconds"] for c in g}) == 1 and len(g) <= 16
+        for g in groups
+    )
     assert [g[0]["mission_seconds"] for g in groups] == sorted(
         [g[0]["mission_seconds"] for g in groups], reverse=True
     )
-    assert sorted(c["case_id"] for g in groups for c in g) == sorted(c["case_id"] for c in rows)
+    assert sorted(c["case_id"] for g in groups for c in g) == sorted(
+        c["case_id"] for c in rows
+    )
     for seconds in (900, 480, 180):
-        assert [c for g in groups for c in g if c["mission_seconds"] == seconds] == [
-            c for c in rows if c["mission_seconds"] == seconds
-        ]
+        assert [
+            c for g in groups for c in g if c["mission_seconds"] == seconds
+        ] == [c for c in rows if c["mission_seconds"] == seconds]
 
 
 class FixtureRunner:
@@ -54,11 +59,15 @@ class FixtureRunner:
             self.second_flight.set()
 
 
-def test_next_flight_overlaps_cpu_but_third_group_waits_for_first_retirement(tmp_path, monkeypatch):
+def test_next_flight_overlaps_cpu_but_third_group_waits_for_first_retirement(
+    tmp_path, monkeypatch
+):
     r = FixtureRunner(tmp_path)
     cpu_started, release = threading.Event(), threading.Event()
     groups = [[dict(case_id=str(i))] for i in range(3)]
-    monkeypatch.setattr(streaming, "fragment_freeze", lambda *a: (tmp_path, [dict(run_id="a")]))
+    monkeypatch.setattr(
+        streaming, "fragment_freeze", lambda *a: (tmp_path, [dict(run_id="a")])
+    )
 
     def process(rows, label, folder):
         if label.endswith("001"):
@@ -68,31 +77,40 @@ def test_next_flight_overlaps_cpu_but_third_group_waits_for_first_retirement(tmp
 
     pipeline = SimpleNamespace(r=r, process_chunk=process)
     with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(flow.collect_overlapping, r, pipeline, [sum(groups, [])], [groups])
+        future = executor.submit(
+            flow.collect_overlapping, r, pipeline, [sum(groups, [])], [groups]
+        )
         try:
             assert cpu_started.wait(5) and r.second_flight.wait(5)
-            assert len(r.flights) == 2  # CPU1 held; cannot admit a third raw group.
-            assert common.read(tmp_path / "operator/processing-state.json")["stage"].endswith(
-                "freeze"
-            )
+            assert (
+                len(r.flights) == 2
+            )  # CPU1 held; cannot admit a third raw group.
+            assert common.read(tmp_path / "operator/processing-state.json")[
+                "stage"
+            ].endswith("freeze")
         finally:
             release.set()
         outcomes = future.result(timeout=5)
     assert len(outcomes) == len(r.flights) == 3
     assert pipeline.r is r and r.state["bounded_raw_runs"] == 4
     assert (
-        common.read(tmp_path / "operator/processing-state.json")["status"] == "PROCESSING_COMPLETE"
+        common.read(tmp_path / "operator/processing-state.json")["status"]
+        == "PROCESSING_COMPLETE"
     )
     # Main and CPU each write their own state file; no concurrent edits of common state.
     assert r.state.get("completed") == []
 
 
-def test_cpu_failure_preserves_first_error_and_stops_new_groups(tmp_path, monkeypatch):
+def test_cpu_failure_preserves_first_error_and_stops_new_groups(
+    tmp_path, monkeypatch
+):
     r = FixtureRunner(tmp_path)
     groups = [[dict(case_id=str(i))] for i in range(4)]
     preserved = tmp_path / "pending-original.txt"
     preserved.write_text("keep")
-    monkeypatch.setattr(streaming, "fragment_freeze", lambda *a: (tmp_path, [dict(run_id="a")]))
+    monkeypatch.setattr(
+        streaming, "fragment_freeze", lambda *a: (tmp_path, [dict(run_id="a")])
+    )
 
     def fail(rows, label, folder):
         assert r.second_flight.wait(5)
@@ -103,10 +121,16 @@ def test_cpu_failure_preserves_first_error_and_stops_new_groups(tmp_path, monkey
         flow.collect_overlapping(r, pipeline, [sum(groups, [])], [groups])
     signal = common.read(tmp_path / "operator/processing-stop.json")
     assert signal["reason"] == "ValueError: original capsule failure"
-    assert len(r.flights) == 2 and preserved.read_text() == "keep" and pipeline.r is r
+    assert (
+        len(r.flights) == 2
+        and preserved.read_text() == "keep"
+        and pipeline.r is r
+    )
 
 
-def test_cpu_view_is_read_only_and_stays_visible_above_16_flight_cards(tmp_path, monkeypatch):
+def test_cpu_view_is_read_only_and_stays_visible_above_16_flight_cards(
+    tmp_path, monkeypatch
+):
     common.write(
         tmp_path / "config.json",
         dict(
@@ -160,7 +184,10 @@ def test_cpu_view_is_read_only_and_stays_visible_above_16_flight_cards(tmp_path,
             total=16,
             archived=0,
             failed=0,
-            workers=[dict(instance=i, scenario="hover_normal", status="FLYING") for i in range(16)],
+            workers=[
+                dict(instance=i, scenario="hover_normal", status="FLYING")
+                for i in range(16)
+            ],
             reason=[],
             eta_s=None,
         )

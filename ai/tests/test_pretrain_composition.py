@@ -21,7 +21,9 @@ def test_104_roles_exposure_and_independent_seeds():
     for r in rows:
         exposure[r["role"]] += r["mission_seconds"]
     assert exposure["normal_train"] == 7 * 7380
-    assert exposure["normal_validation"] == exposure["normal_calibration"] == 7380
+    assert (
+        exposure["normal_validation"] == exposure["normal_calibration"] == 7380
+    )
     assert exposure["normal_dev_eval"] == 7380 + 2 * 480
     next_rows = collection.cases(500100, "train104")["cases"]
     for key in ("seed", "group_id", "case_id"):
@@ -40,10 +42,14 @@ def test_changed_membership_or_leakage_rejected(damage):
         train[-1]["mission_seconds"] = 42
     elif damage == "condition":
         train[-1]["scenario"] = (
-            "waypoint_normal" if train[-1]["scenario"] != "waypoint_normal" else "hover_normal"
+            "waypoint_normal"
+            if train[-1]["scenario"] != "waypoint_normal"
+            else "hover_normal"
         )
     elif damage == "fault":
-        next(r for r in rows if r["role"] == "anomaly_dev")["scenario"] = "hover_normal"
+        next(r for r in rows if r["role"] == "anomaly_dev")["scenario"] = (
+            "hover_normal"
+        )
     else:
         rows.pop()
     with pytest.raises(ValueError):
@@ -52,14 +58,28 @@ def test_changed_membership_or_leakage_rejected(damage):
 
 def test_multiplier_and_no_legacy_selection():
     args = cli.parser().parse_args(
-        ["init", "--name", "fixture", "--mode", "collect", "--collection-sets", "3"]
+        [
+            "init",
+            "--name",
+            "fixture",
+            "--mode",
+            "collect",
+            "--collection-sets",
+            "3",
+        ]
     )
-    assert args.collection_sets == 3 and args.collection_profile == "balanced300"
+    assert (
+        args.collection_sets == 3 and args.collection_profile == "balanced300"
+    )
     for value in ("0", "-1", "1.5"):
         with pytest.raises(SystemExit):
-            cli.parser().parse_args(["init", "--name", "fixture", "--collection-sets", value])
+            cli.parser().parse_args(
+                ["init", "--name", "fixture", "--collection-sets", value]
+            )
     with pytest.raises(SystemExit):
-        cli.parser().parse_args(["init", "--name", "fixture", "--collection-profile", "legacy50"])
+        cli.parser().parse_args(
+            ["init", "--name", "fixture", "--collection-profile", "legacy50"]
+        )
 
 
 def fixture_runner(tmp_path):
@@ -91,7 +111,9 @@ def synthetic_rows(cases):
             origin="px4_sitl",
             continuity="independent_reset",
             previous_attempts=[],
-            health_eligibility="abnormal" if c["role"] == "anomaly_dev" else "confirmed_healthy",
+            health_eligibility="abnormal"
+            if c["role"] == "anomaly_dev"
+            else "confirmed_healthy",
             revision_lock=dict(battery_profile="VTC6_4S4P"),
         )
         for c in cases
@@ -127,8 +149,13 @@ def test_two_sets_prepare_once_with_one_global_handoff(tmp_path, monkeypatch):
 
     def prepare(frozen, label, workers, *, cases_path):
         assert cases_path == r.task / "cases.json"
-        assert len(common.read(cases_path)["cases"]) == len(frozen["runs"]) == 208
-        assert Counter(row["role"] for row in frozen["runs"])["normal_train"] == 126
+        assert (
+            len(common.read(cases_path)["cases"]) == len(frozen["runs"]) == 208
+        )
+        assert (
+            Counter(row["role"] for row in frozen["runs"])["normal_train"]
+            == 126
+        )
         assert len(frozen["source_freezes"]) == 2
         assert frozen["scaler_scope"] == "all_selected_normal_train"
         assert label == "prepared"
@@ -143,7 +170,8 @@ def test_two_sets_prepare_once_with_one_global_handoff(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "damage", ["none", "seed", "group_id", "paired_case_id", "membership", "raw_sha256"]
+    "damage",
+    ["none", "seed", "group_id", "paired_case_id", "membership", "raw_sha256"],
 )
 def test_global_set_identity_guards(damage):
     first = collection.cases(500000, "train104")["cases"]
@@ -162,7 +190,9 @@ def test_global_set_identity_guards(damage):
         composition.validate_roles(rows, cases, [], "train104", case_sets=sets)
 
 
-def test_failed_first_collection_never_launches_second_or_preparation(tmp_path, monkeypatch):
+def test_failed_first_collection_never_launches_second_or_preparation(
+    tmp_path, monkeypatch
+):
     r = fixture_runner(tmp_path)
     calls = []
 
@@ -171,7 +201,9 @@ def test_failed_first_collection_never_launches_second_or_preparation(tmp_path, 
         raise RuntimeError("fixture failure")
 
     monkeypatch.setattr(r, "flight", fail)
-    monkeypatch.setattr(r, "prepare", lambda *a, **k: pytest.fail("must not prepare"))
+    monkeypatch.setattr(
+        r, "prepare", lambda *a, **k: pytest.fail("must not prepare")
+    )
     with pytest.raises(RuntimeError, match="fixture failure"):
         r.collection_sets()
     assert len(calls) == 1

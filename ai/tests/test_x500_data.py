@@ -20,7 +20,13 @@ class DisplayTest(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.plan = self.root / "plan.json"
         self.plan.write_text(
-            json.dumps({"campaign_id": "test", "execution_dir": str(self.root), "attempts_max": 3})
+            json.dumps(
+                {
+                    "campaign_id": "test",
+                    "execution_dir": str(self.root),
+                    "attempts_max": 3,
+                }
+            )
         )
 
     def ledger(self, state):
@@ -45,17 +51,27 @@ class DisplayTest(unittest.TestCase):
         state = display.snapshot(self.plan)
         self.assertEqual(state["archived"], 1)
         self.assertLess(state["percent"], 34)
-        self.assertIn("품질 승인·전처리·학습 완료가 아닙니다", display.render(state))
+        self.assertIn(
+            "품질 승인·전처리·학습 완료가 아닙니다", display.render(state)
+        )
 
     def test_no_path_traversal(self):
-        self.ledger({"status": "RUNNING", "cases": {"../outside": {"status": "ARCHIVING"}}})
+        self.ledger(
+            {
+                "status": "RUNNING",
+                "cases": {"../outside": {"status": "ARCHIVING"}},
+            }
+        )
         self.assertEqual(display.snapshot(self.plan)["workers"], [])
 
     def test_completed_collection_still_pending_quality(self):
         self.ledger(
             {
                 "status": "COLLECTED_PENDING_QUALITY_STOPPED",
-                "cases": {str(i): {"status": "ARCHIVED_PENDING_QUALITY"} for i in range(3)},
+                "cases": {
+                    str(i): {"status": "ARCHIVED_PENDING_QUALITY"}
+                    for i in range(3)
+                },
             }
         )
         state = display.snapshot(self.plan)
@@ -71,7 +87,12 @@ def test_resource_and_effective_rtf_display(tmp_path):
     plan = tmp_path / "plan.json"
     plan.write_text(
         json.dumps(
-            dict(campaign_id="R3", execution_dir=str(tmp_path), attempts_max=1, phase="benchmark")
+            dict(
+                campaign_id="R3",
+                execution_dir=str(tmp_path),
+                attempts_max=1,
+                phase="benchmark",
+            )
         )
     )
     (tmp_path / "ledger.json").write_text(
@@ -82,7 +103,9 @@ def test_resource_and_effective_rtf_display(tmp_path):
                     "case1": dict(
                         status="VERIFYING",
                         assessment=dict(
-                            observed_valid_seconds=100, flight_command_wall_s=80, effective_rtf=1.25
+                            observed_valid_seconds=100,
+                            flight_command_wall_s=80,
+                            effective_rtf=1.25,
                         ),
                     )
                 },
@@ -136,7 +159,13 @@ def test_progress_does_not_invent_simulation_time_or_eta(tmp_path):
     )
     (tmp_path / "c1").mkdir()
     (tmp_path / "c1/flight-progress.json").write_text(
-        json.dumps(dict(wall_elapsed_s=123, observed_simulation_elapsed_s=None, live_rtf=None))
+        json.dumps(
+            dict(
+                wall_elapsed_s=123,
+                observed_simulation_elapsed_s=None,
+                live_rtf=None,
+            )
+        )
     )
     state = display.snapshot(plan)
     text = display.render(state)
@@ -149,10 +178,14 @@ def test_progress_does_not_invent_simulation_time_or_eta(tmp_path):
 def test_eta_uses_measured_campaign_throughput_and_failure_disables_it():
     plan = dict(concurrency=2, mission_seconds=900)
     rows = {
-        str(i): dict(status="ARCHIVED_PENDING_QUALITY", case=dict(mission_seconds=900))
+        str(i): dict(
+            status="ARCHIVED_PENDING_QUALITY", case=dict(mission_seconds=900)
+        )
         for i in range(2)
     }
-    ledger = dict(status="RUNNING", elapsed_s=1000, planned_mission_seconds_total=3600)
+    ledger = dict(
+        status="RUNNING", elapsed_s=1000, planned_mission_seconds_total=3600
+    )
     result = display.estimate_eta(plan, ledger, {}, rows)
     assert result["seconds"] == 1000
     assert result["confidence"].startswith("low")
@@ -160,14 +193,21 @@ def test_eta_uses_measured_campaign_throughput_and_failure_disables_it():
     assert display.estimate_eta(plan, ledger, {}, rows)["seconds"] is None
 
 
-def test_live_simulation_clock_display_and_stale_suppression(tmp_path, monkeypatch):
+def test_live_simulation_clock_display_and_stale_suppression(
+    tmp_path, monkeypatch
+):
     from datetime import datetime, timezone
 
     now = datetime(2026, 10, 15, tzinfo=timezone.utc)
     plan = tmp_path / "plan.json"
     plan.write_text(
         json.dumps(
-            dict(campaign_id="R3", execution_dir=str(tmp_path), attempts_max=1, mission_seconds=900)
+            dict(
+                campaign_id="R3",
+                execution_dir=str(tmp_path),
+                attempts_max=1,
+                mission_seconds=900,
+            )
         )
     )
     (tmp_path / "ledger.json").write_text(
@@ -176,7 +216,9 @@ def test_live_simulation_clock_display_and_stale_suppression(tmp_path, monkeypat
                 status="RUNNING",
                 cases={
                     "c1": dict(
-                        status="FLYING", case=dict(scenario="hover_normal"), lane=dict(instance=0)
+                        status="FLYING",
+                        case=dict(scenario="hover_normal"),
+                        lane=dict(instance=0),
                     )
                 },
             )
@@ -201,23 +243,36 @@ def test_live_simulation_clock_display_and_stale_suppression(tmp_path, monkeypat
     assert "producer 갱신" in text
     monkeypatch.setattr(display.time, "time", lambda: now.timestamp() + 11)
     state = display.snapshot(plan)
-    assert state["workers"][0]["flight"]["observed_simulation_elapsed_s"] is None
+    assert (
+        state["workers"][0]["flight"]["observed_simulation_elapsed_s"] is None
+    )
     assert state["workers"][0]["flight"]["live_rtf"] is None
 
 
 def test_retry_uses_current_attempt_progress_only(tmp_path):
     plan = tmp_path / "plan.json"
     plan.write_text(
-        json.dumps(dict(campaign_id="retry", execution_dir=str(tmp_path), attempts_max=1))
+        json.dumps(
+            dict(
+                campaign_id="retry", execution_dir=str(tmp_path), attempts_max=1
+            )
+        )
     )
     (tmp_path / "ledger.json").write_text(
         json.dumps(
-            dict(status="RUNNING", cases={"c1": dict(status="FLYING", attempt=2, attempts_max=3)})
+            dict(
+                status="RUNNING",
+                cases={"c1": dict(status="FLYING", attempt=2, attempts_max=3)},
+            )
         )
     )
     (tmp_path / "c1/attempt-02").mkdir(parents=True)
-    (tmp_path / "c1/flight-progress.json").write_text(json.dumps(dict(marker="old")))
-    (tmp_path / "c1/attempt-02/flight-progress.json").write_text(json.dumps(dict(marker="current")))
+    (tmp_path / "c1/flight-progress.json").write_text(
+        json.dumps(dict(marker="old"))
+    )
+    (tmp_path / "c1/attempt-02/flight-progress.json").write_text(
+        json.dumps(dict(marker="current"))
+    )
     state = display.snapshot(plan)
     assert state["workers"][0]["flight"]["marker"] == "current"
     assert state["workers"][0]["attempt"] == 2

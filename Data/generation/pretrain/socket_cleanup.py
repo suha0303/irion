@@ -17,7 +17,9 @@ def process(pid):
     try:
         folder = Path(f"/proc/{pid}")
         fields = (folder / "stat").read_text().rsplit(")", 1)[1].split()
-        return dict(pid=pid, start=fields[19], state=fields[0], uid=folder.stat().st_uid)
+        return dict(
+            pid=pid, start=fields[19], state=fields[0], uid=folder.stat().st_uid
+        )
     except FileNotFoundError:
         return None
 
@@ -26,7 +28,12 @@ def socket_identity(path):
     info = path.lstat()
     if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
         raise ValueError("Not a socket owned by this user")
-    return dict(device=info.st_dev, inode=info.st_ino, uid=info.st_uid, ctime_ns=info.st_ctime_ns)
+    return dict(
+        device=info.st_dev,
+        inode=info.st_ino,
+        uid=info.st_uid,
+        ctime_ns=info.st_ctime_ns,
+    )
 
 
 def bound_inodes(path):
@@ -46,7 +53,11 @@ def claim(run, instance, destination):
     try:
         meta = read(run / "run.json")
         pid = meta.get("owned_process_groups", {}).get("px4")
-        if not pid or meta.get("instance") != instance or meta.get("run_id") != run.name:
+        if (
+            not pid
+            or meta.get("instance") != instance
+            or meta.get("run_id") != run.name
+        ):
             return
         owner = process(pid)
         if not owner or owner["uid"] != os.getuid() or owner["state"] == "Z":
@@ -70,7 +81,9 @@ def claim(run, instance, destination):
         if (
             socket_identity(path) != identity
             or not current
-            or any(current[key] != owner[key] for key in ("pid", "start", "uid"))
+            or any(
+                current[key] != owner[key] for key in ("pid", "start", "uid")
+            )
         ):
             return
     except FileNotFoundError:
@@ -100,7 +113,10 @@ def release(receipt, unit):
         for line in receipt["cgroup"].splitlines()
     ):
         raise ValueError("Socket belongs to a different service")
-    if receipt["boot_id"] != Path("/proc/sys/kernel/random/boot_id").read_text().strip():
+    if (
+        receipt["boot_id"]
+        != Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    ):
         raise ValueError("Boot identity changed")
     if not os.path.lexists(path):
         return "already_removed"
@@ -108,7 +124,10 @@ def release(receipt, unit):
     if (
         owner
         and owner["state"] != "Z"
-        and all(owner[key] == receipt["owner"][key] for key in ("pid", "start", "uid"))
+        and all(
+            owner[key] == receipt["owner"][key]
+            for key in ("pid", "start", "uid")
+        )
     ):
         raise ValueError("Owner still running")
     if socket_identity(path) != receipt["identity"]:
@@ -158,24 +177,38 @@ def cleanup(task):
                     instance = receipt["instance"]
                     if type(instance) is not int or not 0 <= instance <= 15:
                         raise ValueError("Invalid instance")
-                    with (ROOT / f"simulation/.cache/instances/{instance}.lock").open("a") as lease:
+                    with (
+                        ROOT / f"simulation/.cache/instances/{instance}.lock"
+                    ).open("a") as lease:
                         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
                         result = release(receipt, unit)
                     report["actions"].append(
-                        dict(receipt=str(source), path=receipt["path"], result=result)
+                        dict(
+                            receipt=str(source),
+                            path=receipt["path"],
+                            result=result,
+                        )
                     )
                 except (OSError, ValueError, KeyError, TypeError) as exc:
-                    report["errors"].append(dict(receipt=str(source), reason=str(exc)))
+                    report["errors"].append(
+                        dict(receipt=str(source), reason=str(exc))
+                    )
         except OSError as exc:
-            report["errors"].append(dict(reason="Project lock unavailable; preserved: " + str(exc)))
+            report["errors"].append(
+                dict(reason="Project lock unavailable; preserved: " + str(exc))
+            )
         claimed = {action["path"] for action in report["actions"]}
         report["remaining_unremoved_sockets"] = [
-            str(path) for i in range(16) if os.path.lexists(path := SOCKET_ROOT / f"px4-sock-{i}")
+            str(path)
+            for i in range(16)
+            if os.path.lexists(path := SOCKET_ROOT / f"px4-sock-{i}")
         ]
         report["status"] = (
             "CLEANUP_REQUIRES_REVIEW"
             if report["errors"]
-            or any(p not in claimed for p in report["remaining_unremoved_sockets"])
+            or any(
+                p not in claimed for p in report["remaining_unremoved_sockets"]
+            )
             else "CLEANUP_COMPLETE"
         )
         write(task / "operator/socket-cleanup.json", report)
@@ -195,7 +228,9 @@ def cleanup(task):
                     active=[],
                 )
                 write(state_path, state)
-    if (task / "config.json").exists() and read(task / "config.json").get("mode") == "main19":
+    if (task / "config.json").exists() and read(task / "config.json").get(
+        "mode"
+    ) == "main19":
         from .main_collection import cleanup_finished
 
         cleanup_finished(task, report)

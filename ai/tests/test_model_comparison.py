@@ -10,7 +10,6 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 import torch
-
 from execution.common import read, sha, write
 from learning import comparison, lifecycle, operator, prepare_compare
 from learning.training import Batches
@@ -38,7 +37,13 @@ def server_profile(root, monkeypatch):
             output_root=str(root / "results"),
             ssh=None,
             slurm=dict(
-                partition="p02", node="DIS01", nodes=1, ntasks=1, gpus=1, cpus=4, memory_gib=16
+                partition="p02",
+                node="DIS01",
+                nodes=1,
+                ntasks=1,
+                gpus=1,
+                cpus=4,
+                memory_gib=16,
             ),
         ),
     )
@@ -87,7 +92,10 @@ def config(approved=True):
 def test_fixed_eight_variants_seed0_and_approval():
     cfg = config()
     lifecycle.config_check(cfg)
-    assert len(lifecycle.neural_ids(cfg)) == 8 and len(lifecycle.model_ids(cfg)) == 10
+    assert (
+        len(lifecycle.neural_ids(cfg)) == 8
+        and len(lifecycle.model_ids(cfg)) == 10
+    )
     for v in cfg["variants"]:
         spec = lifecycle.spec_for(cfg, v["id"])
         assert (spec.name, spec.hidden, spec.layers, spec.heads) == (
@@ -113,7 +121,9 @@ def test_fixed_eight_variants_seed0_and_approval():
         comparison.config_check(config(False))
     comparison.config_check(config(False), require_approval=False)
     with pytest.raises(MemoryError):
-        comparison.config_check({**cfg, "memory": dict(estimated_host_peak_bytes=64 * 1024**3)})
+        comparison.config_check(
+            {**cfg, "memory": dict(estimated_host_peak_bytes=64 * 1024**3)}
+        )
 
 
 def test_r5_still_rejects_seed0():
@@ -144,7 +154,9 @@ def test_r5_still_rejects_seed0():
 def test_mmap_normalization_matches_legacy_and_avoids_whole_copy(tmp_path):
     rng = np.random.default_rng(3)
     arrays = dict(
-        X=rng.normal(size=(7, 100, 19)), C=rng.normal(size=(7, 6)), Y=rng.normal(size=(7, 10, 4))
+        X=rng.normal(size=(7, 100, 19)),
+        C=rng.normal(size=(7, 6)),
+        Y=rng.normal(size=(7, 10, 4)),
     )
     scaler = {
         k + suffix: np.arange(n) * 0.1 + (1 if suffix == "_scale" else 0)
@@ -155,24 +167,35 @@ def test_mmap_normalization_matches_legacy_and_avoids_whole_copy(tmp_path):
     np.savez_compressed(path, **arrays)
     write(tmp_path / "manifest.json", dict(hashes={path.name: sha(path)}))
     result = comparison.normalized_mmap(
-        tmp_path, "normal_train", scaler, tmp_path / "cache", Progress(), chunk=3
+        tmp_path,
+        "normal_train",
+        scaler,
+        tmp_path / "cache",
+        Progress(),
+        chunk=3,
     )
     batches = Batches(result, 3, "cpu")
     for key, scale in (("X", "x"), ("C", "c"), ("Y", "y")):
-        expected = ((arrays[key] - scaler[scale + "_mean"]) / scaler[scale + "_scale"]).astype(
-            "float32"
-        )
+        expected = (
+            (arrays[key] - scaler[scale + "_mean"]) / scaler[scale + "_scale"]
+        ).astype("float32")
         np.testing.assert_array_equal(result[key], expected)
         assert np.shares_memory(result[key], batches.data[key].numpy())
     for actual, key in zip(batches.get([6, 0, 2]), ("X", "C", "Y")):
         np.testing.assert_array_equal(actual.numpy(), result[key][[6, 0, 2]])
     with pytest.raises(FileExistsError):
-        comparison.normalized_mmap(tmp_path, "normal_train", scaler, tmp_path / "cache", Progress())
+        comparison.normalized_mmap(
+            tmp_path, "normal_train", scaler, tmp_path / "cache", Progress()
+        )
     with pytest.raises(ValueError):
-        comparison.normalized_mmap(tmp_path, "anomaly_dev", scaler, tmp_path / "bad", Progress())
+        comparison.normalized_mmap(
+            tmp_path, "anomaly_dev", scaler, tmp_path / "bad", Progress()
+        )
     path.write_bytes(b"changed")
     with pytest.raises(ValueError, match="changed"):
-        comparison.normalized_mmap(tmp_path, "normal_train", scaler, tmp_path / "bad", Progress())
+        comparison.normalized_mmap(
+            tmp_path, "normal_train", scaler, tmp_path / "bad", Progress()
+        )
 
 
 def test_batch_finite_check_includes_later_chunks():
@@ -187,7 +210,9 @@ def test_batch_finite_check_includes_later_chunks():
 
 
 @pytest.mark.parametrize("budget_passed", [None, True, False])
-def test_exact_eight_gates_no_extra_model_or_seed(tmp_path, monkeypatch, budget_passed):
+def test_exact_eight_gates_no_extra_model_or_seed(
+    tmp_path, monkeypatch, budget_passed
+):
     cfg = config() if budget_passed is None else training_only_config()
     write(tmp_path / "input/config.json", cfg)
     measured, children = [], []
@@ -231,7 +256,11 @@ def test_exact_eight_gates_no_extra_model_or_seed(tmp_path, monkeypatch, budget_
         return {"passed": budget_passed}
 
     monkeypatch.setattr(lifecycle, "estimate_fit_budget", budget)
-    arrays = dict(X=np.zeros((512, 100, 19)), C=np.zeros((512, 6)), Y=np.zeros((512, 10, 4)))
+    arrays = dict(
+        X=np.zeros((512, 100, 19)),
+        C=np.zeros((512, 6)),
+        Y=np.zeros((512, 10, 4)),
+    )
     progress = Progress()
     progress.started = time.time()
     if budget_passed is False:
@@ -244,10 +273,14 @@ def test_exact_eight_gates_no_extra_model_or_seed(tmp_path, monkeypatch, budget_
         seed == 0 and batches == [256] for _, seed, batches in measured
     )
     assert children == [
-        (v["id"], p) for v in comparison.VARIANTS for p in ("full", "partial", "resume")
+        (v["id"], p)
+        for v in comparison.VARIANTS
+        for p in ("full", "partial", "resume")
     ]
     if budget_passed is not False:
-        assert set(read(tmp_path / "gates/passed.json")["proofs"]) == set(lifecycle.neural_ids(cfg))
+        assert set(read(tmp_path / "gates/passed.json")["proofs"]) == set(
+            lifecycle.neural_ids(cfg)
+        )
     assert len(budgets) == (0 if budget_passed is None else 1)
     if budget_passed is not None:
         context = read(tmp_path / "training-budget.json")["measurement_context"]
@@ -255,14 +288,18 @@ def test_exact_eight_gates_no_extra_model_or_seed(tmp_path, monkeypatch, budget_
         assert context["training_stride_us"] == 1000000 and context["seed"] == 0
 
 
-def test_r6_submission_budget_and_no_submission_before_approval(tmp_path, monkeypatch):
+def test_r6_submission_budget_and_no_submission_before_approval(
+    tmp_path, monkeypatch
+):
     (tmp_path / "input").mkdir()
     write(tmp_path / "input/inventory.json", {})
     server_profile(tmp_path, monkeypatch)
     monkeypatch.setattr(operator, "LOCK", tmp_path / "project.lock")
     monkeypatch.setattr(operator, "own_queue", lambda: "")
     calls = []
-    monkeypatch.setattr(operator, "command", lambda argv: calls.append(argv) or "123")
+    monkeypatch.setattr(
+        operator, "command", lambda argv: calls.append(argv) or "123"
+    )
     with pytest.raises(ValueError, match="approved"):
         operator.submit(tmp_path, "fit", config(False))
     assert not calls and not (tmp_path / "fit-submitted.claim").exists()
@@ -285,14 +322,21 @@ def test_r6_submission_budget_and_no_submission_before_approval(tmp_path, monkey
 
 
 def test_authorization_is_explicit_one_time_no_execution(tmp_path, monkeypatch):
-    monkeypatch.setattr(prepare_compare, "external_root", lambda p: Path(p).resolve())
+    monkeypatch.setattr(
+        prepare_compare, "external_root", lambda p: Path(p).resolve()
+    )
     write(tmp_path / "input/config.json", config(False))
-    write(tmp_path / "input/inventory.json", {"config.json": sha(tmp_path / "input/config.json")})
+    write(
+        tmp_path / "input/inventory.json",
+        {"config.json": sha(tmp_path / "input/config.json")},
+    )
     write(tmp_path / "prepared.json", {})
     with pytest.raises(ValueError):
         prepare_compare.authorize(tmp_path, False)
     prepare_compare.authorize(tmp_path, True)
-    assert read(tmp_path / "input/config.json")["production_training_authorized"]
+    assert read(tmp_path / "input/config.json")[
+        "production_training_authorized"
+    ]
     assert not (tmp_path / "controller.claim").exists()
     with pytest.raises(ValueError):
         prepare_compare.authorize(tmp_path, True)
@@ -320,12 +364,20 @@ def test_revision_display_and_remote_scope(tmp_path):
     ):
         with pytest.raises(ValueError):
             prepare_compare.remote_path(path)
-    assert prepare_compare.remote_path("/srv/drone-ai/comparison").name == "comparison"
-    assert prepare_compare.remote_path("/tmp/another-attempt").name == "another-attempt"
+    assert (
+        prepare_compare.remote_path("/srv/drone-ai/comparison").name
+        == "comparison"
+    )
+    assert (
+        prepare_compare.remote_path("/tmp/another-attempt").name
+        == "another-attempt"
+    )
 
 
 @pytest.mark.parametrize("bad", [dict(seed=17), dict(config_sha256="changed")])
-def test_output_seed_config_binding_checked_before_truth_join(tmp_path, monkeypatch, bad):
+def test_output_seed_config_binding_checked_before_truth_join(
+    tmp_path, monkeypatch, bad
+):
     cfg = {**config(), "upstream": str(tmp_path / "upstream")}
     write(tmp_path / "input/config.json", cfg)
     write(tmp_path / "input/inventory.json", {})
@@ -336,13 +388,18 @@ def test_output_seed_config_binding_checked_before_truth_join(tmp_path, monkeypa
     with pytest.raises(ValueError, match="binding mismatch before truth"):
         lifecycle.evaluate_worker(tmp_path)
     assert not (tmp_path / "evaluation").exists()
-    assert read(tmp_path / "evaluation-progress.json")["status"] == "FAILED_STOPPED"
+    assert (
+        read(tmp_path / "evaluation-progress.json")["status"]
+        == "FAILED_STOPPED"
+    )
 
 
 def test_invalid_budget_stops_before_restore(tmp_path, monkeypatch):
     profile = server_profile(tmp_path, monkeypatch)
     with pytest.raises(ValueError, match="hours"):
-        prepare_compare.prepare(SimpleNamespace(wall_hours=0, evaluation_hours=12, profile=profile))
+        prepare_compare.prepare(
+            SimpleNamespace(wall_hours=0, evaluation_hours=12, profile=profile)
+        )
 
 
 def test_model_ids_do_not_reuse_existing_weights(tmp_path):
@@ -388,13 +445,25 @@ def admitted(tmp_path):
         dataset / "manifest.json",
         dict(runs=rows, hashes={p.name: sha(p) for p in dataset.glob("*.npz")}),
     )
-    write(tmp_path / "evidence/frozen-manifest.json", dict(status="DATA_FROZEN", runs=rows))
+    write(
+        tmp_path / "evidence/frozen-manifest.json",
+        dict(status="DATA_FROZEN", runs=rows),
+    )
     write(
         tmp_path / "evidence/quality.json",
-        dict(passed=True, final_test_used=False, train_only_scaler_verified=True),
+        dict(
+            passed=True, final_test_used=False, train_only_scaler_verified=True
+        ),
     )
-    write(tmp_path / "evidence/dataset-seal.json", {p.name: sha(p) for p in dataset.iterdir()})
-    h = dict(training_eligible=True, run_count=1200, scaler_scope="all_selected_normal_train")
+    write(
+        tmp_path / "evidence/dataset-seal.json",
+        {p.name: sha(p) for p in dataset.iterdir()},
+    )
+    h = dict(
+        training_eligible=True,
+        run_count=1200,
+        scaler_scope="all_selected_normal_train",
+    )
     for name, key in (
         ("quality.json", "quality_sha256"),
         ("dataset-seal.json", "dataset_seal_sha256"),
@@ -443,11 +512,15 @@ def test_seed0_continuous_and_resume_match_with_variant_progress(tmp_path):
 
     rng = np.random.default_rng(7)
     arrays = dict(
-        X=rng.normal(size=(3, 100, 19)), C=rng.normal(size=(3, 6)), Y=rng.normal(size=(3, 10, 4))
+        X=rng.normal(size=(3, 100, 19)),
+        C=rng.normal(size=(3, 6)),
+        Y=rng.normal(size=(3, 10, 4)),
     )
     spec = lifecycle.spec_for(config(), "lstm_h64_l2_s0")
     seen = []
-    progress = SimpleNamespace(check=lambda: None, update=lambda **kw: seen.append(kw))
+    progress = SimpleNamespace(
+        check=lambda: None, update=lambda **kw: seen.append(kw)
+    )
     kwargs = dict(
         binding=dict(data="synthetic", scaler="synthetic", sources="synthetic"),
         seed=0,
@@ -458,30 +531,51 @@ def test_seed0_continuous_and_resume_match_with_variant_progress(tmp_path):
         model_id="lstm_h64_l2_s0",
     )
     run_fit(spec, arrays, arrays, tmp_path / "full", **kwargs)
-    run_fit(spec, arrays, arrays, tmp_path / "partial", stop_after_epoch=1, **kwargs)
     run_fit(
-        spec, arrays, arrays, tmp_path / "resumed", resume=tmp_path / "partial/last.pt", **kwargs
+        spec, arrays, arrays, tmp_path / "partial", stop_after_epoch=1, **kwargs
+    )
+    run_fit(
+        spec,
+        arrays,
+        arrays,
+        tmp_path / "resumed",
+        resume=tmp_path / "partial/last.pt",
+        **kwargs,
     )
     full = torch.load(tmp_path / "full/last.pt", weights_only=False)
     resumed = torch.load(tmp_path / "resumed/last.pt", weights_only=False)
     assert full["config"]["seed"] == 0
-    for key in ("model", "optimizer", "rng", "best", "best_epoch", "best_state"):
+    for key in (
+        "model",
+        "optimizer",
+        "rng",
+        "best",
+        "best_epoch",
+        "best_state",
+    ):
         assert same(full[key], resumed[key])
-    assert sha(tmp_path / "full/model.safetensors") == sha(tmp_path / "resumed/model.safetensors")
+    assert sha(tmp_path / "full/model.safetensors") == sha(
+        tmp_path / "resumed/model.safetensors"
+    )
     assert any(row.get("model") == "lstm_h64_l2_s0" for row in seen)
 
 
-@pytest.mark.parametrize("training_only,normalization_study", [(False, False), (True, False), (True, True)])
+@pytest.mark.parametrize(
+    "training_only,normalization_study",
+    [(False, False), (True, False), (True, True)],
+)
 def test_complete_local_prepare_restores_only_fixture_and_never_submits(
     admitted, tmp_path, monkeypatch, training_only, normalization_study
 ):
     from execution.common import ROOT
+
     from pretrain.storage import pack_files
 
     frozen = read(admitted / "evidence/frozen-manifest.json")
     frozen["revision_lock"] = dict(
         preprocessing_sha256=sha(
-            ROOT / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
+            ROOT
+            / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
         )
     )
     for row in frozen["runs"]:
@@ -490,7 +584,9 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
 
             row["archive"] = dict(
                 members={
-                    "evaluation/events.jsonl": dict(bytes=0, sha256=hashlib.sha256(b"").hexdigest())
+                    "evaluation/events.jsonl": dict(
+                        bytes=0, sha256=hashlib.sha256(b"").hexdigest()
+                    )
                 }
             )
     write(admitted / "evidence/frozen-manifest.json", frozen)
@@ -535,7 +631,9 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
             final_test_included=False,
             dataset=data_ref,
             evaluator_truth=truth_ref,
-            uncompressed_dataset_bytes=sum(v["bytes"] for v in data_ref["members"].values()),
+            uncompressed_dataset_bytes=sum(
+                v["bytes"] for v in data_ref["members"].values()
+            ),
         ),
     )
     fake_home = tmp_path / "home"
@@ -543,14 +641,19 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
         fake_home / "comparison-plan.json",
         dict(
             dataset=dict(
-                receipt_sha256=sha(bundle / "receipt.json"), archive_sha256=data_ref["sha256"]
+                receipt_sha256=sha(bundle / "receipt.json"),
+                archive_sha256=data_ref["sha256"],
             )
         ),
     )
     monkeypatch.setattr(prepare_compare, "HOME", fake_home)
-    monkeypatch.setattr(prepare_compare, "external_root", lambda p: Path(p).resolve())
     monkeypatch.setattr(
-        prepare_compare.shutil, "disk_usage", lambda p: SimpleNamespace(free=1024**4)
+        prepare_compare, "external_root", lambda p: Path(p).resolve()
+    )
+    monkeypatch.setattr(
+        prepare_compare.shutil,
+        "disk_usage",
+        lambda p: SimpleNamespace(free=1024**4),
     )
     monkeypatch.setattr(
         prepare_compare.subprocess,
@@ -572,20 +675,26 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
     prepare_compare.prepare(args)
     cfg = read(root / "input/config.json")
     comparison.config_check(cfg, require_approval=False)
-    assert cfg["seed"] == 0 and len(cfg["models"]) == (16 if normalization_study else 10)
+    assert cfg["seed"] == 0 and len(cfg["models"]) == (
+        16 if normalization_study else 10
+    )
     if normalization_study:
         assert "dropout" not in cfg
         assert cfg["learning_rate"] is None
         assert (root / "input/ai/learning/legacy_models.py").is_file()
     assert not cfg["production_training_authorized"]
     assert (
-        sha(root / "server-profile.json") == read(root / "prepared.json")["server_profile_sha256"]
+        sha(root / "server-profile.json")
+        == read(root / "prepared.json")["server_profile_sha256"]
     )
     assert (root / "input/ai/console/profile.py").is_file()
     if training_only:
         assert not (root / "truth").exists()
         assert cfg["truth_index_sha256"] is None
-        assert cfg["evaluation_authorized"] is False and cfg["calibration_authorized"] is False
+        assert (
+            cfg["evaluation_authorized"] is False
+            and cfg["calibration_authorized"] is False
+        )
         assert cfg["evaluation_hours"] == 0
     else:
         assert len(read(root / "truth/index.json")) == 272
@@ -600,12 +709,18 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
         # archive restore, source edits, symlinks, or GPU submission.
         cfg["upstream"] = str(root / "upstream")
         write(root / "input/config.json", cfg)
-        write(root / "input/inventory.json", prepare_compare.inventory(root / "input"))
+        write(
+            root / "input/inventory.json",
+            prepare_compare.inventory(root / "input"),
+        )
         prepared = read(root / "prepared.json")
         prepared["input_inventory_sha256"] = sha(root / "input/inventory.json")
         write(root / "prepared.json", prepared)
         prepare_compare.authorize(root, True)
-        write(root / "controller.json", dict(status="FAILED_STOPPED", job_id="33343"))
+        write(
+            root / "controller.json",
+            dict(status="FAILED_STOPPED", job_id="33343"),
+        )
         write(
             root / "release.json",
             dict(
@@ -617,7 +732,10 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
                 exit_code="1:0",
             ),
         )
-        write(root / "fit-submission.json", dict(job_id="33343", uid=os.getuid(), phase="fit"))
+        write(
+            root / "fit-submission.json",
+            dict(job_id="33343", uid=os.getuid(), phase="fit"),
+        )
         new_profile = tmp_path / "reuse-profile.json"
         settings = read(profile)
         settings["dataset_root"] = str(root / "upstream")
@@ -632,9 +750,15 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
                 "reuse_from": root,
             }
         )
-        original = {str(p.relative_to(root)): sha(p) for p in root.rglob("*") if p.is_file()}
+        original = {
+            str(p.relative_to(root)): sha(p)
+            for p in root.rglob("*")
+            if p.is_file()
+        }
         monkeypatch.setattr(
-            prepare_compare, "restore_ref", lambda *a, **k: pytest.fail("No restore")
+            prepare_compare,
+            "restore_ref",
+            lambda *a, **k: pytest.fail("No restore"),
         )
         admitted_paths = []
         original_admission = comparison.admission
@@ -651,13 +775,23 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
         assert new_cfg["reuse_provenance"]["copied_upstream_bytes"] == 0
         assert new_cfg["production_training_authorized"] is False
         assert new_cfg["seed"] == 0 and new_cfg["batch_size"] == 256
-        assert not (retry / "upstream").exists() and not (retry / "truth").exists()
+        assert (
+            not (retry / "upstream").exists() and not (retry / "truth").exists()
+        )
         assert admitted_paths == [root / "upstream"]
         assert original == {
-            str(p.relative_to(root)): sha(p) for p in root.rglob("*") if p.is_file()
+            str(p.relative_to(root)): sha(p)
+            for p in root.rglob("*")
+            if p.is_file()
         }
         receipt = read(bundle / "receipt.json")
-        source_args = (root, bundle, receipt, tmp_path / "rejected", tmp_path / "rejected")
+        source_args = (
+            root,
+            bundle,
+            receipt,
+            tmp_path / "rejected",
+            tmp_path / "rejected",
+        )
         for change in (
             {"released": False},
             {"job_id": "99999"},
@@ -670,7 +804,9 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
                 prepare_compare.reuse_failed_upstream(*source_args)
             write(root / "release.json", previous)
         with pytest.raises(ValueError, match="same server"):
-            prepare_compare.reuse_failed_upstream(*source_args[:-1], tmp_path / "elsewhere")
+            prepare_compare.reuse_failed_upstream(
+                *source_args[:-1], tmp_path / "elsewhere"
+            )
         with pytest.raises(ValueError, match="separate new attempt"):
             prepare_compare.reuse_failed_upstream(
                 root, bundle, receipt, root / "nested", root / "nested"
@@ -703,22 +839,32 @@ def test_training_only_scope_rejects_post_training_approval_and_budget():
             comparison.config_check({**cfg, key: value})
 
 
-def test_training_only_refuses_evaluator_before_submission_or_gpu(tmp_path, monkeypatch):
+def test_training_only_refuses_evaluator_before_submission_or_gpu(
+    tmp_path, monkeypatch
+):
     cfg = training_only_config()
     monkeypatch.setattr(
-        operator, "runtime_profile", lambda *a, **k: pytest.fail("No submission setup")
+        operator,
+        "runtime_profile",
+        lambda *a, **k: pytest.fail("No submission setup"),
     )
     with pytest.raises(ValueError, match="not authorized"):
         operator.submit(tmp_path, "evaluate", cfg)
     monkeypatch.setattr(
-        lifecycle, "paths", lambda root: (root, cfg, root / "upstream", root / "compute")
+        lifecycle,
+        "paths",
+        lambda root: (root, cfg, root / "upstream", root / "compute"),
     )
-    monkeypatch.setattr(lifecycle, "check", lambda *a, **k: pytest.fail("No GPU evaluation"))
+    monkeypatch.setattr(
+        lifecycle, "check", lambda *a, **k: pytest.fail("No GPU evaluation")
+    )
     with pytest.raises(ValueError, match="not authorized"):
         lifecycle.evaluate_worker(tmp_path)
 
 
-def test_training_only_controller_releases_one_job_and_does_not_evaluate(tmp_path, monkeypatch):
+def test_training_only_controller_releases_one_job_and_does_not_evaluate(
+    tmp_path, monkeypatch
+):
     monkeypatch.delenv("SLURM_JOB_ID", raising=False)
     monkeypatch.setenv("TMUX", "fixture")
     server_profile(tmp_path, monkeypatch)
@@ -757,12 +903,20 @@ def test_training_only_controller_releases_one_job_and_does_not_evaluate(tmp_pat
     monkeypatch.setattr(operator, "submit", submit)
     monkeypatch.setattr(operator, "wait_release", lambda *a: success)
     monkeypatch.setattr(operator, "own_queue", lambda: "")
-    monkeypatch.setattr(operator, "report", lambda *a: pytest.fail("No evaluation report"))
+    monkeypatch.setattr(
+        operator, "report", lambda *a: pytest.fail("No evaluation report")
+    )
     operator.control(tmp_path)
     assert phases == ["fit"]
     completed = read(tmp_path / "completion.json")
-    assert completed["status"] == "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
-    assert completed["fit_release"]["released"] and not completed["evaluation_started"]
+    assert (
+        completed["status"]
+        == "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL"
+    )
+    assert (
+        completed["fit_release"]["released"]
+        and not completed["evaluation_started"]
+    )
     assert not (tmp_path / "evaluation-release.json").exists()
     assert not (tmp_path / "evaluation").exists()
     assert "보정·평가는 미실행" in operator.render(tmp_path)
@@ -776,12 +930,18 @@ def test_training_only_worker_never_calibrates_or_infers(tmp_path, monkeypatch):
     np.savez(upstream / "dataset/scaler.npz", x_mean=np.zeros(19))
     write(tmp_path / "input/config.json", cfg)
     write(tmp_path / "input/inventory.json", {})
-    monkeypatch.setattr(lifecycle, "paths", lambda root: (root, cfg, upstream, root / "compute"))
+    monkeypatch.setattr(
+        lifecycle, "paths", lambda root: (root, cfg, upstream, root / "compute")
+    )
     monkeypatch.setattr(lifecycle, "verify", lambda *a: None)
     monkeypatch.setattr(lifecycle, "check", lambda *a, **k: {"fixture": True})
-    monkeypatch.setattr(lifecycle, "memory_snapshot", lambda: {"available_bytes": 1024**4})
     monkeypatch.setattr(
-        lifecycle, "Telemetry", lambda *a: SimpleNamespace(start=lambda: None, stop=lambda: None)
+        lifecycle, "memory_snapshot", lambda: {"available_bytes": 1024**4}
+    )
+    monkeypatch.setattr(
+        lifecycle,
+        "Telemetry",
+        lambda *a: SimpleNamespace(start=lambda: None, stop=lambda: None),
     )
     monkeypatch.setattr(lifecycle.signal, "signal", lambda *a: None)
     monkeypatch.setattr(lifecycle.torch.cuda, "empty_cache", lambda: None)
@@ -792,7 +952,9 @@ def test_training_only_worker_never_calibrates_or_infers(tmp_path, monkeypatch):
         lambda *a: (tmp_path / "compute/model.bin").write_bytes(b"fixture"),
     )
     monkeypatch.setattr(
-        lifecycle, "calibrate", lambda *a, **k: pytest.fail("No calibration or inference")
+        lifecycle,
+        "calibrate",
+        lambda *a, **k: pytest.fail("No calibration or inference"),
     )
 
     def normalized(dataset, role, scaler, cache, progress):
@@ -803,6 +965,9 @@ def test_training_only_worker_never_calibrates_or_infers(tmp_path, monkeypatch):
     lifecycle.fit_worker(tmp_path)
     seal = read(tmp_path / "compute/result-seal.json")
     assert seal["status"] == "TRAINING_COMPLETE"
-    assert seal["calibration_started"] is False and seal["inference_started"] is False
+    assert (
+        seal["calibration_started"] is False
+        and seal["inference_started"] is False
+    )
     assert seal["evaluation_started"] is False
     assert not (tmp_path / "compute/normalized").exists()

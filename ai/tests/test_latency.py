@@ -4,15 +4,16 @@ import pickle
 import time
 
 import pytest
-from test_preprocessing import CONFIG, META, events
-
 from capstone_ai.file_wait import FileWaiter
 from capstone_ai.preprocessing import Preprocessor
 from capstone_ai.resume_state import restore_runtime, save_runtime
 from capstone_ai.source import DirectoryTail, sha
+from test_preprocessing import CONFIG, META, events
 
 
-def test_fast_runtime_restore_partial_rows_queued_marks_and_duplicate_semantics(tmp_path):
+def test_fast_runtime_restore_partial_rows_queued_marks_and_duplicate_semantics(
+    tmp_path,
+):
     obs = tmp_path / "observations"
     obs.mkdir()
     es = list(events(63))
@@ -22,7 +23,10 @@ def test_fast_runtime_restore_partial_rows_queued_marks_and_duplicate_semantics(
     stream = obs / "streams.jsonl"
     stream.write_bytes(prefix + original[len(prefix) : len(prefix) + 51])
     marks = []
-    for count, through, closed in [(cut, 60200000, False), (len(es), 63000000, True)]:
+    for count, through, closed in [
+        (cut, 60200000, False),
+        (len(es), 63000000, True),
+    ]:
         marks.append(
             {
                 "schema": "drone.raw.watermark/2.0",
@@ -33,7 +37,9 @@ def test_fast_runtime_restore_partial_rows_queued_marks_and_duplicate_semantics(
                 "closed": closed,
             }
         )
-    (obs / "watermarks.jsonl").write_text("".join(json.dumps(m) + "\n" for m in marks))
+    (obs / "watermarks.jsonl").write_text(
+        "".join(json.dumps(m) + "\n" for m in marks)
+    )
     engine = Preprocessor(META, CONFIG)
     tail = DirectoryTail(tmp_path, engine, len(original) + 1)
     tail.poll()
@@ -43,22 +49,30 @@ def test_fast_runtime_restore_partial_rows_queued_marks_and_duplicate_semantics(
     restored, rtail = restore_runtime(
         tmp_path, tmp_path / "runtime.bin", digest, CONFIG, META, checkpoint
     )
-    assert restored.frames == engine.frames and restored.windows == engine.windows
+    assert (
+        restored.frames == engine.frames and restored.windows == engine.windows
+    )
     with stream.open("ab") as f:
         f.write(original[len(prefix) + 51 :])
     tail.poll()
     rtail.poll()
     assert tail.closed and rtail.closed
-    assert restored.frames == engine.frames and restored.windows == engine.windows
+    assert (
+        restored.frames == engine.frames and restored.windows == engine.windows
+    )
     assert restored.exclusions == engine.exclusions
-    restored.ingest(es[0])  # Historical duplicate remains recognized after fast recovery.
+    restored.ingest(
+        es[0]
+    )  # Historical duplicate remains recognized after fast recovery.
     bad = copy.deepcopy(es[0])
     bad["fields"]["output"][0] = 999
     with pytest.raises(ValueError, match="conflicting"):
         restored.ingest(bad)
     (tmp_path / "runtime.bin").write_bytes(b"tampered")
     with pytest.raises(ValueError, match="hash mismatch"):
-        restore_runtime(tmp_path, tmp_path / "runtime.bin", digest, CONFIG, META, checkpoint)
+        restore_runtime(
+            tmp_path, tmp_path / "runtime.bin", digest, CONFIG, META, checkpoint
+        )
 
 
 def test_snapshot_rejects_executable_pickle_class(tmp_path):
@@ -93,13 +107,18 @@ def test_json_storage_shares_labels_without_changing_values(tmp_path):
     first["fields"]["output"][0] = 0
     second = copy.deepcopy(first)
     second["seq"] += 1
-    second["fields"]["output"][0] = 0.0  # Numeric Python equality remains unchanged.
+    second["fields"]["output"][0] = (
+        0.0  # Numeric Python equality remains unchanged.
+    )
     path = tmp_path / "events.jsonl"
     path.write_text(json.dumps(first) + "\n" + json.dumps(second) + "\n")
     decoded = Lines(path).poll(10000)
     assert decoded == [first, second]
     assert decoded[0]["topic"] is decoded[1]["topic"]
-    assert decoded[0]["field_quality"]["output"] is decoded[1]["field_quality"]["output"]
+    assert (
+        decoded[0]["field_quality"]["output"]
+        is decoded[1]["field_quality"]["output"]
+    )
     engine = Preprocessor(META, CONFIG)
     engine.ingest(decoded[0])
     equal_duplicate = copy.deepcopy(decoded[0])
@@ -149,7 +168,9 @@ def test_live_gc_deferral_restores_prior_policy_even_on_failure():
             gc.enable()
 
 
-def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(tmp_path):
+def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(
+    tmp_path,
+):
     from capstone_ai.resume_state import adopt_shadow
 
     obs = tmp_path / "observations"
@@ -192,7 +213,10 @@ def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(tmp
     engine, _ = adopt_shadow(shadow, CONFIG, META, checkpoint)
     assert engine.windows[: len(past)] == past
     primary.poll()
-    assert engine.frames == primary.engine.frames and engine.windows == primary.engine.windows
+    assert (
+        engine.frames == primary.engine.frames
+        and engine.windows == primary.engine.windows
+    )
     bad = copy.deepcopy(CONFIG)
     bad["history"] += 1
     with pytest.raises(ValueError, match="shadow config"):
@@ -203,12 +227,13 @@ def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(tmp
         adopt_shadow(shadow, CONFIG, META, checkpoint)
 
 
-def test_handover_persists_causal_state_without_mutating_event_archive(tmp_path):
+def test_handover_persists_causal_state_without_mutating_event_archive(
+    tmp_path,
+):
     import io
 
-    from test_preprocessing import run
-
     from capstone_ai.resume_state import StateReader, save_handover_state
+    from test_preprocessing import run
 
     engine = run(list(events(64)))
     tail = DirectoryTail(tmp_path, engine)
@@ -233,4 +258,6 @@ def test_handover_persists_causal_state_without_mutating_event_archive(tmp_path)
     for key, value in engine.filters.items():
         assert vars(saved["engine"]["filters"][key]) == vars(value)
     assert len(engine.seen) == count and engine.frames == frames
-    assert "seen" not in saved["engine"]  # Recreated by shadow's verified full raw prefix.
+    assert (
+        "seen" not in saved["engine"]
+    )  # Recreated by shadow's verified full raw prefix.

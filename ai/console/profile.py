@@ -11,7 +11,11 @@ ROOT = Path(__file__).resolve().parents[2]
 PROFILE_HOME = ROOT / "ai/.local/profiles"
 RUNTIME_PROFILES = {
     "torch21": {"torch": "2.1.2", "numpy": "1.26.4", "safetensors": "0.4.5"},
-    "mamba25": {"torch": "2.5.1+cu121", "numpy": "1.26.4", "safetensors": "0.6.2"},
+    "mamba25": {
+        "torch": "2.5.1+cu121",
+        "numpy": "1.26.4",
+        "safetensors": "0.6.2",
+    },
 }
 
 
@@ -20,10 +24,14 @@ def absolute_path(value, *, allow_leaf_symlink=False):
         raise ValueError("Path must be a string")
     path = Path(value).expanduser()
     checked = path.parents if allow_leaf_symlink else (path, *path.parents)
-    if not path.is_absolute() or ".." in path.parts or any(
-        part.is_symlink() for part in checked
+    if (
+        not path.is_absolute()
+        or ".." in path.parts
+        or any(part.is_symlink() for part in checked)
     ):
-        raise ValueError("An absolute path without symlinks or '..' is required")
+        raise ValueError(
+            "An absolute path without symlinks or '..' is required"
+        )
     if any(character in str(path) for character in ("\n", "\r", "\x00")):
         raise ValueError("Control characters are forbidden in paths")
     return path
@@ -31,12 +39,23 @@ def absolute_path(value, *, allow_leaf_symlink=False):
 
 def validate(value):
     if not isinstance(value, dict) or set(value) != {
-        "schema", "name", "project_root", "python", "runtime_profile", "dataset_root",
-        "output_root", "ssh", "slurm",
+        "schema",
+        "name",
+        "project_root",
+        "python",
+        "runtime_profile",
+        "dataset_root",
+        "output_root",
+        "ssh",
+        "slurm",
     }:
-        raise ValueError("Exact machine profile fields required; secrets are not accepted")
-    if value["schema"] != SCHEMA or not isinstance(value["name"], str) or not re.fullmatch(
-        r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", value["name"]
+        raise ValueError(
+            "Exact machine profile fields required; secrets are not accepted"
+        )
+    if (
+        value["schema"] != SCHEMA
+        or not isinstance(value["name"], str)
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", value["name"])
     ):
         raise ValueError("Invalid profile schema or name")
     for key in ("project_root", "python", "dataset_root", "output_root"):
@@ -46,7 +65,9 @@ def validate(value):
     ssh = value["ssh"]
     if ssh is not None:
         if not isinstance(ssh, dict) or set(ssh) != {"host", "user", "port"}:
-            raise ValueError("SSH accepts host/user/port only; use terminal or SSH agent for auth")
+            raise ValueError(
+                "SSH accepts host/user/port only; use terminal or SSH agent for auth"
+            )
         if not isinstance(ssh["host"], str) or not re.fullmatch(
             r"[A-Za-z0-9][A-Za-z0-9._:-]{0,252}", ssh["host"]
         ):
@@ -59,9 +80,17 @@ def validate(value):
             raise ValueError("SSH port must be within 1..65535")
     slurm = value["slurm"]
     if not isinstance(slurm, dict) or set(slurm) != {
-        "partition", "node", "nodes", "ntasks", "gpus", "cpus", "memory_gib"
+        "partition",
+        "node",
+        "nodes",
+        "ntasks",
+        "gpus",
+        "cpus",
+        "memory_gib",
     }:
-        raise ValueError("Explicit single-node Slurm resource fields are required")
+        raise ValueError(
+            "Explicit single-node Slurm resource fields are required"
+        )
     for key in ("partition", "node"):
         if not isinstance(slurm[key], str) or not re.fullmatch(
             r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}", slurm[key]
@@ -112,5 +141,11 @@ def ssh_command(profile):
     if ssh is None:
         raise ValueError("This profile has no SSH destination")
     # Do not disable host-key checks or collect passwords. SSH handles terminal authentication.
-    return ["ssh", "-o", "StrictHostKeyChecking=yes", "-p", str(ssh["port"]),
-            ssh["user"] + "@" + ssh["host"]]
+    return [
+        "ssh",
+        "-o",
+        "StrictHostKeyChecking=yes",
+        "-p",
+        str(ssh["port"]),
+        ssh["user"] + "@" + ssh["host"],
+    ]

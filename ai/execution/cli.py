@@ -31,13 +31,17 @@ from .common import (
 def connection():
     selected = runtime_profile(required=True)["ssh"]
     if not selected:
-        raise ValueError("SSH connection must be explicitly selected in the profile")
+        raise ValueError(
+            "SSH connection must be explicitly selected in the profile"
+        )
     return selected
 
 
 def destination():
     selected = connection()
-    return (selected["user"] + "@" if selected.get("user") else "") + selected["host"]
+    return (selected["user"] + "@" if selected.get("user") else "") + selected[
+        "host"
+    ]
 
 
 def ssh_argv():
@@ -60,7 +64,9 @@ def ssh_argv():
 
 
 def ssh(command, timeout=60):
-    return subprocess.check_output([*ssh_argv(), command], text=True, timeout=timeout).strip()
+    return subprocess.check_output(
+        [*ssh_argv(), command], text=True, timeout=timeout
+    ).strip()
 
 
 def remote(root, action):
@@ -69,7 +75,15 @@ def remote(root, action):
         + shlex.quote(str(root) + "/ai:" + str(root) + "/ai/src")
         + " "
         + shlex.join(
-            [python_for(required=True), "-B", "-m", "execution.remote", action, "--root", str(root)]
+            [
+                python_for(required=True),
+                "-B",
+                "-m",
+                "execution.remote",
+                action,
+                "--root",
+                str(root),
+            ]
         )
     )
     return ssh(command)
@@ -101,7 +115,9 @@ def prepared_input(cfg):
     root = Path(receipt["root"])
     output = Path(receipt["output"])
     if not root.is_relative_to(REMOTE_BASE) or root.name != "input":
-        raise ValueError("Prepared server input must be inside the selected managed root")
+        raise ValueError(
+            "Prepared server input must be inside the selected managed root"
+        )
     if not output.is_relative_to(STORE / "gpu104"):
         raise ValueError("Prepared local input must use external storage")
     if read(output / "input/config.json") != cfg:
@@ -109,7 +125,9 @@ def prepared_input(cfg):
     if sha(output / "input/inventory.json") != receipt["inventory_sha256"]:
         raise ValueError("Prepared input inventory changed")
     if (output / "execution.claim").exists():
-        raise ValueError("Prepared attempt already claimed; use recover, never resubmit")
+        raise ValueError(
+            "Prepared attempt already claimed; use recover, never resubmit"
+        )
     return dict(
         root=str(root),
         output=str(output),
@@ -143,18 +161,27 @@ def launch(action="run", existing=None):
         metadata = (
             prepared_input(cfg)
             if (HOME / "prepared-input.json").exists()
-            else dict(root=REMOTE_BASE + "/" + name + "/input", output=str(STORE / "gpu104" / name))
+            else dict(
+                root=REMOTE_BASE + "/" + name + "/input",
+                output=str(STORE / "gpu104" / name),
+            )
         )
         write(task / "remote.json", metadata)
     else:
         task = Path(existing).resolve()
-        if not task.is_relative_to(HOME / "tasks") or not (task / "remote.json").exists():
+        if (
+            not task.is_relative_to(HOME / "tasks")
+            or not (task / "remote.json").exists()
+        ):
             raise ValueError("Existing managed task required")
         # Only a result recovery controller is started; it never submits a Slurm job.
         name = task.name + "-recover-" + time.strftime("%H%M%S")
     state = task / "controller.json"
     if action == "run":
-        write(state, dict(status="START_REQUESTED", action=action, updated=time.time()))
+        write(
+            state,
+            dict(status="START_REQUESTED", action=action, updated=time.time()),
+        )
     unit = "x500-gpu104-" + name
     cmd = [
         "systemd-run",
@@ -183,18 +210,32 @@ def launch(action="run", existing=None):
         action,
     ]
     subprocess.run(cmd, check=True)
-    write(task / "service.json", dict(unit=unit, argv=cmd, automatic_restart=False))
+    write(
+        task / "service.json",
+        dict(unit=unit, argv=cmd, automatic_restart=False),
+    )
     write(HOME / "latest.json", dict(task=str(task)))
     print("실행 요청:", task)
-    print("화면: " + shlex.join([str(ROOT / "ai/drone-ai"), "watch", "--root", str(task)]))
+    print(
+        "화면: "
+        + shlex.join([str(ROOT / "ai/drone-ai"), "watch", "--root", str(task)])
+    )
     return task
 
 
 def upload(root, workspace, progress):
     job = str(root).rsplit("/", 1)[0]
     # A fresh path and no overwrite: existing remote evidence is never replaced.
-    ssh("umask 077; mkdir -p " + shlex.quote(REMOTE_BASE) + " && mkdir " + shlex.quote(job))
-    needed = 2 * sum(p.stat().st_size for p in workspace.rglob("*") if p.is_file()) + 20_000_000_000
+    ssh(
+        "umask 077; mkdir -p "
+        + shlex.quote(REMOTE_BASE)
+        + " && mkdir "
+        + shlex.quote(job)
+    )
+    needed = (
+        2 * sum(p.stat().st_size for p in workspace.rglob("*") if p.is_file())
+        + 20_000_000_000
+    )
     available = int(
         ssh(
             shlex.join(
@@ -202,13 +243,17 @@ def upload(root, workspace, progress):
                     python_for(required=True),
                     "-B",
                     "-c",
-                    "import shutil; print(shutil.disk_usage(" + repr(job) + ").free)",
+                    "import shutil; print(shutil.disk_usage("
+                    + repr(job)
+                    + ").free)",
                 ]
             )
         )
     )
     if available < needed:
-        raise ValueError(f"Remote disk insufficient: {available} < {needed} bytes")
+        raise ValueError(
+            f"Remote disk insufficient: {available} < {needed} bytes"
+        )
     archive = workspace.parent / "input.tar.gz"
     files = list(workspace.rglob("*"))
     progress.update(stage="packing", done=0, total=len(files))
@@ -216,7 +261,11 @@ def upload(root, workspace, progress):
         for index, path in enumerate(files):
             progress.check()
             if path.is_file():
-                tar.add(path, arcname=str(path.relative_to(workspace)), recursive=False)
+                tar.add(
+                    path,
+                    arcname=str(path.relative_to(workspace)),
+                    recursive=False,
+                )
             progress.update(force=False, done=index + 1, total=len(files))
     progress.update(
         stage="upload",
@@ -246,7 +295,9 @@ def upload(root, workspace, progress):
         timeout=14400,
     )
     digest = sha(archive)
-    check = ssh("sha256sum " + shlex.quote(job + "/input.tar.gz"), timeout=600).split()[0]
+    check = ssh(
+        "sha256sum " + shlex.quote(job + "/input.tar.gz"), timeout=600
+    ).split()[0]
     if check != digest:
         raise ValueError("Remote archive hash mismatch")
     # This archive was generated solely from validated regular relative paths above.
@@ -265,7 +316,9 @@ def upload(root, workspace, progress):
 def wait_and_fetch(task, cfg, meta, progress):
     root = meta["root"]
     output = Path(meta["output"])
-    deadline = time.monotonic() + (cfg["queue_hours"] + cfg["wall_hours"] + 1) * 3600
+    deadline = (
+        time.monotonic() + (cfg["queue_hours"] + cfg["wall_hours"] + 1) * 3600
+    )
     accounting_gaps = 0
     while True:
         progress.check()
@@ -324,16 +377,23 @@ def wait_and_fetch(task, cfg, meta, progress):
             check=True,
             timeout=14400,
         )
-        if snap.get("slurm_state") != "COMPLETED" or snap.get("exit_code") != "0:0":
+        if (
+            snap.get("slurm_state") != "COMPLETED"
+            or snap.get("exit_code") != "0:0"
+        ):
             raise RuntimeError(
-                "GPU job failed; evidence downloaded to " + str(pending) + "; no automatic retry"
+                "GPU job failed; evidence downloaded to "
+                + str(pending)
+                + "; no automatic retry"
             )
         seal = read(pending / "result-seal.json")
         verify(pending, seal["files"])
         pending.rename(download)
     seal = read(download / "result-seal.json")
     if seal.get("config_sha256") != sha(output / "input/config.json"):
-        raise ValueError("Downloaded results belong to different input configuration")
+        raise ValueError(
+            "Downloaded results belong to different input configuration"
+        )
     if snap.get("slurm_state") != "COMPLETED" or snap.get("exit_code") != "0:0":
         raise ValueError("Job not successfully released")
     if (output / "evaluation").exists():
@@ -341,7 +401,9 @@ def wait_and_fetch(task, cfg, meta, progress):
             "Evaluation output exists; preserve it and do not repeat evaluation automatically"
         )
     if snap.get("remaining_own_job_ids"):
-        raise ValueError("Other own jobs remain; preserve results pending review")
+        raise ValueError(
+            "Other own jobs remain; preserve results pending review"
+        )
     verify(ROOT, cfg["source_sha256"])
     from .evaluate import evaluate
 
@@ -375,7 +437,9 @@ def _worker_locked(task, action):
             progress.update(stage="login_preflight")
             queue = ssh('squeue -h -u "$(id -u)" -o "%A %P %j %T %N"')
             if queue:
-                raise ValueError("기존 작업이 남아 있어 제출하지 않았습니다: " + queue)
+                raise ValueError(
+                    "기존 작업이 남아 있어 제출하지 않았습니다: " + queue
+                )
             if not meta.get("prepared"):
                 output.mkdir(parents=True, exist_ok=False)
             if shutil.disk_usage(output).free < 50_000_000_000:
@@ -386,7 +450,10 @@ def _worker_locked(task, action):
             if meta.get("prepared"):
                 if read(output / "input/config.json") != cfg:
                     raise ValueError("Prepared configuration changed")
-                if sha(output / "input/inventory.json") != meta["inventory_sha256"]:
+                if (
+                    sha(output / "input/inventory.json")
+                    != meta["inventory_sha256"]
+                ):
                     raise ValueError("Prepared inventory changed")
                 verify(output / "input", read(output / "input/inventory.json"))
                 progress.update(stage="verify_prepared_remote")
@@ -433,7 +500,10 @@ def render(task):
     current = remote_state or state
     done, total = current.get("done", 0), current.get("total", 0)
     percentage = 100 * done / total if total else None
-    stale = time.time() - state.get("updated", 0) > 120 and state.get("status") == "RUNNING"
+    stale = (
+        time.time() - state.get("updated", 0) > 120
+        and state.get("status") == "RUNNING"
+    )
     lines = [
         "X500 / GPU104 / LSTM + Transformer + Persistence + Ridge / seed17",
         f"상태 {state.get('status')} {'(기록 오래됨: 현재 실행 상태 미확인)' if stale else ''}",
@@ -441,15 +511,23 @@ def render(task):
         f"단계 {current.get('stage', '-')} · 모델 {current.get('model') or '-'}",
     ]
     if current.get("stage") == "upload":
-        lines.append(f"전송 대상 {total / 1024**3:.2f} GiB · 전송 중 바이트 진행률은 미측정")
+        lines.append(
+            f"전송 대상 {total / 1024**3:.2f} GiB · 전송 중 바이트 진행률은 미측정"
+        )
     elif percentage is not None:
         label = (
             "완료 건수"
             if current.get("stage") not in {"training", "validation"}
             else "현재 학습/검증 진행"
         )
-        lines.append(f"{label} {done:,}/{total:,} ({percentage:.1f}%) — 전체 시간 진행률 아님")
-    if current.get("epoch") and current.get("stage") in {"training", "validation", "checkpoint"}:
+        lines.append(
+            f"{label} {done:,}/{total:,} ({percentage:.1f}%) — 전체 시간 진행률 아님"
+        )
+    if current.get("epoch") and current.get("stage") in {
+        "training",
+        "validation",
+        "checkpoint",
+    }:
         lines.append(
             f"epoch {current['epoch']}/{current['epochs']} · batch {current.get('batch', '-')}/{current.get('batches', '-')}"
         )
@@ -469,7 +547,9 @@ def render(task):
     if current.get("steps_per_s") is not None:
         lines.append(f"학습 처리율 {current['steps_per_s']:.2f} step/s")
     if current.get("gpu_reserved_bytes") is not None:
-        lines.append(f"PyTorch GPU 예약 메모리 {current['gpu_reserved_bytes'] / 1024**3:.2f} GiB")
+        lines.append(
+            f"PyTorch GPU 예약 메모리 {current['gpu_reserved_bytes'] / 1024**3:.2f} GiB"
+        )
     if state.get("queue"):
         lines.append("Slurm " + state["queue"])
     if state.get("reason"):
@@ -541,7 +621,9 @@ def main():
     elif a.command == "recover":
         watch(launch("recover", resolve_task(a.task)))
     elif a.command == "stop":
-        print(remote(read(resolve_task(a.task) / "remote.json")["root"], "cancel"))
+        print(
+            remote(read(resolve_task(a.task) / "remote.json")["root"], "cancel")
+        )
     elif a.command == "_worker":
         worker(a.task, a.action)
     elif a.command in {"watch", "status"}:

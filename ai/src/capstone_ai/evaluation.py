@@ -13,7 +13,9 @@ from .training import Predictor, normalized
 
 def scores_for(prediction, actual, error_scale):
     z = (actual - prediction) ** 2 / error_scale
-    return np.stack([z[..., :3].mean(axis=(1, 2)), z[..., 3].mean(axis=1)], axis=1)
+    return np.stack(
+        [z[..., :3].mean(axis=(1, 2)), z[..., 3].mean(axis=1)], axis=1
+    )
 
 
 def episodes(scores, ids, origins, high):
@@ -34,16 +36,25 @@ def flight_bootstrap(episode_counts, exposure_hours):
         return None
     rng = np.random.default_rng(17)
     draws = rng.integers(0, len(episode_counts), (1000, len(episode_counts)))
-    rates = np.asarray(episode_counts)[draws].sum(1) / np.asarray(exposure_hours)[draws].sum(1)
+    rates = np.asarray(episode_counts)[draws].sum(1) / np.asarray(
+        exposure_hours
+    )[draws].sum(1)
     return np.quantile(rates, [0.025, 0.975]).tolist()
 
 
 def match_event(event, decisions, observation_start):
-    kind, onset = event.get("onset_kind", "unknown"), event.get("physical_onset_time_us")
+    kind, onset = (
+        event.get("onset_kind", "unknown"),
+        event.get("physical_onset_time_us"),
+    )
     end = event.get("end_time_us")
     valid = [d for d in decisions if d["scores"] is not None]
     first_valid = min((d["decision_time_us"] for d in valid), default=None)
-    previous = [d for d in decisions if onset is not None and d["decision_time_us"] < onset]
+    previous = [
+        d
+        for d in decisions
+        if onset is not None and d["decision_time_us"] < onset
+    ]
     pre_active = bool(previous and previous[-1]["alarm_active"])
     eligible = [
         d
@@ -68,7 +79,9 @@ def match_event(event, decisions, observation_start):
         if onset is not None and detected is not None
         else None,
         "recognition_from_first_valid_s": (detected - first_valid) / 1e6
-        if kind == "pre_existing" and detected is not None and first_valid is not None
+        if kind == "pre_existing"
+        and detected is not None
+        and first_valid is not None
         else None,
         "recognition_from_observation_start_s": (detected - start) / 1e6
         if kind == "pre_existing" and detected is not None
@@ -82,7 +95,9 @@ def calibrate(folder, dataset):
     val = normalized(dataset, "validation", p.scaler)
     actual = p.physical(val["Y"])
     pred = p.physical(p.predict_scaled(val["X"], val["C"]))
-    error_scale = np.maximum(np.quantile((pred - actual) ** 2, 0.95, axis=0), 1e-8)
+    error_scale = np.maximum(
+        np.quantile((pred - actual) ** 2, 0.95, axis=0), 1e-8
+    )
     cal = normalized(dataset, "calibration", p.scaler)
     prediction = p.physical(p.predict_scaled(cal["X"], cal["C"]))
     scores = scores_for(prediction, p.physical(cal["Y"]), error_scale)
@@ -92,7 +107,12 @@ def calibrate(folder, dataset):
         high = np.maximum(np.quantile(scores, q, axis=0), 1e-8)
         n = episodes(scores, cal["run_id"], cal["origin_us"], high)
         candidates.append(
-            {"q": q, "high": high.tolist(), "episodes": n, "false_alarms_per_hour": n / hours}
+            {
+                "q": q,
+                "high": high.tolist(),
+                "episodes": n,
+                "false_alarms_per_hour": n / hours,
+            }
         )
     chosen = next(
         (c for c in candidates if c["false_alarms_per_hour"] <= 1.0),
@@ -106,23 +126,31 @@ def calibrate(folder, dataset):
                 "run_id": run,
                 "hours": int(idx.sum()) / 3600,
                 "episodes": episodes(
-                    scores[idx], cal["run_id"][idx], cal["origin_us"][idx], chosen["high"]
+                    scores[idx],
+                    cal["run_id"][idx],
+                    cal["origin_us"][idx],
+                    chosen["high"],
                 ),
             }
         )
     result = {
-        "status": "provisional" if chosen["false_alarms_per_hour"] <= 1 else "target_unmet",
+        "status": "provisional"
+        if chosen["false_alarms_per_hour"] <= 1
+        else "target_unmet",
         "error_scale": error_scale.tolist(),
         "high": chosen["high"],
         "chosen": chosen,
         "candidates": candidates,
         "exposure_hours": hours,
-        "zero_event_poisson_95_upper_per_hour": 2.996 / hours if chosen["episodes"] == 0 else None,
+        "zero_event_poisson_95_upper_per_hour": 2.996 / hours
+        if chosen["episodes"] == 0
+        else None,
         "target_false_alarms_per_hour": 1.0,
         "required_zero_alarm_hours_for_poisson_upper_1": 2.996,
         "calibration_run_ids": sorted(set(cal["run_id"].tolist())),
         "flight_bootstrap_95_interval": flight_bootstrap(
-            [r["episodes"] for r in per_flight], [r["hours"] for r in per_flight]
+            [r["episodes"] for r in per_flight],
+            [r["hours"] for r in per_flight],
         ),
         "per_flight": per_flight,
         "calibration_dataset_sha256": sha(Path(dataset) / "calibration.npz"),
@@ -155,12 +183,16 @@ def evaluate(folder, dataset, out):
                 segment = int(test["segment"][idx])
                 started = time.perf_counter()
                 forecast = p.physical(
-                    p.predict_scaled(test["X"][idx : idx + 1], test["C"][idx : idx + 1])
+                    p.predict_scaled(
+                        test["X"][idx : idx + 1], test["C"][idx : idx + 1]
+                    )
                 )[0]
                 elapsed = time.perf_counter() - started
                 latencies.append(elapsed)
                 # Offline logical issuance, not a live latency claim.
-                key = store.issue(run_id, "px4-boot", segment, origin, origin, forecast)
+                key = store.issue(
+                    run_id, "px4-boot", segment, origin, origin, forecast
+                )
                 fw.write(
                     json.dumps(
                         {
@@ -176,7 +208,9 @@ def evaluate(folder, dataset, out):
                 actual = p.physical(test["Y"][idx : idx + 1])[0]
                 for j, target in enumerate(actual):
                     t = origin + (j + 1) * 100000
-                    store.observe(run_id, "px4-boot", segment, t, t, target.tolist())
+                    store.observe(
+                        run_id, "px4-boot", segment, t, t, target.tolist()
+                    )
                     store.advance(t)
                 decision = store.decisions[key]
                 dw.write(json.dumps(decision, allow_nan=False) + "\n")
@@ -184,19 +218,34 @@ def evaluate(folder, dataset, out):
             n = sum(d["episode_start"] for d in decisions)
             events = [
                 json.loads(s)
-                for s in (Path(rows[run_id]["path"]) / "evaluation/events.jsonl")
+                for s in (
+                    Path(rows[run_id]["path"]) / "evaluation/events.jsonl"
+                )
                 .read_text()
                 .splitlines()
                 if s.strip()
             ]
-            canonical = read_json(dataset / "canonical" / run_id / "summary.json")
-            with (dataset / "canonical" / run_id / "frames.jsonl").open() as frame_file:
-                observation_start = json.loads(next(frame_file))["time_us"]
-            event_results = [match_event(event, decisions, observation_start) for event in events]
-            residual = np.array(
-                [d["signed_residual"] for d in decisions if d["signed_residual"] is not None]
+            canonical = read_json(
+                dataset / "canonical" / run_id / "summary.json"
             )
-            canonical = read_json(dataset / "canonical" / run_id / "summary.json")
+            with (
+                dataset / "canonical" / run_id / "frames.jsonl"
+            ).open() as frame_file:
+                observation_start = json.loads(next(frame_file))["time_us"]
+            event_results = [
+                match_event(event, decisions, observation_start)
+                for event in events
+            ]
+            residual = np.array(
+                [
+                    d["signed_residual"]
+                    for d in decisions
+                    if d["signed_residual"] is not None
+                ]
+            )
+            canonical = read_json(
+                dataset / "canonical" / run_id / "summary.json"
+            )
             exposure = len(decisions) / 3600
             records.append(
                 {
@@ -212,11 +261,14 @@ def evaluate(folder, dataset, out):
                     else None,
                     "mse_physical": (residual**2).mean(axis=(0, 1)).tolist(),
                     "events": event_results,
-                    "window_target_coverage": len(decisions) / max(1, canonical["windows"]),
+                    "window_target_coverage": len(decisions)
+                    / max(1, canonical["windows"]),
                     "preprocessing_exclusions": canonical["exclusions"],
                 }
             )
-    normal = [r for r in records if r["health_eligibility"] == "confirmed_healthy"]
+    normal = [
+        r for r in records if r["health_eligibility"] == "confirmed_healthy"
+    ]
     hours = sum(r["valid_exposure_hours"] for r in normal)
     alarms = sum(r["alarm_episodes"] for r in normal)
     rng = np.random.default_rng(17)
@@ -232,7 +284,11 @@ def evaluate(folder, dataset, out):
         "model": p.name,
         "independent_test_groups": len({r["paired_case_id"] for r in records}),
         "independent_abnormal_groups": len(
-            {r["paired_case_id"] for r in records if r["health_eligibility"] == "abnormal"}
+            {
+                r["paired_case_id"]
+                for r in records
+                if r["health_eligibility"] == "abnormal"
+            }
         ),
         "dataset_manifest_sha256": sha(dataset / "manifest.json"),
         "bundle_integrity_sha256": sha(folder / "integrity.json"),
@@ -240,8 +296,12 @@ def evaluate(folder, dataset, out):
         "normal_test_hours": hours,
         "normal_alarm_episodes": alarms,
         "false_alarms_per_hour": alarms / hours,
-        "flight_bootstrap_95_interval": np.quantile(bootstrap, [0.025, 0.975]).tolist(),
-        "zero_alarm_poisson_95_upper_per_hour": 2.996 / hours if alarms == 0 else None,
+        "flight_bootstrap_95_interval": np.quantile(
+            bootstrap, [0.025, 0.975]
+        ).tolist(),
+        "zero_alarm_poisson_95_upper_per_hour": 2.996 / hours
+        if alarms == 0
+        else None,
         "run_results": records,
         "compute_seconds_p50_p95": np.quantile(latencies, [0.5, 0.95]).tolist(),
         "live_forecast_timing": "not_executed; timestamps are offline logical replay clock",

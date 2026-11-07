@@ -43,7 +43,9 @@ def remote_path(path):
         or p == Path("/")
         or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,79}", p.name)
     ):
-        raise ValueError("A new absolute attempt directory with a safe name is required")
+        raise ValueError(
+            "A new absolute attempt directory with a safe name is required"
+        )
     return p
 
 
@@ -86,6 +88,7 @@ class PreparationProgress(Progress):
 
 def restore_ref(bundle, ref, destination, progress):
     from execution.common import child
+
     from pretrain.storage import verify_bundle
 
     progress.check()
@@ -95,7 +98,11 @@ def restore_ref(bundle, ref, destination, progress):
     progress.check()
     destination.mkdir(parents=True, exist_ok=False)
     verify_bundle(
-        source, ref["members"], progress, destination, progress=lambda **kw: progress.update(**kw)
+        source,
+        ref["members"],
+        progress,
+        destination,
+        progress=lambda **kw: progress.update(**kw),
     )
 
 
@@ -106,8 +113,14 @@ def reuse_failed_upstream(source, bundle, receipt, root, remote):
         raise ValueError(
             "Reused upstream requires preparation on the same server: root == remote-root"
         )
-    if root == source or root.is_relative_to(source) or source.is_relative_to(root):
-        raise ValueError("Reuse requires a separate new attempt outside the preserved source")
+    if (
+        root == source
+        or root.is_relative_to(source)
+        or source.is_relative_to(root)
+    ):
+        raise ValueError(
+            "Reuse requires a separate new attempt outside the preserved source"
+        )
     prepared = read(child(source, "prepared.json"))
     controller = read(child(source, "controller.json"))
     release = read(child(source, "release.json"))
@@ -139,7 +152,9 @@ def reuse_failed_upstream(source, bundle, receipt, root, remote):
         or submission.get("uid") != os.getuid()
         or submission.get("phase") != "fit"
     ):
-        raise ValueError("Reuse requires a failed, released own fit job with matching identity")
+        raise ValueError(
+            "Reuse requires a failed, released own fit job with matching identity"
+        )
     input_inventory = child(source, "input/inventory.json")
     if sha(input_inventory) != prepared.get("input_inventory_sha256"):
         raise ValueError("Preserved source input inventory changed")
@@ -151,9 +166,12 @@ def reuse_failed_upstream(source, bundle, receipt, root, remote):
         or prepared.get("execution_scope") != "training_only"
         or prepared.get("source_receipt_sha256") != sha(bundle / "receipt.json")
         or cfg.get("source_dataset_sha256") != receipt["dataset"]["sha256"]
-        or sha(child(source, "server-profile.json")) != prepared.get("server_profile_sha256")
+        or sha(child(source, "server-profile.json"))
+        != prepared.get("server_profile_sha256")
     ):
-        raise ValueError("Preserved source scope, profile, or dataset binding differs")
+        raise ValueError(
+            "Preserved source scope, profile, or dataset binding differs"
+        )
     authorization = read(child(source, "authorization.json"))
     if (
         authorization.get("config_sha256") != sha(source / "input/config.json")
@@ -163,22 +181,34 @@ def reuse_failed_upstream(source, bundle, receipt, root, remote):
     ):
         raise ValueError("Preserved source authorization changed")
     upstream = external_root(cfg["upstream"])
-    if root == upstream or root.is_relative_to(upstream) or upstream.is_relative_to(root):
+    if (
+        root == upstream
+        or root.is_relative_to(upstream)
+        or upstream.is_relative_to(root)
+    ):
         raise ValueError("New output must not overlap reused upstream")
     for name, expected in cfg["upstream_files"].items():
         if name.startswith("evidence/") or name == "preprocessing.json":
             if sha(child(upstream, name)) != expected:
-                raise ValueError("Preserved source upstream evidence changed: " + name)
+                raise ValueError(
+                    "Preserved source upstream evidence changed: " + name
+                )
     # The package receipt binds the small provenance files; admission below hashes
     # actual fit arrays. The worker still verifies the complete upstream seal.
     for name, expected in receipt["dataset"]["members"].items():
         if name.startswith("evidence/"):
             path = child(upstream, name)
-            if path.stat().st_size != expected["bytes"] or sha(path) != expected["sha256"]:
-                raise ValueError("Reused evidence differs from portable package: " + name)
+            if (
+                path.stat().st_size != expected["bytes"]
+                or sha(path) != expected["sha256"]
+            ):
+                raise ValueError(
+                    "Reused evidence differs from portable package: " + name
+                )
     seal = read(child(upstream, "evidence/dataset-seal.json"))
     if seal != cfg["dataset_files"] or any(
-        receipt["dataset"]["members"].get("dataset/" + name, {}).get("sha256") != digest
+        receipt["dataset"]["members"].get("dataset/" + name, {}).get("sha256")
+        != digest
         for name, digest in seal.items()
     ):
         raise ValueError("Reused dataset seal differs from portable package")
@@ -209,14 +239,20 @@ def prepare(args):
         raise ValueError("The normalization study requires --training-only")
     reuse_from = getattr(args, "reuse_from", None)
     if reuse_from is not None and not training_only:
-        raise ValueError("Explicit upstream reuse is limited to training-only attempts")
+        raise ValueError(
+            "Explicit upstream reuse is limited to training-only attempts"
+        )
     evaluation_hours = getattr(args, "evaluation_hours", None)
     if training_only and evaluation_hours is None:
         evaluation_hours = 0
     if type(args.wall_hours) is not int or not 1 <= args.wall_hours <= 168:
-        raise ValueError("Explicit finite fit/evaluation hours within1..168 required")
+        raise ValueError(
+            "Explicit finite fit/evaluation hours within1..168 required"
+        )
     if type(evaluation_hours) is not int or (
-        evaluation_hours != 0 if training_only else not 1 <= evaluation_hours <= 168
+        evaluation_hours != 0
+        if training_only
+        else not 1 <= evaluation_hours <= 168
     ):
         raise ValueError(
             "Training-only requires zero evaluation hours; full comparison requires1..168"
@@ -233,8 +269,12 @@ def prepare(args):
         or receipt.get("final_test_included") is not False
         or receipt["dataset"]["sha256"] != plan["dataset"]["archive_sha256"]
     ):
-        raise ValueError("Only the frozen merged1200 portable dataset is admitted")
-    need = (0 if reuse_from is not None else receipt["uncompressed_dataset_bytes"]) + 24 * 1024**3
+        raise ValueError(
+            "Only the frozen merged1200 portable dataset is admitted"
+        )
+    need = (
+        0 if reuse_from is not None else receipt["uncompressed_dataset_bytes"]
+    ) + 24 * 1024**3
     root.parent.mkdir(parents=True, exist_ok=True)
     if shutil.disk_usage(root.parent).free < need:
         raise OSError(
@@ -247,12 +287,16 @@ def prepare(args):
 
     write(root / "storage-policy.json", capture(root))
     write(root / "server-profile.json", profile)
-    progress = PreparationProgress(root / "prepare-progress.json", storage_root=root, hours=12)
+    progress = PreparationProgress(
+        root / "prepare-progress.json", storage_root=root, hours=12
+    )
     try:
         upstream = root / "upstream"
         reuse_provenance = None
         progress.update(
-            stage="reuse_verify_dataset" if reuse_from is not None else "restore_verify_dataset",
+            stage="reuse_verify_dataset"
+            if reuse_from is not None
+            else "restore_verify_dataset",
             round=comparison.REVISION,
             done=0,
             total=len(receipt["dataset"]["members"]),
@@ -264,24 +308,35 @@ def prepare(args):
                 reuse_from, bundle, receipt, root, remote
             )
             if Path(profile["dataset_root"]) != upstream:
-                raise ValueError("Server profile must name the existing reused upstream")
+                raise ValueError(
+                    "Server profile must name the existing reused upstream"
+                )
         rows, seal, headers = comparison.admission(upstream)
-        preprocess = ROOT / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
+        preprocess = (
+            ROOT
+            / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
+        )
         frozen = read(upstream / "evidence/frozen-manifest.json")
         if sha(preprocess) != frozen["revision_lock"]["preprocessing_sha256"]:
-            raise ValueError("Preprocessing differs from frozen dataset revision")
+            raise ValueError(
+                "Preprocessing differs from frozen dataset revision"
+            )
         progress.check()
         if reuse_from is None:
             shutil.copyfile(preprocess, upstream / "preprocessing.json")
         elif sha(upstream / "preprocessing.json") != sha(preprocess):
-            raise ValueError("Reused preprocessing differs; no source files are overwritten")
+            raise ValueError(
+                "Reused preprocessing differs; no source files are overwritten"
+            )
         if not training_only:
             progress.update(
                 stage="prepare_evaluator_only_truth",
                 done=0,
                 total=len(receipt["evaluator_truth"]["members"]),
             )
-            restore_ref(bundle, receipt["evaluator_truth"], root / "truth", progress)
+            restore_ref(
+                bundle, receipt["evaluator_truth"], root / "truth", progress
+            )
             index = {}
             for row in rows:
                 if row["role"] not in {"normal_dev_eval", "anomaly_dev"}:
@@ -291,11 +346,17 @@ def prepare(args):
                 if receipt["evaluator_truth"]["members"].get(name) != {
                     k: expected[k] for k in ("bytes", "sha256")
                 }:
-                    raise ValueError("Development truth differs from frozen source")
+                    raise ValueError(
+                        "Development truth differs from frozen source"
+                    )
                 index[row["run_id"]] = dict(
-                    sha256=expected["sha256"], bytes=expected["bytes"], role=row["role"]
+                    sha256=expected["sha256"],
+                    bytes=expected["bytes"],
+                    role=row["role"],
                 )
-            if set(receipt["evaluator_truth"]["members"]) != {k + ".jsonl" for k in index}:
+            if set(receipt["evaluator_truth"]["members"]) != {
+                k + ".jsonl" for k in index
+            }:
                 raise ValueError("Unexpected evaluator truth membership")
             write(root / "truth/index.json", index)
         inputs = root / "input"
@@ -339,7 +400,9 @@ def prepare(args):
             gate_epochs=4,
             gate_windows=512,
             production_training_authorized=False,
-            execution_scope="training_only" if training_only else "full_comparison",
+            execution_scope="training_only"
+            if training_only
+            else "full_comparison",
             calibration_authorized=not training_only,
             evaluation_authorized=not training_only,
             wall_hours=args.wall_hours,
@@ -356,20 +419,31 @@ def prepare(args):
             gpu_jobs_max=1,
             next_round_authorized=False,
             development_counts={
-                k: comparison.COUNTS[k] for k in ("normal_dev_eval", "anomaly_dev")
+                k: comparison.COUNTS[k]
+                for k in ("normal_dev_eval", "anomaly_dev")
             },
-            upstream=str(upstream if reuse_from is not None else remote / "upstream"),
+            upstream=str(
+                upstream if reuse_from is not None else remote / "upstream"
+            ),
             reuse_provenance=reuse_provenance,
             upstream_files={
                 **{"dataset/" + k: v for k, v in seal.items()},
-                **{"evidence/" + p.name: sha(p) for p in (upstream / "evidence").iterdir()},
+                **{
+                    "evidence/" + p.name: sha(p)
+                    for p in (upstream / "evidence").iterdir()
+                },
                 "preprocessing.json": sha(preprocess),
             },
             dataset_files=seal,
             handoff_sha256=sha(upstream / "evidence/handoff.json"),
-            truth_index_sha256=None if training_only else sha(root / "truth/index.json"),
+            truth_index_sha256=None
+            if training_only
+            else sha(root / "truth/index.json"),
             binding=dict(
-                data={k: seal[k] for k in ("normal_train.npz", "normal_validation.npz")},
+                data={
+                    k: seal[k]
+                    for k in ("normal_train.npz", "normal_validation.npz")
+                },
                 scaler=seal["scaler.npz"],
                 sources=sources,
             ),
@@ -404,18 +478,28 @@ def prepare(args):
                 reuse_provenance=reuse_provenance,
             ),
         )
-        progress.update(status="PREPARED_PENDING_TRAINING_APPROVAL", stage="stopped")
+        progress.update(
+            status="PREPARED_PENDING_TRAINING_APPROVAL", stage="stopped"
+        )
     except BaseException as exc:
-        progress.update(status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}")
+        progress.update(
+            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}"
+        )
         raise
 
 
 def authorize(root, confirmed):
     if not confirmed:
-        raise ValueError("Explicit --approve-one-comparison is required; no GPU work is started")
+        raise ValueError(
+            "Explicit --approve-one-comparison is required; no GPU work is started"
+        )
     root = external_root(root)
-    if (root / "controller.claim").exists() or (root / "authorization.json").exists():
-        raise ValueError("Already claimed/authorized; never rewrite or automatically retry")
+    if (root / "controller.claim").exists() or (
+        root / "authorization.json"
+    ).exists():
+        raise ValueError(
+            "Already claimed/authorized; never rewrite or automatically retry"
+        )
     verify(root / "input", read(root / "input/inventory.json"))
     cfg = read(root / "input/config.json")
     comparison.config_check(cfg, require_approval=False)
@@ -426,7 +510,8 @@ def authorize(root, confirmed):
     write(root / "input/inventory.json", inventory(root / "input"))
     receipt = read(root / "prepared.json")
     receipt.update(
-        input_inventory_sha256=sha(root / "input/inventory.json"), status="AUTHORIZED_NOT_STARTED"
+        input_inventory_sha256=sha(root / "input/inventory.json"),
+        status="AUTHORIZED_NOT_STARTED",
     )
     write(root / "prepared.json", receipt)
     write(
@@ -456,7 +541,9 @@ def deploy(root):
     profile = runtime_profile(root, required=True)
     connection = profile.get("ssh")
     if not connection:
-        raise ValueError("Deployment requires explicit SSH connection details in the profile")
+        raise ValueError(
+            "Deployment requires explicit SSH connection details in the profile"
+        )
     destination = connection["host"]
     if connection.get("user"):
         destination = connection["user"] + "@" + destination
@@ -483,14 +570,19 @@ def deploy(root):
         ],
         check=True,
     )
-    print("Transferred; no GPU job submitted. Remote start: " + str(target / "start.sh"))
+    print(
+        "Transferred; no GPU job submitted. Remote start: "
+        + str(target / "start.sh")
+    )
 
 
 def start(root):
     remote_path(root)
     approved_python = python_for(root, required=True)
     if Path(os.sys.executable).resolve() != Path(approved_python).resolve():
-        raise ValueError("Start on the selected server with its profile Python interpreter")
+        raise ValueError(
+            "Start on the selected server with its profile Python interpreter"
+        )
     cfg = read(root / "input/config.json")
     comparison.config_check(cfg)
     verify(root / "input", read(root / "input/inventory.json"))
@@ -504,13 +596,23 @@ def start(root):
         + shlex.quote(str(root / "server-profile.json"))
         + "; exec "
         + shlex.join(
-            [approved_python, "-B", "-m", "learning.operator", "control", "--root", str(root)]
+            [
+                approved_python,
+                "-B",
+                "-m",
+                "learning.operator",
+                "control",
+                "--root",
+                str(root),
+            ]
         )
         + " >> "
         + shlex.quote(str(root / "controller.log"))
         + " 2>&1"
     )
-    subprocess.run(["tmux", "new-session", "-d", "-s", name, command], check=True)
+    subprocess.run(
+        ["tmux", "new-session", "-d", "-s", name, command], check=True
+    )
     print("Finite controller started in server tmux: " + name)
 
 
@@ -528,7 +630,17 @@ def launchers(root, remote):
             + "\nexport DRONE_AI_PROFILE="
             + shlex.quote(str(remote / "server-profile.json"))
             + "\nexport PYTHONDONTWRITEBYTECODE=1\nexec "
-            + shlex.join([approved_python, "-B", "-m", module, action, "--root", str(remote)])
+            + shlex.join(
+                [
+                    approved_python,
+                    "-B",
+                    "-m",
+                    module,
+                    action,
+                    "--root",
+                    str(remote),
+                ]
+            )
             + "\n"
         )
         (root / name).write_text(body)
@@ -538,7 +650,9 @@ def launchers(root, remote):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
-    p = sub.add_parser("prepare", help="선택한 로컬 저장소에서 복원·검증; 학습 없음")
+    p = sub.add_parser(
+        "prepare", help="선택한 로컬 저장소에서 복원·검증; 학습 없음"
+    )
     p.add_argument(
         "--root",
         type=Path,
@@ -547,14 +661,22 @@ def main():
     )
     p.add_argument("--bundle", type=Path, default=DEFAULT_BUNDLE)
     p.add_argument("--remote-root", type=Path, required=True)
-    p.add_argument("--profile", type=Path, required=True, help="직접 입력한 서버·Python 프로필")
+    p.add_argument(
+        "--profile",
+        type=Path,
+        required=True,
+        help="직접 입력한 서버·Python 프로필",
+    )
     p.add_argument("--wall-hours", type=int, required=True)
     p.add_argument("--evaluation-hours", type=int)
     p.add_argument(
-        "--training-only", action="store_true", help="학습·저장·반납 후 정지; 보정·평가 실행 금지"
+        "--training-only",
+        action="store_true",
+        help="학습·저장·반납 후 정지; 보정·평가 실행 금지",
     )
     p.add_argument(
-        "--normalization-study", action="store_true",
+        "--normalization-study",
+        action="store_true",
         help="새16종: 층간LN LSTM/Post-LN Transformer, 바닐라SGD/Adam, warmup+cosine",
     )
     p.add_argument(

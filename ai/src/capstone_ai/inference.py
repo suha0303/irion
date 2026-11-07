@@ -30,7 +30,9 @@ class Alarm:
             self.enter = self.exit = 0
         self.last = time_us
         scores = np.array(scores)
-        self.ewma = scores if self.ewma is None else 0.3 * scores + 0.7 * self.ewma
+        self.ewma = (
+            scores if self.ewma is None else 0.3 * scores + 0.7 * self.ewma
+        )
         self.enter = self.enter + 1 if np.any(self.ewma > self.high) else 0
         self.exit = self.exit + 1 if np.all(self.ewma < 0.7 * self.high) else 0
         start = not self.active and self.enter >= 3
@@ -54,7 +56,16 @@ class PendingForecasts:
         self.actuals = {}
         self.decisions = {}
 
-    def issue(self, run_id, clock, segment, origin, issued, prediction, timing_status=None):
+    def issue(
+        self,
+        run_id,
+        clock,
+        segment,
+        origin,
+        issued,
+        prediction,
+        timing_status=None,
+    ):
         key = f"{run_id}:{clock}:{segment}:{origin}"
         forecast = {
             "schema": "drone.forecast/3.0",
@@ -95,26 +106,36 @@ class PendingForecasts:
                 continue
             times = f["target_times_us"]
             actual = [
-                self.actuals.get((f["run_id"], f["clock_id"], f["segment_id"], t)) for t in times
+                self.actuals.get(
+                    (f["run_id"], f["clock_id"], f["segment_id"], t)
+                )
+                for t in times
             ]
             available = all(
-                a is not None and a["available_us"] <= decision_time_us and t <= decision_time_us
+                a is not None
+                and a["available_us"] <= decision_time_us
+                and t <= decision_time_us
                 for a, t in zip(actual, times)
             )
             if not available and not closed:
                 continue
             valid = (
                 available
-                and all(a is not None and a["values"] is not None for a in actual)
+                and all(
+                    a is not None and a["values"] is not None for a in actual
+                )
                 and f["status"] == "awaiting_targets"
             )
             scores, residual = None, None
             if valid:
-                residual = np.array([a["values"] for a in actual if a is not None]) - np.array(
-                    f["prediction"]
-                )
+                residual = np.array(
+                    [a["values"] for a in actual if a is not None]
+                ) - np.array(f["prediction"])
                 normalized = residual**2 / self.error_scale
-                scores = [float(normalized[:, :3].mean()), float(normalized[:, 3].mean())]
+                scores = [
+                    float(normalized[:, :3].mean()),
+                    float(normalized[:, 3].mean()),
+                ]
             # Arrival jitter must not break consecutive origin blocks in a live stream.
             status = self.alarm.update(scores, f["origin_time_us"] + 1000000)
             if f["status"] in {"forecast_late", "forecast_timing_unverified"}:
@@ -127,9 +148,14 @@ class PendingForecasts:
                 "last_target_available_us": max(
                     (a["available_us"] for a in actual if a), default=None
                 ),
-                "coverage": sum(a is not None and a["values"] is not None for a in actual) / 10,
+                "coverage": sum(
+                    a is not None and a["values"] is not None for a in actual
+                )
+                / 10,
                 "scores": scores,
-                "signed_residual": residual.tolist() if residual is not None else None,
+                "signed_residual": residual.tolist()
+                if residual is not None
+                else None,
                 **status,
             }
 
@@ -154,7 +180,9 @@ def save_pending(store, path):
             "decisions": store.decisions,
             "actuals": [[list(k), v] for k, v in store.actuals.items()],
             "alarm": {
-                "ewma": store.alarm.ewma.tolist() if store.alarm.ewma is not None else None,
+                "ewma": store.alarm.ewma.tolist()
+                if store.alarm.ewma is not None
+                else None,
                 "active": store.alarm.active,
                 "enter": store.alarm.enter,
                 "exit": store.alarm.exit,
@@ -173,5 +201,9 @@ def load_pending(path):
     store.decisions = state["decisions"]
     store.actuals = {tuple(k): v for k, v in state["actuals"]}
     for key, value in state["alarm"].items():
-        setattr(store.alarm, key, np.array(value) if key == "ewma" and value is not None else value)
+        setattr(
+            store.alarm,
+            key,
+            np.array(value) if key == "ewma" and value is not None else value,
+        )
     return store

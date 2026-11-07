@@ -13,7 +13,8 @@ from types import SimpleNamespace
 import pytest
 
 SPEC = importlib.util.spec_from_file_location(
-    "long_collect", Path(__file__).parents[2] / "Data/generation/tools/collect_long_runs.py"
+    "long_collect",
+    Path(__file__).parents[2] / "Data/generation/tools/collect_long_runs.py",
 )
 c = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(c)
@@ -77,7 +78,10 @@ print(json.dumps({'status':'completed','run':str(run)}))
         attempts_max=3,
         timing=False,
         source_hashes={"capstone-sim": c.sha(producer)},
-        lanes=[dict(instance=3, ports=[14543]), dict(instance=4, ports=[14544])],
+        lanes=[
+            dict(instance=3, ports=[14543]),
+            dict(instance=4, ports=[14544]),
+        ],
         budgets=dict(
             flight_wall_s=1500,
             verify_wall_s=60,
@@ -94,7 +98,11 @@ print(json.dumps({'status':'completed','run':str(run)}))
     )
     cases = [
         dict(
-            case_id=f"c{i}", scenario="hover_normal", seed=i, role="normal_train", group_id=f"g{i}"
+            case_id=f"c{i}",
+            scenario="hover_normal",
+            seed=i,
+            role="normal_train",
+            group_id=f"g{i}",
         )
         for i in range(1, 4)
     ]
@@ -109,22 +117,32 @@ print(json.dumps({'status':'completed','run':str(run)}))
             source_hashes=plan["source_hashes"],
         ),
     )
-    plan["isolation_evidence"] = dict(path=str(evidence), sha256=c.sha(evidence))
+    plan["isolation_evidence"] = dict(
+        path=str(evidence), sha256=c.sha(evidence)
+    )
 
     def command(args, cwd, log, check, seconds):
         check()
         with Path(log).open("wb") as f:
             result = subprocess.run(
-                args, cwd=cwd, stdout=f, stderr=subprocess.STDOUT, timeout=seconds
+                args,
+                cwd=cwd,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                timeout=seconds,
             )
         check()
         if result.returncode:
             raise c.Stop("fake producer failure")
 
     helper = SimpleNamespace(command=command, check_mount=lambda path: 0)
-    monkeypatch.setattr(c, "preflight", lambda plan, helper: (root, external, local))
     monkeypatch.setattr(
-        c, "memory_snapshot", lambda: dict(available_bytes=10**10, owned_tree_rss_bytes=0)
+        c, "preflight", lambda plan, helper: (root, external, local)
+    )
+    monkeypatch.setattr(
+        c,
+        "memory_snapshot",
+        lambda: dict(available_bytes=10**10, owned_tree_rss_bytes=0),
     )
     return plan, cases, helper, tmp_path
 
@@ -136,14 +154,19 @@ def test_processing_failure_before_admission_starts_no_flight(setup):
         pretrain_cli_approval=str(tmp / "task/config.json"),
         processing_stop_signal=str(tmp / "task/operator/processing-stop.json"),
     )
-    dump(Path(plan["processing_stop_signal"]), dict(reason="failed CPU processing"))
+    dump(
+        Path(plan["processing_stop_signal"]),
+        dict(reason="failed CPU processing"),
+    )
     result = c.execute(plan, cases, helper)
     assert result["status"] == "FAILED_DRAINED_STOPPED"
     assert len(result["not_started"]) == len(cases)
     assert not (Path(plan["root"]) / "events.jsonl").exists()
 
 
-def test_processing_failure_drains_current_flight_even_inside_sample_interval(setup):
+def test_processing_failure_drains_current_flight_even_inside_sample_interval(
+    setup,
+):
     plan, cases, helper, tmp = setup
     plan.update(
         concurrency=1,
@@ -158,14 +181,19 @@ def test_processing_failure_drains_current_flight_even_inside_sample_interval(se
         result = original(args, cwd, log, check, seconds)
         # Producer has finished, but verification/export of its owned run must drain.
         if args[1] != "verify":
-            dump(Path(plan["processing_stop_signal"]), dict(reason="CPU failed"))
+            dump(
+                Path(plan["processing_stop_signal"]), dict(reason="CPU failed")
+            )
         return result
 
     helper.command = command
     result = c.execute(plan, cases, helper)
     assert result["status"] == "FAILED_DRAINED_STOPPED"
     assert len(result["cases"]) == 1 and len(result["not_started"]) == 2
-    assert next(iter(result["cases"].values()))["status"] == "ARCHIVED_PENDING_QUALITY"
+    assert (
+        next(iter(result["cases"].values()))["status"]
+        == "ARCHIVED_PENDING_QUALITY"
+    )
     assert "Processing failure" in str(result["stop_reason"])
 
 
@@ -180,7 +208,10 @@ def test_two_lanes_isolated_and_lossless(setup):
     plan, cases, helper, tmp = setup
     result = c.execute(plan, cases, helper)
     assert result["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
-    events = [json.loads(x) for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()]
+    events = [
+        json.loads(x)
+        for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()
+    ]
     starts = [x for x in events if x["event"] == "start"]
     ends = [x for x in events if x["event"] == "end"]
     assert max(x["time"] for x in starts[:2]) < min(x["time"] for x in ends[:2])
@@ -192,7 +223,9 @@ def test_two_lanes_isolated_and_lossless(setup):
         with tarfile.open(export["archive"], "r:gz") as tar:
             assert tar.extractfile("native/data").read() == b"abc" * 50000
         assert (
-            Path(plan["execution_dir"]) / record["case"]["case_id"] / "archive-progress.json"
+            Path(plan["execution_dir"])
+            / record["case"]["case_id"]
+            / "archive-progress.json"
         ).exists()
     assert len(list(Path(plan["external_output"]).glob("*.tar.gz"))) == 3
     assert not list(Path(plan["external_output"]).glob("*/observations"))
@@ -207,7 +240,11 @@ def test_new_collection_recreates_deleted_output_parents(setup, monkeypatch):
     monkeypatch.setattr(
         c,
         "preflight",
-        lambda plan, helper: (root, Path(plan["external_output"]), Path(plan["execution_dir"])),
+        lambda plan, helper: (
+            root,
+            Path(plan["external_output"]),
+            Path(plan["execution_dir"]),
+        ),
     )
     result = c.execute(plan, cases[:1], helper)
     assert result["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
@@ -244,14 +281,21 @@ def test_first_failure_drains_peer_and_no_third_start(setup):
     assert result["cases"]["c1"]["status"] == "FAILED_PRESERVED"
     assert result["cases"]["c2"]["status"] == "ARCHIVED_PENDING_QUALITY"
     assert result["not_started"] == ["c3"]
-    events = [json.loads(x) for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()]
+    events = [
+        json.loads(x)
+        for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()
+    ]
     assert {x["seed"] for x in events if x["event"] == "start"} == {1, 2}
-    assert any(p.name == "partial" for p in (Path(plan["root"]) / "runs").rglob("*"))
+    assert any(
+        p.name == "partial" for p in (Path(plan["root"]) / "runs").rglob("*")
+    )
 
 
 def test_byte_progress_timeout_does_not_use_heartbeat(tmp_path):
     clock = [0.0]
-    p = c.Progress(tmp_path / "progress.json", "copy", 100, 5, clock=lambda: clock[0])
+    p = c.Progress(
+        tmp_path / "progress.json", "copy", 100, 5, clock=lambda: clock[0]
+    )
     clock[0] = 4
     p.advance(10)
     clock[0] = 8
@@ -278,7 +322,10 @@ def test_source_change_stops_new_cases_but_preserves_peers(setup):
     result = c.execute(plan, cases, helper)
     assert result["status"] == "FAILED_DRAINED_STOPPED"
     assert len(result["cases"]) == 2
-    assert all(x["status"] == "PRESERVED_SOURCE_DRIFT" for x in result["cases"].values())
+    assert all(
+        x["status"] == "PRESERVED_SOURCE_DRIFT"
+        for x in result["cases"].values()
+    )
 
 
 def test_claim_prevents_duplicate_after_failure(setup):
@@ -292,7 +339,9 @@ def test_claim_prevents_duplicate_after_failure(setup):
 def test_bound_dry_run_no_process_or_writes(setup, monkeypatch):
     plan, cases, helper, tmp = setup
     plan["execution_authorized"] = False
-    pp, mp, ap = [tmp / x for x in ("plan.json", "manifest.json", "approval.json")]
+    pp, mp, ap = [
+        tmp / x for x in ("plan.json", "manifest.json", "approval.json")
+    ]
     dump(pp, plan)
     dump(mp, {"cases": cases})
     dump(
@@ -305,9 +354,22 @@ def test_bound_dry_run_no_process_or_writes(setup, monkeypatch):
             collector_sha256=c.sha(c.__file__),
         ),
     )
-    monkeypatch.setattr(c, "execute", lambda *a: pytest.fail("dry run must not execute"))
+    monkeypatch.setattr(
+        c, "execute", lambda *a: pytest.fail("dry run must not execute")
+    )
     assert (
-        c.main(["--plan", str(pp), "--manifest", str(mp), "--approval", str(ap), "--dry-run"]) == 0
+        c.main(
+            [
+                "--plan",
+                str(pp),
+                "--manifest",
+                str(mp),
+                "--approval",
+                str(ap),
+                "--dry-run",
+            ]
+        )
+        == 0
     )
     assert not Path(plan["execution_dir"]).exists()
     with pytest.raises(c.Stop, match="approval"):
@@ -316,7 +378,9 @@ def test_bound_dry_run_no_process_or_writes(setup, monkeypatch):
 
 def test_reject_split_overlap_and_short_duration(setup):
     plan, cases, helper, tmp = setup
-    pp, mp, ap = [tmp / x for x in ("plan.json", "manifest.json", "approval.json")]
+    pp, mp, ap = [
+        tmp / x for x in ("plan.json", "manifest.json", "approval.json")
+    ]
 
     def check():
         dump(pp, plan)
@@ -368,7 +432,11 @@ def test_verify_and_archive_share_one_serial_slot(setup, monkeypatch):
         return original_command(args, *rest)
 
     helper.command = command
-    monkeypatch.setattr(c, "archive_run", lambda *args: tracked("archive", original_archive, *args))
+    monkeypatch.setattr(
+        c,
+        "archive_run",
+        lambda *args: tracked("archive", original_archive, *args),
+    )
     result = c.execute(plan, cases, helper)
     assert result["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
     assert peak[0] == 1
@@ -376,14 +444,19 @@ def test_verify_and_archive_share_one_serial_slot(setup, monkeypatch):
 
 
 @pytest.mark.parametrize("damage", ["integrity", "archive"])
-def test_archive_failure_preserves_partial_without_publishing(tmp_path, monkeypatch, damage):
+def test_archive_failure_preserves_partial_without_publishing(
+    tmp_path, monkeypatch, damage
+):
     run = tmp_path / "run"
     run.mkdir()
     stage = tmp_path / "stage"
     stage.mkdir()
     data = run / "data"
     data.write_bytes(b"original" * 10000)
-    dump(run / "integrity.json", {"data": dict(size=data.stat().st_size, sha256=c.sha(data))})
+    dump(
+        run / "integrity.json",
+        {"data": dict(size=data.stat().st_size, sha256=c.sha(data))},
+    )
     destination = tmp_path / "run.tar.gz"
     partial = tmp_path / "run.tar.gz.partial"
     if damage == "integrity":
@@ -409,7 +482,9 @@ def test_archive_failure_preserves_partial_without_publishing(tmp_path, monkeypa
 
 def test_existing_instance_socket_blocks_without_removal(monkeypatch):
     seen = []
-    monkeypatch.setattr(c.os.path, "lexists", lambda path: seen.append(str(path)) or True)
+    monkeypatch.setattr(
+        c.os.path, "lexists", lambda path: seen.append(str(path)) or True
+    )
     with pytest.raises(c.Stop, match="never removed"):
         c.check_instance_socket(3)
     assert seen == ["/tmp/px4-sock-3"]
@@ -438,22 +513,36 @@ def collection_setup(setup):
         data_pool_id="collection/x500",
         mission_seconds=900,
         producer_args=["--configuration", "collection"],
-        assessment_command=["fake-assess", "{run}", "{instance}", "{duration}", "{profile_id}"],
+        assessment_command=[
+            "fake-assess",
+            "{run}",
+            "{instance}",
+            "{duration}",
+            "{profile_id}",
+        ],
         assessment_code_paths=["capstone-sim"],
         preparation_assertions={"ready": True},
-        quality_thresholds={"min_effective_fraction": 0.8, "min_effective_rtf": 0.1},
+        quality_thresholds={
+            "min_effective_fraction": 0.8,
+            "min_effective_rtf": 0.1,
+        },
     )
     plan["budgets"].update(
-        min_available_ram_bytes=4_000_000_000, memory_soft_cap_bytes=8_000_000_000
+        min_available_ram_bytes=4_000_000_000,
+        memory_soft_cap_bytes=8_000_000_000,
     )
     for lane in plan["lanes"]:
-        lane["ports"] = [p + lane["instance"] for p in (14540, 14580, 18570, 14280, 13030)]
+        lane["ports"] = [
+            p + lane["instance"] for p in (14540, 14580, 18570, 14280, 13030)
+        ]
     for case, duration in zip(cases, (180, 480, 900)):
         case["mission_seconds"] = duration
     cases[0]["scenario"] = "low_soc_normal"
     preparation = tmp / "preparation.json"
     dump(preparation, {"ready": True})
-    plan["producer_preparation"] = dict(path=str(preparation), sha256=c.sha(preparation))
+    plan["producer_preparation"] = dict(
+        path=str(preparation), sha256=c.sha(preparation)
+    )
     isolation = Path(plan["isolation_evidence"]["path"])
     value = c.read(isolation)
     value["lanes"] = plan["lanes"]
@@ -469,14 +558,19 @@ def collection_setup(setup):
         driver_sha256="synthetic",
         producer_preparation=plan["producer_preparation"],
     )
-    dump(benchmark, dict(proof, status="BENCHMARK_PASSED", eligible_concurrency=[2, 4, 8]))
+    dump(
+        benchmark,
+        dict(proof, status="BENCHMARK_PASSED", eligible_concurrency=[2, 4, 8]),
+    )
     dump(
         receipt,
         dict(
             proof,
             status="ENDURANCE_PASSED",
             selected_concurrency=2,
-            benchmark_receipt=dict(path=str(benchmark), sha256=c.sha(benchmark)),
+            benchmark_receipt=dict(
+                path=str(benchmark), sha256=c.sha(benchmark)
+            ),
         ),
     )
     plan["gate_receipt"] = dict(path=str(receipt), sha256=c.sha(receipt))
@@ -507,7 +601,9 @@ def collection_setup(setup):
     return plan, cases, helper, tmp
 
 
-@pytest.mark.parametrize("mutation", [None, "missing", "wrong", "legacy", "extra"])
+@pytest.mark.parametrize(
+    "mutation", [None, "missing", "wrong", "legacy", "extra"]
+)
 def test_collection_runtime_checks_active_plugin_not_preservation_inventory(
     collection_setup, mutation
 ):
@@ -538,7 +634,10 @@ def test_runtime_requires_exact_pinned_transport_and_seal(collection_setup):
     runtime = c.read(Path(plan["root"]) / "synthetic-runtime.json")
     transport = "runtime/gazebo-transport/lib/libgz-transport13.so.13.6.0"
     plan["source_hashes"][transport] = "a" * 64
-    source = dict(local_sources={}, runtime_binary_sha256=dict(runtime, **{transport: "a" * 64}))
+    source = dict(
+        local_sources={},
+        runtime_binary_sha256=dict(runtime, **{transport: "a" * 64}),
+    )
     with pytest.raises(c.Stop, match="requires the installed producer"):
         c.verify_run_source_snapshot(plan, source)
     plan["source_hashes"]["artifacts/runtime-manifest.json"] = "b" * 64
@@ -549,7 +648,9 @@ def test_runtime_requires_exact_pinned_transport_and_seal(collection_setup):
 
 
 def binding_files(plan, cases, tmp):
-    pp, mp, ap = [tmp / x for x in ("plan.json", "manifest.json", "approval.json")]
+    pp, mp, ap = [
+        tmp / x for x in ("plan.json", "manifest.json", "approval.json")
+    ]
     dump(pp, plan)
     dump(mp, {"cases": cases, "data_pool_id": plan.get("data_pool_id")})
     dump(
@@ -575,18 +676,23 @@ def test_collection_mixed_duration_and_measured_rtf(collection_setup):
         actual = row["case"]["mission_seconds"]
         assert row["assessment"]["observed_valid_seconds"] == actual * 0.9
         assert (
-            row["assessment"]["effective_rtf"] == actual * 0.9 / row["timings_s"]["flight_command"]
+            row["assessment"]["effective_rtf"]
+            == actual * 0.9 / row["timings_s"]["flight_command"]
         )
     assert result["resources"]["samples"] >= 1
 
 
 def final_operating_cases(plan, cases):
     plan.update(
-        collection_profile="final324", dataset_purpose="locked_final_test", mission_seconds=480
+        collection_profile="final324",
+        dataset_purpose="locked_final_test",
+        mission_seconds=480,
     )
     for index, case in enumerate(cases):
         case.update(
-            scenario="battery_resistance_ramp" if index == 0 else "hover_normal",
+            scenario="battery_resistance_ramp"
+            if index == 0
+            else "hover_normal",
             role="anomaly_test" if index == 0 else "normal_test",
             mission_seconds=180 if index == 0 else 480,
             operation_variation=dict(
@@ -612,22 +718,32 @@ def final_operating_cases(plan, cases):
             case["fault_after_mission_s"] = 100
 
 
-def test_final_low_soc_anomaly_binds_and_producer_receives_operating_request(collection_setup):
+def test_final_low_soc_anomaly_binds_and_producer_receives_operating_request(
+    collection_setup,
+):
     plan, cases, helper, tmp = collection_setup
     final_operating_cases(plan, cases)
     plan, cases = c.bound(*binding_files(plan, cases, tmp))
     result = c.execute(plan, cases, helper)
     assert result["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
     starts = [
-        json.loads(line) for line in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()
+        json.loads(line)
+        for line in (Path(plan["root"]) / "events.jsonl")
+        .read_text()
+        .splitlines()
     ]
-    starts = {row["seed"]: row["args"] for row in starts if row["event"] == "start"}
+    starts = {
+        row["seed"]: row["args"] for row in starts if row["event"] == "start"
+    }
     for case in cases:
         args = starts[case["seed"]]
         assert (
-            json.loads(args[args.index("--operation-variation") + 1]) == case["operation_variation"]
+            json.loads(args[args.index("--operation-variation") + 1])
+            == case["operation_variation"]
         )
-        assert "--normal-variation-json" not in args and "--fault-at-s" not in args
+        assert (
+            "--normal-variation-json" not in args and "--fault-at-s" not in args
+        )
         if case["role"] == "anomaly_test":
             assert args[args.index("--fault-after-mission-s") + 1] == "100"
         else:
@@ -653,7 +769,9 @@ def test_final_low_soc_anomaly_binds_and_producer_receives_operating_request(col
         "normal_onset",
     ],
 )
-def test_final_operating_request_rejects_unsafe_or_ambiguous_conditions(collection_setup, issue):
+def test_final_operating_request_rejects_unsafe_or_ambiguous_conditions(
+    collection_setup, issue
+):
     plan, cases, _, tmp = collection_setup
     final_operating_cases(plan, cases)
     case = cases[0]
@@ -689,8 +807,12 @@ def test_final_operating_request_rejects_unsafe_or_ambiguous_conditions(collecti
         c.bound(*binding_files(plan, cases, tmp))
 
 
-@pytest.mark.parametrize("field", ["operation_variation", "fault_after_mission_s"])
-def test_final_producer_cannot_silently_ignore_requested_conditions(collection_setup, field):
+@pytest.mark.parametrize(
+    "field", ["operation_variation", "fault_after_mission_s"]
+)
+def test_final_producer_cannot_silently_ignore_requested_conditions(
+    collection_setup, field
+):
     plan, cases, helper, tmp = collection_setup
     final_operating_cases(plan, cases)
     cases = cases[:1]
@@ -718,7 +840,10 @@ def test_collection_four_and_eight_lanes_bind(collection_setup, lanes):
     plan, cases, helper, tmp = collection_setup
     plan["concurrency"] = lanes
     plan["lanes"] = [
-        dict(instance=i, ports=[p + i for p in (14540, 14580, 18570, 14280, 13030)])
+        dict(
+            instance=i,
+            ports=[p + i for p in (14540, 14580, 18570, 14280, 13030)],
+        )
         for i in range(lanes)
     ]
     iso = Path(plan["isolation_evidence"]["path"])
@@ -735,7 +860,14 @@ def test_collection_four_and_eight_lanes_bind(collection_setup, lanes):
 
 
 @pytest.mark.parametrize(
-    "issue", ["old_receipt", "missing_preparation", "wrong_port", "test_leak", "bad_assessment"]
+    "issue",
+    [
+        "old_receipt",
+        "missing_preparation",
+        "wrong_port",
+        "test_leak",
+        "bad_assessment",
+    ],
 )
 def test_collection_rejects_missing_or_wrong_evidence(collection_setup, issue):
     plan, cases, helper, tmp = collection_setup
@@ -768,12 +900,17 @@ def test_collection_rejects_missing_or_wrong_evidence(collection_setup, issue):
 
 
 @pytest.mark.parametrize("count", [4, 8])
-def test_collection_parallel_synthetic_commands_are_isolated(collection_setup, count):
+def test_collection_parallel_synthetic_commands_are_isolated(
+    collection_setup, count
+):
     plan, cases, helper, tmp = collection_setup
     plan["concurrency"] = count
     plan["attempts_max"] = count
     plan["lanes"] = [
-        dict(instance=i, ports=[p + i for p in (14540, 14580, 18570, 14280, 13030)])
+        dict(
+            instance=i,
+            ports=[p + i for p in (14540, 14580, 18570, 14280, 13030)],
+        )
         for i in range(count)
     ]
     cases = [
@@ -795,10 +932,14 @@ def test_collection_parallel_synthetic_commands_are_isolated(collection_setup, c
     assert max(row["flight_started_monotonic"] for row in rows) < min(
         row["flight_finished_monotonic"] for row in rows
     )
-    assert all(row["assessment"]["instance"] == row["lane"]["instance"] for row in rows)
+    assert all(
+        row["assessment"]["instance"] == row["lane"]["instance"] for row in rows
+    )
 
 
-def test_collection_benchmark_cannot_use_collection_entrypoint(collection_setup):
+def test_collection_benchmark_cannot_use_collection_entrypoint(
+    collection_setup,
+):
     plan, cases, helper, tmp = collection_setup
     plan.update(phase="benchmark", mission_seconds=120)
     for row in cases:
@@ -837,9 +978,13 @@ def test_project_lock_blocks_direct_execute_before_processes(setup):
     assert lock.exists()  # Never remove a shared lock inode.
 
 
-def test_size_accounting_tolerates_atomic_status_replacement(tmp_path, monkeypatch):
+def test_size_accounting_tolerates_atomic_status_replacement(
+    tmp_path, monkeypatch
+):
     vanished = tmp_path / "atomic-temp"
-    monkeypatch.setattr(c, "files", lambda *a, **kw: iter([(vanished, c.stat.S_IFREG)]))
+    monkeypatch.setattr(
+        c, "files", lambda *a, **kw: iter([(vanished, c.stat.S_IFREG)])
+    )
     assert c.bytes_under(tmp_path) == 0
 
 
@@ -858,23 +1003,33 @@ def mission_progress_fixture(tmp_path):
         gz_partition="x500_" + run.name,
         clock=dict(id="px4-boot", epoch="simulation_boot", unit="us"),
         progress=dict(
-            sim_elapsed_s=10, target_s=900, px4_boot_s=50, last_update_utc=now.isoformat()
+            sim_elapsed_s=10,
+            target_s=900,
+            px4_boot_s=50,
+            last_update_utc=now.isoformat(),
         ),
     )
     dump(run / "run.json", state)
-    dump(run / "evaluation/scenario.json", dict(name=case["scenario"], seed=case["seed"]))
+    dump(
+        run / "evaluation/scenario.json",
+        dict(name=case["scenario"], seed=case["seed"]),
+    )
     tracker = c.MissionProgress(root, set(), case, {"instance": 3}, 900)
     return tracker, run, state, now
 
 
-def test_live_progress_uuid_cache_and_measured_interval_rtf(mission_progress_fixture, monkeypatch):
+def test_live_progress_uuid_cache_and_measured_interval_rtf(
+    mission_progress_fixture, monkeypatch
+):
     from datetime import timedelta
 
     tracker, run, state, now = mission_progress_fixture
     seen = []
     original = tracker.small_json
     monkeypatch.setattr(
-        tracker, "small_json", lambda path: seen.append(path.name) or original(path)
+        tracker,
+        "small_json",
+        lambda path: seen.append(path.name) or original(path),
     )
     first = tracker.sample(now, 100)
     assert first["observed_simulation_elapsed_s"] == 10
@@ -882,13 +1037,17 @@ def test_live_progress_uuid_cache_and_measured_interval_rtf(mission_progress_fix
     assert first["producer_run_id"] == run.name
     assert seen.count("scenario.json") == 1
     state["progress"].update(
-        sim_elapsed_s=12, px4_boot_s=52, last_update_utc=(now + timedelta(seconds=1)).isoformat()
+        sim_elapsed_s=12,
+        px4_boot_s=52,
+        last_update_utc=(now + timedelta(seconds=1)).isoformat(),
     )
     dump(run / "run.json", state)
     second = tracker.sample(now + timedelta(seconds=1), 101)
     assert second["live_rtf"] == 2
     assert second["producer_target_s"] == 900
-    assert seen.count("scenario.json") == 1  # Cached identity: only tiny run.json reread.
+    assert (
+        seen.count("scenario.json") == 1
+    )  # Cached identity: only tiny run.json reread.
     assert tracker.sample(now + timedelta(seconds=2), 102)["live_rtf"] is None
 
 
@@ -926,13 +1085,17 @@ def test_failed_producer_retains_uuid_and_landing_reason(setup):
     assert record["run_id"] == record["producer_run_id"] == run_id
     assert record["producer_stage"] == "landing"
     assert record["producer_termination_reason"] == "landing timeout"
-    assert "Command exit 4" in record["error"] and "landing timeout" in record["error"]
+    assert (
+        "Command exit 4" in record["error"]
+        and "landing timeout" in record["error"]
+    )
     assert record["attempt_history"][0]["run_id"] == run_id
     assert not list(Path(plan["external_output"]).glob("*.tar.gz"))
 
 
 @pytest.mark.parametrize(
-    "issue", [None, "seed", "duration", "instance", "partition", "duplicate", "symlink"]
+    "issue",
+    [None, "seed", "duration", "instance", "partition", "duplicate", "symlink"],
 )
 def test_terminal_evidence_rechecks_identity_without_live_clock_requirement(
     mission_progress_fixture, issue
@@ -946,7 +1109,9 @@ def test_terminal_evidence_rechecks_identity_without_live_clock_requirement(
     )
     dump(run / "run.json", state)
     dump(run / "evaluation/scenario.json", scenario)
-    tracker.sample(now, 100)  # Cache the original valid identity before metadata changes.
+    tracker.sample(
+        now, 100
+    )  # Cache the original valid identity before metadata changes.
     if issue == "seed":
         scenario["seed"] = 43
     elif issue == "duration":
@@ -957,7 +1122,10 @@ def test_terminal_evidence_rechecks_identity_without_live_clock_requirement(
         state["gz_partition"] = "another-run"
     elif issue == "duplicate":
         other = run.parent / ("b" * 32)
-        dump(other / "run.json", dict(state, run_id=other.name, gz_partition="x500_" + other.name))
+        dump(
+            other / "run.json",
+            dict(state, run_id=other.name, gz_partition="x500_" + other.name),
+        )
         dump(other / "evaluation/scenario.json", scenario)
     dump(run / "run.json", state)
     dump(run / "evaluation/scenario.json", scenario)
@@ -987,7 +1155,9 @@ def test_terminal_evidence_rechecks_identity_without_live_clock_requirement(
         "baseline",
     ],
 )
-def test_live_progress_rejects_ambiguous_or_wrong_evidence(mission_progress_fixture, issue):
+def test_live_progress_rejects_ambiguous_or_wrong_evidence(
+    mission_progress_fixture, issue
+):
     from datetime import timedelta
 
     tracker, run, state, now = mission_progress_fixture
@@ -998,13 +1168,19 @@ def test_live_progress_rejects_ambiguous_or_wrong_evidence(mission_progress_fixt
     elif issue == "clock":
         state["clock"]["id"] = "other-clock"
     elif issue == "seed":
-        dump(run / "evaluation/scenario.json", dict(name="hover_normal", seed=99))
+        dump(
+            run / "evaluation/scenario.json", dict(name="hover_normal", seed=99)
+        )
     elif issue == "target":
         state["progress"]["target_s"] = 300
     elif issue == "stale":
-        state["progress"]["last_update_utc"] = (now - timedelta(seconds=11)).isoformat()
+        state["progress"]["last_update_utc"] = (
+            now - timedelta(seconds=11)
+        ).isoformat()
     elif issue == "future":
-        state["progress"]["last_update_utc"] = (now + timedelta(seconds=1)).isoformat()
+        state["progress"]["last_update_utc"] = (
+            now + timedelta(seconds=1)
+        ).isoformat()
     elif issue == "nonfinite":
         state["progress"]["sim_elapsed_s"] = float("nan")
     elif issue == "baseline":
@@ -1012,29 +1188,44 @@ def test_live_progress_rejects_ambiguous_or_wrong_evidence(mission_progress_fixt
     else:
         assert tracker.sample(now, 100)["producer_run_id"] == run.name
         other = run.parent / ("b" * 32)
-        duplicate = dict(state, run_id=other.name, gz_partition="x500_" + other.name)
+        duplicate = dict(
+            state, run_id=other.name, gz_partition="x500_" + other.name
+        )
         dump(other / "run.json", duplicate)
-        dump(other / "evaluation/scenario.json", dict(name="hover_normal", seed=42))
+        dump(
+            other / "evaluation/scenario.json",
+            dict(name="hover_normal", seed=42),
+        )
     dump(run / "run.json", state)
     result = tracker.sample(now, 101)
     assert result["observed_simulation_elapsed_s"] is None
     assert result["live_rtf"] is None
 
 
-def test_live_progress_clock_regression_and_initial_metadata(mission_progress_fixture):
+def test_live_progress_clock_regression_and_initial_metadata(
+    mission_progress_fixture,
+):
     from datetime import timedelta
 
     tracker, run, state, now = mission_progress_fixture
-    initial = {k: v for k, v in state.items() if k not in {"instance", "configuration"}}
+    initial = {
+        k: v for k, v in state.items() if k not in {"instance", "configuration"}
+    }
     dump(run / "run.json", initial)
     assert tracker.sample(now, 100)["observed_simulation_elapsed_s"] is None
     dump(run / "run.json", state)
     assert tracker.sample(now, 101)["observed_simulation_elapsed_s"] == 10
     state["progress"].update(
-        sim_elapsed_s=9, last_update_utc=(now + timedelta(seconds=1)).isoformat()
+        sim_elapsed_s=9,
+        last_update_utc=(now + timedelta(seconds=1)).isoformat(),
     )
     dump(run / "run.json", state)
-    assert tracker.sample(now + timedelta(seconds=1), 102)["observed_simulation_elapsed_s"] is None
+    assert (
+        tracker.sample(now + timedelta(seconds=1), 102)[
+            "observed_simulation_elapsed_s"
+        ]
+        is None
+    )
 
 
 def test_continue_policy_attempts_next_case_and_never_reports_success(setup):
@@ -1051,16 +1242,29 @@ def test_continue_policy_attempts_next_case_and_never_reports_success(setup):
         == result["cases"]["c3"]["status"]
         == "ARCHIVED_PENDING_QUALITY"
     )
-    events = [json.loads(x) for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()]
-    assert sorted(x["seed"] for x in events if x["event"] == "start") == [1, 2, 3]
-    assert any(p.name == "partial" for p in (Path(plan["root"]) / "runs").rglob("*"))
+    events = [
+        json.loads(x)
+        for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()
+    ]
+    assert sorted(x["seed"] for x in events if x["event"] == "start") == [
+        1,
+        2,
+        3,
+    ]
+    assert any(
+        p.name == "partial" for p in (Path(plan["root"]) / "runs").rglob("*")
+    )
 
 
-def test_continue_policy_still_stops_on_shared_resource_failure(setup, monkeypatch):
+def test_continue_policy_still_stops_on_shared_resource_failure(
+    setup, monkeypatch
+):
     plan, cases, helper, tmp = setup
     plan["continue_after_case_failure"] = True
     monkeypatch.setattr(
-        c, "memory_snapshot", lambda: dict(available_bytes=0, owned_tree_rss_bytes=0)
+        c,
+        "memory_snapshot",
+        lambda: dict(available_bytes=0, owned_tree_rss_bytes=0),
     )
     result = c.execute(plan, cases, helper)
     assert result["status"] == "FAILED_DRAINED_STOPPED"
@@ -1070,7 +1274,9 @@ def test_continue_policy_still_stops_on_shared_resource_failure(setup, monkeypat
 @pytest.mark.parametrize("failures", [2, 3])
 def test_bounded_case_retries_preserve_raw_and_continue(setup, failures):
     plan, cases, helper, tmp = setup
-    plan.update(unit_attempts_max=3, continue_after_case_failure=True, concurrency=1)
+    plan.update(
+        unit_attempts_max=3, continue_after_case_failure=True, concurrency=1
+    )
     plan["lanes"] = plan["lanes"][:1]
     command = helper.command
     calls = []
@@ -1088,15 +1294,24 @@ def test_bounded_case_retries_preserve_raw_and_continue(setup, failures):
     assert calls == [1, 1, 1, 2, 3]
     assert result["cases"]["c1"]["attempt"] == 3
     assert len(list((Path(plan["root"]) / "runs").iterdir())) == 5
-    assert len(list(Path(plan["external_output"]).glob("*.tar.gz"))) == (3 if failures == 2 else 2)
+    assert len(list(Path(plan["external_output"]).glob("*.tar.gz"))) == (
+        3 if failures == 2 else 2
+    )
     assert result["status"] == (
-        "COLLECTED_PENDING_QUALITY_STOPPED" if failures == 2 else "COLLECTED_WITH_ERRORS_STOPPED"
+        "COLLECTED_PENDING_QUALITY_STOPPED"
+        if failures == 2
+        else "COLLECTED_WITH_ERRORS_STOPPED"
     )
     for folder in ("c1", "c1/attempt-02", "c1/attempt-03"):
         proof = json.loads(
-            (Path(plan["execution_dir"]) / folder / "attempt-result.json").read_text()
+            (
+                Path(plan["execution_dir"]) / folder / "attempt-result.json"
+            ).read_text()
         )
-        assert proof["status"] in {"FAILED_PRESERVED", "ARCHIVED_PENDING_QUALITY"}
+        assert proof["status"] in {
+            "FAILED_PRESERVED",
+            "ARCHIVED_PENDING_QUALITY",
+        }
     assert result["cases"]["c1"]["previous_attempts"][0]["attempt"] == 1
 
 
@@ -1104,7 +1319,9 @@ def test_shared_storage_failure_never_retries(setup):
     import errno
 
     plan, cases, helper, tmp = setup
-    plan.update(unit_attempts_max=3, continue_after_case_failure=True, concurrency=1)
+    plan.update(
+        unit_attempts_max=3, continue_after_case_failure=True, concurrency=1
+    )
     plan["lanes"] = plan["lanes"][:1]
     calls = []
 
@@ -1121,7 +1338,9 @@ def test_shared_storage_failure_never_retries(setup):
 
 def test_unsafe_lane_is_not_retried(setup, monkeypatch):
     plan, cases, helper, tmp = setup
-    plan.update(unit_attempts_max=3, continue_after_case_failure=True, concurrency=1)
+    plan.update(
+        unit_attempts_max=3, continue_after_case_failure=True, concurrency=1
+    )
     plan["lanes"] = plan["lanes"][:1]
     calls = []
 
@@ -1157,4 +1376,6 @@ def test_retry_limit_requires_matching_task_config(setup):
     with pytest.raises(c.Stop, match="Retry policy"):
         c.bound(*binding_files(plan, cases, tmp))
     dump(approval, dict(unit_attempts_max=3))
-    assert c.bound(*binding_files(plan, cases, tmp))[0]["unit_attempts_max"] == 3
+    assert (
+        c.bound(*binding_files(plan, cases, tmp))[0]["unit_attempts_max"] == 3
+    )

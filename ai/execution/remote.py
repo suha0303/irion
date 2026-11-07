@@ -27,14 +27,19 @@ REMOTE_LOCK = GPU_LOCK
 
 
 def command(argv):
-    return subprocess.check_output(argv, text=True, stderr=subprocess.PIPE, timeout=30).strip()
+    return subprocess.check_output(
+        argv, text=True, stderr=subprocess.PIPE, timeout=30
+    ).strip()
 
 
 def verify_input(root):
     root = Path(root).resolve()
     config_check(read(root / "config.json"))
     verify(root, read(root / "inventory.json"))
-    return dict(status="INPUT_VERIFIED_NO_TRAINING", inventory_sha256=sha(root / "inventory.json"))
+    return dict(
+        status="INPUT_VERIFIED_NO_TRAINING",
+        inventory_sha256=sha(root / "inventory.json"),
+    )
 
 
 def submit(root):
@@ -45,13 +50,22 @@ def submit(root):
     verify(root, read(root / "inventory.json"))
     if os.environ.get("SLURM_JOB_ID"):
         raise ValueError("Submit from login node only; do not nest allocations")
-    if Path(sys.executable).resolve() != Path(python_for(root, required=True)).resolve():
-        raise ValueError("Approved interpreter required; no environment installation")
+    if (
+        Path(sys.executable).resolve()
+        != Path(python_for(root, required=True)).resolve()
+    ):
+        raise ValueError(
+            "Approved interpreter required; no environment installation"
+        )
     with REMOTE_LOCK.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        queue = command(["squeue", "-h", "-u", str(os.getuid()), "-o", "%A %j %T"])
+        queue = command(
+            ["squeue", "-h", "-u", str(os.getuid()), "-o", "%A %j %T"]
+        )
         if queue:
-            raise ValueError("Existing own pending/running job; not submitted: " + queue)
+            raise ValueError(
+                "Existing own pending/running job; not submitted: " + queue
+            )
         with (job / "submitted.claim").open("x") as f:
             f.write("One submission only; unknown outcome is never retried\n")
         out = job / "output"
@@ -101,12 +115,16 @@ def submit(root):
         ]
         write(
             job / "submission-intent.json",
-            dict(argv=argv, inventory_sha256=inventory_sha, automatic_retry=False),
+            dict(
+                argv=argv, inventory_sha256=inventory_sha, automatic_retry=False
+            ),
         )
         response = command(argv)
         identifier = response.split(";")[0]
         if not identifier.isdigit():
-            raise ValueError("Unknown submission response; do not retry: " + response)
+            raise ValueError(
+                "Unknown submission response; do not retry: " + response
+            )
         record = dict(
             job_id=identifier,
             uid=os.getuid(),
@@ -127,7 +145,16 @@ def snapshot(root):
         raise ValueError("Invalid job identity/owner")
     try:
         queue = command(
-            ["squeue", "-h", "-j", identifier, "-u", str(os.getuid()), "-o", "%A|%T|%R"]
+            [
+                "squeue",
+                "-h",
+                "-j",
+                identifier,
+                "-u",
+                str(os.getuid()),
+                "-o",
+                "%A|%T|%R",
+            ]
         )
     except subprocess.CalledProcessError as exc:
         # Slurm can purge a finished job from squeue before its accounting disappears.
@@ -140,13 +167,24 @@ def snapshot(root):
         if (job / "output/progress.json").exists()
         else dict(status="PENDING", stage="allocation")
     )
-    result = dict(job_id=identifier, queue=queue, progress=state, released=False)
+    result = dict(
+        job_id=identifier, queue=queue, progress=state, released=False
+    )
     if not queue:
         accounting = command(
-            ["sacct", "-n", "-P", "-j", identifier, "--format=JobIDRaw,User,State,ExitCode"]
+            [
+                "sacct",
+                "-n",
+                "-P",
+                "-j",
+                identifier,
+                "--format=JobIDRaw,User,State,ExitCode",
+            ]
         )
         entries = [
-            line.split("|") for line in accounting.splitlines() if line.split("|")[0] == identifier
+            line.split("|")
+            for line in accounting.splitlines()
+            if line.split("|")[0] == identifier
         ]
         if len(entries) == 1 and entries[0][2].split()[0] in {
             "COMPLETED",
@@ -163,7 +201,9 @@ def snapshot(root):
             fields = entries[0]
             if fields[1] != __import__("pwd").getpwuid(os.getuid()).pw_name:
                 raise ValueError("Accounting owner mismatch")
-            result.update(released=True, slurm_state=fields[2], exit_code=fields[3])
+            result.update(
+                released=True, slurm_state=fields[2], exit_code=fields[3]
+            )
             result["remaining_own_job_ids"] = command(
                 ["squeue", "-h", "-u", str(os.getuid()), "-o", "%A"]
             ).split()
@@ -184,7 +224,8 @@ def cancel(root):
         record.get("JobId") != identifier
         or record.get("JobName") != "drone-ai-train"
         or record.get("Partition") != "p02"
-        or record.get("UserId", "").split("(")[-1].rstrip(")") != str(os.getuid())
+        or record.get("UserId", "").split("(")[-1].rstrip(")")
+        != str(os.getuid())
     ):
         raise ValueError("Refuse cancellation: identity mismatch")
     subprocess.run(["scancel", identifier], check=True, timeout=30)
@@ -217,7 +258,9 @@ def worker(root, inventory_sha):
 
             progress.update(stage="resource_admission")
             # Existing DIS01/owner/TRES/Python/Torch/CUDA/GPU checks; no CUDA_VISIBLE_DEVICES writes.
-            environment = check(root / "ai", out, "train", job_prefix="drone-ai-")
+            environment = check(
+                root / "ai", out, "train", job_prefix="drone-ai-"
+            )
             available = memory_available()
             required = cfg["memory"]["estimated_host_peak_bytes"]
             if available < required + 1024**3:
@@ -226,7 +269,11 @@ def worker(root, inventory_sha):
                 )
             write(
                 out / "host-memory-admission.json",
-                dict(available_bytes=available, estimate=cfg["memory"], job=environment["job"]),
+                dict(
+                    available_bytes=available,
+                    estimate=cfg["memory"],
+                    job=environment["job"],
+                ),
             )
             from .engine import bundles, calibrate
 
@@ -263,14 +310,18 @@ def worker(root, inventory_sha):
             )
     except BaseException as exc:
         progress.update(
-            status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}", automatic_retry=False
+            status="FAILED_STOPPED",
+            reason=f"{type(exc).__name__}: {exc}",
+            automatic_retry=False,
         )
         raise
 
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("action", choices=["submit", "snapshot", "cancel", "worker", "verify"])
+    p.add_argument(
+        "action", choices=["submit", "snapshot", "cancel", "worker", "verify"]
+    )
     p.add_argument("--root", required=True, type=Path)
     p.add_argument("--inventory-sha")
     a = p.parse_args()

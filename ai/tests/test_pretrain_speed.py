@@ -16,7 +16,9 @@ def samples():
         valid_airborne_fraction=0.98,
         windows=80,
         topic_quality=dict(
-            battery_status=dict(count=1000, first=0, last=10_000_000, max_gap_us=100000)
+            battery_status=dict(
+                count=1000, first=0, last=10_000_000, max_gap_us=100000
+            )
         ),
     )
 
@@ -46,10 +48,16 @@ def test_matched_seed_exception_is_test_only_and_requires_prior_owned_completion
     config = tmp_path / "config.json"
     common.write(
         config,
-        dict(mode="test", seed_base=100, speed_test=dict(factors=[2, 2, 4, 8], protocol=protocol)),
+        dict(
+            mode="test",
+            seed_base=100,
+            speed_test=dict(factors=[2, 2, 4, 8], protocol=protocol),
+        ),
     )
     plan = dict(
-        pretrain_memory_override=dict(config=dict(path=str(config), sha256=common.sha(config))),
+        pretrain_memory_override=dict(
+            config=dict(path=str(config), sha256=common.sha(config))
+        ),
         pretrain_cli_approval=str(config),
         phase="benchmark",
         concurrency=1,
@@ -69,11 +77,14 @@ def test_matched_seed_exception_is_test_only_and_requires_prior_owned_completion
     plan["speed_comparison"]["index"] = 1
     with pytest.raises(FileNotFoundError):
         collector.speed_comparison_scope(plan, [case])
-    common.write(tmp_path / "speed-01/plan.json", dict(pretrain_cli_approval=str(config)))
+    common.write(
+        tmp_path / "speed-01/plan.json", dict(pretrain_cli_approval=str(config))
+    )
     common.write(
         tmp_path / "speed-01/execution/ledger.json",
         dict(
-            status="COLLECTED_PENDING_QUALITY_STOPPED", cases=dict(one=dict(run_id="owned-first"))
+            status="COLLECTED_PENDING_QUALITY_STOPPED",
+            cases=dict(one=dict(run_id="owned-first")),
         ),
     )
     assert collector.speed_comparison_scope(plan, [case]) == {"owned-first"}

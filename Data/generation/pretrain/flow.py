@@ -23,7 +23,11 @@ def processing_runner(runner):
     cpu = copy.copy(runner)
     cpu.state = copy.deepcopy(runner.state)
     cpu.state.update(
-        completed=[], stages=[], active=[], stage="waiting-for-first-flight", collection_ledger=None
+        completed=[],
+        stages=[],
+        active=[],
+        stage="waiting-for-first-flight",
+        collection_ledger=None,
     )
     cpu.state_path = runner.task / "operator/processing-state.json"
     cpu.peaks = runner.peaks.copy()
@@ -39,18 +43,26 @@ def collect_overlapping(runner, pipeline, planned, groups):
     pipeline.r = cpu
     stop = runner.task / "operator/processing-stop.json"
     if stop.exists():
-        raise ValueError("Existing processing failure signal; never restart a claimed task")
-    runner.update(pipeline_overlap=True, bounded_raw_runs=2 * runner.config["flight_workers"])
+        raise ValueError(
+            "Existing processing failure signal; never restart a claimed task"
+        )
+    runner.update(
+        pipeline_overlap=True,
+        bounded_raw_runs=2 * runner.config["flight_workers"],
+    )
     pending, outcomes = [], {}
 
     def process(label, folder, approved, count):
         if stop.exists():
-            raise RuntimeError("Previous processing failure; pending group preserved")
+            raise RuntimeError(
+                "Previous processing failure; pending group preserved"
+            )
         try:
             cpu.begin(label + "-freeze", total=count, workers=1)
             output, rows = fragment_freeze(cpu, folder, approved)
             cpu.finish(
-                label + "-freeze", dict(verified_runs=len(rows), whole_dataset_admitted=False)
+                label + "-freeze",
+                dict(verified_runs=len(rows), whole_dataset_admitted=False),
             )
             if rows:
                 rows = pipeline.process_chunk(rows, label, folder)
@@ -66,7 +78,9 @@ def collect_overlapping(runner, pipeline, planned, groups):
                 ),
             )
             cpu.update(
-                status="FAILED_STOPPED", reason=f"{type(exc).__name__}: {exc}", finished=time.time()
+                status="FAILED_STOPPED",
+                reason=f"{type(exc).__name__}: {exc}",
+                finished=time.time(),
             )
             raise
 
@@ -80,20 +94,39 @@ def collect_overlapping(runner, pipeline, planned, groups):
             for index, cases in enumerate(batches):
                 # At most one older CPU group plus the next flight group retain raw outputs.
                 if len(pending) >= 2:
-                    runner.update(stage="waiting-for-processing-capacity", collection_ledger=None)
+                    runner.update(
+                        stage="waiting-for-processing-capacity",
+                        collection_ledger=None,
+                    )
                     receive()
                 if stop.exists():
                     while pending:
                         receive()  # Re-raise the original background failure before any new flight.
-                    raise RuntimeError("Processing failure signal; no new flight admitted")
+                    raise RuntimeError(
+                        "Processing failure signal; no new flight admitted"
+                    )
                 label = f"stream-{set_index + 1:03}-{index + 1:03}"
                 try:
-                    runner.flight("collection", runner.config["flight_workers"], cases, label)
+                    runner.flight(
+                        "collection",
+                        runner.config["flight_workers"],
+                        cases,
+                        label,
+                    )
                 except IncompleteCollection:
                     pass
                 folder = runner.task / label
                 pending.append(
-                    (label, pool.submit(process, label, folder, planned[set_index], len(cases)))
+                    (
+                        label,
+                        pool.submit(
+                            process,
+                            label,
+                            folder,
+                            planned[set_index],
+                            len(cases),
+                        ),
+                    )
                 )
         runner.update(stage="waiting-for-processing", collection_ledger=None)
         while pending:

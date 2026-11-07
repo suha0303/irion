@@ -24,28 +24,45 @@ def closed_source(raw):
         if original is not None and info.st_size != original["size"]:
             raise ValueError("Closed raw size changed: " + name)
         members[name] = dict(
-            kind="file", bytes=info.st_size,
+            kind="file",
+            bytes=info.st_size,
             sha256=original["sha256"] if original is not None else sha(path),
         )
     if not ai19.CONSUMER <= set(members):
         raise ValueError("Closed raw consumer inventory incomplete")
     return dict(
-        kind="closed_raw_directory", path=str(raw),
-        integrity_sha256=sha(raw / "integrity.json"), members=members,
-        intermediate_archive=False, replay_source="original_read_only",
+        kind="closed_raw_directory",
+        path=str(raw),
+        integrity_sha256=sha(raw / "integrity.json"),
+        members=members,
+        intermediate_archive=False,
+        replay_source="original_read_only",
     )
 
 
 def prepare(
-    selection, output, expected_path, archive_cache, protection_path, *, policy_bundle, case,
+    selection,
+    output,
+    expected_path,
+    archive_cache,
+    protection_path,
+    *,
+    policy_bundle,
+    case,
     producer_binding=None,
 ):
     mapping, _, _, _ = ai19.ai_modules()
-    from learning.admission19 import check_producer, check_protection, source_evidence
+    from learning.admission19 import (
+        check_producer,
+        check_protection,
+        source_evidence,
+    )
 
     output, archive_cache = Path(output), Path(archive_cache)
     if output.exists():
-        raise ValueError("Never overwrite a previous production processing attempt")
+        raise ValueError(
+            "Never overwrite a previous production processing attempt"
+        )
     if selection["cohort"] not in {
         "normal_train",
         "normal_validation",
@@ -54,14 +71,21 @@ def prepare(
         "final",
     }:
         raise ValueError("Actual approved production role/cohort required")
-    binding = producer_binding if producer_binding is not None else ai19.producer_binding()
+    binding = (
+        producer_binding
+        if producer_binding is not None
+        else ai19.producer_binding()
+    )
     check_producer(binding, read(expected_path))
     assessment_path = archive_cache.parent / (
         output.parent.name + "-" + output.name + "-physical-assessment.json"
     )
     try:
         row, evidence = ai19.admit(
-            selection, binding, policy_bundle=policy_bundle, assessment_path=assessment_path
+            selection,
+            binding,
+            policy_bundle=policy_bundle,
+            assessment_path=assessment_path,
         )
     except ValueError:
         if assessment_path.exists():
@@ -74,7 +98,12 @@ def prepare(
                     binding,
                     assessment_path,
                     archive_cache.parent
-                    / (output.parent.name + "-" + output.name + "-quality-rejection.json"),
+                    / (
+                        output.parent.name
+                        + "-"
+                        + output.name
+                        + "-quality-rejection.json"
+                    ),
                     policy_bundle=policy_bundle,
                 )
                 raise QualityRejected(ref) from None
@@ -84,7 +113,9 @@ def prepare(
         lineage=ai19.lineage(row),
         mission_interval=evidence["mission_interval"],
         source_evidence=pilot19.source_evidence(
-            Path(row["path"]), binding, read(Path(row["path"]) / "evaluation/scenario.json")
+            Path(row["path"]),
+            binding,
+            read(Path(row["path"]) / "evaluation/scenario.json"),
         ),
     )
     source_evidence(row, binding)
@@ -108,7 +139,10 @@ def prepare(
     arrays, exclusions = ai19.online_arrays(engine, row["mission_interval"])
     physical, coverage = ai19.run_array(engine, row["mission_interval"])
     online = dict(
-        available=arrays is not None, valid_windows=0, target_valid_seconds=0, exclusions=exclusions
+        available=arrays is not None,
+        valid_windows=0,
+        target_valid_seconds=0,
+        exclusions=exclusions,
     )
     if arrays is not None:
         np.savez(output / "online.npz", **arrays)
@@ -138,7 +172,9 @@ def prepare(
     if physical is not None:
         np.savez(output / "run.npz", **physical)
         item = dict(
-            row, health=row["health_eligibility"], **ai19.reference(output / "run.npz", output)
+            row,
+            health=row["health_eligibility"],
+            **ai19.reference(output / "run.npz", output),
         )
         write(
             output / "run.json",
@@ -175,7 +211,13 @@ def prepare(
         training_started=False,
         inference_started=False,
     )
-    result["files"] = {str(p.relative_to(output)): sha(p) for p in output.rglob("*") if p.is_file()}
+    result["files"] = {
+        str(p.relative_to(output)): sha(p)
+        for p in output.rglob("*")
+        if p.is_file()
+    }
     write(output / "receipt.json", result)
-    write(output / "seal.json", dict(receipt_sha256=sha(output / "receipt.json")))
+    write(
+        output / "seal.json", dict(receipt_sha256=sha(output / "receipt.json"))
+    )
     return result

@@ -63,7 +63,9 @@ def fixture(tmp_path):
 
 def test_actual_original_eight_pairs_match_coordinator_projection(tmp_path):
     task, rows = fixture(tmp_path)
-    expected = common.read(final16.EXPECTED.with_name("expected-manifest-cases.json"))
+    expected = common.read(
+        final16.EXPECTED.with_name("expected-manifest-cases.json")
+    )
     assert rows == expected["cases"]
     assert len(rows) == 16 and len({c["paired_case_id"] for c in rows}) == 8
     assert all(c["attempts_max"] == 1 for c in rows)
@@ -80,7 +82,17 @@ def test_actual_original_eight_pairs_match_coordinator_projection(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "mutation", ["missing", "extra", "attempt2", "physics", "cohort", "seed", "short", "reuse"]
+    "mutation",
+    [
+        "missing",
+        "extra",
+        "attempt2",
+        "physics",
+        "cohort",
+        "seed",
+        "short",
+        "reuse",
+    ],
 )
 def test_strict_manifest_rejects_changes(tmp_path, mutation):
     task, _ = fixture(tmp_path)
@@ -152,14 +164,18 @@ def test_ledger_rejects_reuse_retry_and_unknown_admin(tmp_path, bad):
     else:
         ledger["cases"][rows[1]["case_id"]]["attempts"] = [dict(a)]
     ledger["attempts"] = [
-        dict(case_id=cid, **a) for cid, e in ledger["cases"].items() for a in e["attempts"]
+        dict(case_id=cid, **a)
+        for cid, e in ledger["cases"].items()
+        for a in e["attempts"]
     ]
     common.write(task / "ledger.json", ledger)
     with pytest.raises(pilot45.Blocked):
         final16.validate_ledger(task)
 
 
-def test_all16_real_registration_boundaries_in_isolated_registry(monkeypatch, tmp_path):
+def test_all16_real_registration_boundaries_in_isolated_registry(
+    monkeypatch, tmp_path
+):
     task, rows = fixture(tmp_path)
     registry = tmp_path / "registry.jsonl"
     # Replay the recorded pre-FINAL16 boundary after the actual authorized cycle completed.
@@ -192,9 +208,13 @@ def test_all16_real_registration_boundaries_in_isolated_registry(monkeypatch, tm
 
 
 @pytest.mark.parametrize("wrong", ["native", "adapter", "both"])
-def test_native_revision_must_be_v2_even_if_both_wrong_values_match(monkeypatch, tmp_path, wrong):
+def test_native_revision_must_be_v2_even_if_both_wrong_values_match(
+    monkeypatch, tmp_path, wrong
+):
     """The original chained comparison missed two equal wrong revisions."""
-    spec = common.read(common.ROOT / "ai/reports/final16-20261107/attempt-01/data-handoff.json")
+    spec = common.read(
+        common.ROOT / "ai/reports/final16-20261107/attempt-01/data-handoff.json"
+    )
     from learning.history19.final16 import CRITICAL
 
     # This negative field test uses a synthetic current-code freeze, not old release READY.
@@ -220,7 +240,9 @@ def test_native_revision_must_be_v2_even_if_both_wrong_values_match(monkeypatch,
     policy["native_policy_sha256"] = common.sha(n)
     common.write(p, policy)
     spec["paths"].update(native_policy=str(n), paired_policy=str(p))
-    spec["sha256"].update(native_policy=common.sha(n), paired_policy=common.sha(p))
+    spec["sha256"].update(
+        native_policy=common.sha(n), paired_policy=common.sha(p)
+    )
     spec["paired_cli_options"][1] = native["revision"]
     monkeypatch.setattr(final16.ai19, "producer_binding", lambda: producer)
     with pytest.raises(pilot45.Blocked, match="policy/CLI"):
@@ -228,13 +250,17 @@ def test_native_revision_must_be_v2_even_if_both_wrong_values_match(monkeypatch,
 
 
 @pytest.mark.parametrize("fail", [False, True])
-def test_exact16_concurrent_then_cpu4_or_failure_drain(monkeypatch, tmp_path, fail):
+def test_exact16_concurrent_then_cpu4_or_failure_drain(
+    monkeypatch, tmp_path, fail
+):
     task, rows = fixture(tmp_path)
     monkeypatch.setattr(pilot_parallel, "ROOT", tmp_path)
     monkeypatch.setattr(pilot_parallel, "STORE", tmp_path)
     monkeypatch.setattr(pilot_parallel, "check_ports", lambda *a: None)
     monkeypatch.setattr(
-        pilot45, "collector", lambda: SimpleNamespace(check_instance_socket=lambda i: None)
+        pilot45,
+        "collector",
+        lambda: SimpleNamespace(check_instance_socket=lambda i: None),
     )
     monkeypatch.setattr(pilot45, "resources", lambda *a: {})
     monkeypatch.setattr(pilot45, "register", lambda *a: None)
@@ -256,12 +282,20 @@ def test_exact16_concurrent_then_cpu4_or_failure_drain(monkeypatch, tmp_path, fa
                 barrier.wait(timeout=10)
                 time.sleep(0.01 + j["instance"] * 0.001)
                 case = j["case"]
-                rid = hashlib.md5(case["case_id"].encode(), usedforsecurity=False).hexdigest()
+                rid = hashlib.md5(
+                    case["case_id"].encode(), usedforsecurity=False
+                ).hexdigest()
                 raw = tmp_path / "simulation/runs" / rid
-                status = "failed" if fail and j["instance"] == 0 else "completed"
+                status = (
+                    "failed" if fail and j["instance"] == 0 else "completed"
+                )
                 common.write(
                     raw / "run.json",
-                    dict(status=status, instance=j["instance"], parent_attempt_id=None),
+                    dict(
+                        status=status,
+                        instance=j["instance"],
+                        parent_attempt_id=None,
+                    ),
                 )
                 common.write(
                     raw / "evaluation/scenario.json",
@@ -278,7 +312,9 @@ def test_exact16_concurrent_then_cpu4_or_failure_drain(monkeypatch, tmp_path, fa
                 time.sleep(0.01)
                 if j["action"] == "prepare":
                     output = Path(j["output"])
-                    common.write(output / "receipt.json", dict(fixture_only=True))
+                    common.write(
+                        output / "receipt.json", dict(fixture_only=True)
+                    )
                     common.write(output / "seal.json", dict(fixture_only=True))
                     result = dict(
                         files={},
@@ -288,10 +324,14 @@ def test_exact16_concurrent_then_cpu4_or_failure_drain(monkeypatch, tmp_path, fa
                     )
                 elif j["action"] == "audit":
                     result = dict(
-                        export_receipt_sha256=common.sha(Path(j["output"]) / "receipt.json")
+                        export_receipt_sha256=common.sha(
+                            Path(j["output"]) / "receipt.json"
+                        )
                     )
                 elif j["action"] == "pair":
-                    result = dict(pair_receipt="fixture:" + j["case"]["group_id"])
+                    result = dict(
+                        pair_receipt="fixture:" + j["case"]["group_id"]
+                    )
                 else:
                     result = dict(fixture_only=True)
                 common.write(j["receipt"], result)
@@ -307,14 +347,32 @@ def test_exact16_concurrent_then_cpu4_or_failure_drain(monkeypatch, tmp_path, fa
     else:
         coordinator.run()
     assert calls.count("flight") == 16 and peak["flight"] == 16 and not overlap
-    assert len(coordinator.ledger["attempts"]) == 16 and not any(active.values())
-    assert all(len(e["attempts"]) == 1 for e in coordinator.ledger["cases"].values())
+    assert len(coordinator.ledger["attempts"]) == 16 and not any(
+        active.values()
+    )
+    assert all(
+        len(e["attempts"]) == 1 for e in coordinator.ledger["cases"].values()
+    )
     if fail:
         assert set(calls) == {"flight"} and peak["cpu"] == 0
-        assert sum(a["state"] == "FAILED_PRESERVED" for a in coordinator.ledger["attempts"]) == 1
-        assert sum(bool(e.get("run")) for e in coordinator.ledger["cases"].values()) == 15
+        assert (
+            sum(
+                a["state"] == "FAILED_PRESERVED"
+                for a in coordinator.ledger["attempts"]
+            )
+            == 1
+        )
+        assert (
+            sum(
+                bool(e.get("run")) for e in coordinator.ledger["cases"].values()
+            )
+            == 15
+        )
     else:
-        assert peak["cpu"] == 4 and calls.count("prepare") == calls.count("audit") == 16
+        assert (
+            peak["cpu"] == 4
+            and calls.count("prepare") == calls.count("audit") == 16
+        )
         assert (
             calls.count("pair") == 8
             and calls.count("ai_case") == 16

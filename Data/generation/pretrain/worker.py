@@ -52,7 +52,10 @@ def execute(request):
         if action == "extract":
             from .archive import extract_consumer
 
-            expected = sum(row["archive"]["members"][name]["bytes"] for name in row["files"])
+            expected = sum(
+                row["archive"]["members"][name]["bytes"]
+                for name in row["files"]
+            )
 
             class ExtractionBudget(Budget):
                 last = 0
@@ -60,16 +63,23 @@ def execute(request):
                 def check(self):
                     super().check()
                     if time.monotonic() - self.last > 2:
-                        files = [Path(row["path"]) / name for name in row["files"]]
+                        files = [
+                            Path(row["path"]) / name for name in row["files"]
+                        ]
                         update(
-                            bytes_done=sum(p.stat().st_size for p in files if p.exists()),
+                            bytes_done=sum(
+                                p.stat().st_size for p in files if p.exists()
+                            ),
                             bytes_total=expected,
                             phase="extract_and_verify",
                         )
                         self.last = time.monotonic()
 
             result = extract_consumer(row, ExtractionBudget())
-            update(bytes_done=result["consumer_bytes"], bytes_total=result["consumer_bytes"])
+            update(
+                bytes_done=result["consumer_bytes"],
+                bytes_total=result["consumer_bytes"],
+            )
         elif action == "preprocess":
             from capstone_ai.cli import output
             from capstone_ai.source import DirectoryTail
@@ -111,16 +121,24 @@ def execute(request):
                     previous = time.monotonic()
             if not tail.closed:
                 raise ValueError("Unclosed stream; whole task stops")
-            update(phase="writing_canonical", bytes_done=tail.stream.offset, bytes_total=total)
+            update(
+                phase="writing_canonical",
+                bytes_done=tail.stream.offset,
+                bytes_total=total,
+            )
             result = output(engine, tail, out, "replay", evidence)
             verify_inventory(run, row["files"])
             if result["input_hashes"] != row["files"]:
                 raise ValueError("Preprocess input inventory mismatch")
             reference = request.get("reference")
             if reference:
-                expected = read(Path(reference) / row["run_id"] / "summary.json")
+                expected = read(
+                    Path(reference) / row["run_id"] / "summary.json"
+                )
                 if result["output_hashes"] != expected["output_hashes"]:
-                    raise ValueError("Parallel canonical result differs from prior serial result")
+                    raise ValueError(
+                        "Parallel canonical result differs from prior serial result"
+                    )
             result = dict(
                 frames=result["frames"],
                 windows=result["windows"],
@@ -131,7 +149,9 @@ def execute(request):
             import numpy as np
 
             derived = load("parallel_derived", ADMISSION / "derived.py")
-            derived.fence(read(RESOURCES / "protected-inventory.json")["deny_paths"])
+            derived.fence(
+                read(RESOURCES / "protected-inventory.json")["deny_paths"]
+            )
             canonical = Path(request["canonical"]) / row["run_id"]
             summary = read(canonical / "summary.json")
             if (
@@ -155,7 +175,12 @@ def execute(request):
             report, samples, selected = derived.inspect_run(canonical, row)
             out.mkdir(exist_ok=False)
             arrays = (
-                dict(zip(("X", "C", "Y", "run_id", "origin_us", "segment"), zip(*samples)))
+                dict(
+                    zip(
+                        ("X", "C", "Y", "run_id", "origin_us", "segment"),
+                        zip(*samples),
+                    )
+                )
                 if samples
                 else {}
             )
@@ -174,7 +199,9 @@ def execute(request):
             verify_inventory(row["path"], row["files"])
             result = dict(
                 verified=True,
-                bytes=sum((Path(row["path"]) / n).stat().st_size for n in row["files"]),
+                bytes=sum(
+                    (Path(row["path"]) / n).stat().st_size for n in row["files"]
+                ),
             )
         else:
             raise ValueError("Unknown CPU-only action")
@@ -182,7 +209,8 @@ def execute(request):
             status="COMPLETE",
             result=result,
             finished=time.time(),
-            peak_rss_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
+            peak_rss_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            * 1024,
         )
     except BaseException as exc:
         fatal = shared_failure(exc)

@@ -11,12 +11,17 @@ def test_four_real_categories_and_no_category_aliases():
     actual = {
         p.name
         for p in ROOT.iterdir()
-        if p.is_dir() and not p.is_symlink() and not p.name.startswith(".")
+        if p.is_dir()
+        and not p.is_symlink()
+        and not p.name.startswith(".")
         # User-created commit export copies are not a fifth runtime category.
         and p.name != "commit-bundles"
     }
     assert actual == {"simulation", "Data", "ai", "docs"}
-    assert all(not (ROOT / name).is_symlink() for name in ("sim", "profiles", "contracts", "vendor"))
+    assert all(
+        not (ROOT / name).is_symlink()
+        for name in ("sim", "profiles", "contracts", "vendor")
+    )
     assert not any(p.is_symlink() for p in ROOT.iterdir())
 
 
@@ -26,7 +31,9 @@ def test_installed_runtime_and_sealed_package():
     collection_config.assert_frozen()
     current = read(collection_config.producer_lock_path())
     assert current["revision"] == "X500_CURRENT"
-    assert collection_config.producer_lock_path().name == "runtime-manifest.json"
+    assert (
+        collection_config.producer_lock_path().name == "runtime-manifest.json"
+    )
     for name, digest in read(PACKAGE / "PACKAGE.json")["files"].items():
         assert sha(PACKAGE / name) == digest
     assert not any(p.is_symlink() for p in PACKAGE.parents)
@@ -91,7 +98,12 @@ print('PHYSICAL_PATHS_PLAN_BOUND_NO_EXECUTION')
 """
     result = subprocess.run(
         [sys.executable, "-B", "-c", code, str(tmp_path)],
-        env={**os.environ, "PYTHONPATH": str(ROOT / "Data/generation") + ":" + str(ROOT / "ai")},
+        env={
+            **os.environ,
+            "PYTHONPATH": str(ROOT / "Data/generation")
+            + ":"
+            + str(ROOT / "ai"),
+        },
         capture_output=True,
         text=True,
         timeout=30,

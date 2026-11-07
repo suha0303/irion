@@ -6,11 +6,10 @@ from contextlib import nullcontext
 from types import SimpleNamespace
 
 import pytest
-from test_post_training import config, fresh_config
-
 from execution.common import read, sha, write
 from learning import operator
 from learning import post_training as post
+from test_post_training import config, fresh_config
 
 
 def diagnostic_config():
@@ -59,7 +58,10 @@ def test_diagnostic_scope_rejects_fitting_or_policy_selection(change):
 @pytest.mark.parametrize(
     "options,match",
     [
-        ({"diagnostic_only": True, "fresh_calibration": False}, "fresh-calibration"),
+        (
+            {"diagnostic_only": True, "fresh_calibration": False},
+            "fresh-calibration",
+        ),
         (
             {
                 "diagnostic_only": True,
@@ -69,7 +71,10 @@ def test_diagnostic_scope_rejects_fitting_or_policy_selection(change):
             "without selecting a policy",
         ),
         (
-            {"numerical_policy": "/unused/policy.json", "fresh_calibration": False},
+            {
+                "numerical_policy": "/unused/policy.json",
+                "fresh_calibration": False,
+            },
             "fresh-calibration",
         ),
     ],
@@ -82,26 +87,34 @@ def test_prepare_rejects_conflicting_modes_before_io(tmp_path, options, match):
 
 @pytest.mark.parametrize("phase", ["fit", "calibrate", "evaluate"])
 def test_diagnostic_cannot_submit_other_phases(tmp_path, monkeypatch, phase):
-    monkeypatch.setattr(post, "checked", lambda root: (root, diagnostic_config()))
+    monkeypatch.setattr(
+        post, "checked", lambda root: (root, diagnostic_config())
+    )
     with pytest.raises(ValueError):
         post.submit(tmp_path, phase, diagnostic_config())
     assert not list(tmp_path.glob("*-submitted.claim"))
 
 
 def test_submit_uses_frozen_mode_not_caller_mode(tmp_path, monkeypatch):
-    monkeypatch.setattr(post, "checked", lambda root: (root, diagnostic_config()))
+    monkeypatch.setattr(
+        post, "checked", lambda root: (root, diagnostic_config())
+    )
     monkeypatch.setattr(post, "SUBMIT_LOCK", tmp_path / "submit.lock")
     monkeypatch.setattr(operator, "own_queue", lambda: "")
     monkeypatch.setattr(post, "python_for", lambda *a, **kw: "/approved/python")
     submitted = []
-    monkeypatch.setattr(operator, "command", lambda argv: submitted.append(argv) or "123")
+    monkeypatch.setattr(
+        operator, "command", lambda argv: submitted.append(argv) or "123"
+    )
     with pytest.raises(ValueError):
         post.submit(tmp_path, "calibrate", config())
     assert not submitted
     assert not (tmp_path / "calibrate-submitted.claim").exists()
 
 
-@pytest.mark.parametrize("frozen_diagnostic,requested_diagnostic", [(True, False), (False, True)])
+@pytest.mark.parametrize(
+    "frozen_diagnostic,requested_diagnostic", [(True, False), (False, True)]
+)
 def test_wrong_worker_phase_stops_before_claim(
     tmp_path, monkeypatch, frozen_diagnostic, requested_diagnostic
 ):
@@ -112,15 +125,21 @@ def test_wrong_worker_phase_stops_before_claim(
     assert not list(tmp_path.rglob("*-started.claim"))
 
 
-def test_diagnostic_evaluator_stops_before_runtime_or_truth(tmp_path, monkeypatch):
-    monkeypatch.setattr(post, "checked", lambda root: (root, diagnostic_config()))
+def test_diagnostic_evaluator_stops_before_runtime_or_truth(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        post, "checked", lambda root: (root, diagnostic_config())
+    )
     with pytest.raises(ValueError, match="cannot evaluate"):
         post.evaluate_worker(tmp_path)
     assert not (tmp_path / "truth").exists()
     assert not (tmp_path / "evaluation-runtime").exists()
 
 
-def test_diagnostic_worker_only_checks_normal_validation_and_seals(tmp_path, monkeypatch):
+def test_diagnostic_worker_only_checks_normal_validation_and_seals(
+    tmp_path, monkeypatch
+):
     import execution.engine
     import learning.telemetry
     import learning.training
@@ -142,11 +161,19 @@ def test_diagnostic_worker_only_checks_normal_validation_and_seals(tmp_path, mon
     (tmp_path / "compute").mkdir()
     monkeypatch.setattr(post, "checked", lambda root: (root, cfg))
     monkeypatch.setattr(post.signal, "signal", lambda *a: None)
-    monkeypatch.setattr(post, "memory_snapshot", lambda: {"available_bytes": 32 * 1024**3})
-    monkeypatch.setattr(pipeline.runtime, "check", lambda *a, **kw: {"approved": True})
-    monkeypatch.setattr(learning.training, "project_lock", lambda *a: nullcontext())
+    monkeypatch.setattr(
+        post, "memory_snapshot", lambda: {"available_bytes": 32 * 1024**3}
+    )
+    monkeypatch.setattr(
+        pipeline.runtime, "check", lambda *a, **kw: {"approved": True}
+    )
+    monkeypatch.setattr(
+        learning.training, "project_lock", lambda *a: nullcontext()
+    )
     checks, preflights = [], []
-    monkeypatch.setattr(post, "verify", lambda root, files: checks.append((root, files)))
+    monkeypatch.setattr(
+        post, "verify", lambda root, files: checks.append((root, files))
+    )
     monkeypatch.setattr(
         learning.telemetry,
         "Telemetry",
@@ -194,7 +221,10 @@ def test_diagnostic_worker_only_checks_normal_validation_and_seals(tmp_path, mon
 def controller_fixture(tmp_path, monkeypatch):
     cfg = diagnostic_config()
     write(tmp_path / "input/config.json", cfg)
-    write(tmp_path / "compute/batch-checks/preflight.json", {"models": cfg["models"]})
+    write(
+        tmp_path / "compute/batch-checks/preflight.json",
+        {"models": cfg["models"]},
+    )
     write(
         tmp_path / "compute/diagnostic-seal.json",
         dict(
@@ -202,7 +232,9 @@ def controller_fixture(tmp_path, monkeypatch):
             models=cfg["models"],
             config_sha256=sha(tmp_path / "input/config.json"),
             files={
-                "batch-checks/preflight.json": sha(tmp_path / "compute/batch-checks/preflight.json")
+                "batch-checks/preflight.json": sha(
+                    tmp_path / "compute/batch-checks/preflight.json"
+                )
             },
             training_repeated=False,
             calibration_started=False,
@@ -227,16 +259,27 @@ def controller_fixture(tmp_path, monkeypatch):
     return cfg, phases
 
 
-def test_diagnostic_control_releases_one_job_and_never_calibrates(tmp_path, monkeypatch):
+def test_diagnostic_control_releases_one_job_and_never_calibrates(
+    tmp_path, monkeypatch
+):
     cfg, phases = controller_fixture(tmp_path, monkeypatch)
 
     def release(root, record, state, budget):
         assert phases == ["diagnose"]
         assert not (root / "completion.json").exists()
-        return dict(job_id="123", released=True, slurm_state="COMPLETED", exit_code="0:0")
+        return dict(
+            job_id="123",
+            released=True,
+            slurm_state="COMPLETED",
+            exit_code="0:0",
+        )
 
     monkeypatch.setattr(operator, "wait_release", release)
-    monkeypatch.setattr(operator, "report", lambda *a: pytest.fail("Evaluation report forbidden"))
+    monkeypatch.setattr(
+        operator,
+        "report",
+        lambda *a: pytest.fail("Evaluation report forbidden"),
+    )
     post.control(tmp_path)
     assert phases == ["diagnose"]
     completed = read(tmp_path / "completion.json")
@@ -248,9 +291,13 @@ def test_diagnostic_control_releases_one_job_and_never_calibrates(tmp_path, monk
     assert not (tmp_path / "truth").exists()
 
 
-def test_failed_diagnostic_release_never_marks_completion(tmp_path, monkeypatch):
+def test_failed_diagnostic_release_never_marks_completion(
+    tmp_path, monkeypatch
+):
     _, phases = controller_fixture(tmp_path, monkeypatch)
-    failed = dict(job_id="123", released=True, slurm_state="FAILED", exit_code="1:0")
+    failed = dict(
+        job_id="123", released=True, slurm_state="FAILED", exit_code="1:0"
+    )
     monkeypatch.setattr(operator, "wait_release", lambda *a: failed)
     monkeypatch.setattr(operator, "snapshot", lambda *a: failed)
     with pytest.raises(RuntimeError):
@@ -260,7 +307,9 @@ def test_failed_diagnostic_release_never_marks_completion(tmp_path, monkeypatch)
     assert not (tmp_path / "completion.json").exists()
 
 
-def test_unacknowledged_diagnostic_submission_is_unconfirmed(tmp_path, monkeypatch):
+def test_unacknowledged_diagnostic_submission_is_unconfirmed(
+    tmp_path, monkeypatch
+):
     controller_fixture(tmp_path, monkeypatch)
 
     def unknown(root, phase, cfg):
@@ -271,12 +320,15 @@ def test_unacknowledged_diagnostic_submission_is_unconfirmed(tmp_path, monkeypat
     with pytest.raises(TimeoutError):
         post.control(tmp_path)
     assert (
-        read(tmp_path / "controller.json")["status"] == "CONTROLLER_STOPPED_JOB_STATE_UNCONFIRMED"
+        read(tmp_path / "controller.json")["status"]
+        == "CONTROLLER_STOPPED_JOB_STATE_UNCONFIRMED"
     )
     assert not (tmp_path / "completion.json").exists()
 
 
-def test_diagnostic_seal_rejects_changed_arrays_before_completion(tmp_path, monkeypatch):
+def test_diagnostic_seal_rejects_changed_arrays_before_completion(
+    tmp_path, monkeypatch
+):
     cfg, _ = controller_fixture(tmp_path, monkeypatch)
     write(tmp_path / "compute/batch-checks/preflight.json", {"tampered": True})
     with pytest.raises(ValueError, match="Input hash changed"):
@@ -318,7 +370,10 @@ def test_policy_copy_cannot_diverge_from_frozen_config(tmp_path, monkeypatch):
     def bind_inventory():
         write(
             root / "input/inventory.json",
-            {name: sha(root / "input" / name) for name in ("config.json", "numerical-policy.json")},
+            {
+                name: sha(root / "input" / name)
+                for name in ("config.json", "numerical-policy.json")
+            },
         )
         write(
             root / "prepared.json",
@@ -337,5 +392,7 @@ def test_policy_copy_cannot_diverge_from_frozen_config(tmp_path, monkeypatch):
     # the already authorized config and its independently recorded policy hash.
     write(root / "input/numerical-policy.json", {**policy(), "atol": 0.1})
     bind_inventory()
-    with pytest.raises(ValueError, match="Frozen common numerical policy changed"):
+    with pytest.raises(
+        ValueError, match="Frozen common numerical policy changed"
+    ):
         post.checked(root)

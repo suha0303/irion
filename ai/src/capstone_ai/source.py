@@ -47,8 +47,12 @@ class Lines:
             return []
         stat = self.path.stat()
         identity = (stat.st_dev, stat.st_ino)
-        if self.identity is not None and (identity != self.identity or stat.st_size < self.offset):
-            raise ValueError("source replaced/truncated; refusing unsafe resume")
+        if self.identity is not None and (
+            identity != self.identity or stat.st_size < self.offset
+        ):
+            raise ValueError(
+                "source replaced/truncated; refusing unsafe resume"
+            )
         self.identity = identity
         with self.path.open("rb") as f:
             f.seek(self.offset)
@@ -57,7 +61,11 @@ class Lines:
         self.offset += len(data)
         parts = (self.buffer + data).split(b"\n")
         self.buffer = parts.pop()
-        result = [json.loads(p, object_hook=shared_strings) for p in parts if p.strip()]
+        result = [
+            json.loads(p, object_hook=shared_strings)
+            for p in parts
+            if p.strip()
+        ]
         self.rows += len(result)
         self.timing = {
             "start_ns": begin,
@@ -95,7 +103,9 @@ class DirectoryTail:
         self.marks.extend(marks)
         for mark in marks:
             key = (mark["clock_id"], mark["recorded_events"], mark["closed"])
-            self.mark_seen.setdefault(key, deque()).append(self.watermarks.timing["read_done_ns"])
+            self.mark_seen.setdefault(key, deque()).append(
+                self.watermarks.timing["read_done_ns"]
+            )
         progress = bool(rows or marks)
         while self.marks:
             w = self.marks[0]
@@ -136,13 +146,18 @@ class DirectoryTail:
             if self.trace:
                 self.trace(timing)
                 for frame in self.engine.frames[frame_start:]:
-                    self.frame_ready[(frame["clock_id"], frame["segment_id"], frame["time_us"])] = (
-                        timing
-                    )
+                    self.frame_ready[
+                        (
+                            frame["clock_id"],
+                            frame["segment_id"],
+                            frame["time_us"],
+                        )
+                    ] = timing
             self.last_mark, self.closed = w, w["closed"]
             if self.closed:
                 if any(
-                    item[-1]["available_time_us"] <= w["through_available_time_us"]
+                    item[-1]["available_time_us"]
+                    <= w["through_available_time_us"]
                     and item[0] != w["clock_id"]
                     for item in self.engine.pending
                 ):
@@ -185,14 +200,18 @@ class DirectoryTail:
             return hashlib.sha256(f.read(offset)).hexdigest()
 
     def verify_checkpoint(self, checkpoint):
-        if checkpoint["run"] != str(self.run) or checkpoint["config"] != self.engine.config:
+        if (
+            checkpoint["run"] != str(self.run)
+            or checkpoint["config"] != self.engine.config
+        ):
             raise ValueError("checkpoint source/config mismatch")
         for path, record in checkpoint["files"].items():
             stat = Path(path).stat()
             if (
                 (stat.st_dev, stat.st_ino) != tuple(record["identity"])
                 or stat.st_size < record["offset"]
-                or self._prefix(path, record["offset"]) != record["prefix_sha256"]
+                or self._prefix(path, record["offset"])
+                != record["prefix_sha256"]
             ):
                 raise ValueError("checkpoint identity or prefix changed")
 

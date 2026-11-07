@@ -30,19 +30,24 @@ from .pilot19 import COHORT, FINAL16_COHORT, SHORT_COHORT, audit_one
 AUTH = ROOT / "ai/reports/p27-pilot45-20261107/parallel16-01/authorization.json"
 REPORT = ROOT / "docs/data/reports/p27-pilot45-20261107/parallel16-01"
 CONTROL_CHANGES = {
-    str(ROOT / "Data/generation/pretrain" / n) for n in ("pilot45.py", "native_flight.py")
+    str(ROOT / "Data/generation/pretrain" / n)
+    for n in ("pilot45.py", "native_flight.py")
 }
 
 
 def authorization():
     value = read(AUTH)
-    if value.get("task_id") != pilot45.TASK_ID or value.get("requested") != dict(
+    if value.get("task_id") != pilot45.TASK_ID or value.get(
+        "requested"
+    ) != dict(
         flight_workers=16,
         real_time_factor=2,
         aggregate_nonflight_workers=4,
         pilot_logical_cases=45,
     ):
-        raise pilot45.Blocked("Explicit same45/16flight/RTF2/CPU4 authorization missing")
+        raise pilot45.Blocked(
+            "Explicit same45/16flight/RTF2/CPU4 authorization missing"
+        )
     if (
         not all(
             value["unchanged"].get(k) is True
@@ -65,9 +70,15 @@ def validate_config(cfg):
         from .final16 import validate_config as validate_final16
 
         return validate_final16(cfg)
-    value = pilot45.short_authorization() if cfg.get("short_cycle") else authorization()
+    value = (
+        pilot45.short_authorization()
+        if cfg.get("short_cycle")
+        else authorization()
+    )
     if type(cfg.get("nonflight_when_flights_idle", False)) is not bool:
-        raise pilot45.Blocked("Explicit boolean required for nonflight admission policy")
+        raise pilot45.Blocked(
+            "Explicit boolean required for nonflight admission policy"
+        )
     if (
         cfg.get("flight_workers"),
         cfg.get("requested_real_time_factor"),
@@ -79,7 +90,9 @@ def validate_config(cfg):
         or cfg.get("training_authorized")
         or cfg.get("fit_authorized")
     ):
-        raise pilot45.Blocked("Only the approved45 no-fit continuation is executable")
+        raise pilot45.Blocked(
+            "Only the approved45 no-fit continuation is executable"
+        )
     if cfg.get("short_cycle"):
         if cfg.get("short_resume") and (
             cfg.get("nonflight_when_flights_idle") is not True
@@ -88,13 +101,21 @@ def validate_config(cfg):
             raise pilot45.Blocked(
                 "Reviewed continuation requires idle-only and stop-on-first-failure"
             )
-        if cfg.get("short_repair") and cfg.get("stop_on_first_physical_failure") is not True:
-            raise pilot45.Blocked("Short repair must drain on first new physical failure")
+        if (
+            cfg.get("short_repair")
+            and cfg.get("stop_on_first_physical_failure") is not True
+        ):
+            raise pilot45.Blocked(
+                "Short repair must drain on first new physical failure"
+            )
         if cfg.get("mission_seconds") != 180 or cfg.get("continuation"):
             raise pilot45.Blocked(
                 "Short-cycle must be180s in a new namespace without480s continuation"
             )
-    elif cfg.get("continuation", {}).get("previous_task") != value["previous_pilot"]:
+    elif (
+        cfg.get("continuation", {}).get("previous_task")
+        != value["previous_pilot"]
+    ):
         raise pilot45.Blocked("Continuation belongs to a different task")
 
 
@@ -113,7 +134,10 @@ def clean_short_inputs(quality, ledger):
             )
         )
         and len(ledger["attempts"]) == 45
-        and all(a["state"] == "COMPLETED" and a["number"] == 1 for a in ledger["attempts"])
+        and all(
+            a["state"] == "COMPLETED" and a["number"] == 1
+            for a in ledger["attempts"]
+        )
         and not any(e.get("inherited_from") for e in ledger["cases"].values())
         and quality.get("short_ai_final_passed") is True
     )
@@ -123,33 +147,53 @@ def current_execution_counts(task, ledger, *, planned_case_ids=None):
     """Keep cumulative attempts intact; report only this execution in a second denominator."""
     from collections import Counter
 
-    current = [a for a in ledger["attempts"] if a.get("execution_task") == str(task)]
+    current = [
+        a for a in ledger["attempts"] if a.get("execution_task") == str(task)
+    ]
     counts = Counter(a["case_id"] for a in current)
-    expected = set(ledger["cases"]) if planned_case_ids is None else set(planned_case_ids)
+    expected = (
+        set(ledger["cases"])
+        if planned_case_ids is None
+        else set(planned_case_ids)
+    )
     if not expected <= set(ledger["cases"]):
-        raise pilot45.Blocked("Current native denominator must be a subset of the frozen45")
+        raise pilot45.Blocked(
+            "Current native denominator must be a subset of the frozen45"
+        )
     return dict(
         current_execution_planned_cases=len(expected),
-        current_execution_reused_accepted_cases=len(ledger["cases"]) - len(expected),
-        physical_completed_attempts=sum(a["state"] == "COMPLETED" for a in ledger["attempts"]),
+        current_execution_reused_accepted_cases=len(ledger["cases"])
+        - len(expected),
+        physical_completed_attempts=sum(
+            a["state"] == "COMPLETED" for a in ledger["attempts"]
+        ),
         historical_quality_rejected_attempts=sum(
             bool(a.get("source_task")) and bool(a.get("quality_rejection"))
             for a in ledger["attempts"]
         ),
-        administrative_not_submitted_attempts=len(ledger.get("administrative_attempts", [])),
+        administrative_not_submitted_attempts=len(
+            ledger.get("administrative_attempts", [])
+        ),
         current_execution_task=str(task),
         current_execution_physical_attempts=len(current),
         current_execution_completed_cases=len(
             {a["case_id"] for a in current if a["state"] == "COMPLETED"}
         ),
-        current_execution_failed_attempts=sum(a["state"] == "FAILED_PRESERVED" for a in current),
+        current_execution_failed_attempts=sum(
+            a["state"] == "FAILED_PRESERVED" for a in current
+        ),
         current_execution_unknown_attempts=sum(
             a["state"] not in {"COMPLETED", "FAILED_PRESERVED"} for a in current
         )
-        + sum(not a.get("source_task") and not a.get("execution_task") for a in ledger["attempts"]),
+        + sum(
+            not a.get("source_task") and not a.get("execution_task")
+            for a in ledger["attempts"]
+        ),
         current_execution_retries=sum(max(0, n - 1) for n in counts.values()),
         current_execution_all_case_ids_match=set(counts) == expected,
-        historical_physical_attempts=sum(bool(a.get("source_task")) for a in ledger["attempts"]),
+        historical_physical_attempts=sum(
+            bool(a.get("source_task")) for a in ledger["attempts"]
+        ),
         historical_failed_attempts=sum(
             bool(a.get("source_task")) and a["state"] == "FAILED_PRESERVED"
             for a in ledger["attempts"]
@@ -198,7 +242,9 @@ def check_ports(instances=range(16)):
     with ExitStack() as stack:
         for i in instances:
             for port in ports(i):
-                sock = stack.enter_context(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
+                sock = stack.enter_context(
+                    socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                )
                 sock.bind(("127.0.0.1", port))
 
 
@@ -208,7 +254,10 @@ def released():
             HOME / "pretrain.lock",
             ROOT / "Data/operations/collection.lock",
             ROOT / "simulation/.cache/setup.lock",
-            *(ROOT / f"simulation/.cache/instances/{i}.lock" for i in range(16)),
+            *(
+                ROOT / f"simulation/.cache/instances/{i}.lock"
+                for i in range(16)
+            ),
         ):
             handle = stack.enter_context(p.open("a"))
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -235,7 +284,9 @@ def closed_previous(task):
         or cleanup.get("errors")
         or cleanup.get("remaining_unremoved_sockets")
     ):
-        raise pilot45.Blocked("Previous stop hook did not release its resources")
+        raise pilot45.Blocked(
+            "Previous stop hook did not release its resources"
+        )
     return dict(unit=unit, properties=props, state=state, cleanup=cleanup)
 
 
@@ -247,7 +298,9 @@ def compatible_sources(task, accepted=None):
             value.get("task") != str(task)
             or value.get("status") != "ACCEPTED_EXISTING_INTEGRATION_NO_FLIGHT"
         ):
-            raise pilot45.Blocked("Prior reviewed integration acceptance does not match")
+            raise pilot45.Blocked(
+                "Prior reviewed integration acceptance does not match"
+            )
         verify(value["evidence_sha256"])
         reviewed = value["source_compatibility"]["reviewed_control_changes"]
     changed = {}
@@ -261,7 +314,9 @@ def compatible_sources(task, accepted=None):
                 and prior.get("current_sha256") == current
             )
             if name not in CONTROL_CHANGES and not certified_old_fix:
-                raise pilot45.Blocked("Producer/AI/signal processing changed: " + name)
+                raise pilot45.Blocked(
+                    "Producer/AI/signal processing changed: " + name
+                )
             changed[name] = dict(previous_sha256=digest, current_sha256=current)
     return changed
 
@@ -289,22 +344,33 @@ def create(name):
     termination = [closed_previous(p) for p in (parent, previous)]
     released()
     old_cfg, manifest, old_ledger = (
-        read(previous / n) for n in ("config.json", "manifest.json", "ledger.json")
+        read(previous / n)
+        for n in ("config.json", "manifest.json", "ledger.json")
     )
     verify(
         {
-            str(previous / "config.json"): (previous / "config.sha256").read_text().strip(),
-            str(previous / "manifest.json"): (previous / "manifest.sha256").read_text().strip(),
+            str(previous / "config.json"): (previous / "config.sha256")
+            .read_text()
+            .strip(),
+            str(previous / "manifest.json"): (previous / "manifest.sha256")
+            .read_text()
+            .strip(),
         }
     )
     pilot45.validate_manifest(manifest)
     if any(a["state"] == "RUNNING" for a in old_ledger["attempts"]):
-        raise pilot45.Blocked("Unknown physical attempt requires explicit reconciliation")
+        raise pilot45.Blocked(
+            "Unknown physical attempt requires explicit reconciliation"
+        )
     changes = compatible_sources(previous)
     spec = pilot_bridge.dependencies(old_cfg["dependency_handoff"])
-    integration = Path(read(parent / "ledger.json")["phases"]["integration"]["task"])
+    integration = Path(
+        read(parent / "ledger.json")["phases"]["integration"]["task"]
+    )
     integration_reuse.historical_termination(integration)
-    integration_changes = compatible_sources(integration, parent / "accepted-integration.json")
+    integration_changes = compatible_sources(
+        integration, parent / "accepted-integration.json"
+    )
     audits = {}
     for source in (integration, previous):
         for cid, entry in read(source / "ledger.json")["cases"].items():
@@ -312,15 +378,25 @@ def create(name):
                 check_raw(entry["run"])
             if entry.get("status") == "COMPLETE":
                 verify(entry["files"])
-                verify(read(Path(entry["output"]) / "binding.json")["consumer_sources"])
+                verify(
+                    read(Path(entry["output"]) / "binding.json")[
+                        "consumer_sources"
+                    ]
+                )
                 audits[str(source) + ":" + cid] = audit_one(
                     entry["output"], source / "expected-producer.json"
                 )
     # The fit/reference namespace and exact planned identities survive the move.
     task = pilot45.task_path(HOME / "tasks" / (name + "-45"))
     flow = pilot45.task_path(HOME / "tasks" / name)
-    if task.exists() or flow.exists() or not pilot45.re.fullmatch(r"[A-Za-z0-9_-]{1,53}", name):
-        raise ValueError("New safe task name required; existing tasks are never overwritten")
+    if (
+        task.exists()
+        or flow.exists()
+        or not pilot45.re.fullmatch(r"[A-Za-z0-9_-]{1,53}", name)
+    ):
+        raise ValueError(
+            "New safe task name required; existing tasks are never overwritten"
+        )
     task.mkdir(parents=True)
     namespace = old_cfg.get("lineage_namespace", previous.name)
     preserved = {
@@ -352,11 +428,17 @@ def create(name):
     ledger = copy.deepcopy(old_ledger)
     ledger["status"] = "NOT_STARTED_CONTINUATION"
     for case in manifest["cases"]:
-        e = ledger["cases"].setdefault(case["case_id"], dict(case=case, attempts=[]))
+        e = ledger["cases"].setdefault(
+            case["case_id"], dict(case=case, attempts=[])
+        )
         if e["case"] != case or len(e["attempts"]) > 3:
             raise pilot45.Blocked("Frozen case/retry count mismatch")
         e["processing_attempts"] = len(
-            list((previous / "pilot/execution" / case["case_id"]).glob("prepare-*.request.json"))
+            list(
+                (previous / "pilot/execution" / case["case_id"]).glob(
+                    "prepare-*.request.json"
+                )
+            )
         )
         if e.get("status") == "COMPLETE":
             e["inherited_from"] = str(previous)
@@ -382,16 +464,22 @@ def create(name):
     write(task / "dependency-handoff.json", spec)
     cfg["dependency_handoff"] = str(task / "dependency-handoff.json")
     write(task / "config.json", cfg)
-    write(task / "expected-producer.json", read(previous / "expected-producer.json"))
+    write(
+        task / "expected-producer.json",
+        read(previous / "expected-producer.json"),
+    )
     protected = pilot45.protection()
     own_raw = {a["run_id"] for a in ledger["attempts"] if a.get("run_id")}
     # Keep old pilot claims in their own no-fit cohort instead of excluding them
     # from this same pilot's continuation. All other raw remain excluded.
-    protected["records"] = [r for r in protected["records"] if r.get("run_id") not in own_raw]
+    protected["records"] = [
+        r for r in protected["records"] if r.get("run_id") not in own_raw
+    ]
     write(task / "protection.json", protected)
     native = read(spec["paths"]["native_completion"])
     dev = native["actual_run_ids"] + [
-        Path(e["run"]).name for e in read(integration / "ledger.json")["cases"].values()
+        Path(e["run"]).name
+        for e in read(integration / "ledger.json")["cases"].values()
     ]
     gp = pilot45.global_protection(protected, manifest["cases"], namespace, dev)
     for rid in own_raw:
@@ -428,7 +516,10 @@ def create(name):
     ]
     cfg["source_sha256"] = pilot45.frozen_sources(task, extra)
     cfg["source_sha256"].update(
-        {str(ROOT / p): h for p, h in read(task / "consumer-capsule.json")["files"].items()}
+        {
+            str(ROOT / p): h
+            for p, h in read(task / "consumer-capsule.json")["files"].items()
+        }
     )
     write(task / "config.json", cfg)
     (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
@@ -453,7 +544,10 @@ def create(name):
         cpu_workers_total_max=4,
     )
     fc["source_sha256"].update(
-        {str(AUTH): sha(AUTH), str(task / "config.json"): sha(task / "config.json")}
+        {
+            str(AUTH): sha(AUTH),
+            str(task / "config.json"): sha(task / "config.json"),
+        }
     )
     write(flow / "config.json", fc)
     (flow / "config.sha256").write_text(sha(flow / "config.json") + "\n")
@@ -462,7 +556,10 @@ def create(name):
         dict(
             cases={},
             attempts=[],
-            phases=dict(pilot45=dict(task=str(task)), integration=dict(task=str(integration))),
+            phases=dict(
+                pilot45=dict(task=str(task)),
+                integration=dict(task=str(integration)),
+            ),
         ),
     )
     verify(preserved)
@@ -475,7 +572,8 @@ class Coordinator:
     def __init__(self, task):
         self.task = task
         self.cfg, self.manifest, self.ledger = (
-            read(task / n) for n in ("config.json", "manifest.json", "ledger.json")
+            read(task / n)
+            for n in ("config.json", "manifest.json", "ledger.json")
         )
         validate_config(self.cfg)
         if self.cfg.get("final16"):
@@ -485,7 +583,9 @@ class Coordinator:
         self.events = queue.SimpleQueue()
         self.active = {}
         self.errors = []
-        self.denied = {r["run_id"] for r in read(task / "protection.json")["records"]}
+        self.denied = {
+            r["run_id"] for r in read(task / "protection.json")["records"]
+        }
         self.state = dict(
             status="RUNNING",
             stage="final16" if self.cfg.get("final16") else "parallel45",
@@ -519,7 +619,9 @@ class Coordinator:
             folder / (label + ".receipt.json"),
         )
         if request.exists() or receipt.exists():
-            raise pilot45.Blocked("Existing phase evidence is never overwritten")
+            raise pilot45.Blocked(
+                "Existing phase evidence is never overwritten"
+            )
         write(
             request,
             dict(
@@ -534,7 +636,9 @@ class Coordinator:
 
     def begin_flight(self, case, instance):
         if self.cfg.get("final16") and case not in self.manifest["cases"]:
-            raise pilot45.Blocked("Only the exact frozen16 may enter flight admission")
+            raise pilot45.Blocked(
+                "Only the exact frozen16 may enter flight admission"
+            )
         entry = self.ledger["cases"][case["case_id"]]
         if entry.get("run") or entry.get("status") == "COMPLETE":
             raise pilot45.Blocked("Successful raw must not be regenerated")
@@ -556,9 +660,14 @@ class Coordinator:
         number = len(entry["attempts"]) + 1
         if number > maximum or (
             prior
-            and ((not prior.get("retry_allowed") and not corrected) or not prior.get("run_id"))
+            and (
+                (not prior.get("retry_allowed") and not corrected)
+                or not prior.get("run_id")
+            )
         ):
-            raise pilot45.Blocked("Logical retry limit/parent/independent-failure gate")
+            raise pilot45.Blocked(
+                "Logical retry limit/parent/independent-failure gate"
+            )
         parent = prior["run_id"] if prior else None
         attempt = dict(
             number=number,
@@ -580,7 +689,9 @@ class Coordinator:
                 seed=case["seed"],
                 paired_case_id=case["paired_case_id"],
                 group_id=self.cfg["lineage_namespace"] + ":" + case["group_id"],
-                retry_family_id=self.cfg["lineage_namespace"] + ":" + case["retry_family_id"],
+                retry_family_id=self.cfg["lineage_namespace"]
+                + ":"
+                + case["retry_family_id"],
                 parent_attempt_id=parent,
                 role=case["role"],
             ),
@@ -596,7 +707,13 @@ class Coordinator:
             parent_attempt_id=parent,
             instance=instance,
         )
-        return dict(case=case, instance=instance, number=number, request=request, log=log)
+        return dict(
+            case=case,
+            instance=instance,
+            number=number,
+            request=request,
+            log=log,
+        )
 
     def finish_flight(self, job, failure):
         case = job["case"]
@@ -606,7 +723,10 @@ class Coordinator:
         result = read(path) if path.exists() else {}
         raw = ai19.no_links(result["run"]) if result.get("run") else None
         if raw is not None:
-            if raw.parent != ROOT / "simulation/runs" or raw.name in self.denied:
+            if (
+                raw.parent != ROOT / "simulation/runs"
+                or raw.name in self.denied
+            ):
                 raise pilot45.Blocked("Raw outside the continued pilot")
             meta, scenario = (
                 read(raw / "run.json"),
@@ -625,7 +745,9 @@ class Coordinator:
                 case["seed"],
                 case["operation_variation"],
             ):
-                raise pilot45.Blocked("Lane/case/seed/parent/operation mismatch")
+                raise pilot45.Blocked(
+                    "Lane/case/seed/parent/operation mismatch"
+                )
             attempt["run_id"] = raw.name
         success = raw is not None and result.get("status") == "completed"
         if success and meta.get("status") != "completed":
@@ -636,7 +758,9 @@ class Coordinator:
             error=str(failure) if failure else None,
         )
         if success:
-            entry["run"] = str(raw)  # durable before any preprocessing or cleanup error
+            entry["run"] = str(
+                raw
+            )  # durable before any preprocessing or cleanup error
         else:
             check_retry = pilot45.retryable
             if self.cfg.get("mode") == "main19":
@@ -646,14 +770,19 @@ class Coordinator:
                 from .main_quality import attempts_max
 
                 check_retry = partial(
-                    main_retryable, binding=self.cfg["producer"],
+                    main_retryable,
+                    binding=self.cfg["producer"],
                     attempts_max=attempts_max(self.cfg, case),
                 )
             attempt.update(
                 result=result,
-                retry_allowed=not self.cfg.get("stop_on_first_physical_failure", False)
+                retry_allowed=not self.cfg.get(
+                    "stop_on_first_physical_failure", False
+                )
                 and check_retry(
-                    result, job["number"], (self.task / "operator/stop-request.json").exists()
+                    result,
+                    job["number"],
+                    (self.task / "operator/stop-request.json").exists(),
                 ),
             )
             pilot45.register(
@@ -701,12 +830,18 @@ class Coordinator:
             raise pilot45.Blocked("Complete views must not be overwritten")
         n = entry.get("processing_attempts", 0) + 1
         if n > (1 if self.cfg.get("final16") else 3):
-            raise pilot45.Blocked("Processing attempt limit reached, raw retained")
+            raise pilot45.Blocked(
+                "Processing attempt limit reached, raw retained"
+            )
         entry["processing_attempts"] = n
         self.save()
         output = (
             STORE
-            / ("processed/final16" if self.cfg.get("final16") else "processed/pilot45")
+            / (
+                "processed/final16"
+                if self.cfg.get("final16")
+                else "processed/pilot45"
+            )
             / self.task.name
             / case["case_id"]
             / f"attempt-{n:02}"
@@ -725,7 +860,9 @@ class Coordinator:
             else COHORT,
             group_id=ns + ":" + case["group_id"],
             retry_family_id=ns + ":" + case["retry_family_id"],
-            previous_attempts=[a["run_id"] for a in entry["attempts"][:-1] if a.get("run_id")],
+            previous_attempts=[
+                a["run_id"] for a in entry["attempts"][:-1] if a.get("run_id")
+            ],
             paired_case_id=case["paired_case_id"],
         )
         request, log = self.request(
@@ -736,7 +873,9 @@ class Coordinator:
             output=str(output),
             archive_cache=str(self.folder(case) / "archive-cache.json"),
         )
-        audit, audit_log = self.request(case, "audit", f"audit-{n:02}", output=str(output))
+        audit, audit_log = self.request(
+            case, "audit", f"audit-{n:02}", output=str(output)
+        )
         return dict(
             case=case,
             request=request,
@@ -748,7 +887,9 @@ class Coordinator:
         )
 
     def child(self, request, log):
-        return pilot45.child(self.task, request, log, on_progress=self.events.put)
+        return pilot45.child(
+            self.task, request, log, on_progress=self.events.put
+        )
 
     def process(self, job):
         # Archive verification, extraction, both views and independent audit all
@@ -785,7 +926,12 @@ class Coordinator:
             ),
         )
         files = {str(output / p): h for p, h in prepared["files"].items()}
-        files.update({str(output / p): sha(output / p) for p in ("receipt.json", "seal.json")})
+        files.update(
+            {
+                str(output / p): sha(output / p)
+                for p in ("receipt.json", "seal.json")
+            }
+        )
         files[str(ar)] = sha(ar)
         entry.update(
             status="COMPLETE",
@@ -810,16 +956,25 @@ class Coordinator:
             active_flights=len(flights),
             active_nonflight=len(cpu),
             total=len(self.manifest["cases"]),
-            done=sum(e.get("status") == "COMPLETE" for e in self.ledger["cases"].values()),
-            max_active_flights=max(self.state["max_active_flights"], len(flights)),
-            max_active_nonflight=max(self.state["max_active_nonflight"], len(cpu)),
+            done=sum(
+                e.get("status") == "COMPLETE"
+                for e in self.ledger["cases"].values()
+            ),
+            max_active_flights=max(
+                self.state["max_active_flights"], len(flights)
+            ),
+            max_active_nonflight=max(
+                self.state["max_active_nonflight"], len(cpu)
+            ),
             errors=self.errors,
         )
         write(self.task / "operator/state.json", self.state)
 
     def run(self):
         pending = deque(
-            c for c in self.manifest["cases"] if not self.ledger["cases"][c["case_id"]].get("run")
+            c
+            for c in self.manifest["cases"]
+            if not self.ledger["cases"][c["case_id"]].get("run")
         )
         processing = deque(
             c
@@ -837,7 +992,9 @@ class Coordinator:
             while pending or processing or flights or cpu:
                 stopped = (self.task / "operator/stop-request.json").exists()
                 if stopped and not self.errors:
-                    self.errors.append("USER_STOP: drain active lanes; no new case/retry")
+                    self.errors.append(
+                        "USER_STOP: drain active lanes; no new case/retry"
+                    )
                 if self.errors:
                     pending.clear()
                     if self.cfg.get("final16"):
@@ -850,29 +1007,47 @@ class Coordinator:
                         pending
                         and free
                         and not self.errors
-                        and (not self.cfg.get("nonflight_when_flights_idle", False) or not cpu)
+                        and (
+                            not self.cfg.get(
+                                "nonflight_when_flights_idle", False
+                            )
+                            or not cpu
+                        )
                     ):
                         case, instance = pending.popleft(), min(free)
                         free.remove(instance)
                         job = self.begin_flight(case, instance)
-                        flights[flight_pool.submit(self.child, job["request"], job["log"])] = job
+                        flights[
+                            flight_pool.submit(
+                                self.child, job["request"], job["log"]
+                            )
+                        ] = job
                     while (
                         processing
                         and not (self.cfg.get("final16") and self.errors)
                         and len(cpu) < 4
-                        and (not self.cfg.get("nonflight_when_flights_idle", False) or not flights)
+                        and (
+                            not self.cfg.get(
+                                "nonflight_when_flights_idle", False
+                            )
+                            or not flights
+                        )
                     ):
                         job = self.begin_processing(processing.popleft())
                         cpu[cpu_pool.submit(self.process, job)] = job
                 except Exception as exc:
-                    self.errors.append(f"admission: {type(exc).__name__}: {exc}")
+                    self.errors.append(
+                        f"admission: {type(exc).__name__}: {exc}"
+                    )
                     pending.clear()
                     if not flights and not cpu:
                         break
                 self.tick(flights, cpu)
                 if not flights and not cpu:
                     break
-                done, _ = wait([*flights, *cpu], timeout=1, return_when=FIRST_COMPLETED)
+                done, _ = wait(
+                    [*flights, *cpu], timeout=1, return_when=FIRST_COMPLETED
+                )
                 for future in done:
                     if future in flights:
                         job = flights.pop(future)
@@ -888,7 +1063,9 @@ class Coordinator:
                             self.errors.append(
                                 f"flight {job['case']['case_id']}: {type(exc).__name__}: {exc}"
                             )
-                            if self.ledger["cases"][job["case"]["case_id"]].get("run"):
+                            if self.ledger["cases"][job["case"]["case_id"]].get(
+                                "run"
+                            ):
                                 processing.append(job["case"])
                     else:
                         job = cpu.pop(future)
@@ -934,11 +1111,16 @@ class Coordinator:
         request, log = self.request(case, "cohort_audit", "cohort-audit")
         self.batch(pool, [dict(case=case, request=request, log=log)])
         pairs, jobs = {}, []
-        for control in (c for c in self.manifest["cases"] if c["category"] == "paired_normal"):
+        for control in (
+            c
+            for c in self.manifest["cases"]
+            if c["category"] == "paired_normal"
+        ):
             anomaly = next(
                 c
                 for c in self.manifest["cases"]
-                if c["category"] == "anomaly" and c["group_id"] == control["group_id"]
+                if c["category"] == "anomaly"
+                and c["group_id"] == control["group_id"]
             )
             request, log = self.request(
                 control,
@@ -953,17 +1135,29 @@ class Coordinator:
         jobs = []
         for case in self.manifest["cases"]:
             request, log = self.request(
-                case, "ai_case", "ai-case", pair_receipt=pairs.get(case["group_id"])
+                case,
+                "ai_case",
+                "ai-case",
+                pair_receipt=pairs.get(case["group_id"]),
             )
             jobs.append(dict(case=case, request=request, log=log))
         for job, _ in self.batch(pool, jobs):
-            self.ledger["cases"][job["case"]["case_id"]]["ai_receipt"] = read(job["request"])[
-                "receipt"
-            ]
+            self.ledger["cases"][job["case"]["case_id"]]["ai_receipt"] = read(
+                job["request"]
+            )["receipt"]
         self.save()
         if self.cfg.get("short_cycle") or self.cfg.get("final16"):
-            request, log = self.request(self.manifest["cases"][0], "ai_final", "ai-final")
-            self.batch(pool, [dict(case=self.manifest["cases"][0], request=request, log=log)])
+            request, log = self.request(
+                self.manifest["cases"][0], "ai_final", "ai-final"
+            )
+            self.batch(
+                pool,
+                [
+                    dict(
+                        case=self.manifest["cases"][0], request=request, log=log
+                    )
+                ],
+            )
             self.ledger["ai_final_receipt"] = read(request)["receipt"]
             self.save()
 
@@ -980,7 +1174,9 @@ def cohort_audit(task):
 
         validate_ledger(task, complete=True)
     total = 16 if final16 else 45
-    if len(rows) != total or set(ledger["cases"]) != {c["case_id"] for c in rows}:
+    if len(rows) != total or set(ledger["cases"]) != {
+        c["case_id"] for c in rows
+    }:
         raise pilot45.Blocked("Complete frozen case denominator changed")
     reports = []
     for case in rows:
@@ -1000,11 +1196,16 @@ def cohort_audit(task):
         else "pilot_input_check",
     )
     if not all(
-        r["online"]["available"] and r["run_health"]["status"] == "available" for r in reports
+        r["online"]["available"] and r["run_health"]["status"] == "available"
+        for r in reports
     ):
-        raise pilot45.Blocked("One or both views unavailable; retain full45 denominator")
+        raise pilot45.Blocked(
+            "One or both views unavailable; retain full45 denominator"
+        )
     return dict(
-        status="ALL16_INDEPENDENTLY_CHECKED" if final16 else "ALL45_INDEPENDENTLY_CHECKED",
+        status="ALL16_INDEPENDENTLY_CHECKED"
+        if final16
+        else "ALL45_INDEPENDENTLY_CHECKED",
         planned=total,
         no_fit=True,
     )
@@ -1012,27 +1213,49 @@ def cohort_audit(task):
 
 def worker(task):
     cfg = read(task / "config.json")
-    verify({str(task / "config.json"): (task / "config.sha256").read_text().strip()})
+    verify(
+        {
+            str(task / "config.json"): (task / "config.sha256")
+            .read_text()
+            .strip()
+        }
+    )
     pilot45.preflight(task)
     coordinator = Coordinator(task)
     with ExitStack() as stack:
-        for p in (HOME / "pretrain.lock", ROOT / "Data/operations/collection.lock"):
+        for p in (
+            HOME / "pretrain.lock",
+            ROOT / "Data/operations/collection.lock",
+        ):
             h = stack.enter_context(p.open("a"))
             fcntl.flock(h, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if (task / "operator/claimed").exists():
             if cfg.get("final16"):
-                raise pilot45.Blocked("FINAL16 cannot resume or retry a claimed cycle")
+                raise pilot45.Blocked(
+                    "FINAL16 cannot resume or retry a claimed cycle"
+                )
             request = task / "operator/resume-request.json"
             if (
                 not request.exists()
-                or read(request).get("config_sha256") != sha(task / "config.json")
+                or read(request).get("config_sha256")
+                != sha(task / "config.json")
                 or read(request).get("owner_uid") != os.getuid()
             ):
-                raise pilot45.Blocked("Explicit identity-checked resume required")
-            request.rename(request.with_name("consumed-resume-" + str(time.time_ns()) + ".json"))
+                raise pilot45.Blocked(
+                    "Explicit identity-checked resume required"
+                )
+            request.rename(
+                request.with_name(
+                    "consumed-resume-" + str(time.time_ns()) + ".json"
+                )
+            )
             stop = task / "operator/stop-request.json"
             if stop.exists():
-                stop.rename(stop.with_name("consumed-stop-" + str(time.time_ns()) + ".json"))
+                stop.rename(
+                    stop.with_name(
+                        "consumed-stop-" + str(time.time_ns()) + ".json"
+                    )
+                )
         else:
             with (task / "operator/claimed").open("x") as f:
                 f.write(now())
@@ -1060,9 +1283,13 @@ def worker(task):
             if cfg.get("final16"):
                 from .final16 import quality as final16_quality
 
-                quality = final16_quality(task, coordinator.ledger, coordinator.state)
+                quality = final16_quality(
+                    task, coordinator.ledger, coordinator.state
+                )
             else:
-                quality = pilot45.quality_snapshot(task, coordinator.ledger, coordinator.state)
+                quality = pilot45.quality_snapshot(
+                    task, coordinator.ledger, coordinator.state
+                )
             quality.update(
                 requested_flight_workers=16,
                 requested_real_time_factor=2,
@@ -1070,7 +1297,8 @@ def worker(task):
                 max_active_flights=coordinator.state["max_active_flights"],
                 max_active_nonflight=coordinator.state["max_active_nonflight"],
                 inherited_successes=sum(
-                    bool(e.get("inherited_from")) for e in coordinator.ledger["cases"].values()
+                    bool(e.get("inherited_from"))
+                    for e in coordinator.ledger["cases"].values()
                 ),
             )
             if cfg.get("short_cycle"):
@@ -1078,7 +1306,9 @@ def worker(task):
                     current_execution_counts(
                         task,
                         coordinator.ledger,
-                        planned_case_ids=cfg.get("short_resume", {}).get("pending_native_cases"),
+                        planned_case_ids=cfg.get("short_resume", {}).get(
+                            "pending_native_cases"
+                        ),
                     )
                 )
                 final = (
@@ -1087,7 +1317,8 @@ def worker(task):
                     else {}
                 )
                 quality["short_ai_final_passed"] = (
-                    final.get("status") == "SHORT45_INPUT_AND_PAIR_CHECKS_PASSED"
+                    final.get("status")
+                    == "SHORT45_INPUT_AND_PAIR_CHECKS_PASSED"
                     and final.get("actual_data_verified") is True
                     and final.get("cases_checked") == 45
                     and final.get("pairs_checked") == 9
@@ -1095,7 +1326,9 @@ def worker(task):
                 quality.update(
                     scope_id="SHORT_CYCLE_20261107",
                     mission_seconds=180,
-                    clean_inputs_without_retry=clean_short_inputs(quality, coordinator.ledger),
+                    clean_inputs_without_retry=clean_short_inputs(
+                        quality, coordinator.ledger
+                    ),
                     clean_cycle=False,
                     actual_service_termination_pending=True,
                     LR_main_connected=False,
@@ -1145,7 +1378,9 @@ def flow_worker(flow):
                     LR_main_connected=False,
                 )
             if cfg.get("short_cycle"):
-                clean = result["quality"].get("clean_inputs_without_retry") is True
+                clean = (
+                    result["quality"].get("clean_inputs_without_retry") is True
+                )
                 result.update(
                     status="SHORT_CYCLE_CLEAN_PASSED_STOPPED"
                     if clean
@@ -1154,9 +1389,9 @@ def flow_worker(flow):
                     mission_seconds=180,
                     scope_id="SHORT_CYCLE_20261107",
                     LR_main_connected=False,
-                    current_execution_completed_and_resources_released=result["quality"].get(
-                        "current_execution_inputs_passed_without_retry"
-                    )
+                    current_execution_completed_and_resources_released=result[
+                        "quality"
+                    ].get("current_execution_inputs_passed_without_retry")
                     is True,
                     clean_scope="clean_cycle retains all-history first-attempt criterion; current_execution fields retain a separate current-cycle denominator",
                 )
@@ -1175,7 +1410,9 @@ def flow_worker(flow):
             )
             state["status"] = result["status"]
         except BaseException as exc:
-            state.update(status="BLOCKED_STOPPED", reason=f"{type(exc).__name__}: {exc}")
+            state.update(
+                status="BLOCKED_STOPPED", reason=f"{type(exc).__name__}: {exc}"
+            )
             write(flow / "failure.json", state)
             raise
         finally:
@@ -1198,7 +1435,9 @@ def prepare_short(task, handoff):
             and not (cfg.get("short_repair") or cfg.get("short_resume"))
         )
     ):
-        raise ValueError("Only a new unclaimed180s draft can receive a final source capsule")
+        raise ValueError(
+            "Only a new unclaimed180s draft can receive a final source capsule"
+        )
     if cfg.get("short_repair"):
         verify(cfg["short_repair"]["files"])
     if cfg.get("short_resume"):
@@ -1208,14 +1447,20 @@ def prepare_short(task, handoff):
         raise ValueError("Short worker task must have explicit -45 suffix")
     flow = pilot45.task_path(HOME / "tasks" / name)
     if flow.exists():
-        raise ValueError("Existing short flow must never be overwritten or resubmitted")
+        raise ValueError(
+            "Existing short flow must never be overwritten or resubmitted"
+        )
     spec = pilot_bridge.dependencies(handoff)
     if spec.get("task_id") != "SHORT_CYCLE_20261107":
         raise ValueError(
             "Explicit new short contract required; historical native6 cannot replace it"
         )
-    if any(k in spec["paths"] for k in ("native_completion", "development_receipt")):
-        raise ValueError("New short contract must not consume historical development6/pilot READY")
+    if any(
+        k in spec["paths"] for k in ("native_completion", "development_receipt")
+    ):
+        raise ValueError(
+            "New short contract must not consume historical development6/pilot READY"
+        )
     binding = ai19.producer_binding()
     from learning.admission19 import check_producer
 
@@ -1237,7 +1482,9 @@ def prepare_short(task, handoff):
         checked["result"].get("actual_data_verified") is not True
         or checked["result"].get("phase") != "prerequisites"
     ):
-        raise ValueError("Actual static short capsule prerequisites did not pass")
+        raise ValueError(
+            "Actual static short capsule prerequisites did not pass"
+        )
     sources = pilot45.frozen_sources(
         task,
         [
@@ -1257,7 +1504,10 @@ def prepare_short(task, handoff):
         ],
     )
     sources.update(
-        {str(ROOT / p): h for p, h in read(task / "consumer-capsule.json")["files"].items()}
+        {
+            str(ROOT / p): h
+            for p, h in read(task / "consumer-capsule.json")["files"].items()
+        }
     )
     cfg.update(
         sealed=True,
@@ -1272,7 +1522,9 @@ def prepare_short(task, handoff):
         paired_cli_options=spec["paired_cli_options"],
         validated_flight_workers=None,
         report_directory=str(
-            ROOT / "docs/data/reports/short-cycle-20261107/attempt-01" / task.name
+            ROOT
+            / "docs/data/reports/short-cycle-20261107/attempt-01"
+            / task.name
         ),
     )
     write(task / "config.json", cfg)
@@ -1302,11 +1554,17 @@ def prepare_short(task, handoff):
     (flow / "config.sha256").write_text(sha(flow / "config.json") + "\n")
     write(flow / "budget.json", dict(per_case_conservative_increment_bytes=0))
     write(
-        flow / "ledger.json", dict(cases={}, attempts=[], phases=dict(pilot45=dict(task=str(task))))
+        flow / "ledger.json",
+        dict(cases={}, attempts=[], phases=dict(pilot45=dict(task=str(task)))),
     )
     write(
         flow / "operator/state.json",
-        dict(status="READY_NOT_STARTED", stage="short180", task=name, updated_utc=now()),
+        dict(
+            status="READY_NOT_STARTED",
+            stage="short180",
+            task=name,
+            updated_utc=now(),
+        ),
     )
     return flow
 

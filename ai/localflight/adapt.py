@@ -5,9 +5,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from safetensors.torch import load_file, save_file
-
 from capstone_ai.training import loss as objective
+from safetensors.torch import load_file, save_file
 
 from .catalog import Catalog, digest
 from .prepared import distinct_flights, load, segment_ranges, windows
@@ -51,19 +50,27 @@ def fit(
     stop_after_epoch=None,
     resume=None,
 ):
-    if type(epochs) is not int or not 1 <= epochs <= 20 or not 0 < learning_rate <= 0.01:
+    if (
+        type(epochs) is not int
+        or not 1 <= epochs <= 20
+        or not 0 < learning_rate <= 0.01
+    ):
         raise ValueError("Adaptation is bounded to 1..20 epochs and LR <= .01")
     if not 1 <= len(adaptation) <= 3 or len(development) > 1:
-        raise ValueError("Use 1..3 adaptation flights and at most one development flight")
+        raise ValueError(
+            "Use 1..3 adaptation flights and at most one development flight"
+        )
     runtime = Runtime(model_id, catalog=Catalog(bundle))
     health_task = runtime.entry["task"] == "run_health"
     flights = [load(p, normal=True) for p in [*adaptation, *development]]
     metadata = [f[0] for f in flights]
     distinct_flights(metadata)
-    if any(m["role"] != "adaptation" for m in metadata[: len(adaptation)]) or any(
-        m["role"] != "development" for m in metadata[len(adaptation) :]
-    ):
-        raise ValueError("Evaluation flights may not be used for fitting or model selection")
+    if any(
+        m["role"] != "adaptation" for m in metadata[: len(adaptation)]
+    ) or any(m["role"] != "development" for m in metadata[len(adaptation) :]):
+        raise ValueError(
+            "Evaluation flights may not be used for fitting or model selection"
+        )
     arrays = (
         [health_segments(f, runtime.scaler) for f in flights]
         if health_task
@@ -74,7 +81,11 @@ def fit(
         if health_task
         else np.concatenate([a[0] for a in arrays[: len(adaptation)]])
     )
-    train_y = None if health_task else np.concatenate([a[1] for a in arrays[: len(adaptation)]])
+    train_y = (
+        None
+        if health_task
+        else np.concatenate([a[1] for a in arrays[: len(adaptation)]])
+    )
     if len(train_x) > 3000:
         raise ValueError("Adaptation limit is 3000 windows")
     validation = arrays[len(adaptation) :]
@@ -114,13 +125,22 @@ def fit(
     if resume:
         folder = Path(resume)
         old = json.loads((folder / "checkpoint.json").read_text())
-        if old["binding"] != binding or digest(folder / "last.safetensors") != old["last_sha256"]:
+        if (
+            old["binding"] != binding
+            or digest(folder / "last.safetensors") != old["last_sha256"]
+        ):
             raise ValueError("Checkpoint/input/plan mismatch")
         if digest(folder / "best.safetensors") != old["best_sha256"]:
             raise ValueError("Best checkpoint changed")
-        model.load_state_dict(load_file(str(folder / "last.safetensors"), device="cpu"))
+        model.load_state_dict(
+            load_file(str(folder / "last.safetensors"), device="cpu")
+        )
         best = load_file(str(folder / "best.safetensors"), device="cpu")
-        start, history, best_loss = old["epoch"], old["history"], old["best_loss"]
+        start, history, best_loss = (
+            old["epoch"],
+            old["history"],
+            old["best_loss"],
+        )
     else:
         best = {k: v.detach().clone() for k, v in model.state_dict().items()}
     end = epochs if stop_after_epoch is None else stop_after_epoch
@@ -134,7 +154,10 @@ def fit(
         batch_size = 1 if health_task else 16
         for offset in range(0, len(ids), batch_size):
             if cancelled():
-                write(out / "status.json", dict(status="cancelled", last_complete_epoch=epoch))
+                write(
+                    out / "status.json",
+                    dict(status="cancelled", last_complete_epoch=epoch),
+                )
                 return dict(status="cancelled", output=str(out))
             batch = ids[offset : offset + batch_size]
             optimizer.zero_grad(set_to_none=True)
@@ -145,7 +168,8 @@ def fit(
                 for x in segments:
                     if cancelled():
                         write(
-                            out / "status.json", dict(status="cancelled", last_complete_epoch=epoch)
+                            out / "status.json",
+                            dict(status="cancelled", last_complete_epoch=epoch),
                         )
                         return dict(status="cancelled", output=str(out))
                     loss = health_objective(model, x) / len(segments)
@@ -156,13 +180,16 @@ def fit(
                 total += flight_loss
             else:
                 loss = objective(
-                    model(torch.from_numpy(train_x[batch])), torch.from_numpy(train_y[batch])
+                    model(torch.from_numpy(train_x[batch])),
+                    torch.from_numpy(train_y[batch]),
                 )
                 if not bool(torch.isfinite(loss)):
                     raise ValueError("Nonfinite adaptation loss")
                 loss.backward()
                 total += float(loss.detach()) * len(batch)
-            torch.nn.utils.clip_grad_norm_(model.head.parameters(), 1.0, error_if_nonfinite=True)
+            torch.nn.utils.clip_grad_norm_(
+                model.head.parameters(), 1.0, error_if_nonfinite=True
+            )
             optimizer.step()
         validation_loss = None
         if validation:
@@ -189,9 +216,13 @@ def fit(
         criterion = validation_loss if validation_loss is not None else 0.0
         if not validation or criterion < best_loss:
             best_loss = criterion
-            best = {k: v.detach().clone() for k, v in model.state_dict().items()}
+            best = {
+                k: v.detach().clone() for k, v in model.state_dict().items()
+            }
         row = dict(
-            epoch=epoch + 1, train_loss=total / len(train_x), development_loss=validation_loss
+            epoch=epoch + 1,
+            train_loss=total / len(train_x),
+            development_loss=validation_loss,
         )
         history.append(row)
         for filename, state in (
@@ -217,7 +248,9 @@ def fit(
     save_file(best, str(out / "model.safetensors"))
     np.savez(out / "scaler.npz", **runtime.scaler)
     result = dict(
-        status="experimental_adaptation_complete" if end == epochs else "paused_at_epoch",
+        status="experimental_adaptation_complete"
+        if end == epochs
+        else "paused_at_epoch",
         base_model_id=model_id,
         model_sha256=digest(out / "model.safetensors"),
         calibration_status="not_calibrated",

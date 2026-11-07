@@ -64,7 +64,11 @@ def duration(seconds):
 
 def snapshot(task):
     path = task / "operator/state.json"
-    state = read(path) if path.exists() else dict(status="NOT_STARTED", completed=[], active=[])
+    state = (
+        read(path)
+        if path.exists()
+        else dict(status="NOT_STARTED", completed=[], active=[])
+    )
     if state["status"] in {"RUNNING", "DRAINING"} and (
         not state.get("pid_start_ticks")
         or identity(state.get("pid")) != state.get("pid_start_ticks")
@@ -85,7 +89,9 @@ def snapshot(task):
             if stage["name"] == state.get("stage"):
                 if "completed" in stage:
                     state["done"] = stage["completed"]
-                elif stage.get("passed") is True and stage["name"] in state.get("completed", []):
+                elif stage.get("passed") is True and stage["name"] in state.get(
+                    "completed", []
+                ):
                     state["done"] = state.get("total", 0)
     processing = task / "operator/processing-state.json"
     if state.get("pipeline_overlap") and processing.exists():
@@ -114,7 +120,10 @@ def render(task, tick=0):
     if ledger:
         data = load("pretrain_data_view", ROOT / "ai/x500_data.py")
         collection = data.snapshot(Path(ledger).parent.parent / "plan.json")
-        total, done = collection["total"], collection["archived"] + collection.get("failed", 0)
+        total, done = (
+            collection["total"],
+            collection["archived"] + collection.get("failed", 0),
+        )
     percent = 100 * done / total if total else None
     complete = state["status"] in {
         "TEST_COMPLETE_STOPPED",
@@ -124,7 +133,8 @@ def render(task, tick=0):
     }
     if config["mode"] == "test":
         planned = len(config["levels"]) * (
-            (0 if config.get("flights_only") else 5) + bool(config["test_flights"])
+            (0 if config.get("flights_only") else 5)
+            + bool(config["test_flights"])
         )
     elif config["mode"] == "resume_preprocess":
         planned = config["collection_sets"] + 6
@@ -149,7 +159,11 @@ def render(task, tick=0):
             if config["mode"] == "collect"
             else 5
         )
-    stopped = state["status"] in {"FAILED_STOPPED", "BLOCKED_STOPPED", "UNKNOWN_NOT_RUNNING"}
+    stopped = state["status"] in {
+        "FAILED_STOPPED",
+        "BLOCKED_STOPPED",
+        "UNKNOWN_NOT_RUNNING",
+    }
     if config.get("storage_profile") == "compact" and config["mode"] not in {
         "test",
         "merge_prepared",
@@ -206,7 +220,9 @@ def render(task, tick=0):
         f"현재   {state.get('stage', '-')}  |  완료 단계 {len(state.get('completed', []))}/{planned}  (시간 진행률 아님)",
     ]
     if config.get("collection_profile") == "final324":
-        lines[4] = "흐름   최종324run 수집 → 인수 → 관측 추출 → 전처리 → 독립 품질검산·봉인 → 정지"
+        lines[4] = (
+            "흐름   최종324run 수집 → 인수 → 관측 추출 → 전처리 → 독립 품질검산·봉인 → 정지"
+        )
         lines.append(
             "최종 시험   별도 정상108 / paired 대조108 / 이상108 · scaler fit·학습·보정·성능평가 없음"
         )
@@ -236,7 +252,9 @@ def render(task, tick=0):
                 if config.get("pipeline_overlap")
                 else "흐름   유한 묶음: 비행→검증→전처리→run 검산→압축·정리 / 전체 집계·검산→보관"
             )
-            raw_limit = config["flight_workers"] * (2 if config.get("pipeline_overlap") else 1)
+            raw_limit = config["flight_workers"] * (
+                2 if config.get("pipeline_overlap") else 1
+            )
             lines.append(
                 "보관   원본 캡슐·실패 기록 보존 · 새 작업의 임시 파일만 정리"
                 if config["mode"] == "recover_capsules"
@@ -253,9 +271,13 @@ def render(task, tick=0):
                     "최종 데이터셋은 무손실 압축 보관 중 · 학습 인수 전 새 준비 경로에 복원 필요"
                 )
         else:
-            lines.append("보관   검산 후 무손실 데이터셋·평가 정답 분리 압축 / 원시 자동 삭제 없음")
+            lines.append(
+                "보관   검산 후 무손실 데이터셋·평가 정답 분리 압축 / 원시 자동 삭제 없음"
+            )
         if config.get("dataset_scope") == "all_selected_runs":
-            lines.append("전처리   전체 통합 데이터셋 1개 · 전체 train 기준 공통 scaler 1개")
+            lines.append(
+                "전처리   전체 통합 데이터셋 1개 · 전체 train 기준 공통 scaler 1개"
+            )
         if config["mode"] == "collect":
             lines.append(
                 f"수집 완료   {len(state.get('collected_sets', []))}/{sets}묶음 (현재 묶음 진행률은 아래 표시)"
@@ -286,9 +308,15 @@ def render(task, tick=0):
             f"개별 처리 [{'█' * filled}{'·' * (width - filled)}] {percent:5.1f}%  {done}/{total}건"
         )
         if stopped:
-            lines.append("단계 판정: 통과 아님. 개별 처리 완료율은 자원·품질 승인율이 아닙니다.")
+            lines.append(
+                "단계 판정: 통과 아님. 개별 처리 완료율은 자원·품질 승인율이 아닙니다."
+            )
         eta = (
-            ((time.time() - state.get("stage_started", time.time())) / done * (total - done))
+            (
+                (time.time() - state.get("stage_started", time.time()))
+                / done
+                * (total - done)
+            )
             if done >= state.get("workers", 1)
             else None
         )
@@ -315,7 +343,9 @@ def render(task, tick=0):
         )
     violation = state.get("first_resource_violation")
     if violation:
-        lines.append(f"한도 위반 순간   {violation['observed_utc']}  ·  {violation['reason']}")
+        lines.append(
+            f"한도 위반 순간   {violation['observed_utc']}  ·  {violation['reason']}"
+        )
     elif stopped and "RAM" in str(state.get("reason")):
         lines.append(
             "한도 위반 순간 수치: 이전 버전에서 저장하지 않아 미확인. 마지막 자원 기록과 다릅니다."
@@ -324,11 +354,22 @@ def render(task, tick=0):
         lines.append(
             f"수집   보관 {collection['archived']} / 실패 {collection.get('failed', 0)} / 전체 {collection['total']} · 잔여 예상 {duration(collection.get('eta', {}).get('seconds'))}"
         )
-        failures = [w for w in collection["workers"] if w["status"] == "FAILED_PRESERVED"]
-        active_workers = [w for w in collection["workers"] if w["status"] != "FAILED_PRESERVED"]
+        failures = [
+            w
+            for w in collection["workers"]
+            if w["status"] == "FAILED_PRESERVED"
+        ]
+        active_workers = [
+            w
+            for w in collection["workers"]
+            if w["status"] != "FAILED_PRESERVED"
+        ]
         lines.extend(grid(flight_cards(active_workers + failures, duration)))
         if failures:
-            lines.append(f"실패 증거 {len(failures)}건 · 최근: " + str(failures[-1].get("error")))
+            lines.append(
+                f"실패 증거 {len(failures)}건 · 최근: "
+                + str(failures[-1].get("error"))
+            )
         for reason in collection.get("reason", []):
             lines.append("수집 중지: " + str(reason))
     cpu_cards = []
@@ -356,7 +397,10 @@ def render(task, tick=0):
     cleanup_file = task / "operator/socket-cleanup.json"
     if cleanup_file.exists():
         cleanup = read(cleanup_file)
-        removed = sum(a["result"] == "removed_owned_stale_socket" for a in cleanup["actions"])
+        removed = sum(
+            a["result"] == "removed_owned_stale_socket"
+            for a in cleanup["actions"]
+        )
         lines.append(
             f"소켓 정리   {cleanup['status']} · 제거 {removed}개 · 남은 소켓 {len(cleanup['remaining_unremoved_sockets'])}개 (미확인 소유는 보존)"
         )
@@ -378,7 +422,11 @@ def render(task, tick=0):
 
 
 def watch(task, once=False):
-    previous = termios.tcgetattr(sys.stdin) if sys.stdin.isatty() and not once else None
+    previous = (
+        termios.tcgetattr(sys.stdin)
+        if sys.stdin.isatty() and not once
+        else None
+    )
     try:
         if previous:
             tty.setcbreak(sys.stdin.fileno())
@@ -408,12 +456,19 @@ def watch(task, once=False):
 
 def create(args):
     if args.mode not in {"test", "collect"}:
-        raise ValueError("attempt-07 재현은 제거됐습니다. test/collect만 실행할 수 있습니다")
+        raise ValueError(
+            "attempt-07 재현은 제거됐습니다. test/collect만 실행할 수 있습니다"
+        )
     if not 1 <= args.flight_workers <= MAX_FLIGHT_WORKERS:
         raise ValueError("PX4 instance 계약상 비행 병렬은1..16입니다")
     if any(
         type(n) is not int or n <= 0
-        for n in (args.workers, args.io_workers, args.audit_workers, args.export_workers)
+        for n in (
+            args.workers,
+            args.io_workers,
+            args.audit_workers,
+            args.export_workers,
+        )
     ):
         raise ValueError("병렬 수는 양의 정수여야 합니다")
     args.test_flights = args.mode == "test"
@@ -421,10 +476,16 @@ def create(args):
     if args.use_available_ram:
         args.ignore_memory_estimate = True
         args.min_available_ram_gb = 1
-    if args.ignore_memory_estimate and args.mode != "test" and not args.use_available_ram:
+    if (
+        args.ignore_memory_estimate
+        and args.mode != "test"
+        and not args.use_available_ram
+    ):
         raise ValueError("예상 메모리 차단 해제는 병렬 시험 전용입니다")
     if args.min_available_ram_gb != 4 and not args.ignore_memory_estimate:
-        raise ValueError("가용 RAM 완화는 예상 차단을 해제한 CPU 시험 전용입니다")
+        raise ValueError(
+            "가용 RAM 완화는 예상 차단을 해제한 CPU 시험 전용입니다"
+        )
     if args.mode != "test" and (args.test_flights or args.flights_only):
         raise ValueError("비행 시험 옵션은 test 모드 전용입니다")
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", args.name):
@@ -433,20 +494,35 @@ def create(args):
         raise ValueError("검증·압축 병렬 수는 비행 병렬 수 이하여야 합니다")
     if args.gates and args.mode != "collect":
         raise ValueError("게이트는 신규 수집 모드에서만 선택합니다")
-    if args.collection_sets < 1 or (args.collection_sets != 1 and args.mode != "collect"):
+    if args.collection_sets < 1 or (
+        args.collection_sets != 1 and args.mode != "collect"
+    ):
         raise ValueError("수집 묶음 수는 collect 모드의 양의 정수입니다")
     final = args.collection_profile == "final324"
-    if final and (args.mode != "collect" or args.collection_sets != 1 or args.gates):
-        raise ValueError("최종 평가 수집은 collect·324run 1묶음·별도 게이트 없음으로 고정합니다")
+    if final and (
+        args.mode != "collect" or args.collection_sets != 1 or args.gates
+    ):
+        raise ValueError(
+            "최종 평가 수집은 collect·324run 1묶음·별도 게이트 없음으로 고정합니다"
+        )
     # Reserve room for16-way benchmark programs and optional gate seeds as well.
-    seed_max = 2**31 - 20_000 - seed_stride(args.collection_profile) * args.collection_sets
+    seed_max = (
+        2**31
+        - 20_000
+        - seed_stride(args.collection_profile) * args.collection_sets
+    )
     if seed_max < 0:
         raise ValueError("수집 배율이 seed 범위를 초과합니다")
     automatic_seed = args.seed_base is None
     if automatic_seed:
         args.seed_base = secrets.randbelow(seed_max + 1)
-    if args.levels != sorted(set(args.levels)) or not 0 <= args.seed_base <= seed_max:
-        raise ValueError("시험 병렬 수는 오름차순·중복 없이, seed는 작업별 허용 범위여야 합니다")
+    if (
+        args.levels != sorted(set(args.levels))
+        or not 0 <= args.seed_base <= seed_max
+    ):
+        raise ValueError(
+            "시험 병렬 수는 오름차순·중복 없이, seed는 작업별 허용 범위여야 합니다"
+        )
     storage_root = guard(getattr(args, "storage_root", selected_root()))
     storage_policy = capture(storage_root)
     # Existing pipelines use the sealed ctx6 engine. They are historical-only now.
@@ -469,7 +545,9 @@ def create(args):
     sources += [
         p
         for p in RESOURCES.rglob("*")
-        if p.is_file() and "__pycache__" not in p.parts and not p.is_relative_to(PACKAGE)
+        if p.is_file()
+        and "__pycache__" not in p.parts
+        and not p.is_relative_to(PACKAGE)
     ]
     native_inventory = producer_sources()
     package = read(PACKAGE / "PACKAGE.json")
@@ -477,10 +555,16 @@ def create(args):
     runtime = runtime_identity()
     inventory[runtime["executable"]] = runtime["sha256"]
     inventory.update(
-        {str((PACKAGE / name).resolve()): digest for name, digest in package["files"].items()}
+        {
+            str((PACKAGE / name).resolve()): digest
+            for name, digest in package["files"].items()
+        }
     )
     inventory.update(
-        {str((SIMULATION / name).absolute()): digest for name, digest in native_inventory.items()}
+        {
+            str((SIMULATION / name).absolute()): digest
+            for name, digest in native_inventory.items()
+        }
     )
     task = HOME / "tasks" / args.name
     task.mkdir(parents=True, exist_ok=False)
@@ -508,11 +592,15 @@ def create(args):
         seed_source="os_secure_random" if automatic_seed else "user_explicit",
         collection_sets=args.collection_sets,
         collection_profile=args.collection_profile,
-        storage_profile=args.storage_profile if args.mode == "collect" else "standard",
-        pipeline_overlap=args.mode == "collect" and args.storage_profile == "stream_compact",
+        storage_profile=args.storage_profile
+        if args.mode == "collect"
+        else "standard",
+        pipeline_overlap=args.mode == "collect"
+        and args.storage_profile == "stream_compact",
         collection_order="mission_seconds_desc_then_frozen_manifest",
         dataset_scope="all_selected_runs",
-        collection_run_count=SIZES[args.collection_profile] * args.collection_sets
+        collection_run_count=SIZES[args.collection_profile]
+        * args.collection_sets
         if args.mode == "collect"
         else 0,
         source_sha256=inventory,
@@ -539,16 +627,23 @@ def create(args):
 
         planned = [
             cases(
-                args.seed_base + seed_stride(args.collection_profile) * i, args.collection_profile
+                args.seed_base + seed_stride(args.collection_profile) * i,
+                args.collection_profile,
             )["cases"]
             for i in range(args.collection_sets)
         ]
         write(
             task / "planned-cases.json",
-            dict(profile=args.collection_profile, sets=planned, execution_started=False),
+            dict(
+                profile=args.collection_profile,
+                sets=planned,
+                execution_started=False,
+            ),
         )
         config["planned_cases"] = str(task / "planned-cases.json")
-        config["source_sha256"][config["planned_cases"]] = sha(task / "planned-cases.json")
+        config["source_sha256"][config["planned_cases"]] = sha(
+            task / "planned-cases.json"
+        )
         if final:
             from .final_dataset import configure
 
@@ -563,7 +658,10 @@ def systemd_command(arguments):
     """Quote one ExecStart-style argument vector, including percent specifiers."""
     return " ".join(
         '"'
-        + argument.replace("\\", "\\\\").replace('"', '\\"').replace("%", "%%").replace("$", "$$")
+        + argument.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("%", "%%")
+        .replace("$", "$$")
         + '"'
         for argument in arguments
     )
@@ -577,7 +675,13 @@ def start(task, *, pilot_resume=False):
         raise ValueError(
             "STOP: Attempt already claimed; no automatic retry. 새 task 이름을 사용하세요."
         )
-    verify({str(task / "config.json"): (task / "config.sha256").read_text().strip()})
+    verify(
+        {
+            str(task / "config.json"): (task / "config.sha256")
+            .read_text()
+            .strip()
+        }
+    )
     cfg = read(task / "config.json")
     if cfg.get("mode") == "main19":
         from .main_collection import preflight
@@ -597,7 +701,9 @@ def start(task, *, pilot_resume=False):
             or read(request).get("config_sha256") != sha(task / "config.json")
             or read(request).get("owner_uid") != os.getuid()
         ):
-            raise ValueError("Explicit identity-checked pilot resume receipt required")
+            raise ValueError(
+                "Explicit identity-checked pilot resume receipt required"
+            )
     if cfg.get("python_allocator") not in (None, "debug"):
         raise ValueError("Unsupported task Python allocator")
     verify_runtime(cfg)
@@ -616,13 +722,16 @@ def start(task, *, pilot_resume=False):
         "--property=KillMode=control-group",
         "--property=OOMPolicy=stop",
         "--property=ExecStopPost="
-        + systemd_command([str(PYTHON), "-B", "-m", "pretrain.socket_cleanup", str(task)]),
+        + systemd_command(
+            [str(PYTHON), "-B", "-m", "pretrain.socket_cleanup", str(task)]
+        ),
         "--property=RemainAfterExit="
         + ("no" if cfg.get("flow") or cfg.get("mode") == "main19" else "yes"),
         "--property=MemoryAccounting=yes",
         "--property=MemoryHigh=" + str(memory["high_bytes"]),
         "--property=MemoryMax=" + str(memory["max_bytes"]),
-        "--property=RuntimeMaxSec=" + str(cfg.get("wall_seconds", TASK_WALL_SECONDS)),
+        "--property=RuntimeMaxSec="
+        + str(cfg.get("wall_seconds", TASK_WALL_SECONDS)),
         "--property=TimeoutStopSec=900",
         "--property=WorkingDirectory=" + str(ROOT),
         "--property=StandardOutput=append:" + str(task / "operator/run.log"),
@@ -645,7 +754,9 @@ def start(task, *, pilot_resume=False):
     if cfg.get("python_allocator"):
         command.insert(2, "--setenv=PYTHONMALLOC=" + cfg["python_allocator"])
     if cfg.get("use_available_ram"):
-        command.insert(2, "--property=MemorySwapMax=" + str(memory["swap_max_bytes"]))
+        command.insert(
+            2, "--property=MemorySwapMax=" + str(memory["swap_max_bytes"])
+        )
     subprocess.run(command, check=True)
     write(
         task / "operator/service.json",
@@ -657,7 +768,10 @@ def start(task, *, pilot_resume=False):
             python_allocator=cfg.get("python_allocator", "default"),
             session_lifetime="user systemd; survives terminal closure, host shutdown/logout may stop user manager",
             **(
-                dict(owner_uid=os.getuid(), config_sha256=sha(task / "config.json"))
+                dict(
+                    owner_uid=os.getuid(),
+                    config_sha256=sha(task / "config.json"),
+                )
                 if cfg.get("mode") == "main19"
                 else {}
             ),
@@ -703,7 +817,10 @@ def service_memory(config):
 
 
 def free_swap_bytes():
-    values = dict(line.split(":", 1) for line in Path("/proc/meminfo").read_text().splitlines())
+    values = dict(
+        line.split(":", 1)
+        for line in Path("/proc/meminfo").read_text().splitlines()
+    )
     return int(values["SwapFree"].split()[0]) * 1024
 
 
@@ -714,7 +831,9 @@ def choose(prompt, options, default):
                 f"{prompt} [{'/'.join(map(str, options))}] (기본 {default}): "
             ).strip().lower() or str(default)
         except UnicodeDecodeError:
-            print("터미널 입력 인코딩 오류입니다. 영문 입력으로 전환한 뒤 다시 입력하세요.")
+            print(
+                "터미널 입력 인코딩 오류입니다. 영문 입력으로 전환한 뒤 다시 입력하세요."
+            )
             continue
         if value in {str(x) for x in options}:
             return value
@@ -724,9 +843,13 @@ def choose(prompt, options, default):
 def input_integer(prompt, default, maximum=None):
     while True:
         try:
-            value = positive_int(input(f"{prompt} (기본 {default}): ").strip() or str(default))
+            value = positive_int(
+                input(f"{prompt} (기본 {default}): ").strip() or str(default)
+            )
             if maximum is not None and value > maximum:
-                raise ValueError(f"현재 PX4 인스턴스/포트 계약은 1..{maximum}입니다")
+                raise ValueError(
+                    f"현재 PX4 인스턴스/포트 계약은 1..{maximum}입니다"
+                )
             return value
         except UnicodeDecodeError:
             print("터미널 입력 인코딩 오류: 숫자로 다시 입력하세요.")
@@ -736,14 +859,20 @@ def input_integer(prompt, default, maximum=None):
 
 def existing_task():
     tasks = sorted(
-        (HOME / "tasks").glob("*/config.json"), key=lambda p: p.stat().st_mtime, reverse=True
+        (HOME / "tasks").glob("*/config.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
     )
     if not tasks:
         print("기존 작업이 없습니다.")
         return
     for i, path in enumerate(tasks, 1):
         state_path = path.parent / "operator/state.json"
-        state = read(state_path).get("status", "UNKNOWN") if state_path.exists() else "NOT_STARTED"
+        state = (
+            read(state_path).get("status", "UNKNOWN")
+            if state_path.exists()
+            else "NOT_STARTED"
+        )
         print(f"{i}. {path.parent.name} · {state}")
     while True:
         index = input_integer("조회할 작업 번호", 1)
@@ -786,7 +915,9 @@ def input_seed():
             seed = int(value)
             if 0 <= seed <= 2**31 - 20_000:
                 return seed
-            print("seed는0..2^31-20000 정수입니다. 배율에 따라 추가 여유가 필요합니다.")
+            print(
+                "seed는0..2^31-20000 정수입니다. 배율에 따라 추가 여유가 필요합니다."
+            )
         except (ValueError, UnicodeDecodeError):
             print("정수 seed를 입력하거나 빈칸으로 두세요.")
 
@@ -803,17 +934,26 @@ class Levels(argparse.Action):
             if levels != sorted(set(levels)) or any(
                 not 1 <= n <= MAX_FLIGHT_WORKERS for n in levels
             ):
-                parser.error("--levels: 중복 없는 오름차순1..16 정수가 필요합니다")
+                parser.error(
+                    "--levels: 중복 없는 오름차순1..16 정수가 필요합니다"
+                )
         setattr(namespace, self.dest, levels)
 
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
     sub = p.add_subparsers(dest="action")
-    sub.add_parser("main19", help="LR108·전체1674 실제 수집/전처리/검산·조회/중지/명시재개")
+    sub.add_parser(
+        "main19", help="LR108·전체1674 실제 수집/전처리/검산·조회/중지/명시재개"
+    )
     sub.add_parser("training19", help="LR108·승인된 본학습1674 계획 조회")
-    sub.add_parser("pilot45", help="새CMU19 예비45 init/seal/start/status/stop/resume; no fit")
-    sub.add_parser("integration19", help="총괄용 단일run 두19입력 연결 시험; no fit")
+    sub.add_parser(
+        "pilot45",
+        help="새CMU19 예비45 init/seal/start/status/stop/resume; no fit",
+    )
+    sub.add_parser(
+        "integration19", help="총괄용 단일run 두19입력 연결 시험; no fit"
+    )
     init = sub.add_parser("init", help="실행 없이 설정 작성")
     init.add_argument("--name", required=True)
     init.add_argument("--mode", choices=("test", "collect"), default="test")
@@ -850,7 +990,9 @@ def parser():
         help="기본300run 배율; 전체 통합 데이터셋·공통 train scaler로 전처리·검산",
     )
     init.set_defaults(test_flights=False, flights_only=False)
-    init.add_argument("--no-swap", dest="use_swap", action="store_false", default=True)
+    init.add_argument(
+        "--no-swap", dest="use_swap", action="store_false", default=True
+    )
     init.add_argument(
         "--ignore-memory-estimate",
         action="store_true",
@@ -858,7 +1000,11 @@ def parser():
         help=argparse.SUPPRESS,
     )
     init.add_argument(
-        "--min-available-ram-gb", type=int, choices=(1, 4), default=1, help=argparse.SUPPRESS
+        "--min-available-ram-gb",
+        type=int,
+        choices=(1, 4),
+        default=1,
+        help=argparse.SUPPRESS,
     )
     init.add_argument(
         "--use-available-ram",
@@ -866,7 +1012,9 @@ def parser():
         default=True,
         help=argparse.SUPPRESS,
     )
-    init.add_argument("--levels", nargs="+", action=Levels, default=[2], metavar="N|all")
+    init.add_argument(
+        "--levels", nargs="+", action=Levels, default=[2], metavar="N|all"
+    )
     init.add_argument(
         "--seed-base",
         type=int,
@@ -874,12 +1022,14 @@ def parser():
         help="생략하면 매번 새 보안 난수 seed; 지정하면 구성 재현",
     )
     resume = sub.add_parser(
-        "resume-preprocess", help="완료된 수집만 새 작업에서 전처리; 재수집 없음"
+        "resume-preprocess",
+        help="완료된 수집만 새 작업에서 전처리; 재수집 없음",
     )
     resume.add_argument("source", type=Path)
     resume.add_argument("--name", required=True)
     capsules = sub.add_parser(
-        "recover-capsules", help="완료된 run 캡슐을 새 작업에서 복원·통합·검산; 재수집·학습 없음"
+        "recover-capsules",
+        help="완료된 run 캡슐을 새 작업에서 복원·통합·검산; 재수집·학습 없음",
     )
     capsules.add_argument("source", type=Path)
     capsules.add_argument("--name", required=True)
@@ -888,20 +1038,27 @@ def parser():
     )
     partial.add_argument("source", type=Path)
     partial.add_argument("--name", required=True)
-    audit = sub.add_parser("finish-audit", help="실패1개 검산 후 기존 결과와 전체 검산")
+    audit = sub.add_parser(
+        "finish-audit", help="실패1개 검산 후 기존 결과와 전체 검산"
+    )
     audit.add_argument("source", type=Path)
     audit.add_argument("--name", required=True)
     speed = sub.add_parser(
-        "speed-test", help="2x twice,4x,8x finite matched-seed comparison; no training"
+        "speed-test",
+        help="2x twice,4x,8x finite matched-seed comparison; no training",
     )
     speed.add_argument("--name", required=True)
-    speed.add_argument("--seed-base", type=int, default=int(time.time()) % 1_000_000_000)
+    speed.add_argument(
+        "--seed-base", type=int, default=int(time.time()) % 1_000_000_000
+    )
     speed.add_argument(
         "--baseline-review",
         type=Path,
         help="Run one speed candidate using its preserved2x reference",
     )
-    speed.add_argument("--candidate-factor", type=int, choices=(3, 8), default=8)
+    speed.add_argument(
+        "--candidate-factor", type=int, choices=(3, 8), default=8
+    )
     speed.add_argument(
         "--previous-candidate",
         type=Path,
@@ -935,12 +1092,16 @@ def main(argv=None):
     elif args.action == "init":
         create(args)
     elif args.action == "speed-test":
-        if (args.candidate_factor != 8 or args.previous_candidate) and not args.baseline_review:
+        if (
+            args.candidate_factor != 8 or args.previous_candidate
+        ) and not args.baseline_review:
             raise ValueError("Single candidate requires --baseline-review")
         baseline = None
         if args.baseline_review:
             baseline = read(args.baseline_review)
-            args.seed_base = read(Path(baseline["source_task"]) / "config.json")["seed_base"]
+            args.seed_base = read(
+                Path(baseline["source_task"]) / "config.json"
+            )["seed_base"]
         fresh = parser().parse_args(
             [
                 "init",
@@ -967,7 +1128,11 @@ def main(argv=None):
         task = create(fresh)
         config = read(task / "config.json")
         config.update(
-            speed_test=dict(factors=[2, 2, 4, 8], protocol="information-v2", mission_seconds=120),
+            speed_test=dict(
+                factors=[2, 2, 4, 8],
+                protocol="information-v2",
+                mission_seconds=120,
+            ),
             storage_profile="standard",
             unit_attempts_max=1,
             continue_after_case_failure=False,
@@ -979,17 +1144,25 @@ def main(argv=None):
                 candidate_only=True,
                 continue_after_lower_speed_failure=True,
                 baseline_review=dict(
-                    path=str(args.baseline_review.resolve()), sha256=sha(args.baseline_review)
+                    path=str(args.baseline_review.resolve()),
+                    sha256=sha(args.baseline_review),
                 ),
-                baseline_config=dict(path=str(source_config), sha256=sha(source_config)),
+                baseline_config=dict(
+                    path=str(source_config), sha256=sha(source_config)
+                ),
                 previous_candidates=[
                     dict(
                         config=dict(
-                            path=str(p.resolve() / "config.json"), sha256=sha(p / "config.json")
+                            path=str(p.resolve() / "config.json"),
+                            sha256=sha(p / "config.json"),
                         ),
                         results=dict(
-                            path=str(STORE / "speed-tests" / p.name / "results.json"),
-                            sha256=sha(STORE / "speed-tests" / p.name / "results.json"),
+                            path=str(
+                                STORE / "speed-tests" / p.name / "results.json"
+                            ),
+                            sha256=sha(
+                                STORE / "speed-tests" / p.name / "results.json"
+                            ),
                         ),
                     )
                     for p in args.previous_candidate

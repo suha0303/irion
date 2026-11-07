@@ -6,11 +6,10 @@ import json
 from pathlib import Path
 
 import pytest
-from test_pilot45_admission import make_request
-
 from learning.admission19 import SHORT
 from learning.history19 import quality_rejection as qr
 from learning.history19.pilot import json_file, plan_and_ledger, sha
+from test_pilot45_admission import make_request
 
 
 def write(path, value):
@@ -23,8 +22,14 @@ def write(path, value):
 def evidence(tmp_path, monkeypatch):
     catalog = json_file(qr.CATALOG)
     catalog["fixture_only"] = True
-    for name in ("root_review", "original_physical_ledger", "official_rejection_index"):
-        catalog[name] = write(tmp_path / (name + ".json"), dict(fixture_only=True))
+    for name in (
+        "root_review",
+        "original_physical_ledger",
+        "official_rejection_index",
+    ):
+        catalog[name] = write(
+            tmp_path / (name + ".json"), dict(fixture_only=True)
+        )
     for rid, entry in catalog["entries"].items():
         raw = tmp_path / "raw" / rid
         # Only immutable small metadata is borrowed; events below are synthetic.
@@ -32,14 +37,20 @@ def evidence(tmp_path, monkeypatch):
         refs = dict(
             run=write(
                 raw / "run.json",
-                dict(run_id=rid, status="completed", origin="synthetic_unit_fixture"),
+                dict(
+                    run_id=rid,
+                    status="completed",
+                    origin="synthetic_unit_fixture",
+                ),
             ),
             scenario=write(raw / "evaluation/scenario.json", scenario),
             native_origin=write(
-                raw / "evaluation/joint-origin.json", dict(actual_start_us=60000000)
+                raw / "evaluation/joint-origin.json",
+                dict(actual_start_us=60000000),
             ),
             native_landing=write(
-                raw / "evaluation/joint-landing.json", dict(actual_time_us=240000000)
+                raw / "evaluation/joint-landing.json",
+                dict(actual_time_us=240000000),
             ),
         )
         path = raw / "evaluation/joint-consumption.csv"
@@ -72,7 +83,10 @@ def evidence(tmp_path, monkeypatch):
         )
         refs["assessment_log"] = write(
             tmp_path / (rid + ".log"),
-            dict(status="BLOCKED", reason="Producer assessment failed: " + json.dumps(assessment)),
+            dict(
+                status="BLOCKED",
+                reason="Producer assessment failed: " + json.dumps(assessment),
+            ),
         )
         entry["refs"] = refs
     path = tmp_path / "catalog.json"
@@ -97,7 +111,11 @@ class Context:
 
 
 def attempt(entry, receipt):
-    return dict(entry["original_attempt"], status="quality_rejected", quality_rejection=receipt)
+    return dict(
+        entry["original_attempt"],
+        status="quality_rejected",
+        quality_rejection=receipt,
+    )
 
 
 def verify(ctx, catalog, case, a):
@@ -112,10 +130,18 @@ def verify(ctx, catalog, case, a):
 
 def test_three_explicit_rejections_publish_and_verify(evidence, tmp_path):
     for rid, entry in evidence["entries"].items():
-        receipt = qr.publish(rid, tmp_path / (rid + "-receipt.json"), fixture_only=True)
-        assert verify(Context(), evidence, entry["case"], attempt(entry, receipt)) is True
+        receipt = qr.publish(
+            rid, tmp_path / (rid + "-receipt.json"), fixture_only=True
+        )
+        assert (
+            verify(Context(), evidence, entry["case"], attempt(entry, receipt))
+            is True
+        )
         value = json_file(receipt["path"])
-        assert value["actual_data_verified"] is False and value["authorizes_flight"] is False
+        assert (
+            value["actual_data_verified"] is False
+            and value["authorizes_flight"] is False
+        )
         assert value["measured"]["reference_rows_seen"] == 1801
         assert value["measured"]["max_gap_us"] == entry["expected_gap_us"]
         with pytest.raises(FileExistsError):
@@ -147,8 +173,15 @@ def test_three_explicit_rejections_publish_and_verify(evidence, tmp_path):
 def test_evidence_and_identity_cannot_be_weakened(evidence, tmp_path, damage):
     rid, entry = next(iter(evidence["entries"].items()))
     receipt = qr.publish(rid, tmp_path / "receipt.json", fixture_only=True)
-    a, case, ctx = attempt(entry, receipt), copy.deepcopy(entry["case"]), Context()
-    producer, policy = copy.deepcopy(evidence["producer"]), evidence["native_policy_sha256"]
+    a, case, ctx = (
+        attempt(entry, receipt),
+        copy.deepcopy(entry["case"]),
+        Context(),
+    )
+    producer, policy = (
+        copy.deepcopy(evidence["producer"]),
+        evidence["native_policy_sha256"],
+    )
     if damage == "unapproved":
         a["run_id"] = "unapproved-completed-raw"
     if damage == "physical_status":
@@ -189,7 +222,13 @@ def test_evidence_and_identity_cannot_be_weakened(evidence, tmp_path, damage):
     if damage == "actual_promotion":
         ctx.request["fixture_only"] = False
     with pytest.raises((ValueError, AssertionError)):
-        qr.verify_attempt(ctx, case, a, expected_producer=producer, native_policy_sha256=policy)
+        qr.verify_attempt(
+            ctx,
+            case,
+            a,
+            expected_producer=producer,
+            native_policy_sha256=policy,
+        )
 
 
 def campaign(evidence, tmp_path):
@@ -205,7 +244,8 @@ def campaign(evidence, tmp_path):
             if c["case_kind"] == case["case_kind"]
             and (
                 c["case_kind"] == "paired_normal"
-                or (c["motion"], c["environment"]) == (case["motion"], case["environment"])
+                or (c["motion"], c["environment"])
+                == (case["motion"], case["environment"])
             )
         )
         old_pair = manifest["cases"][index]["pair_id"]
@@ -219,12 +259,20 @@ def campaign(evidence, tmp_path):
             paired.update(
                 {
                     k: case[k]
-                    for k in ("seed", "motion", "environment", "operation_sha256", "pair_id")
+                    for k in (
+                        "seed",
+                        "motion",
+                        "environment",
+                        "operation_sha256",
+                        "pair_id",
+                    )
                 }
             )
     registry = dict(schema="drone-ai.global-protection/1", entries=[])
     rows, failed = [], 0
-    by_case = {e["case"]["case_id"]: (rid, e) for rid, e in evidence["entries"].items()}
+    by_case = {
+        e["case"]["case_id"]: (rid, e) for rid, e in evidence["entries"].items()
+    }
     for i, case in enumerate(manifest["cases"]):
         rid = "synthetic-valid-" + str(i)
         completed = dict(
@@ -239,7 +287,9 @@ def campaign(evidence, tmp_path):
         if case["case_id"] in by_case:
             prior_rid, e = by_case[case["case_id"]]
             receipt = qr.publish(
-                prior_rid, tmp_path / (prior_rid + "-receipt.json"), fixture_only=True
+                prior_rid,
+                tmp_path / (prior_rid + "-receipt.json"),
+                fixture_only=True,
             )
             attempts.insert(0, attempt(e, receipt))
             completed.update(index=2, parent_attempt_id=prior_rid)
@@ -256,17 +306,24 @@ def campaign(evidence, tmp_path):
             )
             completed.update(index=2, parent_attempt_id=old)
             failed += 1
-        rows.append(dict(case_id=case["case_id"], status="completed", attempts=attempts))
+        rows.append(
+            dict(case_id=case["case_id"], status="completed", attempts=attempts)
+        )
         registry["entries"].append(
             dict(
-                identities=["case:" + case["case_id"], *["run:" + a["run_id"] for a in attempts]],
+                identities=[
+                    "case:" + case["case_id"],
+                    *["run:" + a["run_id"] for a in attempts],
+                ],
                 forbidden_uses=["fit", "calibration", "final_test"],
             )
         )
     ctx = Context(
         dict(
             pilot_manifest=manifest,
-            ledger=dict(schema="drone-ai.pilot45.ledger/1", task_id=qr.TASK, cases=rows),
+            ledger=dict(
+                schema="drone-ai.pilot45.ledger/1", task_id=qr.TASK, cases=rows
+            ),
         )
     )
     return ctx, registry
@@ -285,10 +342,14 @@ def campaign(evidence, tmp_path):
         "no_callback",
     ],
 )
-def test_short_retry_counts_and_ordinary_success_guard(evidence, tmp_path, damage):
+def test_short_retry_counts_and_ordinary_success_guard(
+    evidence, tmp_path, damage
+):
     ctx, registry = campaign(evidence, tmp_path)
     rows = ctx.docs["ledger"]["cases"]
-    rejected = next(r for r in rows if r["attempts"][0]["status"] == "quality_rejected")
+    rejected = next(
+        r for r in rows if r["attempts"][0]["status"] == "quality_rejected"
+    )
     if damage == "ordinary_success_retry":
         rejected["attempts"][0]["status"] = "completed"
     if damage == "wrong_parent":
@@ -300,7 +361,11 @@ def test_short_retry_counts_and_ordinary_success_guard(evidence, tmp_path, damag
     if damage == "unresolved_quality":
         rejected["attempts"].pop()
         # Case still claiming completed must be refused.
-    callback = None if damage == "no_callback" else lambda c, a: verify(ctx, evidence, c, a)
+    callback = (
+        None
+        if damage == "no_callback"
+        else lambda c, a: verify(ctx, evidence, c, a)
+    )
     kwargs = dict(
         task_id=qr.TASK,
         cohort=SHORT if damage != "wrong_cohort" else "other",
@@ -312,7 +377,13 @@ def test_short_retry_counts_and_ordinary_success_guard(evidence, tmp_path, damag
             plan_and_ledger(ctx, registry, **kwargs)
     else:
         _, _, counts = plan_and_ledger(ctx, registry, **kwargs)
-        assert counts["planned_cases"] == 45 and counts["physical_attempts"] == 65
-        assert counts["failed_attempts"] == counts["physical_failed_attempts"] == 17
+        assert (
+            counts["planned_cases"] == 45 and counts["physical_attempts"] == 65
+        )
+        assert (
+            counts["failed_attempts"]
+            == counts["physical_failed_attempts"]
+            == 17
+        )
         assert counts["quality_rejected_attempts"] == 3
         assert counts["quality_rejected_cases"] == counts["pending_cases"] == 0

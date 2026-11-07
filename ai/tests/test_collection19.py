@@ -7,7 +7,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
 from capstone_ai.dataset import feature_transform, target_transform
 from capstone_ai.mapping import FEATURES, TARGETS
 from learning.admission19 import MISSION_POLICY, ONLINE_UNITS
@@ -47,7 +46,9 @@ def export(
     root.mkdir(parents=True)
     binding = producer_binding or producer()
     times = 60000000 + np.arange(n, dtype=np.int64) * 100000
-    values = np.arange(19)[None, :] * 0.01 + offset + np.arange(n)[:, None] * 0.001
+    values = (
+        np.arange(19)[None, :] * 0.01 + offset + np.arange(n)[:, None] * 0.001
+    )
     values[:, 17] = 16 + offset + np.arange(n) * 0.2
     values[:, 18] = 24 + offset + np.arange(n) * 0.01
     if physical_override is not None:
@@ -68,7 +69,12 @@ def export(
         health="confirmed_healthy",
         health_eligibility="confirmed_healthy",
         origin="synthetic_unit_fixture",
-        lineage=["run:" + rid, "pair:pair-" + rid, "group:group-" + rid, "retry:retry-" + rid],
+        lineage=[
+            "run:" + rid,
+            "pair:pair-" + rid,
+            "group:group-" + rid,
+            "retry:retry-" + rid,
+        ],
         source_evidence=dict(fixture_only=True),
         mission_interval=dict(
             policy=MISSION_POLICY,
@@ -88,12 +94,16 @@ def export(
         [
             t
             for t in times
-            if t % 1000000 == 0 and t - 9900000 >= times[0] and t + 1000000 <= times[-1]
+            if t % 1000000 == 0
+            and t - 9900000 >= times[0]
+            and t + 1000000 <= times[-1]
         ],
         dtype=np.int64,
     )
     at = {int(t): i for i, t in enumerate(times)}
-    X = np.array([transformed[at[int(t)] - 99 : at[int(t)] + 1] for t in origins])
+    X = np.array(
+        [transformed[at[int(t)] - 99 : at[int(t)] + 1] for t in origins]
+    )
     Y = np.array([targets[at[int(t)] + 1 : at[int(t)] + 11] for t in origins])
     np.savez(
         root / "online.npz",
@@ -152,7 +162,9 @@ def export(
                 operating_state="airborne",
                 quality=dict.fromkeys(FEATURES, "valid"),
                 values=dict(zip(FEATURES, vector.tolist())),
-                lineage=dict(sample=dict(sample_time_us=int(t), available_time_us=int(t))),
+                lineage=dict(
+                    sample=dict(sample_time_us=int(t), available_time_us=int(t))
+                ),
             )
             f.write(json.dumps(frame) + "\n")
     checked = compare_views(
@@ -167,7 +179,9 @@ def export(
 def records(tmp_path):
     first, _ = export(tmp_path / "train0", "fixture-t0", "normal_train", 0)
     second, _ = export(tmp_path / "train1", "fixture-t1", "normal_train", 2)
-    validation, _ = export(tmp_path / "val", "fixture-v", "normal_validation", 1000)
+    validation, _ = export(
+        tmp_path / "val", "fixture-v", "normal_validation", 1000
+    )
     return [first, second, validation]
 
 
@@ -175,7 +189,9 @@ def registry():
     return dict(schema="drone-ai.global-protection/1", entries=[])
 
 
-def test_bounded_dataset_matches_current_readers_and_exact_train_only_statistics(records, tmp_path):
+def test_bounded_dataset_matches_current_readers_and_exact_train_only_statistics(
+    records, tmp_path
+):
     events = []
     root, prov = ag._compile(
         records,
@@ -190,7 +206,9 @@ def test_bounded_dataset_matches_current_readers_and_exact_train_only_statistics
         records, root, scope="main", producer=producer(), registry=registry()
     )
     assert checked["passed"] and checked["actual_data_verified"] is False
-    assert prov["unique_valid_mission_frames"] == 262 and prov["fit_run_ids"] == [
+    assert prov["unique_valid_mission_frames"] == 262 and prov[
+        "fit_run_ids"
+    ] == [
         "fixture-t0",
         "fixture-t1",
     ]
@@ -224,7 +242,9 @@ def test_bounded_dataset_matches_current_readers_and_exact_train_only_statistics
     shared = ag.load_shared_scaler(root)
     np.testing.assert_array_equal(shared.mean, scaler["x_mean"])
     assert events and all(e["whole_task_complete"] is False for e in events)
-    assert any(e["stage"] == "train_statistics" and e["done"] == 2 for e in events)
+    assert any(
+        e["stage"] == "train_statistics" and e["done"] == 2 for e in events
+    )
 
 
 @pytest.mark.parametrize(
@@ -240,7 +260,9 @@ def test_bounded_dataset_matches_current_readers_and_exact_train_only_statistics
         "target_zero",
     ],
 )
-def test_independent_audit_rejects_wrong_statistics_identity_or_inputs(records, tmp_path, damage):
+def test_independent_audit_rejects_wrong_statistics_identity_or_inputs(
+    records, tmp_path, damage
+):
     root, _ = ag._compile(
         records,
         tmp_path / "dataset",
@@ -257,7 +279,10 @@ def test_independent_audit_rejects_wrong_statistics_identity_or_inputs(records, 
             fields["segment_id"] += 1
         else:
             # Same numeric moments, but false additional segment identities must fail.
-            fields = {k: np.tile(v, (2, 1) if k == "values" else 2) for k, v in fields.items()}
+            fields = {
+                k: np.tile(v, (2, 1) if k == "values" else 2)
+                for k, v in fields.items()
+            }
             fields["segment_id"][262:] += 1
         np.savez(path, **fields)
     if damage == "scaler":
@@ -298,7 +323,9 @@ def test_independent_audit_rejects_wrong_statistics_identity_or_inputs(records, 
         )
 
 
-def test_lr_scaler_uses_same_source_subset_without_new_collection(records, tmp_path):
+def test_lr_scaler_uses_same_source_subset_without_new_collection(
+    records, tmp_path
+):
     main, _ = ag._compile(
         records,
         tmp_path / "main",
@@ -317,9 +344,10 @@ def test_lr_scaler_uses_same_source_subset_without_new_collection(records, tmp_p
     )
     main_scale = ag.load_shared_scaler(main)
     lr_scale = ag.load_shared_scaler(lr)
-    assert main_scale.fit_run_ids == ("fixture-t0", "fixture-t1") and lr_scale.fit_run_ids == (
+    assert main_scale.fit_run_ids == (
         "fixture-t0",
-    )
+        "fixture-t1",
+    ) and lr_scale.fit_run_ids == ("fixture-t0",)
     assert main_scale.mean[0] - lr_scale.mean[0] == pytest.approx(1)
     assert json_file(lr / "scaler-provenance.json")["scope"] == "lr108"
 
@@ -342,7 +370,12 @@ def test_aggregate_calls_independent_audit_once_and_returns_both_sealed_receipts
 
     def audit(index, root, **kwargs):
         calls.append(str(root))
-        result = dict(passed=True, actual_data_verified=False, fixture_only=True, scope="main")
+        result = dict(
+            passed=True,
+            actual_data_verified=False,
+            fixture_only=True,
+            scope="main",
+        )
         return dict(result, receipt=write_new(kwargs["output"], result))
 
     monkeypatch.setattr(ag, "audit_aggregate", audit)
@@ -356,21 +389,35 @@ def test_aggregate_calls_independent_audit_once_and_returns_both_sealed_receipts
     )
     assert len(calls) == 1
     assert sha(Path(result["receipt"]["path"])) == result["receipt"]["sha256"]
-    assert sha(Path(result["independent_audit"]["path"])) == result["independent_audit"]["sha256"]
-    assert json_file(tmp_path / "aggregate/progress.json")["whole_task_complete"] is False
+    assert (
+        sha(Path(result["independent_audit"]["path"]))
+        == result["independent_audit"]["sha256"]
+    )
+    assert (
+        json_file(tmp_path / "aggregate/progress.json")["whole_task_complete"]
+        is False
+    )
 
 
 def test_frozen_main_and_lr_are_same_role_exact_subset_without_mutation():
     checked = check_scope()
     assert len(checked["cases"]) == 1674 and len(checked["lr_ids"]) == 108
-    assert checked["lr"]["native_phase_policy"] == "joint-native-consumption-c2-v1"
+    assert (
+        checked["lr"]["native_phase_policy"] == "joint-native-consumption-c2-v1"
+    )
 
 
 @pytest.mark.parametrize(
     "states",
-    [["failed", "completed"], ["failed", "failed", "completed"], ["failed", "failed", "failed"]],
+    [
+        ["failed", "completed"],
+        ["failed", "failed", "completed"],
+        ["failed", "failed", "failed"],
+    ],
 )
-def test_retry_chain_keeps_original_failure_budget_and_next_case(tmp_path, states):
+def test_retry_chain_keeps_original_failure_budget_and_next_case(
+    tmp_path, states
+):
     allids = set()
     case = dict(case_id="fixture-case", seed=7)
     attempts = []
@@ -389,7 +436,9 @@ def test_retry_chain_keeps_original_failure_budget_and_next_case(tmp_path, state
     ref = write_new(
         tmp_path / "ledger.json",
         dict(
-            schema="drone-ai.collection19.case-ledger/1", case_id="fixture-case", attempts=attempts
+            schema="drone-ai.collection19.case-ledger/1",
+            case_id="fixture-case",
+            attempts=attempts,
         ),
     )
     _, counts = ag._ledger(ref, case, producer(), allids, {})
@@ -418,7 +467,9 @@ def test_retry_chain_keeps_original_failure_budget_and_next_case(tmp_path, state
     assert after["physical_attempts"] == 1
 
 
-@pytest.mark.parametrize("damage", ["four", "parent", "seed", "completed_reflight"])
+@pytest.mark.parametrize(
+    "damage", ["four", "parent", "seed", "completed_reflight"]
+)
 def test_retry_guard_rejects_budget_or_identity_changes(tmp_path, damage):
     a = dict(
         index=1,
@@ -429,7 +480,16 @@ def test_retry_guard_rejects_budget_or_identity_changes(tmp_path, damage):
         lineage=["group:g"],
         failure_reason="kept",
     )
-    attempts = [a, dict(a, index=2, run_id="two", parent_attempt_id="one", status="completed")]
+    attempts = [
+        a,
+        dict(
+            a,
+            index=2,
+            run_id="two",
+            parent_attempt_id="one",
+            status="completed",
+        ),
+    ]
     if damage == "four":
         attempts = attempts * 2
     if damage == "parent":
@@ -440,7 +500,11 @@ def test_retry_guard_rejects_budget_or_identity_changes(tmp_path, damage):
         attempts[0]["status"] = "completed"
     ref = write_new(
         tmp_path / "ledger.json",
-        dict(schema="drone-ai.collection19.case-ledger/1", case_id="fixture", attempts=attempts),
+        dict(
+            schema="drone-ai.collection19.case-ledger/1",
+            case_id="fixture",
+            attempts=attempts,
+        ),
     )
     with pytest.raises(ValueError):
         ag._ledger(ref, dict(case_id="fixture", seed=7), producer(), set(), {})
@@ -467,13 +531,17 @@ def test_zip64_writer_and_moments_match_independent_small_array(tmp_path):
     np.testing.assert_allclose(scale, array.std(0), atol=1e-12)
 
 
-def test_large_whole_input_is_sharded_and_existing_iterator_keeps_small_loader_guard(tmp_path):
+def test_large_whole_input_is_sharded_and_existing_iterator_keeps_small_loader_guard(
+    tmp_path,
+):
     from learning.run_health19.data import load_manifest
 
     records = []
     for i in range(66):
         role = "normal_validation" if i == 65 else "normal_train"
-        record, _ = export(tmp_path / ("case" + str(i)), "fixture-" + str(i), role, i * 0.01)
+        record, _ = export(
+            tmp_path / ("case" + str(i)), "fixture-" + str(i), role, i * 0.01
+        )
         records.append(record)
     root, _ = ag._compile(
         records,
@@ -485,19 +553,30 @@ def test_large_whole_input_is_sharded_and_existing_iterator_keeps_small_loader_g
     )
     paths = ag.whole_manifest_paths(root)
     assert len(paths) == 2
-    assert len(json_file(paths[0])["runs"]) == 64 and len(json_file(paths[1])["runs"]) == 2
+    assert (
+        len(json_file(paths[0])["runs"]) == 64
+        and len(json_file(paths[1])["runs"]) == 2
+    )
     with pytest.raises(ValueError, match="iter_manifests"):
-        load_manifest(paths[0], expected_producer=producer(), protection=registry())
+        load_manifest(
+            paths[0], expected_producer=producer(), protection=registry()
+        )
     count = 0
-    for run in iter_manifests(paths, expected_producer=producer(), protection=registry()):
+    for run in iter_manifests(
+        paths, expected_producer=producer(), protection=registry()
+    ):
         count += 1
         assert len(run.values) == 131
         del run
     assert count == 66
 
 
-def test_canonical_stats_never_include_calibration_or_final_data(records, tmp_path):
-    calibration, _ = export(tmp_path / "cal", "fixture-cal", "normal_calibration", 99999)
+def test_canonical_stats_never_include_calibration_or_final_data(
+    records, tmp_path
+):
+    calibration, _ = export(
+        tmp_path / "cal", "fixture-cal", "normal_calibration", 99999
+    )
     final, _ = export(
         tmp_path / "final",
         "fixture-final",
@@ -514,24 +593,33 @@ def test_canonical_stats_never_include_calibration_or_final_data(records, tmp_pa
         registry=registry(),
         fixture_only=True,
     )
-    assert prov["unique_valid_mission_frames"] == 262 and prov["fit_run_ids"] == [
+    assert prov["unique_valid_mission_frames"] == 262 and prov[
+        "fit_run_ids"
+    ] == [
         "fixture-t0",
         "fixture-t1",
     ]
     checked = ag._audit_compiled(
         records, root, scope="main", producer=producer(), registry=registry()
     )
-    assert checked["passed"] and checked["fit_run_ids"] == ["fixture-t0", "fixture-t1"]
+    assert checked["passed"] and checked["fit_run_ids"] == [
+        "fixture-t0",
+        "fixture-t1",
+    ]
 
 
-def test_preserved_native_pair_proof_is_auditable_after_original_raw_paths_are_retired(tmp_path):
+def test_preserved_native_pair_proof_is_auditable_after_original_raw_paths_are_retired(
+    tmp_path,
+):
     proof = dict(
         schema="drone.joint-phase-pair-check/1",
         status="passed",
         errors=[],
         source_sha256=producer()["source_manifest_sha256"],
         runtime_sha256=producer()["runtime_sha256"],
-        policy=dict(revision="joint-native-consumption-c2-v2", policy_sha256="e" * 64),
+        policy=dict(
+            revision="joint-native-consumption-c2-v2", policy_sha256="e" * 64
+        ),
         original_interval_us=[0, 480000000],
         interpolation_used=False,
         wind=dict(
@@ -549,7 +637,11 @@ def test_preserved_native_pair_proof_is_auditable_after_original_raw_paths_are_r
             max_circular_yaw_difference_rad=0.0,
         ),
         wind_function_checks=[
-            dict(status="passed", mission_samples=480001, max_abs_component_error_mps=0.0)
+            dict(
+                status="passed",
+                mission_samples=480001,
+                max_abs_component_error_mps=0.0,
+            )
         ]
         * 2,
         normal_run="/retired/raw/normal-id",
@@ -561,10 +653,17 @@ def test_preserved_native_pair_proof_is_auditable_after_original_raw_paths_are_r
     ref = write_new(p, proof)
     policy = tmp_path / "policy.json"
     write_new(
-        policy, dict(native_policy_sha256="e" * 64, native_adapter="joint-native-consumption-c2-v2")
+        policy,
+        dict(
+            native_policy_sha256="e" * 64,
+            native_adapter="joint-native-consumption-c2-v2",
+        ),
     )
     records = []
-    for role, rid, native in [("normal_test", "normal-id", 1), ("anomaly_test", "anomaly-id", 2)]:
+    for role, rid, native in [
+        ("normal_test", "normal-id", 1),
+        ("anomaly_test", "anomaly-id", 2),
+    ]:
         records.append(
             dict(
                 record=dict(pair_evidence=ref),
@@ -573,7 +672,9 @@ def test_preserved_native_pair_proof_is_auditable_after_original_raw_paths_are_r
                     run_id=rid,
                     role=role,
                     mission_interval=dict(
-                        start_us=proof["origins"]["anomaly" if native == 2 else "normal"]
+                        start_us=proof["origins"][
+                            "anomaly" if native == 2 else "normal"
+                        ]
                     ),
                 ),
                 audit=dict(native_check={"fixture": native}),

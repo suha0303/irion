@@ -10,16 +10,26 @@ def validated_collections(source):
     if source.parent != (HOME / "tasks").resolve():
         raise ValueError("Registered local source task required")
     config = read(source / "config.json")
-    verify({str(source / "config.json"): (source / "config.sha256").read_text().strip()})
+    verify(
+        {
+            str(source / "config.json"): (source / "config.sha256")
+            .read_text()
+            .strip()
+        }
+    )
     state = read(source / "operator/state.json")
     if config["mode"] != "collect" or state.get("status") != "FAILED_STOPPED":
-        raise ValueError("Stopped collection task required; never duplicate an active task")
-    if identity(state.get("pid", -1)) == state.get("pid_start_ticks") and state.get(
+        raise ValueError(
+            "Stopped collection task required; never duplicate an active task"
+        )
+    if identity(state.get("pid", -1)) == state.get(
         "pid_start_ticks"
-    ):
+    ) and state.get("pid_start_ticks"):
         raise ValueError("Source task process still exists")
     folders = [Path(p).resolve() for p in state.get("collected_sets", [])]
-    if len(folders) != config.get("collection_sets", 1) or len(set(folders)) != len(folders):
+    if len(folders) != config.get("collection_sets", 1) or len(
+        set(folders)
+    ) != len(folders):
         raise ValueError("Every planned collection must be complete")
     total = 0
     for folder in folders:
@@ -35,10 +45,15 @@ def validated_collections(source):
             or ledger.get("stop_reason")
             or set(ledger["cases"]) != {c["case_id"] for c in manifest}
         ):
-            raise ValueError("Incomplete collection cannot be recovered as a full dataset")
+            raise ValueError(
+                "Incomplete collection cannot be recovered as a full dataset"
+            )
         for case in manifest:
             record = ledger["cases"][case["case_id"]]
-            if record.get("status") != "ARCHIVED_PENDING_QUALITY" or record.get("case") != case:
+            if (
+                record.get("status") != "ARCHIVED_PENDING_QUALITY"
+                or record.get("case") != case
+            ):
                 raise ValueError("Collection case/status mismatch")
         total += len(manifest)
     if total != config["collection_run_count"]:
@@ -52,7 +67,9 @@ def create_recovery(source, name):
     source = Path(source).resolve()
     folders = validated_collections(source)
     original = read(source / "config.json")
-    args = cli.parser().parse_args(["init", "--name", name, "--mode", "collect"])
+    args = cli.parser().parse_args(
+        ["init", "--name", name, "--mode", "collect"]
+    )
     from x500_storage import task_root
 
     args.storage_root = task_root(original)
@@ -81,7 +98,12 @@ def create_recovery(source, name):
     )
     evidence = [
         source / n
-        for n in ("config.json", "config.sha256", "operator/state.json", "operator/run.log")
+        for n in (
+            "config.json",
+            "config.sha256",
+            "operator/state.json",
+            "operator/run.log",
+        )
     ]
     evidence += [
         folder / n

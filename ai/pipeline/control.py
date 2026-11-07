@@ -75,7 +75,9 @@ def verify_files(root, inventory):
 
 def validate_config(config, models=MODELS):
     if tuple(models) != MODELS or config != CONFIG:
-        raise ValueError("R1 fixed LSTM seed17/baseline/config allowlist mismatch")
+        raise ValueError(
+            "R1 fixed LSTM seed17/baseline/config allowlist mismatch"
+        )
 
 
 def lineage(row):
@@ -89,7 +91,10 @@ def lineage(row):
         "continuation_id",
     ):
         if row.get(field):
-            keys.add(("run:" if field == "parent_attempt_id" else field + ":") + row[field])
+            keys.add(
+                ("run:" if field == "parent_attempt_id" else field + ":")
+                + row[field]
+            )
     return keys
 
 
@@ -113,11 +118,19 @@ def validate_roles(rows, cases, protected):
                 raise ValueError("planned case mismatch: " + key)
         if row.get("status") != "completed" or row.get("origin") != "px4_sitl":
             raise ValueError("unfinished/non-SITL run")
-        if row.get("continuity") != "independent_reset" or row.get("previous_attempts"):
+        if row.get("continuity") != "independent_reset" or row.get(
+            "previous_attempts"
+        ):
             raise ValueError("continuation/retry forbidden in R1")
-        if row["role"] != "anomaly_dev" and row.get("health_eligibility") != "confirmed_healthy":
+        if (
+            row["role"] != "anomaly_dev"
+            and row.get("health_eligibility") != "confirmed_healthy"
+        ):
             raise ValueError("normal role lacks health eligibility")
-        if row["role"] == "anomaly_dev" and row.get("health_eligibility") != "abnormal":
+        if (
+            row["role"] == "anomaly_dev"
+            and row.get("health_eligibility") != "abnormal"
+        ):
             raise ValueError("anomaly role lacks scenario eligibility")
         if not row.get("raw_sha256") or not row.get("paired_case_id"):
             raise ValueError("missing raw/group identity")
@@ -142,7 +155,9 @@ def claim(output, ledger, stage):
     ledger.mkdir(parents=True, exist_ok=True)
     marker = ledger / (stage + ".claimed")
     with marker.open("x") as stream:
-        json.dump({"stage": stage, "output": str(output), "pid": os.getpid()}, stream)
+        json.dump(
+            {"stage": stage, "output": str(output), "pid": os.getpid()}, stream
+        )
         stream.flush()
         os.fsync(stream.fileno())
     output.mkdir(parents=True, exist_ok=False)
@@ -150,7 +165,9 @@ def claim(output, ledger, stage):
 
 def check_claim(output, stage):
     marker = read(REMOTE_LEDGER / (stage + ".claimed"))
-    if marker["stage"] != stage or marker["output"] != str(Path(output).resolve()):
+    if marker["stage"] != stage or marker["output"] != str(
+        Path(output).resolve()
+    ):
         raise ValueError("stage output differs from durable account claim")
 
 
@@ -165,7 +182,9 @@ class Budget:
     def check(self):
         if time.monotonic() >= self.deadline:
             raise RuntimeError("wall budget exhausted; STOPPED")
-        size = sum(p.stat().st_size for p in self.output.rglob("*") if p.is_file())
+        size = sum(
+            p.stat().st_size for p in self.output.rglob("*") if p.is_file()
+        )
         if size > self.bytes_limit:
             raise RuntimeError("storage budget exhausted; STOPPED")
 

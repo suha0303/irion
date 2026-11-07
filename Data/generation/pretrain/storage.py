@@ -52,14 +52,18 @@ def verify_bundle(path, expected, budget, destination=None, progress=None):
                 h.hexdigest() != expected[member.name]["sha256"]
                 or size != expected[member.name]["bytes"]
             ):
-                raise ValueError("Portable member hash/size mismatch: " + member.name)
+                raise ValueError(
+                    "Portable member hash/size mismatch: " + member.name
+                )
             if progress:
                 progress(done=len(seen), total=len(expected))
     if seen != set(expected):
         raise ValueError("Missing portable members")
 
 
-def pack_files(sources, path, budget, *, preset=3, readback=True, expected=None):
+def pack_files(
+    sources, path, budget, *, preset=3, readback=True, expected=None
+):
     """Hash while packing; readback remains the default for legacy callers."""
     inventory = {}
 
@@ -91,18 +95,36 @@ def pack_files(sources, path, budget, *, preset=3, readback=True, expected=None)
                 hashed = HashedReader(stream)
                 tar.addfile(member, hashed)
             after = source.stat()
-            if ((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
-                    != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
-                    or hashed.size != member.size):
-                raise ValueError("Capsule source changed while packing: " + name)
-            inventory[name] = dict(bytes=hashed.size, sha256=hashed.digest.hexdigest())
+            if (
+                before.st_dev,
+                before.st_ino,
+                before.st_size,
+                before.st_mtime_ns,
+            ) != (
+                after.st_dev,
+                after.st_ino,
+                after.st_size,
+                after.st_mtime_ns,
+            ) or hashed.size != member.size:
+                raise ValueError(
+                    "Capsule source changed while packing: " + name
+                )
+            inventory[name] = dict(
+                bytes=hashed.size, sha256=hashed.digest.hexdigest()
+            )
             if expected is not None and inventory[name] != expected[name]:
-                raise ValueError("Capsule source differs from approved inventory: " + name)
+                raise ValueError(
+                    "Capsule source differs from approved inventory: " + name
+                )
     if readback:
         verify_bundle(path, inventory, budget)
     return dict(
-        path=str(path), sha256=sha(path), bytes=path.stat().st_size, members=inventory,
-        compression=dict(format="xz", preset=preset), readback_verified=readback,
+        path=str(path),
+        sha256=sha(path),
+        bytes=path.stat().st_size,
+        members=inventory,
+        compression=dict(format="xz", preset=preset),
+        readback_verified=readback,
     )
 
 
@@ -119,10 +141,17 @@ def event_body(row, budget):
         if sha(p) != compact["sha256"]:
             raise ValueError("Compact source receipt changed")
         receipt = read(p)
-        if receipt["run_id"] != row["run_id"] or receipt["status"] != "RUN_CAPSULE_VERIFIED":
+        if (
+            receipt["run_id"] != row["run_id"]
+            or receipt["status"] != "RUN_CAPSULE_VERIFIED"
+        ):
             raise ValueError("Wrong compact source identity")
         event = Path(receipt["event_path"])
-        if event.is_symlink() or not event.is_file() or event.stat().st_size != expected["bytes"]:
+        if (
+            event.is_symlink()
+            or not event.is_file()
+            or event.stat().st_size != expected["bytes"]
+        ):
             raise ValueError("Bounded regular compact truth required")
         with event.open("rb") as stream:
             body = stream.read(10_000_001)
@@ -165,17 +194,25 @@ def pack(prepared, output, progress=lambda **kw: None, *, budget=None):
         or not quality.get("train_only_scaler_verified")
         or not handoff.get("training_eligible")
     ):
-        raise ValueError("Complete independently verified dataset required before packing")
+        raise ValueError(
+            "Complete independently verified dataset required before packing"
+        )
     dataset = Path(handoff["dataset"]).resolve()
     seal = read(prepared / "dataset-seal.json")
-    sources = {"dataset/" + name: (dataset / name, digest) for name, digest in seal.items()}
+    sources = {
+        "dataset/" + name: (dataset / name, digest)
+        for name, digest in seal.items()
+    }
     for name, key in [
         ("dataset-seal.json", "dataset_seal_sha256"),
         ("quality.json", "quality_sha256"),
         ("frozen-manifest.json", "frozen_manifest_sha256"),
     ]:
         sources["evidence/" + name] = (prepared / name, handoff[key])
-    sources["evidence/handoff.json"] = (prepared / "handoff.json", sha(prepared / "handoff.json"))
+    sources["evidence/handoff.json"] = (
+        prepared / "handoff.json",
+        sha(prepared / "handoff.json"),
+    )
     output.mkdir(parents=True, exist_ok=False)
     inventory = {}
     archive = output / "dataset.tar.xz"
@@ -183,7 +220,11 @@ def pack(prepared, output, progress=lambda **kw: None, *, budget=None):
         for i, (name, (source, digest)) in enumerate(sorted(sources.items())):
             budget.check()
             safe_name(name)
-            if source.is_symlink() or not source.is_file() or sha(source) != digest:
+            if (
+                source.is_symlink()
+                or not source.is_file()
+                or sha(source) != digest
+            ):
                 raise ValueError("Prepared source changed: " + str(source))
             inventory[name] = dict(bytes=source.stat().st_size, sha256=digest)
             tar.add(source, arcname=name, recursive=False)
@@ -206,7 +247,9 @@ def pack(prepared, output, progress=lambda **kw: None, *, budget=None):
             info = tarfile.TarInfo(name)
             info.size = len(body)
             tar.addfile(info, io.BytesIO(body))
-            truth_inventory[name] = dict(bytes=len(body), sha256=expected["sha256"])
+            truth_inventory[name] = dict(
+                bytes=len(body), sha256=expected["sha256"]
+            )
             progress(phase="pack_evaluator_truth", done=i + 1, total=len(dev))
     verify_bundle(truth_archive, truth_inventory, budget)
     receipt = dict(
@@ -215,7 +258,10 @@ def pack(prepared, output, progress=lambda **kw: None, *, budget=None):
         source_handoff=str(prepared / "handoff.json"),
         source_handoff_sha256=sha(prepared / "handoff.json"),
         dataset=dict(
-            path=archive.name, sha256=sha(archive), bytes=archive.stat().st_size, members=inventory
+            path=archive.name,
+            sha256=sha(archive),
+            bytes=archive.stat().st_size,
+            members=inventory,
         ),
         evaluator_truth=dict(
             path=truth_archive.name,
@@ -263,7 +309,9 @@ def restore(bundle, destination, *, truth=False, budget=None, progress=None):
     if path.stat().st_size != ref["bytes"] or sha(path) != ref["sha256"]:
         raise ValueError("Portable archive changed")
     destination.mkdir(parents=True, exist_ok=False)
-    verify_bundle(path, ref["members"], budget or Budget(), destination, progress=progress)
+    verify_bundle(
+        path, ref["members"], budget or Budget(), destination, progress=progress
+    )
     if not truth:
         h = read(destination / "evidence/handoff.json")
         h.update(
@@ -284,23 +332,32 @@ def truth_provider(bundle):
 
     def provide(row, target, progress):
         if row["role"] not in {"normal_dev_eval", "anomaly_dev"}:
-            raise ValueError("Only development evaluator may join compact truth")
+            raise ValueError(
+                "Only development evaluator may join compact truth"
+            )
         name = row["run_id"] + ".jsonl"
         safe_name(name)
         expected = row["archive"]["members"]["evaluation/events.jsonl"]
-        if ref["members"].get(name) != {k: expected[k] for k in ("sha256", "bytes")}:
+        if ref["members"].get(name) != {
+            k: expected[k] for k in ("sha256", "bytes")
+        }:
             raise ValueError("Portable truth differs from frozen source")
         with tarfile.open(archive, "r|xz") as tar:
             for member in tar:
                 progress.check()
                 if member.name == name:
-                    if not member.isfile() or member.issparse() or member.size != expected["bytes"]:
+                    if (
+                        not member.isfile()
+                        or member.issparse()
+                        or member.size != expected["bytes"]
+                    ):
                         raise ValueError("Invalid portable event member")
                     with tar.extractfile(member) as stream:
                         body = stream.read(10_000_001)
                     if (
                         len(body) != expected["bytes"]
-                        or hashlib.sha256(body).hexdigest() != expected["sha256"]
+                        or hashlib.sha256(body).hexdigest()
+                        != expected["sha256"]
                     ):
                         raise ValueError("Portable event changed")
                     with Path(target).open("xb") as output:
@@ -325,7 +382,9 @@ def main():
     if args.action == "pack":
         print(json.dumps(pack(args.prepared, args.output), indent=2))
     else:
-        print(restore(args.bundle, args.destination, truth=args.evaluator_truth))
+        print(
+            restore(args.bundle, args.destination, truth=args.evaluator_truth)
+        )
 
 
 if __name__ == "__main__":

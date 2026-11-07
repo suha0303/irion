@@ -92,7 +92,10 @@ def cases(seed_base, profile="legacy50"):
         from capstone_sim.normal_variation import sample
 
         for row in record["cases"]:
-            if row["role"] != "anomaly_dev" and row["mission_seconds"] in {180, 900}:
+            if row["role"] != "anomaly_dev" and row["mission_seconds"] in {
+                180,
+                900,
+            }:
                 row["normal_variation"] = sample(row["scenario"], row["seed"])
         record["normal_variation_revision"] = "healthy-envelope-paths-v1"
     from .composition import validate_cases
@@ -152,10 +155,14 @@ def plan(task, phase, count, case_list, label, export_workers=1):
         phase=phase,
         campaign_id=f"pretrain_{task.name}_{label}",
         execution_dir=str(folder / "execution"),
-        external_output=str(storage / "archives" / f"pretrain_{task.name}_{label}"),
+        external_output=str(
+            storage / "archives" / f"pretrain_{task.name}_{label}"
+        ),
         storage_policy=policy,
         runs_root=str(runs_root(ROOT)),
-        storage_config=dict(path=str(task / "config.json"), sha256=sha(task / "config.json")),
+        storage_config=dict(
+            path=str(task / "config.json"), sha256=sha(task / "config.json")
+        ),
         mission_seconds=120 if phase == "benchmark" else 900,
         concurrency=count,
         export_workers=min(export_workers, count),
@@ -167,10 +174,15 @@ def plan(task, phase, count, case_list, label, export_workers=1):
         gate_policy="optional_pretrain_cli_v1",
         pretrain_cli_approval=str(task / "config.json"),
         isolation_evidence=dict(
-            path=str(folder / "isolation.json"), sha256=sha(folder / "isolation.json")
+            path=str(folder / "isolation.json"),
+            sha256=sha(folder / "isolation.json"),
         ),
-        producer_preparation=dict(path=str(preparation), sha256=sha(preparation)),
-        preparation_assertions=preparation_assertions(read(preparation), result["profile_id"]),
+        producer_preparation=dict(
+            path=str(preparation), sha256=sha(preparation)
+        ),
+        preparation_assertions=preparation_assertions(
+            read(preparation), result["profile_id"]
+        ),
         assessment_command=[
             str(SIMULATION / ".venv/bin/python"),
             "-B",
@@ -196,7 +208,9 @@ def plan(task, phase, count, case_list, label, export_workers=1):
         )
     config = read(task / "config.json")
     if phase == "collection" and config.get("pipeline_overlap"):
-        result["processing_stop_signal"] = str(task / "operator/processing-stop.json")
+        result["processing_stop_signal"] = str(
+            task / "operator/processing-stop.json"
+        )
     if config.get("speed_test"):
         index = int(label.split("-")[-1]) - 1
         factor = config["speed_test"]["factors"][index]
@@ -206,18 +220,25 @@ def plan(task, phase, count, case_list, label, export_workers=1):
             factor=factor,
         )
         result["capture_interval_ms"] = 10.0 / factor
-    result["continue_after_case_failure"] = config.get("continue_after_case_failure", False)
+    result["continue_after_case_failure"] = config.get(
+        "continue_after_case_failure", False
+    )
     result["unit_attempts_max"] = config.get("unit_attempts_max", 1)
     if config.get("use_available_ram"):
         if not (
             (config["mode"] == "test" and phase == "benchmark")
-            or (config["mode"] == "collect" and phase in {"collection", "benchmark", "endurance"})
+            or (
+                config["mode"] == "collect"
+                and phase in {"collection", "benchmark", "endurance"}
+            )
         ):
             raise ValueError("Expanded memory requires a finite pretrain task")
         memory_path = task / "operator/memory-policy.json"
         memory = read(memory_path)
         result["pretrain_memory_override"] = {
-            "config": dict(path=str(task / "config.json"), sha256=sha(task / "config.json")),
+            "config": dict(
+                path=str(task / "config.json"), sha256=sha(task / "config.json")
+            ),
             "memory": dict(path=str(memory_path), sha256=sha(memory_path)),
         }
         result["budgets"]["min_available_ram_bytes"] = 1_000_000_000
@@ -226,14 +247,21 @@ def plan(task, phase, count, case_list, label, export_workers=1):
     if phase == "collection":
         # Keep the old per-run allowance when the explicit finite set grows.
         for key in ("local_bytes_cap", "external_bytes_cap"):
-            result["budgets"][key] = int(result["budgets"][key] * len(case_list) / 50)
+            result["budgets"][key] = int(
+                result["budgets"][key] * len(case_list) / 50
+            )
     write(folder / "plan.json", result)
-    write(folder / "manifest.json", dict(data_pool_id=result["data_pool_id"], cases=case_list))
+    write(
+        folder / "manifest.json",
+        dict(data_pool_id=result["data_pool_id"], cases=case_list),
+    )
     write(
         folder / "approval.json",
         dict(
             authorized=True,
-            action="START_LONG_COLLECTION" if phase == "collection" else "START_COLLECTION_GATE",
+            action="START_LONG_COLLECTION"
+            if phase == "collection"
+            else "START_COLLECTION_GATE",
             plan_sha256=sha(folder / "plan.json"),
             manifest_sha256=sha(folder / "manifest.json"),
             collector_sha256=sha(c.__file__),
@@ -251,24 +279,39 @@ def run(folder):
     raw = read(folder / "plan.json")
     gate = raw["phase"] != "collection"
     plan, rows = c.bound(
-        folder / "plan.json", folder / "manifest.json", folder / "approval.json", dry_run=gate
+        folder / "plan.json",
+        folder / "manifest.json",
+        folder / "approval.json",
+        dry_run=gate,
     )
     result = c.execute(plan, rows, c.helper(ROOT))
     if result["status"] == "COLLECTED_WITH_ERRORS_STOPPED":
-        raise IncompleteCollection("Individual run failures preserved: " + str(folder))
-    if result["status"] != "COLLECTED_PENDING_QUALITY_STOPPED" or result["not_started"]:
-        raise RuntimeError("Collection/gate failed; evidence retained: " + str(folder))
+        raise IncompleteCollection(
+            "Individual run failures preserved: " + str(folder)
+        )
+    if (
+        result["status"] != "COLLECTED_PENDING_QUALITY_STOPPED"
+        or result["not_started"]
+    ):
+        raise RuntimeError(
+            "Collection/gate failed; evidence retained: " + str(folder)
+        )
     if gate and len(rows) >= plan["concurrency"]:
         from .common import overlap
 
         observed = overlap(
             [
-                dict(started=r["flight_started_monotonic"], finished=r["flight_finished_monotonic"])
+                dict(
+                    started=r["flight_started_monotonic"],
+                    finished=r["flight_finished_monotonic"],
+                )
                 for r in result["cases"].values()
             ]
         )
         if observed < plan["concurrency"]:
-            raise RuntimeError("Requested flights did not overlap; not a parallel pass")
+            raise RuntimeError(
+                "Requested flights did not overlap; not a parallel pass"
+            )
     return result
 
 
@@ -279,7 +322,9 @@ def freeze_benchmark(folder):
 
     from .common import load
 
-    identity = load("pretrain_admission_identity", ADMISSION / "freeze.py").identity
+    identity = load(
+        "pretrain_admission_identity", ADMISSION / "freeze.py"
+    ).identity
 
     ledger = read(folder / "execution/ledger.json")
     cases = read(folder / "manifest.json")["cases"]
@@ -337,7 +382,9 @@ def freeze_benchmark(folder):
             raise ValueError("Fresh benchmark archive identity mismatch")
         seen.add(run["run_id"])
         files = {name: archive["members"][name]["sha256"] for name in RAW_FILES}
-        if any(archive["members"][name]["kind"] != "file" for name in RAW_FILES):
+        if any(
+            archive["members"][name]["kind"] != "file" for name in RAW_FILES
+        ):
             raise ValueError("Benchmark consumer members must be regular files")
         row = dict(
             case,
@@ -383,13 +430,15 @@ def source_revision():
 
     library = collection_config.transport_library()
     if library is not None:
-        source["runtime_binary_sha256"][str(library.relative_to(collection_config.ROOT))] = sha(
-            library
-        )
+        source["runtime_binary_sha256"][
+            str(library.relative_to(collection_config.ROOT))
+        ] = sha(library)
     # Path.rglob traversal differs across Python versions. Compare source content,
     # while each run's original file hash remains in its archive/member inventory.
     digest = hashlib.sha256(
-        (json.dumps(source, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
+        (
+            json.dumps(source, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode()
     ).hexdigest()
     producer_manifest()
     return dict(
@@ -400,10 +449,14 @@ def source_revision():
         physics_plugin_sha256=source["runtime_binary_sha256"][
             "build/current/libDronePowertrain.so"
         ],
-        x500_profile_sha256=sha(SIMULATION / "profiles/collection/vehicle.yaml"),
+        x500_profile_sha256=sha(
+            SIMULATION / "profiles/collection/vehicle.yaml"
+        ),
         producer_lock_sha256=digest,
         producer_lock_hash_format="sorted-json-v1",
-        preprocessing_sha256=sha(RESOURCES / "preprocessing/preprocessing.json"),
+        preprocessing_sha256=sha(
+            RESOURCES / "preprocessing/preprocessing.json"
+        ),
     )
 
 
@@ -453,18 +506,27 @@ def combine_frozen(task, parts):
 
     config = read(task / "config.json")
     if len(parts) != config.get("collection_sets", 1) or not parts:
-        raise ValueError("All configured sets must finish before combined preparation")
+        raise ValueError(
+            "All configured sets must finish before combined preparation"
+        )
     profile = config.get("collection_profile", "legacy50")
     merged = copy.deepcopy(parts[0][1])
     for key in ("ledger_sha256", "plan_sha256"):
-        merged.pop(key, None)  # Per-set references are retained in source_freezes below.
+        merged.pop(
+            key, None
+        )  # Per-set references are retained in source_freezes below.
     rows, cases, groups, references = [], [], [], []
     for output, frozen in parts:
-        if frozen.get("status") != "DATA_FROZEN" or frozen.get("collection_profile") != profile:
+        if (
+            frozen.get("status") != "DATA_FROZEN"
+            or frozen.get("collection_profile") != profile
+        ):
             raise ValueError("Completed matching collection freeze required")
         for key in ("revision", "revision_lock", "protected_inventory_sha256"):
             if frozen.get(key) != merged.get(key):
-                raise ValueError("Collection source/protection mismatch: " + key)
+                raise ValueError(
+                    "Collection source/protection mismatch: " + key
+                )
         record = read(output / "cases.json")
         cases.extend(record["cases"])
         groups.append([c["case_id"] for c in record["cases"]])
@@ -478,7 +540,11 @@ def combine_frozen(task, parts):
             )
         )
     validate_roles(
-        rows, cases, read(RESOURCES / "protected-inventory.json")["runs"], profile, case_sets=groups
+        rows,
+        cases,
+        read(RESOURCES / "protected-inventory.json")["runs"],
+        profile,
+        case_sets=groups,
     )
     write(
         task / "cases.json",

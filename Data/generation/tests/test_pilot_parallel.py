@@ -9,7 +9,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
 from pretrain import common, native_flight, pilot45
 from pretrain import pilot_parallel as parallel
 
@@ -30,7 +29,9 @@ def fixture(monkeypatch, tmp_path):
         service_unit="drone-pretrain-task.service",
         source_sha256={},
     )
-    monkeypatch.setattr(parallel, "authorization", lambda: dict(previous_pilot="previous"))
+    monkeypatch.setattr(
+        parallel, "authorization", lambda: dict(previous_pilot="previous")
+    )
     monkeypatch.setattr(parallel, "ROOT", tmp_path)
     monkeypatch.setattr(parallel, "STORE", tmp_path)
     monkeypatch.setattr(parallel, "check_ports", lambda *args: None)
@@ -64,7 +65,9 @@ def fixture(monkeypatch, tmp_path):
         dict(
             cases=entries,
             attempts=[
-                dict(case_id=c["case_id"], **entries[c["case_id"]]["attempts"][0])
+                dict(
+                    case_id=c["case_id"], **entries[c["case_id"]]["attempts"][0]
+                )
                 for c in cases[:3]
             ],
         ),
@@ -84,7 +87,9 @@ def fixture(monkeypatch, tmp_path):
         ("fit_authorized", True),
     ],
 )
-def test_no_silent_downgrade_or_scope_expansion(monkeypatch, tmp_path, key, value):
+def test_no_silent_downgrade_or_scope_expansion(
+    monkeypatch, tmp_path, key, value
+):
     task, _ = fixture(monkeypatch, tmp_path)
     cfg = common.read(task / "config.json")
     cfg[key] = value
@@ -95,7 +100,9 @@ def test_no_silent_downgrade_or_scope_expansion(monkeypatch, tmp_path, key, valu
 def test_real_native_argv_has16_distinct_instances_and_requested_rtf2():
     case = pilot45.build_cases(1)[0]
     argv = [
-        native_flight.command(case, "parent", ["--paired-case-id", "{paired_case_id}"], i)
+        native_flight.command(
+            case, "parent", ["--paired-case-id", "{paired_case_id}"], i
+        )
         for i in range(16)
     ]
     assert [int(a[a.index("--instance") + 1]) for a in argv] == list(range(16))
@@ -127,7 +134,11 @@ def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
         original_write(path, value)
 
     monkeypatch.setattr(parallel, "write", write)
-    monkeypatch.setattr(pilot45, "register", lambda *args: registry.append(threading.get_ident()))
+    monkeypatch.setattr(
+        pilot45,
+        "register",
+        lambda *args: registry.append(threading.get_ident()),
+    )
 
     def child(task, request, log, *, on_progress=None):
         job = common.read(request)
@@ -145,7 +156,9 @@ def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
                 if first_wave:
                     barrier.wait(timeout=10)
                 case = job["case"]
-                rid = hashlib.md5(case["case_id"].encode(), usedforsecurity=False).hexdigest()
+                rid = hashlib.md5(
+                    case["case_id"].encode(), usedforsecurity=False
+                ).hexdigest()
                 raw = tmp_path / "simulation/runs" / rid
                 common.write(
                     raw / "run.json",
@@ -163,7 +176,9 @@ def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
                         operation_variation=case["operation_variation"],
                     ),
                 )
-                common.write(job["receipt"], dict(status="completed", run=str(raw)))
+                common.write(
+                    job["receipt"], dict(status="completed", run=str(raw))
+                )
                 if on_progress:
                     on_progress(
                         dict(
@@ -178,7 +193,9 @@ def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
                 time.sleep(0.015)
                 if job["action"] == "prepare":
                     output = Path(job["output"])
-                    common.write(output / "receipt.json", dict(fixture_only=True))
+                    common.write(
+                        output / "receipt.json", dict(fixture_only=True)
+                    )
                     common.write(output / "seal.json", dict(fixture_only=True))
                     result = dict(
                         files={},
@@ -188,10 +205,14 @@ def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
                     )
                 elif job["action"] == "audit":
                     result = dict(
-                        export_receipt_sha256=common.sha(Path(job["output"]) / "receipt.json")
+                        export_receipt_sha256=common.sha(
+                            Path(job["output"]) / "receipt.json"
+                        )
                     )
                 elif job["action"] == "pair":
-                    result = dict(pair_receipt="fixture-pair:" + job["case"]["group_id"])
+                    result = dict(
+                        pair_receipt="fixture-pair:" + job["case"]["group_id"]
+                    )
                 else:
                     result = dict(fixture_only=True)
                 common.write(job["receipt"], result)
@@ -202,15 +223,23 @@ def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
     monkeypatch.setattr(pilot45, "child", child)
     coordinator = parallel.Coordinator(task)
     inherited = {
-        k: e.copy() for k, e in coordinator.ledger["cases"].items() if e.get("status") == "COMPLETE"
+        k: e.copy()
+        for k, e in coordinator.ledger["cases"].items()
+        if e.get("status") == "COMPLETE"
     }
     coordinator.run()
     assert len(launches) == len({c for c, i in launches}) == 42
     assert {i for c, i in launches[:16]} == set(range(16))
     assert peak == dict(flight=16, cpu=4)
     assert set(writes + registry) == {owner}
-    assert Counter(actions) == dict(prepare=42, audit=42, pair=9, ai_case=45, cohort_audit=1)
-    assert len(coordinator.ledger["cases"]) == len(coordinator.ledger["attempts"]) == 45
+    assert Counter(actions) == dict(
+        prepare=42, audit=42, pair=9, ai_case=45, cohort_audit=1
+    )
+    assert (
+        len(coordinator.ledger["cases"])
+        == len(coordinator.ledger["attempts"])
+        == 45
+    )
     assert all(
         e["status"] == "COMPLETE" and e.get("ai_receipt")
         for e in coordinator.ledger["cases"].values()
@@ -220,7 +249,9 @@ def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
         and coordinator.state["max_active_nonflight"] == 4
     )
     for cid, old in inherited.items():
-        assert all(coordinator.ledger["cases"][cid][k] == v for k, v in old.items())
+        assert all(
+            coordinator.ledger["cases"][cid][k] == v for k, v in old.items()
+        )
 
 
 def test_complete_success_cannot_be_reflown(monkeypatch, tmp_path):
@@ -233,9 +264,19 @@ def test_complete_success_cannot_be_reflown(monkeypatch, tmp_path):
 @pytest.mark.parametrize(
     "prior",
     [
-        dict(number=1, state="FAILED_PRESERVED", retry_allowed=False, run_id="failed"),
+        dict(
+            number=1,
+            state="FAILED_PRESERVED",
+            retry_allowed=False,
+            run_id="failed",
+        ),
         dict(number=1, state="FAILED_PRESERVED", retry_allowed=True),
-        dict(number=3, state="FAILED_PRESERVED", retry_allowed=True, run_id="failed"),
+        dict(
+            number=3,
+            state="FAILED_PRESERVED",
+            retry_allowed=True,
+            run_id="failed",
+        ),
     ],
 )
 def test_retry_policy_keeps_parent_and_cap(monkeypatch, tmp_path, prior):
@@ -283,7 +324,10 @@ def result_for(job, tmp_path):
     case = job["case"]
     raw = tmp_path / "simulation/runs" / ("a" * 30 + f"{job['instance']:02}")
     common.write(
-        raw / "run.json", dict(status="completed", instance=job["instance"], parent_attempt_id=None)
+        raw / "run.json",
+        dict(
+            status="completed", instance=job["instance"], parent_attempt_id=None
+        ),
     )
     common.write(
         raw / "evaluation/scenario.json",
@@ -293,7 +337,10 @@ def result_for(job, tmp_path):
             operation_variation=case["operation_variation"],
         ),
     )
-    common.write(common.read(job["request"])["receipt"], dict(status="completed", run=str(raw)))
+    common.write(
+        common.read(job["request"])["receipt"],
+        dict(status="completed", run=str(raw)),
+    )
 
 
 def test_out_of_order_completion_updates_case_and_attempt_instead_of_last_row(
@@ -309,7 +356,9 @@ def test_out_of_order_completion_updates_case_and_attempt_instead_of_last_row(
     assert c.ledger["attempts"][-1]["state"] == "RUNNING"
     assert c.finish_flight(second, None)
     assert c.ledger["attempts"][-1]["state"] == "COMPLETED"
-    assert c.ledger["attempts"][-2]["run_id"] != c.ledger["attempts"][-1]["run_id"]
+    assert (
+        c.ledger["attempts"][-2]["run_id"] != c.ledger["attempts"][-1]["run_id"]
+    )
 
 
 def test_resource_block_never_silently_runs_fewer_lanes_or_discards_denominator(
@@ -323,7 +372,9 @@ def test_resource_block_never_silently_runs_fewer_lanes_or_discards_denominator(
 
     monkeypatch.setattr(pilot45, "resources", blocked)
     monkeypatch.setattr(
-        pilot45, "child", lambda *a, **kw: pytest.fail("No flight on blocked resources")
+        pilot45,
+        "child",
+        lambda *a, **kw: pytest.fail("No flight on blocked resources"),
     )
     with pytest.raises(pilot45.Blocked, match="RAM"):
         c.run()
@@ -338,30 +389,47 @@ def test_actual_child_processes_have_separate_records_and_do_not_write_shared_st
     task = tmp_path / "task"
     (tmp_path / "simulation/runs").mkdir(parents=True)
     common.write(task / "config.json", dict(parallel16=True, source_sha256={}))
-    common.write(task / "operator/state.json", dict(coordinator_only="untouched"))
+    common.write(
+        task / "operator/state.json", dict(coordinator_only="untouched")
+    )
     monkeypatch.setattr(pilot45, "ROOT", tmp_path)
     monkeypatch.setattr(native_flight, "ROOT", tmp_path)
     monkeypatch.setattr(
         pilot45,
         "resources",
         lambda: dict(
-            available_bytes=2_000_000_000, disk_free_bytes=100_000_000_000, owned_tree_rss_bytes=1
+            available_bytes=2_000_000_000,
+            disk_free_bytes=100_000_000_000,
+            owned_tree_rss_bytes=1,
         ),
     )
     lanes = []
 
     def progress(*args, **kwargs):
         lanes.append(args[3]["instance"])
-        return SimpleNamespace(matches={}, sample=lambda: {}, terminal_evidence=lambda: {})
+        return SimpleNamespace(
+            matches={}, sample=lambda: {}, terminal_evidence=lambda: {}
+        )
 
-    monkeypatch.setattr(pilot45, "collector", lambda: SimpleNamespace(MissionProgress=progress))
+    monkeypatch.setattr(
+        pilot45, "collector", lambda: SimpleNamespace(MissionProgress=progress)
+    )
 
     def command(case, parent, options, instance):
         raw = tmp_path / "simulation/runs" / str(instance)
         raw.mkdir(parents=True, exist_ok=True)
         result = dict(status="completed", run=str(raw))
-        program = "import time;time.sleep(.15);print(" + repr(json.dumps(result)) + ")"
-        return [str(common.ROOT / "simulation/.venv/bin/python"), "-B", "-c", program]
+        program = (
+            "import time;time.sleep(.15);print("
+            + repr(json.dumps(result))
+            + ")"
+        )
+        return [
+            str(common.ROOT / "simulation/.venv/bin/python"),
+            "-B",
+            "-c",
+            program,
+        ]
 
     monkeypatch.setattr(native_flight, "command", command)
     requests = []
@@ -372,7 +440,10 @@ def test_actual_child_processes_have_separate_records_and_do_not_write_shared_st
         common.write(
             request,
             dict(
-                case=case, action="flight", instance=instance, receipt=str(folder / "receipt.json")
+                case=case,
+                action="flight",
+                instance=instance,
+                receipt=str(folder / "receipt.json"),
             ),
         )
         requests.append(request)
@@ -388,13 +459,17 @@ def test_actual_child_processes_have_separate_records_and_do_not_write_shared_st
     assert set(lanes) == {0, 15} and {r["instance"] for r in results} == {0, 15}
     assert len({r["pid"] for r in results}) == 2
     assert all(r["exit_code"] == 0 for r in results)
-    assert common.read(task / "operator/state.json") == dict(coordinator_only="untouched")
+    assert common.read(task / "operator/state.json") == dict(
+        coordinator_only="untouched"
+    )
     assert not (task / "operator/child.json").exists()
     assert all(p.with_suffix(".process.json").exists() for p in requests)
 
 
 @pytest.mark.parametrize("fault", [None, "current_hash", "other_file"])
-def test_prior_termination_fix_requires_exact_historical_acceptance(monkeypatch, tmp_path, fault):
+def test_prior_termination_fix_requires_exact_historical_acceptance(
+    monkeypatch, tmp_path, fault
+):
     monkeypatch.setattr(parallel, "ROOT", tmp_path)
     p = (
         tmp_path
@@ -417,7 +492,9 @@ def test_prior_termination_fix_requires_exact_historical_acceptance(monkeypatch,
                 reviewed_control_changes={
                     str(p): dict(
                         old_sha256=old,
-                        current_sha256="1" * 64 if fault == "current_hash" else common.sha(p),
+                        current_sha256="1" * 64
+                        if fault == "current_hash"
+                        else common.sha(p),
                     )
                 }
             ),
@@ -427,4 +504,6 @@ def test_prior_termination_fix_requires_exact_historical_acceptance(monkeypatch,
         with pytest.raises(pilot45.Blocked, match="processing changed"):
             parallel.compatible_sources(task, receipt)
     else:
-        assert parallel.compatible_sources(task, receipt)[str(p)]["current_sha256"] == common.sha(p)
+        assert parallel.compatible_sources(task, receipt)[str(p)][
+            "current_sha256"
+        ] == common.sha(p)

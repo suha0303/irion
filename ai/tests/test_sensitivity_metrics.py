@@ -4,7 +4,6 @@ import copy
 
 import numpy as np
 import pytest
-
 from learning.sensitivity_metrics import assess_sensitivity, validate_policy
 
 
@@ -31,7 +30,8 @@ def inputs(count=24):
         identities={
             "run_id": np.array(["normal"] * count),
             "segment": np.zeros(count, dtype=int),
-            "origin_us": 60_000_000 + np.arange(count, dtype=np.int64) * 1_000_000,
+            "origin_us": 60_000_000
+            + np.arange(count, dtype=np.int64) * 1_000_000,
         },
         diagnostic_calibration={
             "reference_error_scale_scaled": np.ones((10, 4)).tolist(),
@@ -49,18 +49,32 @@ def test_known_alarm_entry_and_exit_trajectories_are_preserved():
     snapshot = copy.deepcopy(data)
     report, arrays = assess_sensitivity(**data)
     assert report["status"] == "PASSED"
-    assert report["reference_union_episodes"] == report["batch_union_episodes"] == 1
+    assert (
+        report["reference_union_episodes"]
+        == report["batch_union_episodes"]
+        == 1
+    )
     assert np.flatnonzero(arrays["reference_union_start"]).tolist() == [2]
     # EWMA falls below0.7 at index7; ten consecutive low values close at16.
     assert np.flatnonzero(arrays["reference_union_end"]).tolist() == [16]
-    assert np.flatnonzero(arrays["reference_union_active"]).tolist() == list(range(2, 16))
+    assert np.flatnonzero(arrays["reference_union_active"]).tolist() == list(
+        range(2, 16)
+    )
     assert np.flatnonzero(arrays["reference_domain_end"][:, 0]).tolist() == [16]
-    np.testing.assert_array_equal(arrays["reference_domain_active"][:, 1], False)
-    np.testing.assert_array_equal(arrays["reference_scores"][:3], [[4.0, 0.0]] * 3)
+    np.testing.assert_array_equal(
+        arrays["reference_domain_active"][:, 1], False
+    )
+    np.testing.assert_array_equal(
+        arrays["reference_scores"][:3], [[4.0, 0.0]] * 3
+    )
     assert report["changed_alarm_origins"] == 0
     assert report["threshold_changed_between_paths"] is False
     assert report["event_truth_used"] is False
-    assert len(report["policy_sha256"]) == len(report["diagnostic_calibration_sha256"]) == 64
+    assert (
+        len(report["policy_sha256"])
+        == len(report["diagnostic_calibration_sha256"])
+        == 64
+    )
     for key in ("reference_batch1", "batch256", "repeat256", "actual_scaled"):
         np.testing.assert_array_equal(data[key], snapshot[key])
     assert data["policy"] == snapshot["policy"]
@@ -81,7 +95,13 @@ def test_tiny_prediction_delta_can_fail_alarm_equivalence_with_all_numeric_budge
     assert report["changed_alarm_origins"] == 3
     assert report["changed_alarm_fields"]["union_start"] == 1
     assert not arrays["reference_union_active"].any()
-    assert arrays["batch_union_start"].tolist() == [False, False, True, False, False]
+    assert arrays["batch_union_start"].tolist() == [
+        False,
+        False,
+        True,
+        False,
+        False,
+    ]
 
 
 def test_each_scope_resets_without_inventing_a_cross_run_episode_end():
@@ -91,7 +111,14 @@ def test_each_scope_resets_without_inventing_a_cross_run_episode_end():
     data["identities"]["origin_us"] = np.array([1, 2, 3, 1, 2, 3]) * 1_000_000
     report, arrays = assess_sensitivity(**data)
     assert report["status"] == "PASSED"
-    assert arrays["reference_union_active"].tolist() == [False, False, True, False, False, False]
+    assert arrays["reference_union_active"].tolist() == [
+        False,
+        False,
+        True,
+        False,
+        False,
+        False,
+    ]
     assert not arrays["reference_union_end"].any()
     assert not arrays["reference_domain_end"].any()
 
@@ -138,7 +165,9 @@ def test_score_delta_is_relative_to_fixed_threshold_not_reference_score():
     data["actual_scaled"][:] = 10.0
     data["batch256"][:] = 1e-6
     data["repeat256"] = data["batch256"].copy()
-    data["diagnostic_calibration"]["reference_error_scale_scaled"] = np.full((10, 4), 1e-8).tolist()
+    data["diagnostic_calibration"]["reference_error_scale_scaled"] = np.full(
+        (10, 4), 1e-8
+    ).tolist()
     data["diagnostic_calibration"]["high"] = [100.0, 200.0]
     report, arrays = assess_sensitivity(**data)
     expected = abs(100.0 - (10.0 - 1e-6) ** 2) / 1e-8
@@ -215,7 +244,15 @@ def test_common_policy_rejects_implicit_or_model_specific_exceptions(change):
 
 @pytest.mark.parametrize(
     "change",
-    ["high_zero", "scale_zero", "scale_nan", "physical_negative", "actual_nan", "shape", "complex"],
+    [
+        "high_zero",
+        "scale_zero",
+        "scale_nan",
+        "physical_negative",
+        "actual_nan",
+        "shape",
+        "complex",
+    ],
 )
 def test_malformed_calibration_or_data_raises_before_any_admission(change):
     data = inputs()
@@ -224,7 +261,9 @@ def test_malformed_calibration_or_data_raises_before_any_admission(change):
     elif change == "scale_zero":
         data["diagnostic_calibration"]["reference_error_scale_scaled"][0][0] = 0
     elif change == "scale_nan":
-        data["diagnostic_calibration"]["reference_error_scale_scaled"][0][0] = float("nan")
+        data["diagnostic_calibration"]["reference_error_scale_scaled"][0][0] = (
+            float("nan")
+        )
     elif change == "physical_negative":
         data["physical_scale4"][0] = -1
     elif change == "actual_nan":

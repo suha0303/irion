@@ -40,9 +40,16 @@ def dependencies(path):
     if value.get("status") in {"FAILED", "STOPPED"}:
         raise ValueError("Final dependency failed; no blind wait/retry")
     if value.get("status") != "READY":
-        raise Pending(value.get("reason", "Final owner readiness not confirmed"))
+        raise Pending(
+            value.get("reason", "Final owner readiness not confirmed")
+        )
     paths = value["paths"]
-    for key in ("native_completion", "native_policy", "paired_policy", "development_receipt"):
+    for key in (
+        "native_completion",
+        "native_policy",
+        "paired_policy",
+        "development_receipt",
+    ):
         actual = ref(paths[key])
         if actual["sha256"] != value["sha256"][key]:
             raise ValueError("Final handoff evidence changed: " + key)
@@ -59,14 +66,22 @@ def dependencies(path):
         native["source_sha256"] != binding["source_manifest_sha256"]
         or native["runtime_sha256"] != binding["runtime_sha256"]
     ):
-        raise ValueError("Actual native6 completion belongs to another producer")
+        raise ValueError(
+            "Actual native6 completion belongs to another producer"
+        )
     for rid in native["actual_run_ids"]:
-        if read(ROOT / "simulation/runs" / rid / "run.json").get("status") != "completed":
+        if (
+            read(ROOT / "simulation/runs" / rid / "run.json").get("status")
+            != "completed"
+        ):
             raise ValueError("Actual development raw missing/not completed")
     member = Path(value["origin_relative_path"])
     if member.is_absolute() or ".." in member.parts:
         raise ValueError("Reviewed native origin relative member required")
-    if not isinstance(value.get("paired_cli_options"), list) or not value["paired_cli_options"]:
+    if (
+        not isinstance(value.get("paired_cli_options"), list)
+        or not value["paired_cli_options"]
+    ):
         raise Pending("Reviewed new-policy flight CLI options missing")
     help_text = subprocess.run(
         [str(ROOT / "simulation/capstone-sim"), "run", "--help"],
@@ -78,9 +93,13 @@ def dependencies(path):
     for token in value["paired_cli_options"]:
         if token.startswith("--") and (
             token not in help_text
-            or not any(x in token for x in ("phase", "origin", "paired", "schedule"))
+            or not any(
+                x in token for x in ("phase", "origin", "paired", "schedule")
+            )
         ):
-            raise ValueError("Only actual reviewed origin/phase CLI options allowed")
+            raise ValueError(
+                "Only actual reviewed origin/phase CLI options allowed"
+            )
     if not value.get("pair_verifier_argv"):
         raise Pending("Actual native pair verifier CLI template missing")
     return value
@@ -102,17 +121,25 @@ def short_dependencies(value):
         or value.get("expected_pairs") != 9
         or value.get("limits")
         != dict(
-            flight_workers=16, RTF=2, aggregate_nonflight_workers=4, max_attempts_per_logical_case=3
+            flight_workers=16,
+            RTF=2,
+            aggregate_nonflight_workers=4,
+            max_attempts_per_logical_case=3,
         )
         or value.get("no_extra_development6") is not True
         or value.get("no_LR108_or_main_training_link") is not True
     ):
-        raise ValueError("Explicit frozen short180/45/9pair/16flight/RTF2/CPU4/max3 scope required")
+        raise ValueError(
+            "Explicit frozen short180/45/9pair/16flight/RTF2/CPU4/max3 scope required"
+        )
     frozen_ref = value["source_freeze"]
     if ref(frozen_ref["path"])["sha256"] != frozen_ref["sha256"]:
         raise ValueError("Owner AI source freeze changed")
     frozen = read(frozen_ref["path"])
-    if frozen.get("code_frozen") is not True or frozen.get("task_id") != value["task_id"]:
+    if (
+        frozen.get("code_frozen") is not True
+        or frozen.get("task_id") != value["task_id"]
+    ):
         raise ValueError("Explicit final owner AI source freeze required")
     for name, digest in frozen["files"].items():
         if not name.startswith("ai/") or ".." in Path(name).parts:
@@ -125,7 +152,9 @@ def short_dependencies(value):
     if not {"native_policy", "paired_policy"} <= set(paths) or any(
         k in paths for k in ("native_completion", "development_receipt")
     ):
-        raise ValueError("New short policies required without historical development6 dependency")
+        raise ValueError(
+            "New short policies required without historical development6 dependency"
+        )
     for name, path in paths.items():
         if ref(path)["sha256"] != value["sha256"][name]:
             raise ValueError("Final short handoff evidence changed: " + name)
@@ -147,11 +176,18 @@ def short_dependencies(value):
         or policy.get("native_adapter") != "joint-native-consumption-c2-v2"
         or policy.get("native_adapter") != native.get("revision")
         or policy.get("native_policy_sha256") != sha(paths["native_policy"])
-        or set(native.get("supported_duration_us", [])) != {180000000, 480000000}
+        or set(native.get("supported_duration_us", []))
+        != {180000000, 480000000}
     ):
-        raise ValueError("Actual v2 short180 policy/current generation binding required")
+        raise ValueError(
+            "Actual v2 short180 policy/current generation binding required"
+        )
     member = Path(value["origin_relative_path"])
-    if member.is_absolute() or ".." in member.parts or str(member) != policy.get("mission_source"):
+    if (
+        member.is_absolute()
+        or ".." in member.parts
+        or str(member) != policy.get("mission_source")
+    ):
         raise ValueError("Actual native short mission-origin member required")
     options = value.get("paired_cli_options")
     if not isinstance(options, list) or len(options) != 4:
@@ -161,7 +197,9 @@ def short_dependencies(value):
         "--phase-policy": native["revision"],
         "--paired-case-id": "{paired_case_id}",
     }:
-        raise ValueError("Actual v2 phase and independent pair identity required")
+        raise ValueError(
+            "Actual v2 phase and independent pair identity required"
+        )
     argv = value.get("pair_verifier_argv", [])
     if (
         len(argv) != 8
@@ -191,13 +229,17 @@ def short_dependencies(value):
 
 
 def policy_bundle(spec):
-    return {k: spec["paths"][k] for k in ("paired_policy", "native_policy")} | dict(
-        origin_relative_path=spec["origin_relative_path"]
-    )
+    return {
+        k: spec["paths"][k] for k in ("paired_policy", "native_policy")
+    } | dict(origin_relative_path=spec["origin_relative_path"])
 
 
 def qualified(task, case):
-    return read(task / "config.json").get("lineage_namespace", task.name) + ":" + case["case_id"]
+    return (
+        read(task / "config.json").get("lineage_namespace", task.name)
+        + ":"
+        + case["case_id"]
+    )
 
 
 def plan(task):
@@ -219,7 +261,9 @@ def plan(task):
                 environment=c["environment"],
                 operation_sha256=hashlib.sha256(
                     json.dumps(
-                        c["operation_variation"], sort_keys=True, separators=(",", ":")
+                        c["operation_variation"],
+                        sort_keys=True,
+                        separators=(",", ":"),
                     ).encode()
                 ).hexdigest(),
                 pair_id=c["paired_case_id"],
@@ -257,7 +301,9 @@ def snapshot(task, directory):
     manifest = read(task / "ai-manifest.json")
     local = read(task / "ledger.json")
     registry = copy.deepcopy(read(task / "global-protection.json"))
-    by_id = {qualified(task, c): c for c in read(task / "manifest.json")["cases"]}
+    by_id = {
+        qualified(task, c): c for c in read(task / "manifest.json")["cases"]
+    }
     rows = []
     for case in manifest["cases"]:
         source = local["cases"].get(by_id[case["case_id"]]["case_id"], {})
@@ -282,7 +328,10 @@ def snapshot(task, directory):
                 )
             )
             if a.get("quality_rejection"):
-                if not read(task / "config.json").get("short_cycle") or a["state"] != "COMPLETED":
+                if (
+                    not read(task / "config.json").get("short_cycle")
+                    or a["state"] != "COMPLETED"
+                ):
                     raise ValueError(
                         "Quality rejection projection requires short physical COMPLETED"
                     )
@@ -323,7 +372,9 @@ def snapshot(task, directory):
         ):
             item.update(
                 status="unavailable",
-                unavailable_reasons=read(source["receipt"]).get("run_health", {}).get("reasons", [])
+                unavailable_reasons=read(source["receipt"])
+                .get("run_health", {})
+                .get("reasons", [])
                 + ["one_or_both_AI_views_unavailable"],
             )
         rows.append(item)
@@ -349,7 +400,10 @@ def capsule(task, spec):
 
     files = {name: sha(ROOT / name) for name in CRITICAL}
     files.update(
-        {str(p.relative_to(ROOT)): sha(p) for p in (ROOT / "Data/generation/pretrain").glob("*.py")}
+        {
+            str(p.relative_to(ROOT)): sha(p)
+            for p in (ROOT / "Data/generation/pretrain").glob("*.py")
+        }
     )
     return dict(
         schema="drone-ai.consumer-capsule/1",
@@ -376,7 +430,9 @@ def check(task, spec, *, case_id=None, pair_path=None, phase=None):
         spec["paths"],
         expected_producer=str(task / "expected-producer.json"),
         source_manifest=str(ROOT / "simulation/config/producer-sources.json"),
-        runtime_manifest=str(ROOT / "simulation/artifacts/runtime-manifest.json"),
+        runtime_manifest=str(
+            ROOT / "simulation/artifacts/runtime-manifest.json"
+        ),
         capsule=str(task / "consumer-capsule.json"),
         registry=str(directory / "registry.json"),
         pilot_manifest=str(task / "ai-manifest.json"),
@@ -404,7 +460,9 @@ def check(task, spec, *, case_id=None, pair_path=None, phase=None):
             scenario=str(raw / "evaluation/scenario.json"),
             raw_integrity=str(raw / "integrity.json"),
             battery_selection=str(raw / "evaluation/battery-selection.json"),
-            propulsion_selection=str(raw / "evaluation/propulsion-selection.json"),
+            propulsion_selection=str(
+                raw / "evaluation/propulsion-selection.json"
+            ),
             canonical_frames=str(output / "frames.jsonl"),
             online_manifest=str(output / "online.json"),
             run_manifest=str(output / "run.json"),
@@ -428,17 +486,27 @@ def check(task, spec, *, case_id=None, pair_path=None, phase=None):
                 checked = read(entry["ai_receipt"])
                 actual = ref(checked["receipt"])
                 if actual["sha256"] != checked["sha256"]:
-                    raise ValueError("Actual scoped case receipt changed before final check")
+                    raise ValueError(
+                        "Actual scoped case receipt changed before final check"
+                    )
                 receipts.append(actual["path"])
             bundle["case_receipts"] = receipts
     elif phase == "final":
-        raise ValueError("The explicit short final gate must not alter480s pilot contracts")
+        raise ValueError(
+            "The explicit short final gate must not alter480s pilot contracts"
+        )
     write(directory / "bundle.json", bundle)
     prepare_request(directory / "bundle.json", directory / "request.json")
     code = main(directory / "request.json", directory / "receipt.json")
     result = read(directory / "receipt.json")
-    if code != 0 or result.get("fixture_only") or result.get("actual_data_verified") is not True:
-        raise ValueError("AI input gate did not pass: " + str(directory / "receipt.json"))
+    if (
+        code != 0
+        or result.get("fixture_only")
+        or result.get("actual_data_verified") is not True
+    ):
+        raise ValueError(
+            "AI input gate did not pass: " + str(directory / "receipt.json")
+        )
     return dict(
         receipt=str(directory / "receipt.json"),
         sha256=sha(directory / "receipt.json"),
@@ -453,7 +521,9 @@ def pair(task, spec, normal_id, anomaly_id):
     directory = task / "pilot/pairs" / normal["case"]["group_id"]
     directory.mkdir(parents=True, exist_ok=True)
     output = directory / "native.json"
-    values = dict(normal_run=normal["run"], anomaly_run=anomaly["run"], output=str(output))
+    values = dict(
+        normal_run=normal["run"], anomaly_run=anomaly["run"], output=str(output)
+    )
     argv = [part.format(**values) for part in spec["pair_verifier_argv"]]
     executable = ai19.no_links(argv[0])
     if (
@@ -467,7 +537,12 @@ def pair(task, spec, normal_id, anomaly_id):
     if not output.exists():
         with (directory / "verify.log").open("x") as log:
             subprocess.run(
-                argv, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, timeout=3600, check=True
+                argv,
+                cwd=ROOT,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                timeout=3600,
+                check=True,
             )
     ai19.ai_modules()
     from learning.history19.pilot_connector import project_pair_receipt

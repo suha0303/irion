@@ -5,7 +5,9 @@ import copy
 import pytest
 from pretrain import common, pilot45, short_resume
 
-REPORT = common.ROOT / "docs/data/reports/short-cycle-20261107/attempt-01/resume-c05"
+REPORT = (
+    common.ROOT / "docs/data/reports/short-cycle-20261107/attempt-01/resume-c05"
+)
 PREVIOUS = common.HOME / "tasks/short180-20261107-c04-45"
 
 
@@ -37,9 +39,12 @@ def test_exact_actual_C04_projection_preserves_original52_and_keeps51_physical()
 
 
 @pytest.mark.parametrize(
-    "mutation", ["absent_proof", "bad_hash", "budget_true", "wrong_record", "fake_uuid"]
+    "mutation",
+    ["absent_proof", "bad_hash", "budget_true", "wrong_record", "fake_uuid"],
 )
-def test_uncertified_or_mismatched_unknown_is_never_discarded(tmp_path, mutation):
+def test_uncertified_or_mismatched_unknown_is_never_discarded(
+    tmp_path, mutation
+):
     old = common.read(PREVIOUS / "ledger.json")
     ref = proof_ref()
     value = dict(administrative_not_submitted=ref)
@@ -48,7 +53,9 @@ def test_uncertified_or_mismatched_unknown_is_never_discarded(tmp_path, mutation
     elif mutation == "bad_hash":
         value["administrative_not_submitted"] = dict(ref, sha256="0" * 64)
     elif mutation == "fake_uuid":
-        next(a for a in old["attempts"] if not a.get("run_id"))["run_id"] = "invented-UUID"
+        next(a for a in old["attempts"] if not a.get("run_id"))["run_id"] = (
+            "invented-UUID"
+        )
     else:
         proof = common.read(ref["path"])
         if mutation == "budget_true":
@@ -57,13 +64,17 @@ def test_uncertified_or_mismatched_unknown_is_never_discarded(tmp_path, mutation
             proof["original_flat_attempt"]["number"] = 3
         p = tmp_path / "bad-proof.json"
         common.write(p, proof)
-        value["administrative_not_submitted"] = dict(path=str(p), sha256=common.sha(p))
+        value["administrative_not_submitted"] = dict(
+            path=str(p), sha256=common.sha(p)
+        )
     with pytest.raises(pilot45.Blocked):
         short_resume.physical_projection(PREVIOUS, value, copy.deepcopy(old))
 
 
 @pytest.mark.parametrize("failure", [None, "failed", "unknown", "retry"])
-def test_C05_counter_fixture_separates14_new31_reused_and_one_administrative_record(failure):
+def test_C05_counter_fixture_separates14_new31_reused_and_one_administrative_record(
+    failure,
+):
     from pretrain import pilot_parallel
 
     task = common.HOME / "tasks/short180-20261107-c05-45"
@@ -71,20 +82,31 @@ def test_C05_counter_fixture_separates14_new31_reused_and_one_administrative_rec
     ledger = copy.deepcopy(common.read(task / "ledger.json"))
     pending = cfg["short_resume"]["pending_native_cases"]
     # Reconstruct the initial C05 counter fixture after the live C05 task has completed.
-    ledger["attempts"] = [a for a in ledger["attempts"] if a.get("execution_task") != str(task)]
+    ledger["attempts"] = [
+        a for a in ledger["attempts"] if a.get("execution_task") != str(task)
+    ]
     for e in ledger["cases"].values():
-        e["attempts"] = [a for a in e["attempts"] if a.get("execution_task") != str(task)]
+        e["attempts"] = [
+            a for a in e["attempts"] if a.get("execution_task") != str(task)
+        ]
     for cid in pending:
         prior = ledger["cases"][cid]["attempts"]
         ledger["attempts"].append(
-            dict(case_id=cid, execution_task=str(task), state="COMPLETED", number=len(prior) + 1)
+            dict(
+                case_id=cid,
+                execution_task=str(task),
+                state="COMPLETED",
+                number=len(prior) + 1,
+            )
         )
     if failure == "failed":
         ledger["attempts"][-1]["state"] = "FAILED_PRESERVED"
     elif failure == "unknown":
         ledger["attempts"][-1]["state"] = "RUNNING"
     elif failure == "retry":
-        ledger["attempts"].append(dict(ledger["attempts"][-1], number=2, state="FAILED_PRESERVED"))
+        ledger["attempts"].append(
+            dict(ledger["attempts"][-1], number=2, state="FAILED_PRESERVED")
+        )
     q = dict(
         status="PILOT45_QUALITY_PASSED_STOPPED",
         short_ai_final_passed=True,
@@ -96,13 +118,25 @@ def test_C05_counter_fixture_separates14_new31_reused_and_one_administrative_rec
         run_available=45,
         ai_case_checks_passed=45,
     )
-    q.update(pilot_parallel.current_execution_counts(task, ledger, planned_case_ids=pending))
-    assert q["historical_physical_attempts"] == 51 and q["historical_failed_attempts"] == 17
+    q.update(
+        pilot_parallel.current_execution_counts(
+            task, ledger, planned_case_ids=pending
+        )
+    )
+    assert (
+        q["historical_physical_attempts"] == 51
+        and q["historical_failed_attempts"] == 17
+    )
     assert (
         q["historical_quality_rejected_attempts"] == 3
         and q["administrative_not_submitted_attempts"] == 1
     )
     assert pilot_parallel.clean_short_inputs(q, ledger) is False
-    assert pilot_parallel.current_execution_inputs_passed(q) is (failure is None)
+    assert pilot_parallel.current_execution_inputs_passed(q) is (
+        failure is None
+    )
     if failure is None:
-        assert len(ledger["attempts"]) == 65 and q["physical_completed_attempts"] == 48
+        assert (
+            len(ledger["attempts"]) == 65
+            and q["physical_completed_attempts"] == 48
+        )

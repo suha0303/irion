@@ -12,7 +12,11 @@ import numpy as np
 import pytest
 from capstone_ai.mapping import FEATURES, TARGETS
 from learning import admission19 as admission
-from learning.history19.data import arrived_samples, inspect_run, verify_train_frames
+from learning.history19.data import (
+    arrived_samples,
+    inspect_run,
+    verify_train_frames,
+)
 from learning.run_health19 import data
 
 
@@ -43,7 +47,9 @@ def manifest(tmp_path, instance):
         origin=instance.origin,
         path=source.name,
         sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
-        mission_interval=dict(policy=data.INTERVAL_POLICY, start_us=0, end_us_exclusive=20500000),
+        mission_interval=dict(
+            policy=data.INTERVAL_POLICY, start_us=0, end_us_exclusive=20500000
+        ),
     )
     value = dict(
         schema=data.SCHEMA,
@@ -64,12 +70,18 @@ def test_paired_roles_share_only_one_explicit_evaluation_cohort():
     normal, anomaly = run(), run("anomaly_test", rid="abnormal")
     assert data.validate_splits([normal, anomaly]) == [normal, anomaly]
     with pytest.raises(ValueError, match="cohorts"):
-        data.validate_splits([normal, dataclasses.replace(anomaly, cohort="final")])
+        data.validate_splits(
+            [normal, dataclasses.replace(anomaly, cohort="final")]
+        )
     with pytest.raises(ValueError, match="cohort"):
         dataclasses.replace(normal, cohort=None).validate()
     with pytest.raises(ValueError, match="Only pair/group"):
-        data.validate_splits([normal, dataclasses.replace(anomaly, lineage=normal.lineage)])
-    train = dataclasses.replace(normal, run_id="train", role="normal_train", cohort=None)
+        data.validate_splits(
+            [normal, dataclasses.replace(anomaly, lineage=normal.lineage)]
+        )
+    train = dataclasses.replace(
+        normal, run_id="train", role="normal_train", cohort=None
+    )
     with pytest.raises(ValueError, match="splits"):
         data.validate_splits([train, anomaly])
 
@@ -82,14 +94,17 @@ def test_per_role_manifests_must_be_checked_together(tmp_path):
     a.write_text(json.dumps(av))
     (tmp_path / "abnormal.npz").unlink()
     with pytest.raises(ValueError, match="cohorts"):
-        list(data.iter_manifests([n, a]))  # Fails metadata before loading any run.
+        list(
+            data.iter_manifests([n, a])
+        )  # Fails metadata before loading any run.
 
 
 def test_units_tail_boundaries_and_stream_release(tmp_path):
     n, value = manifest(tmp_path, run())
     first = data.load_manifest(n)[0]
     np.testing.assert_array_equal(
-        data.physical_features(first.values)[:, 17:19], np.tile([4.0, 2.0], (205, 1))
+        data.physical_features(first.values)[:, 17:19],
+        np.tile([4.0, 2.0], (205, 1)),
     )
     assert len(first.values) - 100 == 105 and len(first.values) % 100 == 5
     value["units"] = admission.ONLINE_UNITS
@@ -138,7 +153,13 @@ def metadata_fixture():
         cohort="development",
         origin="px4_sitl",
         health="abnormal",
-        lineage=["run:metadata-fixture", "pair:p", "group:g", "retry:r", "raw-sha256:" + "e" * 64],
+        lineage=[
+            "run:metadata-fixture",
+            "pair:p",
+            "group:g",
+            "retry:r",
+            "raw-sha256:" + "e" * 64,
+        ],
         mission_interval=dict(
             policy=admission.MISSION_POLICY,
             start_us=20_000_000,
@@ -193,7 +214,9 @@ def test_producer_revision_hash_and_mixed_step_semantics():
     with pytest.raises(ValueError, match="joint binary"):
         admission.check_producer(old, old)
     with pytest.raises(ValueError, match="runtime_sha256"):
-        admission.check_producer({**producer, "runtime_sha256": "0" * 64}, producer)
+        admission.check_producer(
+            {**producer, "runtime_sha256": "0" * 64}, producer
+        )
     changed = copy.deepcopy(row)
     changed["source_evidence"]["battery_selection"]["initial_stage"] = "rpt_00"
     with pytest.raises(ValueError, match="fixed battery"):
@@ -203,7 +226,9 @@ def test_producer_revision_hash_and_mixed_step_semantics():
     with pytest.raises(ValueError, match="old component"):
         admission.source_evidence(changed, producer)
     changed = copy.deepcopy(row)
-    changed["source_evidence"]["transition_evidence"]["propulsion"].pop("actual_endpoint_us")
+    changed["source_evidence"]["transition_evidence"]["propulsion"].pop(
+        "actual_endpoint_us"
+    )
     with pytest.raises(ValueError, match="onset/endpoint"):
         admission.source_evidence(changed, producer)
 
@@ -217,14 +242,21 @@ def test_all_nine_anomaly_selection_metadata_paths(family, kind):
     evidence["scenario_name"] = (
         "battery_aging_" if family == "battery" else "propulsion_loss_"
     ) + kind
-    battery, propulsion = evidence["battery_selection"], evidence["propulsion_selection"]
+    battery, propulsion = (
+        evidence["battery_selection"],
+        evidence["propulsion_selection"],
+    )
     battery_active, propulsion_active = (
         family == "battery" and dynamic,
         family != "battery" and dynamic,
     )
-    battery["initial_stage"] = "rpt_00" if battery_active or family == "propulsion" else "rpt_16"
+    battery["initial_stage"] = (
+        "rpt_00" if battery_active or family == "propulsion" else "rpt_16"
+    )
     battery["target_stage"] = "rpt_00" if family == "propulsion" else "rpt_16"
-    propulsion["initial_state"] = "abnormal" if family != "battery" and not dynamic else "normal"
+    propulsion["initial_state"] = (
+        "abnormal" if family != "battery" and not dynamic else "normal"
+    )
     propulsion["target_state"] = "normal" if family == "battery" else "abnormal"
     evidence["transition_evidence"] = {}
     for system, selected, active in (
@@ -232,16 +264,23 @@ def test_all_nine_anomaly_selection_metadata_paths(family, kind):
         ("propulsion", propulsion, propulsion_active),
     ):
         selected["fixed_for_flight"] = not active
-        selected["transition_s"] = (1.0 if kind == "step" else 20.0) if active else 0.0
+        selected["transition_s"] = (
+            (1.0 if kind == "step" else 20.0) if active else 0.0
+        )
         if active:
             evidence["transition_evidence"][system] = dict(
                 requested_offset_s=180.0,
                 actual_onset_us=200000000,
-                actual_endpoint_us=200000000 + int(selected["transition_s"] * 1000000),
+                actual_endpoint_us=200000000
+                + int(selected["transition_s"] * 1000000),
                 clock_id="px4-boot",
             )
     result = admission.source_evidence(row, producer)
-    expected = ["battery"] if family == "combined" or (family == "battery" and not dynamic) else []
+    expected = (
+        ["battery"]
+        if family == "combined" or (family == "battery" and not dynamic)
+        else []
+    )
     if family != "battery" and not dynamic:
         expected += ["propulsion"]
     assert result["initial_anomaly_systems"] == expected
@@ -253,12 +292,20 @@ def test_normal_selection_metadata_path():
     row.update(role="normal_test", health="confirmed_healthy")
     evidence = row["source_evidence"]
     evidence["scenario_name"] = "hover_normal"
-    evidence["battery_selection"].update(initial_stage="rpt_00", target_stage="rpt_00")
+    evidence["battery_selection"].update(
+        initial_stage="rpt_00", target_stage="rpt_00"
+    )
     evidence["propulsion_selection"].update(
-        initial_state="normal", target_state="normal", fixed_for_flight=True, transition_s=0.0
+        initial_state="normal",
+        target_state="normal",
+        fixed_for_flight=True,
+        transition_s=0.0,
     )
     evidence["transition_evidence"] = {}
-    assert admission.source_evidence(row, producer)["initial_anomaly_systems"] == []
+    assert (
+        admission.source_evidence(row, producer)["initial_anomaly_systems"]
+        == []
+    )
 
 
 def test_actual_run_cannot_enter_without_an_external_seal(tmp_path):
@@ -269,7 +316,9 @@ def test_actual_run_cannot_enter_without_an_external_seal(tmp_path):
         data.load_manifest(path)
 
 
-@pytest.mark.parametrize("damage", ["gap", "reset", "missing", "short", "oversized_header"])
+@pytest.mark.parametrize(
+    "damage", ["gap", "reset", "missing", "short", "oversized_header"]
+)
 def test_bad_run_is_rejected_without_quality_trimming(tmp_path, damage):
     instance = run()
     if damage == "gap":
@@ -280,7 +329,9 @@ def test_bad_run_is_rejected_without_quality_trimming(tmp_path, damage):
         instance.values[110, 17] = np.nan
     elif damage == "short":
         instance = dataclasses.replace(
-            instance, values=instance.values[:100], time_us=instance.time_us[:100]
+            instance,
+            values=instance.values[:100],
+            time_us=instance.time_us[:100],
         )
     elif damage == "oversized_header":
         instance = dataclasses.replace(
@@ -290,7 +341,9 @@ def test_bad_run_is_rejected_without_quality_trimming(tmp_path, damage):
         )
     path, value = manifest(tmp_path, instance)
     # Match declared end so internal gap/reset/NaN checks, not edge cropping, decide.
-    value["runs"][0]["mission_interval"]["end_us_exclusive"] = int(instance.time_us[-1]) + 100000
+    value["runs"][0]["mission_interval"]["end_us_exclusive"] = (
+        int(instance.time_us[-1]) + 100000
+    )
     path.write_text(json.dumps(value))
     with pytest.raises(ValueError):
         data.load_manifest(path)
@@ -307,7 +360,13 @@ def online_engine():
                 time_us=step * 100000,
                 quality={n: "valid" for n in FEATURES},
                 values={
-                    n: (16.0 if n == "pack_voltage" else 24.0 if n == "pack_current" else 1.0)
+                    n: (
+                        16.0
+                        if n == "pack_voltage"
+                        else 24.0
+                        if n == "pack_current"
+                        else 1.0
+                    )
                     for n in FEATURES
                 },
             )
@@ -321,14 +380,21 @@ def online_engine():
                 segment_id=0,
                 origin_us=second * 1000000,
                 history_times_us=[i * 100000 for i in indices],
-                target_times_us=[second * 1000000 + i * 100000 for i in range(1, 11)],
-                X=[[frames[i - 1]["values"][n] for n in FEATURES] for i in indices],
+                target_times_us=[
+                    second * 1000000 + i * 100000 for i in range(1, 11)
+                ],
+                X=[
+                    [frames[i - 1]["values"][n] for n in FEATURES]
+                    for i in indices
+                ],
             )
         )
     return SimpleNamespace(
         frames=frames,
         windows=windows,
-        config=dict(battery_profile_id="vtc6_4s4p_r3_long15", nominal_capacity_ah=12),
+        config=dict(
+            battery_profile_id="vtc6_4s4p_r3_long15", nominal_capacity_ah=12
+        ),
     )
 
 
@@ -352,13 +418,19 @@ def test_online_mission_history_target_arrival_and_transform_once():
     ]
     assert [e["reason"] for e in excluded].count("history_outside_mission") == 2
     assert [e["reason"] for e in excluded].count("target_outside_mission") == 3
-    assert np.all(arrays["X"][:, :, 17] == 4.0) and np.all(arrays["X"][:, :, 18] == 2.0)
+    assert np.all(arrays["X"][:, :, 17] == 4.0) and np.all(
+        arrays["X"][:, :, 18] == 2.0
+    )
     assert np.all(arrays["Y"][:, :, TARGETS.index("pack_voltage")] == 4.0)
     engine.frames[144]["quality"]["pack_voltage"] = "stale"
     fewer, excluded = arrived_samples(engine, mission)
     assert 14_000_000 not in fewer["origin_us"]
-    assert any(e["reason"] == "missing_or_nonvalid_future_target" for e in excluded)
-    assert engine.windows == before  # No retrospective editing of issued inputs.
+    assert any(
+        e["reason"] == "missing_or_nonvalid_future_target" for e in excluded
+    )
+    assert (
+        engine.windows == before
+    )  # No retrospective editing of issued inputs.
 
 
 def test_per_run_online_inspection_needs_no_train_val_or_scaler(tmp_path):
@@ -390,7 +462,10 @@ def test_per_run_online_inspection_needs_no_train_val_or_scaler(tmp_path):
             origin="synthetic_unit_fixture",
             mission_interval=mission,
         ),
-        file=dict(path=source.name, sha256=hashlib.sha256(source.read_bytes()).hexdigest()),
+        file=dict(
+            path=source.name,
+            sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+        ),
     )
     path = tmp_path / "online.json"
     path.write_text(json.dumps(value))
@@ -420,7 +495,9 @@ def test_bounded_unique_train_frame_verification_no_scaler_fit(tmp_path):
         segment_id=np.zeros(4, dtype=np.int64),
         time_us=np.arange(4, dtype=np.int64) * 100000,
     )
-    scaler = dict(x_mean=np.zeros(19), x_scale=np.ones(19))  # Fixed expected constants, no fit.
+    scaler = dict(
+        x_mean=np.zeros(19), x_scale=np.ones(19)
+    )  # Fixed expected constants, no fit.
     np.savez(source, **arrays)
     verify_train_frames(source, ["train"], scaler, chunk=2)
     arrays["time_us"][-1] = arrays["time_us"][-2]

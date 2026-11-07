@@ -4,7 +4,6 @@ import copy
 
 import numpy as np
 import pytest
-
 from execution.common import write
 from learning.sensitivity_data import (
     REGRESSION_ORIGIN_US,
@@ -24,23 +23,49 @@ def manifest(tmp_path):
         for scenario in SCENARIOS:
             for i in range(4):
                 identity = f"{role}-{scenario}-{i}"
-                rows.append(dict(
-                    run_id=identity, role=role, scenario=scenario,
-                    paired_case_id="group-" + identity, health_eligibility="confirmed_healthy",
-                ))
-    rows.append(dict(run_id=REGRESSION_RUN, role="normal_validation", scenario="payload_normal",
-                     paired_case_id="known-regression-group", health_eligibility="confirmed_healthy"))
-    rows.append(dict(run_id="never-evaluate", role="anomaly_dev", scenario="battery_failure",
-                     paired_case_id="unknown", health_eligibility="abnormal"))
+                rows.append(
+                    dict(
+                        run_id=identity,
+                        role=role,
+                        scenario=scenario,
+                        paired_case_id="group-" + identity,
+                        health_eligibility="confirmed_healthy",
+                    )
+                )
+    rows.append(
+        dict(
+            run_id=REGRESSION_RUN,
+            role="normal_validation",
+            scenario="payload_normal",
+            paired_case_id="known-regression-group",
+            health_eligibility="confirmed_healthy",
+        )
+    )
+    rows.append(
+        dict(
+            run_id="never-evaluate",
+            role="anomaly_dev",
+            scenario="battery_failure",
+            paired_case_id="unknown",
+            health_eligibility="abnormal",
+        )
+    )
     path = tmp_path / "manifest.json"
     write(path, {"runs": rows})
     return path, rows
 
 
 def selection(run="example", *, count=96, **extra):
-    return dict(role="normal_validation", run_id=run, scenario="hover_normal",
-                paired_case_id="group-" + run, windows=count, position="first",
-                provenance="deterministic_metadata_rank", **extra)
+    return dict(
+        role="normal_validation",
+        run_id=run,
+        scenario="hover_normal",
+        paired_case_id="group-" + run,
+        windows=count,
+        position="first",
+        provenance="deterministic_metadata_rank",
+        **extra,
+    )
 
 
 def arrays(runs=("example",), *, count=300):
@@ -51,7 +76,10 @@ def arrays(runs=("example",), *, count=300):
         Y=np.zeros((total, 10, 4), dtype=np.float32),
         run_id=np.repeat(np.array(runs), count),
         segment=np.ones(total, dtype=np.int64),
-        origin_us=np.tile(400_000_000 + np.arange(count, dtype=np.int64) * 1_000_000, len(runs)),
+        origin_us=np.tile(
+            400_000_000 + np.arange(count, dtype=np.int64) * 1_000_000,
+            len(runs),
+        ),
     )
     data["Y"][:, :, :] = np.arange(total)[:, None, None]
     return data
@@ -75,7 +103,9 @@ def test_plan_is_bounded_metadata_only_and_all_groups_are_disjoint(manifest):
     assert regression["provenance"] == "prior_regression"
 
 
-def test_ranking_does_not_depend_on_manifest_row_order_but_hash_binds_it(manifest):
+def test_ranking_does_not_depend_on_manifest_row_order_but_hash_binds_it(
+    manifest,
+):
     path, rows = manifest
     first = build_plan(path)
     write(path, {"runs": list(reversed(rows))})
@@ -102,8 +132,13 @@ def test_manifest_symlink_is_rejected(manifest, tmp_path):
         build_plan(link)
 
 
-@pytest.mark.parametrize("mutation", ["duplicate", "regression_missing", "unhealthy", "coverage_missing"])
-def test_invalid_metadata_never_substitutes_another_condition(manifest, mutation):
+@pytest.mark.parametrize(
+    "mutation",
+    ["duplicate", "regression_missing", "unhealthy", "coverage_missing"],
+)
+def test_invalid_metadata_never_substitutes_another_condition(
+    manifest, mutation
+):
     path, rows = manifest
     if mutation == "duplicate":
         rows.append(copy.deepcopy(rows[0]))
@@ -134,11 +169,15 @@ def test_group_overlap_is_excluded_from_every_fit_and_check_set(manifest):
 
 def test_selected_arrays_preserve_input_order_and_boundaries_without_mutation():
     source = arrays(("first", "second"))
-    result = select_arrays(source, [selection("second"), selection("first", count=257)])
+    result = select_arrays(
+        source, [selection("second"), selection("first", count=257)]
+    )
     expected = np.r_[np.arange(300, 396), np.arange(257)]
     np.testing.assert_array_equal(result["source_indices"], expected)
     np.testing.assert_array_equal(result["Y"], source["Y"][expected])
-    np.testing.assert_array_equal(result["selection_index"], np.r_[np.zeros(96), np.ones(257)])
+    np.testing.assert_array_equal(
+        result["selection_index"], np.r_[np.zeros(96), np.ones(257)]
+    )
     assert result["selection_evidence"][0]["selected_stop"] == 96
     assert result["selection_evidence"][1]["selected_start"] == 96
     assert result["selection_evidence"][1]["last_origin_us"] == 656_000_000
@@ -149,16 +188,30 @@ def test_selected_arrays_preserve_input_order_and_boundaries_without_mutation():
 def test_regression_anchor_is_exact_and_centered():
     source = arrays((REGRESSION_RUN,))
     spec = selection(REGRESSION_RUN)
-    spec.update(position="around", origin_us=REGRESSION_ORIGIN_US,
-                provenance="prior_regression")
+    spec.update(
+        position="around",
+        origin_us=REGRESSION_ORIGIN_US,
+        provenance="prior_regression",
+    )
     result = select_arrays(source, [spec])
     assert result["origin_us"][48] == REGRESSION_ORIGIN_US
     assert result["source_indices"][0] == 179
     assert result["source_indices"][-1] == 274
 
 
-@pytest.mark.parametrize("mutation", ["missing_anchor", "edge_anchor", "gap", "segment",
-                                      "duplicate", "interleaved", "nonfinite", "short"])
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing_anchor",
+        "edge_anchor",
+        "gap",
+        "segment",
+        "duplicate",
+        "interleaved",
+        "nonfinite",
+        "short",
+    ],
+)
 def test_bad_sequence_stops_without_skipping_or_repair(mutation):
     source = arrays()
     spec = selection()
@@ -182,8 +235,19 @@ def test_bad_sequence_stops_without_skipping_or_repair(mutation):
         select_arrays(source, [spec])
 
 
-@pytest.mark.parametrize("kind", ["mixed_roles", "non_normal", "duplicate_run", "duplicate_group",
-                                  "wrong_shape", "bad_identity_dtype", "unbounded", "empty"])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "mixed_roles",
+        "non_normal",
+        "duplicate_run",
+        "duplicate_group",
+        "wrong_shape",
+        "bad_identity_dtype",
+        "unbounded",
+        "empty",
+    ],
+)
 def test_role_identity_and_shape_guards(kind):
     source = arrays(("one", "two"))
     specs = [selection("one"), selection("two")]
@@ -213,8 +277,12 @@ def layout_dataset(manifest):
     path, _ = manifest
     plan = build_plan(path)
     for role in ("normal_validation", "normal_calibration"):
-        runs = [s["run_id"] for selections in plan["selections"].values()
-                for s in selections if s["role"] == role]
+        runs = [
+            s["run_id"]
+            for selections in plan["selections"].values()
+            for s in selections
+            if s["role"] == role
+        ]
         source = arrays(tuple(runs))
         # Layout admission must not interpret these feature values as real,
         # validated observations. The worker's value check remains mandatory.
@@ -223,8 +291,9 @@ def layout_dataset(manifest):
     return plan, path.parent
 
 
-def test_layout_verification_loads_only_identity_members_and_labels_its_limit(layout_dataset,
-                                                                            monkeypatch):
+def test_layout_verification_loads_only_identity_members_and_labels_its_limit(
+    layout_dataset, monkeypatch
+):
     plan, dataset = layout_dataset
     original = np.load
     accesses = []
@@ -241,22 +310,43 @@ def test_layout_verification_loads_only_identity_members_and_labels_its_limit(la
 
         def __getitem__(self, key):
             accesses.append(key)
-            assert key in {"run_id", "segment", "origin_us"}, "Full feature array was read"
+            assert key in {"run_id", "segment", "origin_us"}, (
+                "Full feature array was read"
+            )
             return self.archive[key]
 
     monkeypatch.setattr(np, "load", IdentityOnly)
     report = verify_selection_layout(plan, dataset)
     assert report["status"] == "LAYOUT_ONLY_VERIFIED"
-    assert report["feature_values_loaded"] is report["feature_quality_checked"] is False
+    assert (
+        report["feature_values_loaded"]
+        is report["feature_quality_checked"]
+        is False
+    )
     assert report["model_executed"] is False
-    assert set(report["selection_evidence"]) == {"scale", "calibration", "check"}
-    assert report["selection_evidence"]["check"][-1]["first_origin_us"] == 579_000_000
+    assert set(report["selection_evidence"]) == {
+        "scale",
+        "calibration",
+        "check",
+    }
+    assert (
+        report["selection_evidence"]["check"][-1]["first_origin_us"]
+        == 579_000_000
+    )
     assert accesses == ["run_id", "segment", "origin_us"] * 2
-    assert report["roles"]["normal_validation"]["headers"]["X"]["shape"] == [2100, 100, 19]
+    assert report["roles"]["normal_validation"]["headers"]["X"]["shape"] == [
+        2100,
+        100,
+        19,
+    ]
 
 
-@pytest.mark.parametrize("kind", ["shape", "dtype", "identity_dtype", "gap", "short"])
-def test_layout_verification_rejects_true_headers_and_bad_availability(layout_dataset, kind):
+@pytest.mark.parametrize(
+    "kind", ["shape", "dtype", "identity_dtype", "gap", "short"]
+)
+def test_layout_verification_rejects_true_headers_and_bad_availability(
+    layout_dataset, kind
+):
     plan, dataset = layout_dataset
     path = dataset / "normal_calibration.npz"
     with np.load(path, allow_pickle=False) as source:
@@ -276,7 +366,9 @@ def test_layout_verification_rejects_true_headers_and_bad_availability(layout_da
         verify_selection_layout(plan, dataset)
 
 
-def test_layout_verification_revalidates_frozen_plan_before_npz_access(manifest):
+def test_layout_verification_revalidates_frozen_plan_before_npz_access(
+    manifest,
+):
     path, _ = manifest
     plan = build_plan(path)
     plan["selections"]["scale"][0]["windows"] = 1

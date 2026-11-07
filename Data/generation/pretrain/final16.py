@@ -8,7 +8,17 @@ from pathlib import Path
 from x500_storage import capture
 
 from . import ai19, pilot45, pilot_bridge
-from .common import HOME, ROOT, STORE, now, read, runtime_identity, sha, verify, write
+from .common import (
+    HOME,
+    ROOT,
+    STORE,
+    now,
+    read,
+    runtime_identity,
+    sha,
+    verify,
+    write,
+)
 
 TASK = "FINAL16_20261107"
 COHORT = "final16_development_reference"
@@ -30,8 +40,14 @@ def authorization():
 def cases():
     auth = authorization()
     source = read(EXPECTED)
-    generated = pilot45.build_cases(auth["scope"]["seed_base"], duration=180, case_prefix="final16")
-    rows = [c for c in generated if c["group_id"] in {f"final16-pair-{i:02}" for i in range(1, 9)}]
+    generated = pilot45.build_cases(
+        auth["scope"]["seed_base"], duration=180, case_prefix="final16"
+    )
+    rows = [
+        c
+        for c in generated
+        if c["group_id"] in {f"final16-pair-{i:02}" for i in range(1, 9)}
+    ]
     for c in rows:
         c["attempts_max"] = 1
     if (
@@ -40,7 +56,9 @@ def cases():
         or source.get("seed_base") != auth["scope"]["seed_base"]
         or rows != source.get("cases")
     ):
-        raise pilot45.Blocked("FINAL16 must match the independently frozen original8 pairs")
+        raise pilot45.Blocked(
+            "FINAL16 must match the independently frozen original8 pairs"
+        )
     for c in rows:
         c["cohort"] = COHORT
     return rows
@@ -55,11 +73,17 @@ def validate_manifest(manifest):
         or manifest.get("single_integration") is not False
         or manifest.get("mission_seconds") != 180
         or manifest.get("seed_base") != authorization()["scope"]["seed_base"]
-        or manifest.get("authorization") != dict(path=str(AUTH), sha256=AUTH_SHA)
+        or manifest.get("authorization")
+        != dict(path=str(AUTH), sha256=AUTH_SHA)
         or manifest.get("cases") != cases()
-        or any(manifest.get(k) for k in ("recovery_of", "short_resume", "reused_cases"))
+        or any(
+            manifest.get(k)
+            for k in ("recovery_of", "short_resume", "reused_cases")
+        )
     ):
-        raise pilot45.Blocked("Exact new FINAL16/max1/8pair/no-reuse manifest required")
+        raise pilot45.Blocked(
+            "Exact new FINAL16/max1/8pair/no-reuse manifest required"
+        )
     return manifest["cases"]
 
 
@@ -80,14 +104,25 @@ def validate_config(cfg):
         training_authorized=False,
         fit_authorized=False,
     )
-    if any(type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in expected.items()) or any(
+    if any(
+        type(cfg.get(k)) is not type(v) or cfg[k] != v
+        for k, v in expected.items()
+    ) or any(
         cfg.get(k)
-        for k in ("short_cycle", "short_resume", "short_repair", "continuation", "recovery")
+        for k in (
+            "short_cycle",
+            "short_resume",
+            "short_repair",
+            "continuation",
+            "recovery",
+        )
     ):
         raise pilot45.Blocked(
             "Exact FINAL16/16flight/RTF2/CPU4-after-flight/max1 contract required"
         )
-    if cfg.get("authorization") != dict(path=str(AUTH), sha256=AUTH_SHA) or not re.fullmatch(
+    if cfg.get("authorization") != dict(
+        path=str(AUTH), sha256=AUTH_SHA
+    ) or not re.fullmatch(
         r"final16[A-Za-z0-9_-]*", cfg.get("lineage_namespace", "")
     ):
         raise pilot45.Blocked("New authorized FINAL16 namespace required")
@@ -113,7 +148,8 @@ def validate_ledger(task, *, complete=False, pristine=False):
     for c in rows:
         entry = ledger["cases"][c["case_id"]]
         if entry.get("case") != c or any(
-            entry.get(k) for k in ("inherited_from", "external_audit", "reuse_audit")
+            entry.get(k)
+            for k in ("inherited_from", "external_audit", "reuse_audit")
         ):
             raise pilot45.Blocked("FINAL16 cannot substitute inherited data")
         if len(entry["attempts"]) > 1 or any(
@@ -123,8 +159,12 @@ def validate_ledger(task, *, complete=False, pristine=False):
             or a.get("quality_rejection")
             for a in entry["attempts"]
         ):
-            raise pilot45.Blocked("FINAL16 admits one new physical attempt per case")
-        attempts.extend(dict(case_id=c["case_id"], **a) for a in entry["attempts"])
+            raise pilot45.Blocked(
+                "FINAL16 admits one new physical attempt per case"
+            )
+        attempts.extend(
+            dict(case_id=c["case_id"], **a) for a in entry["attempts"]
+        )
         if complete and (
             entry.get("status") != "COMPLETE"
             or not entry.get("run")
@@ -138,12 +178,21 @@ def validate_ledger(task, *, complete=False, pristine=False):
         def by_id(xs):
             return {a["case_id"]: a for a in xs}
 
-        if len(attempts) != len(ledger["attempts"]) or by_id(attempts) != by_id(ledger["attempts"]):
-            raise pilot45.Blocked("FINAL16 flat/individual physical ledgers disagree")
+        if len(attempts) != len(ledger["attempts"]) or by_id(attempts) != by_id(
+            ledger["attempts"]
+        ):
+            raise pilot45.Blocked(
+                "FINAL16 flat/individual physical ledgers disagree"
+            )
     if pristine and (
-        attempts or any(e.get("run") or e.get("status") for e in ledger["cases"].values())
+        attempts
+        or any(
+            e.get("run") or e.get("status") for e in ledger["cases"].values()
+        )
     ):
-        raise pilot45.Blocked("FINAL16 submission must be unclaimed and entirely new")
+        raise pilot45.Blocked(
+            "FINAL16 submission must be unclaimed and entirely new"
+        )
     ids = [a["run_id"] for a in attempts if a.get("run_id")]
     if len(ids) != len(set(ids)):
         raise pilot45.Blocked("Duplicate FINAL16 native UUID")
@@ -159,7 +208,9 @@ def dependencies(value):
         or value.get("status") != "READY"
         or value.get("code_frozen") is not True
     ):
-        raise pilot45.Blocked("Final AI FINAL16 READY source-frozen handoff required")
+        raise pilot45.Blocked(
+            "Final AI FINAL16 READY source-frozen handoff required"
+        )
     for key in (
         "authorization",
         "expected_cases",
@@ -169,7 +220,9 @@ def dependencies(value):
         item = value[key]
         verify({str(ai19.no_links(item["path"])): item["sha256"]})
     if value["authorization"] != dict(path=str(AUTH), sha256=AUTH_SHA):
-        raise pilot45.Blocked("Owner handoff must bind this FINAL16 authorization")
+        raise pilot45.Blocked(
+            "Owner handoff must bind this FINAL16 authorization"
+        )
     freeze = value["source_freeze"]
     verify({freeze["path"]: freeze["sha256"]})
     frozen = read(freeze["path"])
@@ -181,7 +234,9 @@ def dependencies(value):
         or frozen.get("code_frozen") is not True
         or set(frozen["files"]) != set(CRITICAL)
     ):
-        raise pilot45.Blocked("Complete final AI FINAL16 source freeze required")
+        raise pilot45.Blocked(
+            "Complete final AI FINAL16 source freeze required"
+        )
     for name, digest in frozen["files"].items():
         if not name.startswith("ai/") or ".." in Path(name).parts:
             raise pilot45.Blocked("AI freeze must bind actual owner sources")
@@ -195,7 +250,9 @@ def dependencies(value):
         "source_manifest",
         "runtime_manifest",
     }:
-        raise pilot45.Blocked("FINAL16 does not import prior45/native6 READY receipts")
+        raise pilot45.Blocked(
+            "FINAL16 does not import prior45/native6 READY receipts"
+        )
     ai19.ai_modules()
     from learning.admission19 import check_producer
 
@@ -207,7 +264,8 @@ def dependencies(value):
         != ROOT / "simulation/config/producer-sources.json"
         or ai19.no_links(value["paths"]["runtime_manifest"])
         != ROOT / "simulation/artifacts/runtime-manifest.json"
-        or value["sha256"]["source_manifest"] != binding["source_manifest_sha256"]
+        or value["sha256"]["source_manifest"]
+        != binding["source_manifest_sha256"]
         or value["sha256"]["runtime_manifest"] != binding["runtime_sha256"]
     ):
         raise pilot45.Blocked(
@@ -217,8 +275,12 @@ def dependencies(value):
         authorization()["producer"]["source_sha256"],
         authorization()["producer"]["runtime_sha256"],
     ):
-        raise pilot45.Blocked("FINAL16 producer differs from coordinator authority")
-    policy, native = (read(value["paths"][n]) for n in ("paired_policy", "native_policy"))
+        raise pilot45.Blocked(
+            "FINAL16 producer differs from coordinator authority"
+        )
+    policy, native = (
+        read(value["paths"][n]) for n in ("paired_policy", "native_policy")
+    )
     check_producer(policy["producer"], binding)
     if (
         policy.get("scope_task") != TASK
@@ -226,12 +288,18 @@ def dependencies(value):
         or policy.get("purpose") != COHORT
         or policy.get("authorization_sha256") != AUTH_SHA
         or policy.get("fixture_only") is not False
-        or policy.get("native_policy_sha256") != sha(value["paths"]["native_policy"])
+        or policy.get("native_policy_sha256")
+        != sha(value["paths"]["native_policy"])
         or policy.get("native_adapter") != "joint-native-consumption-c2-v2"
         or native.get("revision") != "joint-native-consumption-c2-v2"
         or value.get("origin_relative_path") != policy.get("mission_source")
         or value.get("paired_cli_options")
-        != ["--phase-policy", native["revision"], "--paired-case-id", "{paired_case_id}"]
+        != [
+            "--phase-policy",
+            native["revision"],
+            "--paired-case-id",
+            "{paired_case_id}",
+        ]
         or value.get("pair_verifier_argv")
         != [
             str(ROOT / "simulation/capstone-sim"),
@@ -250,7 +318,11 @@ def dependencies(value):
 
 def quality(task, ledger, state):
     q = pilot45.quality_snapshot(task, ledger, state)
-    final = read(ledger["ai_final_receipt"])["result"] if ledger.get("ai_final_receipt") else {}
+    final = (
+        read(ledger["ai_final_receipt"])["result"]
+        if ledger.get("ai_final_receipt")
+        else {}
+    )
     q.update(
         schema="drone-data.final16.completion/1",
         cohort=COHORT,
@@ -258,7 +330,9 @@ def quality(task, ledger, state):
         scope_id=TASK,
         final16_ai_final=final,
         LR_main_connected=False,
-        inherited_successes=sum(bool(e.get("inherited_from")) for e in ledger["cases"].values()),
+        inherited_successes=sum(
+            bool(e.get("inherited_from")) for e in ledger["cases"].values()
+        ),
     )
     if state["status"] == "FINAL16_QUALITY_PASSED_STOPPED":
         validate_ledger(task, complete=True)
@@ -277,7 +351,9 @@ def create(name, handoff):
     auth = authorization()
     if not re.fullmatch(r"final16[A-Za-z0-9_-]{1,42}", name):
         raise ValueError("New final16 namespace required")
-    task, flow = (pilot45.task_path(HOME / "tasks" / n) for n in (name + "-16", name))
+    task, flow = (
+        pilot45.task_path(HOME / "tasks" / n) for n in (name + "-16", name)
+    )
     if task.exists() or flow.exists():
         raise ValueError("Existing FINAL16 evidence must be preserved")
     spec = pilot_bridge.dependencies(handoff)
@@ -344,7 +420,9 @@ def create(name, handoff):
     validate_config(cfg)
     budget = pilot45.estimate()
     budget.update(
-        planned_cases=16, total_increment_bytes=16 * budget["per_case_conservative_increment_bytes"]
+        planned_cases=16,
+        total_increment_bytes=16
+        * budget["per_case_conservative_increment_bytes"],
     )
     pilot45.resources(16, budget["per_case_conservative_increment_bytes"])
     task.mkdir()
@@ -352,7 +430,9 @@ def create(name, handoff):
         "manifest.json": manifest,
         "config.json": cfg,
         "protection.json": protected,
-        "global-protection.json": pilot45.global_protection(protected, rows, name, cohort=COHORT),
+        "global-protection.json": pilot45.global_protection(
+            protected, rows, name, cohort=COHORT
+        ),
         "budget.json": budget,
         "dependency-handoff.json": spec,
         "expected-producer.json": {
@@ -390,7 +470,10 @@ def create(name, handoff):
         ],
     )
     sources.update(
-        {str(ROOT / p): h for p, h in read(task / "consumer-capsule.json")["files"].items()}
+        {
+            str(ROOT / p): h
+            for p, h in read(task / "consumer-capsule.json")["files"].items()
+        }
     )
     cfg.update(sealed=True, ai_ready=checked, source_sha256=sources)
     write(task / "config.json", cfg)
@@ -398,7 +481,12 @@ def create(name, handoff):
     validate_ledger(task, pristine=True)
     write(
         task / "operator/state.json",
-        dict(status="READY_NOT_STARTED", task=task.name, scope_id=TASK, updated_utc=now()),
+        dict(
+            status="READY_NOT_STARTED",
+            task=task.name,
+            scope_id=TASK,
+            updated_utc=now(),
+        ),
     )
     fc = copy.deepcopy(cfg)
     fc.update(
@@ -413,10 +501,16 @@ def create(name, handoff):
     write(flow / "config.json", fc)
     (flow / "config.sha256").write_text(sha(flow / "config.json") + "\n")
     write(
-        flow / "ledger.json", dict(cases={}, attempts=[], phases=dict(final16=dict(task=str(task))))
+        flow / "ledger.json",
+        dict(cases={}, attempts=[], phases=dict(final16=dict(task=str(task)))),
     )
     write(
         flow / "operator/state.json",
-        dict(status="READY_NOT_STARTED", task=name, scope_id=TASK, updated_utc=now()),
+        dict(
+            status="READY_NOT_STARTED",
+            task=name,
+            scope_id=TASK,
+            updated_utc=now(),
+        ),
     )
     return flow, task

@@ -40,8 +40,13 @@ def command(case, parent=None, paired_options=(), instance=0, timing=False):
     if not isinstance(paired_options, (list, tuple)) or any(
         not isinstance(v, str) for v in paired_options
     ):
-        raise ValueError("Reviewed native CLI argv required, not guessed Python kwargs")
-    return args + [token.format(paired_case_id=case["paired_case_id"]) for token in paired_options]
+        raise ValueError(
+            "Reviewed native CLI argv required, not guessed Python kwargs"
+        )
+    return args + [
+        token.format(paired_case_id=case["paired_case_id"])
+        for token in paired_options
+    ]
 
 
 def environment_check():
@@ -52,9 +57,14 @@ print(json.dumps(dict(executable=sys.executable,prefix=sys.prefix,version=sys.ve
     pymavlink_path=pymavlink.__file__,run_flight_imported=callable(run_flight),flight_started=False)))"""
     env = dict(os.environ, PYTHONPATH=str(ROOT / "simulation/sim/src"))
     args = [str(ROOT / "simulation/.venv/bin/python"), "-B", "-c", probe]
-    result = subprocess.run(args, env=env, capture_output=True, text=True, timeout=30, check=True)
+    result = subprocess.run(
+        args, env=env, capture_output=True, text=True, timeout=30, check=True
+    )
     data = json.loads(result.stdout)
-    if Path(data["prefix"]) != ROOT / "simulation/.venv" or not data["run_flight_imported"]:
+    if (
+        Path(data["prefix"]) != ROOT / "simulation/.venv"
+        or not data["run_flight_imported"]
+    ):
         raise ValueError("Verified Sim interpreter/runtime required")
     cli = subprocess.run(
         [str(ROOT / "simulation/capstone-sim"), "run", "--help"],
@@ -65,7 +75,11 @@ print(json.dumps(dict(executable=sys.executable,prefix=sys.prefix,version=sys.ve
     )
     if any(
         flag not in cli.stdout
-        for flag in ("--operation-variation", "--parent-attempt-id", "--fault-after-mission-s")
+        for flag in (
+            "--operation-variation",
+            "--parent-attempt-id",
+            "--fault-after-mission-s",
+        )
     ):
         raise ValueError("Actual producer CLI is missing required arguments")
     return dict(
@@ -80,9 +94,13 @@ print(json.dumps(dict(executable=sys.executable,prefix=sys.prefix,version=sys.ve
 def read_result(path):
     path = Path(path)
     if path.stat().st_size > 1024 * 1024:
-        raise ValueError("Producer stdout exceeds bounded JSON result size; preserve for review")
+        raise ValueError(
+            "Producer stdout exceeds bounded JSON result size; preserve for review"
+        )
     value = json.loads(path.read_text())
-    if value.get("status") not in {"completed", "failed"} or not isinstance(value.get("run"), str):
+    if value.get("status") not in {"completed", "failed"} or not isinstance(
+        value.get("run"), str
+    ):
         raise ValueError("Producer did not return an actual run/status result")
     raw = Path(value["run"]).absolute()
     if raw.parent != ROOT / "simulation/runs":

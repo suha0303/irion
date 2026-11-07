@@ -22,7 +22,13 @@ def inputs(source):
     if source.parent != (HOME / "tasks").resolve():
         raise ValueError("Registered source task required")
     config = read(source / "config.json")
-    verify({str(source / "config.json"): (source / "config.sha256").read_text().strip()})
+    verify(
+        {
+            str(source / "config.json"): (source / "config.sha256")
+            .read_text()
+            .strip()
+        }
+    )
     state = read(source / "operator/state.json")
     if (
         config["mode"] not in {"resume_preprocess", "finish_preprocess"}
@@ -31,14 +37,21 @@ def inputs(source):
         or "prepared-assemble" not in state.get("completed", [])
     ):
         raise ValueError("Stopped audit with completed assembly required")
-    if state.get("pid_start_ticks") and identity(state["pid"]) == state["pid_start_ticks"]:
+    if (
+        state.get("pid_start_ticks")
+        and identity(state["pid"]) == state["pid_start_ticks"]
+    ):
         raise ValueError("Previous process still exists")
     verify(
         {
             p: h
             for p, h in config["source_sha256"].items()
             if Path(p).is_relative_to(PACKAGE)
-            or p in {str(ROOT / "Data/generation/pretrain/worker.py"), str(ADMISSION / "derived.py")}
+            or p
+            in {
+                str(ROOT / "Data/generation/pretrain/worker.py"),
+                str(ADMISSION / "derived.py"),
+            }
         }
     )
     from x500_storage import guard, task_root
@@ -66,7 +79,9 @@ def inputs(source):
         or set(rows) != set(completed) | {failed[0]["run_id"]}
         or manifest["runs"] != frozen["runs"]
     ):
-        raise ValueError("Exactly one audit failure and complete dataset required")
+        raise ValueError(
+            "Exactly one audit failure and complete dataset required"
+        )
     evidence = [
         source / n
         for n in (
@@ -88,16 +103,24 @@ def inputs(source):
             or summary["input_hashes"] != row["files"]
             or not summary["closed"]
             or summary["config"] != read(PACKAGE / "preprocessing.json")
-            or set(summary["output_hashes"]) != {"frames", "windows", "exclusions"}
+            or set(summary["output_hashes"])
+            != {"frames", "windows", "exclusions"}
         ):
             raise ValueError("Canonical summary/config mismatch: " + rid)
         evidence.append(summary_path)
-        for name in ("summary.json", "frames.jsonl", "windows.jsonl", "exclusions.jsonl"):
+        for name in (
+            "summary.json",
+            "frames.jsonl",
+            "windows.jsonl",
+            "exclusions.jsonl",
+        ):
             p = summary_path.parent / name
             if not p.is_file() or any(q.is_symlink() for q in (p, *p.parents)):
                 raise ValueError("Missing/linked canonical file: " + str(p))
         if rid in completed:
-            status_path = source / "units/prepared-audit" / (rid + ".status.json")
+            status_path = (
+                source / "units/prepared-audit" / (rid + ".status.json")
+            )
             status = read(status_path)
             if (
                 status != completed[rid]
@@ -115,7 +138,9 @@ def create_audit_recovery(source, name):
     source = Path(source).resolve()
     root, frozen, completed, failed, evidence = inputs(source)
     original = read(source / "config.json")
-    args = cli.parser().parse_args(["init", "--name", name, "--mode", "collect"])
+    args = cli.parser().parse_args(
+        ["init", "--name", name, "--mode", "collect"]
+    )
     from x500_storage import task_root
 
     args.storage_root = task_root(original)
@@ -159,11 +184,14 @@ def finish_audit(runner):
         or len(completed) != runner.config["reused_audit_count"]
     ):
         raise ValueError("Audit recovery input changed")
-    root = external(STORE / "processed/pretrain" / runner.task.name / "prepared")
+    root = external(
+        STORE / "processed/pretrain" / runner.task.name / "prepared"
+    )
     root.mkdir(parents=True, exist_ok=False)
     write(root / "frozen-manifest.json", frozen)
     runner.finish(
-        "validate-existing-audits", dict(passed=True, reused=len(completed), retry_run=failed)
+        "validate-existing-audits",
+        dict(passed=True, reused=len(completed), retry_run=failed),
     )
     row = next(r for r in frozen["runs"] if r["run_id"] == failed)
     runner.batch(
@@ -175,7 +203,10 @@ def finish_audit(runner):
         canonical=old / "dataset/canonical",
     )
     sources = {
-        rid: (old / "audit-work" / rid, source / "units/prepared-audit" / (rid + ".status.json"))
+        rid: (
+            old / "audit-work" / rid,
+            source / "units/prepared-audit" / (rid + ".status.json"),
+        )
         for rid in completed
     }
     sources[failed] = (
@@ -194,5 +225,7 @@ def finish_audit(runner):
             training_authorized=False,
         ),
     )
-    result = runner.finish_quality(frozen, root, "prepared", old / "dataset", audit_sources=sources)
+    result = runner.finish_quality(
+        frozen, root, "prepared", old / "dataset", audit_sources=sources
+    )
     runner.update(result=str(result / "handoff.json"))

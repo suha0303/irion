@@ -14,7 +14,13 @@ SCHEMA = "round001-r1p1-checkpoint-v1"
 def cudnn_flags():
     return {
         k: getattr(torch.backends.cudnn, k)
-        for k in ("enabled", "benchmark", "benchmark_limit", "deterministic", "allow_tf32")
+        for k in (
+            "enabled",
+            "benchmark",
+            "benchmark_limit",
+            "deterministic",
+            "allow_tf32",
+        )
     }
 
 
@@ -24,7 +30,9 @@ def validate_backend(config):
         config.get("device") not in expected
         or config.get("lstm_backend") != expected[config["device"]]
     ):
-        raise ValueError("explicit LSTM backend/device policy required; no fallback")
+        raise ValueError(
+            "explicit LSTM backend/device policy required; no fallback"
+        )
 
 
 @contextmanager
@@ -55,7 +63,9 @@ def execution_environment(device):
         "mkldnn_enabled": torch.backends.mkldnn.enabled,
         "threads": torch.get_num_threads(),
         "cublas_workspace_config": os.environ.get("CUBLAS_WORKSPACE_CONFIG"),
-        "gpu_name": torch.cuda.get_device_name() if device.type == "cuda" else None,
+        "gpu_name": torch.cuda.get_device_name()
+        if device.type == "cuda"
+        else None,
         "gpu_capability": list(torch.cuda.get_device_capability())
         if device.type == "cuda"
         else None,
@@ -88,7 +98,10 @@ def check_model(model, device):
 
 def validate_operators(operators, device, training):
     # This predicate runs even when cuDNN is disabled; it is not a cuDNN kernel.
-    if any("cudnn" in name.lower() and name != "aten::cudnn_is_acceptable" for name in operators):
+    if any(
+        "cudnn" in name.lower() and name != "aten::cudnn_is_acceptable"
+        for name in operators
+    ):
         raise ValueError("cuDNN operator observed in ATen policy")
     if "aten::lstm" not in operators:
         raise ValueError("missing actual LSTM operator evidence")
@@ -107,7 +120,9 @@ def trace_batch(folder, phase, device, training, enabled):
     from .control import write
 
     # CPU dispatcher events include CUDA ATen calls; no CUPTI installation is needed.
-    with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU]) as profile:
+    with torch.profiler.profile(
+        activities=[torch.profiler.ProfilerActivity.CPU]
+    ) as profile:
         yield
     operators = {event.key: event.count for event in profile.key_averages()}
     write(

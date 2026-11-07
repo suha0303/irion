@@ -33,7 +33,11 @@ def test_capsule_recovery_uses_existing_memory_reserve(monkeypatch):
         ),
     )
     result = cli.service_memory(
-        dict(mode="recover_capsules", use_available_ram=True, min_available_ram_gb=1)
+        dict(
+            mode="recover_capsules",
+            use_available_ram=True,
+            min_available_ram_gb=1,
+        )
     )
     assert result["max_bytes"] == 5_000_000_000
     assert result["reserve_bytes"] == 1_000_000_000
@@ -56,7 +60,9 @@ def test_capsule_display_never_claims_new_collection(tmp_path, monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        cli, "snapshot", lambda task: dict(status="RUNNING", stage="prepared-restore")
+        cli,
+        "snapshot",
+        lambda task: dict(status="RUNNING", stage="prepared-restore"),
     )
     result = cli.render(tmp_path)
     assert "보존 캡슐 1200run" in result
@@ -65,19 +71,28 @@ def test_capsule_display_never_claims_new_collection(tmp_path, monkeypatch):
     assert "압축 완료   0/1200" not in result
 
 
-def test_recovery_service_sets_allocator_before_python_starts(tmp_path, monkeypatch):
+def test_recovery_service_sets_allocator_before_python_starts(
+    tmp_path, monkeypatch
+):
     from pretrain.common import read, sha, write
 
     home = tmp_path / "home"
     task = home / "tasks/recovery"
-    write(task / "config.json", dict(
-        mode="recover_capsules", source_sha256={}, python_allocator="debug",
-        external_storage=str(tmp_path / "Data"),
-    ))
+    write(
+        task / "config.json",
+        dict(
+            mode="recover_capsules",
+            source_sha256={},
+            python_allocator="debug",
+            external_storage=str(tmp_path / "Data"),
+        ),
+    )
     (task / "config.sha256").write_text(sha(task / "config.json"))
     monkeypatch.setattr(cli, "HOME", home)
     commands = []
-    monkeypatch.setattr(cli.subprocess, "run", lambda command, **kw: commands.append(command))
+    monkeypatch.setattr(
+        cli.subprocess, "run", lambda command, **kw: commands.append(command)
+    )
     cli.start(task)
     assert "--setenv=PYTHONMALLOC=debug" in commands[0]
     assert "--setenv=PYTHONFAULTHANDLER=1" in commands[0]
@@ -87,9 +102,14 @@ def test_recovery_service_sets_allocator_before_python_starts(tmp_path, monkeypa
 def test_worker_rejects_missing_allocator_before_claim(tmp_path, monkeypatch):
     from pretrain.common import sha, write
 
-    write(tmp_path / "config.json", dict(
-        mode="recover_capsules", source_sha256={}, python_allocator="debug",
-    ))
+    write(
+        tmp_path / "config.json",
+        dict(
+            mode="recover_capsules",
+            source_sha256={},
+            python_allocator="debug",
+        ),
+    )
     (tmp_path / "config.sha256").write_text(sha(tmp_path / "config.json"))
     monkeypatch.delenv("PYTHONMALLOC", raising=False)
     with pytest.raises(ValueError, match="allocator mismatch"):

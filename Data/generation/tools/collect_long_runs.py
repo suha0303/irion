@@ -37,9 +37,21 @@ def shared_failure(exc):
         or (
             isinstance(exc, OSError)
             and exc.errno
-            in {errno.ENOSPC, errno.EDQUOT, errno.EROFS, errno.EIO, errno.ENOMEM, errno.ENODEV}
+            in {
+                errno.ENOSPC,
+                errno.EDQUOT,
+                errno.EROFS,
+                errno.EIO,
+                errno.ENOMEM,
+                errno.ENODEV,
+            }
         )
-        or bool(re.search(r"Command exit(?:=|:| )?(-9|-15|-2|137|143|130)(?:\D|$)", str(exc)))
+        or bool(
+            re.search(
+                r"Command exit(?:=|:| )?(-9|-15|-2|137|143|130)(?:\D|$)",
+                str(exc),
+            )
+        )
     )
 
 
@@ -63,7 +75,11 @@ LEGACY_COLLECTION_PROTOCOL = "R3_LONG15"
 COLLECTION_PROTOCOLS = {COLLECTION_PROTOCOL, LEGACY_COLLECTION_PROTOCOL}
 COLLECTION_CONFIGURATIONS = {"collection", "r3_long15"}
 SPEED_TEST_ROOT = (
-    Path(os.environ.get("X500_STORAGE_ROOT", str(Path(__file__).resolve().parents[2])))
+    Path(
+        os.environ.get(
+            "X500_STORAGE_ROOT", str(Path(__file__).resolve().parents[2])
+        )
+    )
     / "speed-tests"
 )
 
@@ -86,10 +102,14 @@ def validate_case_conditions(plan, case):
     if variation is not None and case.get("normal_variation") is not None:
         raise Stop("Normal and operation variation are mutually exclusive")
     if onset is not None and case.get("fault_at_s") is not None:
-        raise Stop("Boot and mission-relative fault schedules are mutually exclusive")
+        raise Stop(
+            "Boot and mission-relative fault schedules are mutually exclusive"
+        )
     if not final:
         if variation is not None or onset is not None:
-            raise Stop("Operating variation and mission-relative faults require final324")
+            raise Stop(
+                "Operating variation and mission-relative faults require final324"
+            )
         return
     if (
         plan.get("protocol") != COLLECTION_PROTOCOL
@@ -97,12 +117,25 @@ def validate_case_conditions(plan, case):
         or plan.get("dataset_purpose") != "locked_final_test"
         or case["role"] not in {"normal_test", "anomaly_test"}
     ):
-        raise Stop("Final operating conditions require the locked collection test partition")
-    fields = {"soc", "temperature", "payload", "wind_e", "wind_n", "gust_sigma", "path"}
+        raise Stop(
+            "Final operating conditions require the locked collection test partition"
+        )
+    fields = {
+        "soc",
+        "temperature",
+        "payload",
+        "wind_e",
+        "wind_n",
+        "gust_sigma",
+        "path",
+    }
     if not isinstance(variation, dict) or set(variation) != fields:
-        raise Stop("Exact operation variation fields required; health/fault overrides forbidden")
+        raise Stop(
+            "Exact operation variation fields required; health/fault overrides forbidden"
+        )
     if any(
-        type(variation[key]) not in (int, float) or not math.isfinite(variation[key])
+        type(variation[key]) not in (int, float)
+        or not math.isfinite(variation[key])
         for key in fields - {"path"}
     ) or not isinstance(variation["path"], dict):
         raise Stop("Finite explicit operating conditions/path required")
@@ -113,10 +146,14 @@ def validate_case_conditions(plan, case):
         and 0 <= variation["gust_sigma"] <= 0.4
         and math.hypot(variation["wind_e"], variation["wind_n"]) <= 2.000001
     ):
-        raise Stop("Operating conditions exceed the existing engineering envelope")
+        raise Stop(
+            "Operating conditions exceed the existing engineering envelope"
+        )
     seconds = duration_for(plan, case)
     if seconds != (180 if variation["soc"] < 0.6 else 480):
-        raise Stop("Final low-SOC operation requires180s; other conditions require480s")
+        raise Stop(
+            "Final low-SOC operation requires180s; other conditions require480s"
+        )
     dynamic = case["scenario"] in {
         "battery_resistance_step",
         "battery_resistance_ramp",
@@ -124,7 +161,9 @@ def validate_case_conditions(plan, case):
         "propulsion_loss_ramp",
     }
     if case.get("fault_at_s") is not None:
-        raise Stop("Final dynamic anomalies require a mission-relative fault schedule")
+        raise Stop(
+            "Final dynamic anomalies require a mission-relative fault schedule"
+        )
     if dynamic:
         if (
             case["role"] != "anomaly_test"
@@ -132,9 +171,13 @@ def validate_case_conditions(plan, case):
             or not math.isfinite(onset)
             or not 0 < onset < seconds
         ):
-            raise Stop("Final dynamic anomaly requires a finite in-mission fault onset")
+            raise Stop(
+                "Final dynamic anomaly requires a finite in-mission fault onset"
+            )
     elif onset is not None:
-        raise Stop("Mission-relative fault onset only applies to dynamic anomalies")
+        raise Stop(
+            "Mission-relative fault onset only applies to dynamic anomalies"
+        )
 
 
 def memory_used(snapshot):
@@ -146,19 +189,29 @@ def memory_used(snapshot):
 
 
 def expanded_memory(plan):
-    return plan.get("pretrain_memory_override") or plan.get("test_memory_override")
+    return plan.get("pretrain_memory_override") or plan.get(
+        "test_memory_override"
+    )
 
 
 def budget_memory_used(plan, snapshot):
     # Reclaimable file cache is accounted by the OS cap, not an RSS violation.
-    return snapshot["owned_tree_rss_bytes"] if expanded_memory(plan) else memory_used(snapshot)
+    return (
+        snapshot["owned_tree_rss_bytes"]
+        if expanded_memory(plan)
+        else memory_used(snapshot)
+    )
 
 
 class MissionProgress:
     """Read tiny producer metadata only; bind a unique new UUID to this case/lane."""
 
-    def __init__(self, root, baseline_dirs, case, lane, duration, *, runs_root=None):
-        self.runs = Path(runs_root) if runs_root is not None else Path(root) / "runs"
+    def __init__(
+        self, root, baseline_dirs, case, lane, duration, *, runs_root=None
+    ):
+        self.runs = (
+            Path(runs_root) if runs_root is not None else Path(root) / "runs"
+        )
         self.baseline = baseline_dirs
         self.case, self.lane, self.duration = case, lane, duration
         self.classified, self.matches = set(), set()
@@ -184,7 +237,9 @@ class MissionProgress:
             producer_target_s=None,
         )
         now_utc = now_utc or datetime.now(timezone.utc)
-        monotonic_now = time.monotonic() if monotonic_now is None else monotonic_now
+        monotonic_now = (
+            time.monotonic() if monotonic_now is None else monotonic_now
+        )
         try:
             # Names only. Once classified, unrelated metadata is never rescanned.
             for path in self.runs.iterdir():
@@ -196,10 +251,14 @@ class MissionProgress:
                     continue
                 try:
                     state = self.small_json(path / "run.json")
-                    scenario = self.small_json(path / "evaluation/scenario.json")
+                    scenario = self.small_json(
+                        path / "evaluation/scenario.json"
+                    )
                     if "instance" not in state or "configuration" not in state:
                         continue  # Producer creates initial run.json before adding collection fields.
-                    if state.get("configuration") in COLLECTION_CONFIGURATIONS and (
+                    if state.get(
+                        "configuration"
+                    ) in COLLECTION_CONFIGURATIONS and (
                         state.get("run_id"),
                         state.get("instance"),
                         scenario.get("name"),
@@ -230,7 +289,8 @@ class MissionProgress:
                 raise ValueError("Producer identity or clock mismatch")
             progress = state["progress"]
             elapsed, target, boot = (
-                progress[key] for key in ("sim_elapsed_s", "target_s", "px4_boot_s")
+                progress[key]
+                for key in ("sim_elapsed_s", "target_s", "px4_boot_s")
             )
             if (
                 any(
@@ -242,7 +302,10 @@ class MissionProgress:
             ):
                 raise ValueError("Invalid producer mission clock")
             updated = datetime.fromisoformat(progress["last_update_utc"])
-            if updated.tzinfo is None or not 0 <= (now_utc - updated).total_seconds() <= 10:
+            if (
+                updated.tzinfo is None
+                or not 0 <= (now_utc - updated).total_seconds() <= 10
+            ):
                 raise ValueError("Stale/future/unspecified producer clock")
             current = (updated, elapsed, boot, monotonic_now)
             rtf = None
@@ -251,8 +314,12 @@ class MissionProgress:
                 delta_wall = (updated - old_utc).total_seconds()
                 if delta_wall < 0 or elapsed < old_elapsed or boot < old_boot:
                     raise ValueError("Producer clock moved backwards")
-                if delta_wall == 0 and (elapsed != old_elapsed or boot != old_boot):
-                    raise ValueError("Changed progress without producer timestamp")
+                if delta_wall == 0 and (
+                    elapsed != old_elapsed or boot != old_boot
+                ):
+                    raise ValueError(
+                        "Changed progress without producer timestamp"
+                    )
                 if delta_wall > 0:
                     if abs(delta_wall - (monotonic_now - old_monotonic)) > 2:
                         raise ValueError(
@@ -284,7 +351,9 @@ class MissionProgress:
             run_id = next(iter(self.matches))
             path = self.runs / run_id / "run.json"
             state = self.small_json(path)
-            scenario = self.small_json(self.runs / run_id / "evaluation/scenario.json")
+            scenario = self.small_json(
+                self.runs / run_id / "evaluation/scenario.json"
+            )
             if (
                 state.get("run_id"),
                 state.get("instance"),
@@ -392,8 +461,21 @@ def bytes_under(root):
 class Progress:
     """Only increasing byte counters reset the stall clock. State writes do not."""
 
-    def __init__(self, path, stage, wall_s, stall_s, check=lambda: None, clock=time.monotonic):
-        self.path, self.stage, self.clock, self.check_external = path, stage, clock, check
+    def __init__(
+        self,
+        path,
+        stage,
+        wall_s,
+        stall_s,
+        check=lambda: None,
+        clock=time.monotonic,
+    ):
+        self.path, self.stage, self.clock, self.check_external = (
+            path,
+            stage,
+            clock,
+            check,
+        )
         self.started = self.last_progress = self.last_write = clock()
         self.last_external = self.started - 2
         self.wall_s, self.stall_s, self.bytes = wall_s, stall_s, 0
@@ -439,7 +521,12 @@ class Progress:
 
 class HashIO:
     def __init__(self, stream, progress):
-        self.stream, self.progress, self.digest, self.count = stream, progress, hashlib.sha256(), 0
+        self.stream, self.progress, self.digest, self.count = (
+            stream,
+            progress,
+            hashlib.sha256(),
+            0,
+        )
 
     def read(self, n=-1):
         self.progress.check()
@@ -483,30 +570,43 @@ def archive_run(run, destination, stage_dir, budgets, check):
             with gzip.GzipFile(
                 filename="", mode="wb", fileobj=sink, compresslevel=1, mtime=0
             ) as gz:
-                with tarfile.open(fileobj=gz, mode="w|", dereference=False) as archive:
+                with tarfile.open(
+                    fileobj=gz, mode="w|", dereference=False
+                ) as archive:
                     for path, mode in files(run):
                         progress.check()
                         name = str(path.relative_to(run))
                         member = archive.gettarinfo(path, arcname=name)
                         if stat.S_ISREG(mode):
                             if not member.isfile():
-                                raise Stop("Hardlink/special tar member requires review")
+                                raise Stop(
+                                    "Hardlink/special tar member requires review"
+                                )
                             with path.open("rb") as source:
                                 wrapped = HashIO(source, progress)
                                 archive.addfile(member, wrapped)
-                            if wrapped.count != member.size or path.stat().st_size != member.size:
+                            if (
+                                wrapped.count != member.size
+                                or path.stat().st_size != member.size
+                            ):
                                 raise Stop("Source file changed during archive")
                             inventory[name] = dict(
-                                kind="file", bytes=member.size, sha256=wrapped.digest.hexdigest()
+                                kind="file",
+                                bytes=member.size,
+                                sha256=wrapped.digest.hexdigest(),
                             )
                         elif stat.S_ISDIR(mode):
                             archive.addfile(member)
                             inventory[name] = dict(kind="directory")
                         elif stat.S_ISLNK(mode) and path.is_dir():
                             archive.addfile(member)
-                            inventory[name] = dict(kind="symlink", target=os.readlink(path))
+                            inventory[name] = dict(
+                                kind="symlink", target=os.readlink(path)
+                            )
                         else:
-                            raise Stop("File/broken symlink or special file requires review")
+                            raise Stop(
+                                "File/broken symlink or special file requires review"
+                            )
             output.flush()
             os.fsync(output.fileno())
             digest, compressed_bytes = sink.digest.hexdigest(), sink.count
@@ -514,7 +614,10 @@ def archive_run(run, destination, stage_dir, budgets, check):
         integrity = read(run / "integrity.json")
         for name, expected in integrity.items():
             item = inventory.get(name, {})
-            if (item.get("bytes"), item.get("sha256")) != (expected["size"], expected["sha256"]):
+            if (item.get("bytes"), item.get("sha256")) != (
+                expected["size"],
+                expected["sha256"],
+            ):
                 raise Stop("Source integrity mismatch: " + name)
         verify = Progress(
             stage_dir / "archive-verify-progress.json",
@@ -538,17 +641,23 @@ def archive_run(run, destination, stage_dir, budgets, check):
                                 stream = archive.extractfile(
                                     member
                                 )  # streaming, no disk extraction
-                                for chunk in iter(lambda: stream.read(BLOCK), b""):
+                                for chunk in iter(
+                                    lambda: stream.read(BLOCK), b""
+                                ):
                                     h.update(chunk)
                                     count += len(chunk)
                                     verify.advance(len(chunk))
                                 actual[member.name] = dict(
-                                    kind="file", bytes=count, sha256=h.hexdigest()
+                                    kind="file",
+                                    bytes=count,
+                                    sha256=h.hexdigest(),
                                 )
                             elif member.isdir():
                                 actual[member.name] = dict(kind="directory")
                             elif member.issym():
-                                actual[member.name] = dict(kind="symlink", target=member.linkname)
+                                actual[member.name] = dict(
+                                    kind="symlink", target=member.linkname
+                                )
                             else:
                                 raise Stop("Unexpected archive member type")
                     while gz.read(BLOCK):  # consume gzip footer and verify CRC
@@ -568,7 +677,9 @@ def archive_run(run, destination, stage_dir, budgets, check):
         check()
         if destination.exists():
             raise Stop("Archive publish collision")
-        os.rename(partial, destination)  # same filesystem, exclusive campaign writer
+        os.rename(
+            partial, destination
+        )  # same filesystem, exclusive campaign writer
     except BaseException:
         progress.persist("FAILED")
         raise
@@ -594,18 +705,25 @@ def memory_snapshot():
             continue
         try:
             fields = (p / "stat").read_text().rsplit(")", 1)[1].split()
-            processes[int(p.name)] = (int(fields[1]), int(fields[21]) * os.sysconf("SC_PAGE_SIZE"))
+            processes[int(p.name)] = (
+                int(fields[1]),
+                int(fields[21]) * os.sysconf("SC_PAGE_SIZE"),
+            )
         except (OSError, ValueError, IndexError):
             continue
     selected = {os.getpid()}
     while True:
-        larger = selected | {pid for pid, (parent, _) in processes.items() if parent in selected}
+        larger = selected | {
+            pid for pid, (parent, _) in processes.items() if parent in selected
+        }
         if larger == selected:
             break
         selected = larger
     result = {
         "available_bytes": info["MemAvailable"],
-        "owned_tree_rss_bytes": sum(processes.get(pid, (0, 0))[1] for pid in selected),
+        "owned_tree_rss_bytes": sum(
+            processes.get(pid, (0, 0))[1] for pid in selected
+        ),
         "cgroup_total_rss_bytes": None,
         "cgroup_memory_current_bytes": None,
         "cgroup_path": None,
@@ -622,8 +740,12 @@ def memory_snapshot():
             pids.update(int(pid) for pid in file.read_text().split())
         result.update(
             cgroup_path=group,
-            cgroup_total_rss_bytes=sum(processes.get(pid, (0, 0))[1] for pid in pids),
-            cgroup_memory_current_bytes=int((base / "memory.current").read_text()),
+            cgroup_total_rss_bytes=sum(
+                processes.get(pid, (0, 0))[1] for pid in pids
+            ),
+            cgroup_memory_current_bytes=int(
+                (base / "memory.current").read_text()
+            ),
         )
     except (OSError, ValueError, StopIteration):
         pass  # Explicit null means unavailable, never zero or successful cgroup isolation.
@@ -641,7 +763,9 @@ def collection_prerequisites(plan, dry_run=False):
     if phase not in {"benchmark", "endurance", "collection"}:
         raise Stop("Collection phase required")
     if not plan.get("profile_id") or not plan.get("assessment_command"):
-        raise Stop("Collection profile and Simulation assessment command required")
+        raise Stop(
+            "Collection profile and Simulation assessment command required"
+        )
     if plan.get("producer_args") != ["--configuration", expected_configuration]:
         raise Stop("Collection requires explicit new producer configuration")
     if not plan.get("assessment_code_paths") or any(
@@ -651,17 +775,24 @@ def collection_prerequisites(plan, dry_run=False):
     preparation = reference(plan["producer_preparation"])
     # The coordinator supplies exact JSON top-level assertions from Simulation's report.
     assertions = plan.get("preparation_assertions", {})
-    if not assertions or any(preparation.get(k) != v for k, v in assertions.items()):
+    if not assertions or any(
+        preparation.get(k) != v for k, v in assertions.items()
+    ):
         raise Stop("Producer preparation assertions not satisfied")
     override = expanded_memory(plan)
     if override:
         config = reference(override["config"])
         memory = reference(override["memory"])
-        allowed_phase = (config.get("mode") == "test" and plan["phase"] == "benchmark") or (
+        allowed_phase = (
+            config.get("mode") == "test" and plan["phase"] == "benchmark"
+        ) or (
             config.get("mode") == "collect"
             and (
                 plan["phase"] == "collection"
-                or (config.get("gates") is True and plan["phase"] in {"benchmark", "endurance"})
+                or (
+                    config.get("gates") is True
+                    and plan["phase"] in {"benchmark", "endurance"}
+                )
             )
         )
         if (
@@ -701,14 +832,19 @@ def collection_prerequisites(plan, dry_run=False):
             or receipt.get("profile_id") != plan["profile_id"]
             or receipt.get("source_hashes") != plan["source_hashes"]
             or receipt.get("collector_sha256") != sha(__file__)
-            or receipt.get("producer_preparation") != plan["producer_preparation"]
+            or receipt.get("producer_preparation")
+            != plan["producer_preparation"]
             or receipt.get("selected_concurrency") != plan["concurrency"]
         ):
-            raise Stop("Matching benchmark/endurance receipt required before collection")
+            raise Stop(
+                "Matching benchmark/endurance receipt required before collection"
+            )
         benchmark = reference(receipt["benchmark_receipt"])
         if (
-            benchmark.get("status") not in {"BENCHMARK_PASSED", "BENCHMARK_8_NOT_TESTED"}
-            or plan["concurrency"] not in benchmark.get("eligible_concurrency", [])
+            benchmark.get("status")
+            not in {"BENCHMARK_PASSED", "BENCHMARK_8_NOT_TESTED"}
+            or plan["concurrency"]
+            not in benchmark.get("eligible_concurrency", [])
             or any(
                 benchmark.get(k) != receipt.get(k)
                 for k in (
@@ -722,11 +858,15 @@ def collection_prerequisites(plan, dry_run=False):
         ):
             raise Stop("Endurance benchmark chain mismatch")
     if phase in {"benchmark", "endurance"} and not dry_run:
-        raise Stop("Collection gates must use the finite gate driver, not direct collector CLI")
+        raise Stop(
+            "Collection gates must use the finite gate driver, not direct collector CLI"
+        )
 
 
 def bound(plan_path, manifest_path, approval_path, dry_run=False):
-    plan, manifest, approval = map(read, (plan_path, manifest_path, approval_path))
+    plan, manifest, approval = map(
+        read, (plan_path, manifest_path, approval_path)
+    )
     for key, path in [
         ("plan_sha256", plan_path),
         ("manifest_sha256", manifest_path),
@@ -747,16 +887,29 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
         plan.get("mission_seconds", 900 if collection else 1200),
         plan.get("concurrency", 2),
     )
-    allowed = {120} if collection and plan.get("phase") == "benchmark" else {180, 480, 900}
+    allowed = (
+        {120}
+        if collection and plan.get("phase") == "benchmark"
+        else {180, 480, 900}
+    )
     if (
         type(duration) is not int
-        or (duration not in allowed if collection else not 1200 <= duration <= 1800)
+        or (
+            duration not in allowed
+            if collection
+            else not 1200 <= duration <= 1800
+        )
         or type(concurrency) is not int
         or not 1 <= concurrency <= (16 if collection else 2)
     ):
-        raise Stop("Require legacy 1200..1800/concurrency1..2 or collection duration/lanes")
+        raise Stop(
+            "Require legacy 1200..1800/concurrency1..2 or collection duration/lanes"
+        )
     lanes = plan["lanes"]
-    if len(lanes) != concurrency or len({x["instance"] for x in lanes}) != concurrency:
+    if (
+        len(lanes) != concurrency
+        or len({x["instance"] for x in lanes}) != concurrency
+    ):
         raise Stop("Distinct instance per lane required")
     ports = [p for lane in lanes for p in lane["ports"]]
     if len(ports) != len(set(ports)) or any(
@@ -771,15 +924,23 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
         ):
             raise Stop("Invalid producer instance/observation port")
         if collection and not {
-            base + lane["instance"] for base in (14540, 14580, 18570, 14280, 13030)
+            base + lane["instance"]
+            for base in (14540, 14580, 18570, 14280, 13030)
         }.issubset(lane["ports"]):
             raise Stop("Collection requires every instance-local port")
     evidence = read(plan["isolation_evidence"]["path"])
-    if sha(plan["isolation_evidence"]["path"]) != plan["isolation_evidence"]["sha256"]:
+    if (
+        sha(plan["isolation_evidence"]["path"])
+        != plan["isolation_evidence"]["sha256"]
+    ):
         raise Stop("Isolation evidence hash mismatch")
     if not dry_run and any(
         evidence.get(k) is not True
-        for k in ("parallel_safe", "uuid_partitioned", "immutable_shared_inputs")
+        for k in (
+            "parallel_safe",
+            "uuid_partitioned",
+            "immutable_shared_inputs",
+        )
     ):
         raise Stop("Simulation isolation review required")
     limit = unit_attempts(plan)
@@ -791,7 +952,10 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
         config = read(plan["pretrain_cli_approval"])
         if config.get("continue_after_case_failure") is not True:
             raise Stop("Continue policy must match the task configuration")
-    if evidence.get("lanes") != lanes or evidence.get("source_hashes") != plan["source_hashes"]:
+    if (
+        evidence.get("lanes") != lanes
+        or evidence.get("source_hashes") != plan["source_hashes"]
+    ):
         raise Stop("Isolation review does not cover lanes/source revision")
     if not plan["source_hashes"]:
         raise Stop("Nonempty source lock required")
@@ -800,7 +964,9 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
     )
     if plan.get("project_source_hashes") and not plan.get("project_root"):
         raise Stop("Project sources require a separate project root")
-    if evidence.get("project_source_hashes", {}) != plan.get("project_source_hashes", {}):
+    if evidence.get("project_source_hashes", {}) != plan.get(
+        "project_source_hashes", {}
+    ):
         raise Stop("Isolation review does not cover project sources")
     for name, digest in source_entries:
         if (
@@ -843,11 +1009,14 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
         ):
             seconds = case.get("mission_seconds", duration)
             if (case["scenario"] == "low_soc_normal") != (seconds == 180):
-                raise Stop("Collection low-SOC requires180s; other scenarios cannot use180s")
+                raise Stop(
+                    "Collection low-SOC requires180s; other scenarios cannot use180s"
+                )
         signature = (case["scenario"], case["seed"])
         partition = (
             case["role"]
-            if case["role"] in {"normal_train", "normal_validation", "normal_calibration"}
+            if case["role"]
+            in {"normal_train", "normal_validation", "normal_calibration"}
             else "test"
             if case["role"] in {"normal_test", "anomaly_test"}
             else "development"
@@ -889,14 +1058,19 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
     ):
         raise Stop("Flight wall budget shorter than mission")
     plan = dict(
-        plan, mission_seconds=duration, concurrency=concurrency, timing=plan.get("timing", False)
+        plan,
+        mission_seconds=duration,
+        concurrency=concurrency,
+        timing=plan.get("timing", False),
     )
     if collection:
         if manifest.get("data_pool_id") != plan.get("data_pool_id"):
             raise Stop("Collection manifest pool mismatch")
         collection_prerequisites(plan, dry_run)
         for case in cases:
-            if (plan["phase"] in {"benchmark", "endurance"}) != (case["role"] == plan["phase"]):
+            if (plan["phase"] in {"benchmark", "endurance"}) != (
+                case["role"] == plan["phase"]
+            ):
                 raise Stop("Gate cases cannot enter collection splits")
     return plan, cases
 
@@ -933,13 +1107,19 @@ def verify_run_source_snapshot(plan, source):
         transport = "runtime/gazebo-transport/lib/libgz-transport13.so.13.6.0"
         if transport in plan["source_hashes"]:
             if "artifacts/runtime-manifest.json" not in plan["source_hashes"]:
-                raise Stop("Private transport requires the installed producer runtime seal")
+                raise Stop(
+                    "Private transport requires the installed producer runtime seal"
+                )
             names += (transport,)
         if any(name not in plan["source_hashes"] for name in names):
-            raise Stop("Collection active runtime binary hashes missing from plan")
+            raise Stop(
+                "Collection active runtime binary hashes missing from plan"
+            )
         expected = {name: plan["source_hashes"][name] for name in names}
         if source.get("runtime_binary_sha256") != expected:
-            raise Stop("Run collection runtime binary snapshot mismatch (PX4 / collection plugin)")
+            raise Stop(
+                "Run collection runtime binary snapshot mismatch (PX4 / collection plugin)"
+            )
     else:
         for name, digest in plan["source_hashes"].items():
             if (
@@ -949,16 +1129,22 @@ def verify_run_source_snapshot(plan, source):
                 raise Stop("Run runtime binary snapshot mismatch")
 
 
-def prepare_external_parent(external, process_helper, mount=Path("/media/sa/X31")):
+def prepare_external_parent(
+    external, process_helper, mount=Path("/media/sa/X31")
+):
     """Create output parents only on the mounted device; never recreate the mount."""
     external = no_links(external)
     if not external.is_relative_to(mount / "Data") or not mount.is_mount():
-        raise Stop("External mount absent/outside scope; no internal-disk fallback")
+        raise Stop(
+            "External mount absent/outside scope; no internal-disk fallback"
+        )
     device = mount.stat().st_dev
     for part in (external.parent, *external.parent.parents):
         if part.is_relative_to(mount) and part.exists():
             if not part.is_dir() or part.stat().st_dev != device:
-                raise Stop("External output parent is not a directory on the mounted device")
+                raise Stop(
+                    "External output parent is not a directory on the mounted device"
+                )
     external.parent.mkdir(parents=True, exist_ok=True)
     process_helper.check_mount(external.parent)
 
@@ -995,14 +1181,19 @@ def preflight(plan, process_helper):
         raise Stop("Native/project root mismatch")
     if not (
         local.is_relative_to(project / "Data/operations")
-        or (not plan.get("project_root") and local.is_relative_to(project / "ai"))
+        or (
+            not plan.get("project_root")
+            and local.is_relative_to(project / "ai")
+        )
     ):
         raise Stop("Output scope mismatch")
     if plan.get("storage_policy"):
         from x500_storage import guard
 
         guard(external, plan["storage_policy"])
-        if not external.is_relative_to(Path(plan["storage_policy"]["root"]) / "archives"):
+        if not external.is_relative_to(
+            Path(plan["storage_policy"]["root"]) / "archives"
+        ):
             raise Stop("Output archive category mismatch")
         external.parent.mkdir(parents=True, exist_ok=True)
         check_output_storage(plan, external, process_helper)
@@ -1012,7 +1203,10 @@ def preflight(plan, process_helper):
         prepare_external_parent(external, process_helper)
     budgets = plan["budgets"]
     if (
-        min(shutil.disk_usage(root).free, shutil.disk_usage(external.parent).free)
+        min(
+            shutil.disk_usage(root).free,
+            shutil.disk_usage(external.parent).free,
+        )
         < budgets["min_free_bytes"]
     ):
         raise Stop("Disk preflight failed")
@@ -1030,7 +1224,9 @@ def preflight(plan, process_helper):
     return root, external, local
 
 
-def assess_run(plan, case, lane, run, folder, process_helper, check, flight_wall):
+def assess_run(
+    plan, case, lane, run, folder, process_helper, check, flight_wall
+):
     """Consume Simulation's assessment; never infer safety from completed status."""
     values = {
         "run": str(run),
@@ -1048,7 +1244,8 @@ def assess_run(plan, case, lane, run, folder, process_helper, check, flight_wall
     )
     result = read(folder / "assessment.json")
     if (
-        result.get("schema") not in {"drone.run-assessment/1", "x500.r3.run-assessment/1"}
+        result.get("schema")
+        not in {"drone.run-assessment/1", "x500.r3.run-assessment/1"}
         or result.get("run_id") != run.name
         or result.get("instance") != lane["instance"]
         or result.get("gz_partition") != "x500_" + run.name
@@ -1085,13 +1282,18 @@ def assess_run(plan, case, lane, run, folder, process_helper, check, flight_wall
 
 def execute(plan, cases, process_helper):
     """One project collection lock shared by optional gates and production collection."""
-    lock_path = Path(plan.get("project_root", plan["root"])) / "Data/operations/collection.lock"
+    lock_path = (
+        Path(plan.get("project_root", plan["root"]))
+        / "Data/operations/collection.lock"
+    )
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
-            raise Stop("Project collection lock held; no new processes") from exc
+            raise Stop(
+                "Project collection lock held; no new processes"
+            ) from exc
         try:
             return _execute_locked(plan, cases, process_helper)
         finally:
@@ -1114,7 +1316,8 @@ def candidate_baseline(config):
     old_config = reference(speed["baseline_config"])
     if (
         Path(speed["baseline_config"]["path"]) != source / "config.json"
-        or sha(source / "config.json") != (source / "config.sha256").read_text().strip()
+        or sha(source / "config.json")
+        != (source / "config.sha256").read_text().strip()
         or read(source / "operator/state.json")["status"]
         not in {"FAILED_STOPPED", "TEST_COMPLETE_STOPPED"}
         or old_config.get("mode") != "test"
@@ -1132,7 +1335,10 @@ def candidate_baseline(config):
         )
     )
     ids = [r["measured"]["raw_run"] for r in baseline["results"]]
-    if ids != [r["measured"]["raw_run"] for r in original["results"]] or len(set(ids)) != 3:
+    if (
+        ids != [r["measured"]["raw_run"] for r in original["results"]]
+        or len(set(ids)) != 3
+    ):
         raise Stop("Baseline evidence identity mismatch")
     for i, rid in enumerate(ids):
         ledger = read(source / f"speed-{i + 1:02}/execution/ledger.json")
@@ -1152,8 +1358,10 @@ def candidate_baseline(config):
         prior_task = Path(previous["config"]["path"]).parent
         prior_speed = prior_config.get("speed_test", {})
         if (
-            Path(previous["results"]["path"]) != SPEED_TEST_ROOT / prior_task.name / "results.json"
-            or sha(prior_task / "config.json") != (prior_task / "config.sha256").read_text().strip()
+            Path(previous["results"]["path"])
+            != SPEED_TEST_ROOT / prior_task.name / "results.json"
+            or sha(prior_task / "config.json")
+            != (prior_task / "config.sha256").read_text().strip()
             or read(prior_task / "operator/state.json")["status"]
             not in {"FAILED_STOPPED", "TEST_COMPLETE_STOPPED"}
             or prior_config.get("mode") != "test"
@@ -1163,7 +1371,8 @@ def candidate_baseline(config):
             or prior_speed.get("baseline_review") != speed["baseline_review"]
             or prior_speed.get("baseline_config") != speed["baseline_config"]
             or len(prior_results.get("results", [])) != 1
-            or [r["requested_factor"] for r in prior_results["results"]] != prior_speed["factors"]
+            or [r["requested_factor"] for r in prior_results["results"]]
+            != prior_speed["factors"]
         ):
             raise Stop("Previous candidate evidence mismatch")
         rid = prior_results["results"][0]["measured"]["raw_run"]
@@ -1194,7 +1403,8 @@ def speed_comparison_scope(plan, cases):
     factors = config.get("speed_test", {}).get("factors")
     if (
         scope.get("protocol") not in {"information-v1", "information-v2"}
-        or scope.get("protocol") != config.get("speed_test", {}).get("protocol", "information-v1")
+        or scope.get("protocol")
+        != config.get("speed_test", {}).get("protocol", "information-v1")
         or config.get("mode") != "test"
         or (factors not in ([3], [8]) if single else factors != [2, 2, 4, 8])
         or type(index) is not int
@@ -1208,7 +1418,9 @@ def speed_comparison_scope(plan, cases):
         or cases[0].get("scenario") != "hover_normal"
         or cases[0].get("seed") != config["seed_base"] + 2000
     ):
-        raise Stop("Invalid controlled speed comparison; no seed reuse outside this finite test")
+        raise Stop(
+            "Invalid controlled speed comparison; no seed reuse outside this finite test"
+        )
     if single:
         return candidate_baseline(config)[1]
     previous = set()
@@ -1218,7 +1430,8 @@ def speed_comparison_scope(plan, cases):
         old_plan = read(folder / "plan.json")
         ledger = read(folder / "execution/ledger.json")
         if (
-            old_plan.get("pretrain_cli_approval") != plan["pretrain_cli_approval"]
+            old_plan.get("pretrain_cli_approval")
+            != plan["pretrain_cli_approval"]
             or ledger.get("status") != "COLLECTED_PENDING_QUALITY_STOPPED"
         ):
             raise Stop("Earlier controlled comparison did not complete")
@@ -1232,13 +1445,16 @@ def _execute_locked(plan, cases, process_helper):
     processing_signal = plan.get("processing_stop_signal")
     if processing_signal:
         expected = (
-            Path(plan.get("pretrain_cli_approval", "")).parent / "operator/processing-stop.json"
+            Path(plan.get("pretrain_cli_approval", "")).parent
+            / "operator/processing-stop.json"
         )
         processing_signal = Path(processing_signal)
         if processing_signal != expected or plan.get("phase") != "collection":
             raise Stop("Invalid task processing stop signal")
     runs = no_links(plan.get("runs_root", root / "runs"))
-    expected_runs = root / ("runs" if plan.get("project_root") else "simulation/runs")
+    expected_runs = root / (
+        "runs" if plan.get("project_root") else "simulation/runs"
+    )
     if plan.get("runs_root") is not None and runs != expected_runs:
         raise Stop("Unrecognized simulator raw-run scope")
     runs.mkdir(parents=True, exist_ok=True)
@@ -1257,14 +1473,21 @@ def _execute_locked(plan, cases, process_helper):
             if processing_signal:
                 continue  # Verified previous groups may retire; persistent seed claims still guard reuse.
             raise
-        if comparison_previous is not None and p.parents[1].name in comparison_previous:
+        if (
+            comparison_previous is not None
+            and p.parents[1].name in comparison_previous
+        ):
             continue  # Same test's explicit matched-seed replicate, never a training run/retry.
         existing.add((row.get("name"), row.get("seed")))
     if any((c["scenario"], c["seed"]) in existing for c in cases):
         raise Stop("Existing raw seed/scenario reuse forbidden")
     local.mkdir(parents=True)
     external.mkdir(parents=True)
-    halt, admission, state_lock = threading.Event(), threading.Lock(), threading.Lock()
+    halt, admission, state_lock = (
+        threading.Event(),
+        threading.Lock(),
+        threading.Lock(),
+    )
     memory_halt = threading.Event()
     exporter = threading.Semaphore(plan.get("export_workers", 1))
     queue = iter(cases)
@@ -1274,16 +1497,28 @@ def _execute_locked(plan, cases, process_helper):
     records, run_ids = {}, set()
     known_runs = []
     baseline_dirs = {p.name for p in runs.iterdir() if p.is_dir()}
-    locked_sources = {root / name: digest for name, digest in plan["source_hashes"].items()}
+    locked_sources = {
+        root / name: digest for name, digest in plan["source_hashes"].items()
+    }
     project = Path(plan.get("project_root", root))
     locked_sources.update(
-        {project / name: digest for name, digest in plan.get("project_source_hashes", {}).items()}
+        {
+            project / name: digest
+            for name, digest in plan.get("project_source_hashes", {}).items()
+        }
     )
-    source_stats = {path: (path.stat().st_size, path.stat().st_mtime_ns) for path in locked_sources}
+    source_stats = {
+        path: (path.stat().st_size, path.stat().st_mtime_ns)
+        for path in locked_sources
+    }
     watch_lock = threading.Lock()
     last_watch = [0.0]
     stop_reason = []
-    resources = {"samples": 0, "peak_memory_used_bytes": 0, "min_available_bytes": None}
+    resources = {
+        "samples": 0,
+        "peak_memory_used_bytes": 0,
+        "min_available_bytes": None,
+    }
 
     def stop_new(reason):
         halt.set()
@@ -1292,7 +1527,10 @@ def _execute_locked(plan, cases, process_helper):
                 stop_reason.append(reason)
                 atomic(
                     local / "stop-new-cases.json",
-                    {"reason": reason, "policy": "in-flight peers drain; no retries"},
+                    {
+                        "reason": reason,
+                        "policy": "in-flight peers drain; no retries",
+                    },
                 )
 
     def sources():
@@ -1326,7 +1564,9 @@ def _execute_locked(plan, cases, process_helper):
     def observe_limits():
         # Check on every admission, even inside the resource-sampling interval.
         if processing_signal and os.path.lexists(processing_signal):
-            stop_new("Processing failure: close new flight admission; drain peers")
+            stop_new(
+                "Processing failure: close new flight admission; drain peers"
+            )
         # One-second RAM sampling; byte/space accounting every ten seconds.
         with watch_lock:
             if time.monotonic() - last_watch[0] < 1:
@@ -1342,12 +1582,17 @@ def _execute_locked(plan, cases, process_helper):
                 mem = memory_snapshot()
                 if (
                     mem["available_bytes"] < budgets["min_available_ram_bytes"]
-                    or budget_memory_used(plan, mem) > budgets["memory_soft_cap_bytes"]
+                    or budget_memory_used(plan, mem)
+                    > budgets["memory_soft_cap_bytes"]
                 ):
                     if expanded_memory(plan):
                         memory_halt.set()
-                        resources.setdefault("first_memory_violation", dict(mem))
-                    stop_new("RAM admission/soft cap reached; drain active cases")
+                        resources.setdefault(
+                            "first_memory_violation", dict(mem)
+                        )
+                    stop_new(
+                        "RAM admission/soft cap reached; drain active cases"
+                    )
                 if resources["samples"] % 10 == 0:
                     new_dirs = [
                         p
@@ -1355,7 +1600,8 @@ def _execute_locked(plan, cases, process_helper):
                         if p.is_dir() and p.name not in baseline_dirs
                     ]
                     resources.update(
-                        local_bytes=bytes_under(local) + sum(bytes_under(p) for p in new_dirs),
+                        local_bytes=bytes_under(local)
+                        + sum(bytes_under(p) for p in new_dirs),
                         external_bytes=bytes_under(external),
                     )
                 resources["samples"] += 1
@@ -1381,7 +1627,9 @@ def _execute_locked(plan, cases, process_helper):
                 ):
                     stop_new("Output admission cap reached; drain active cases")
                 if time.monotonic() - started >= budgets["campaign_wall_s"]:
-                    stop_new("Campaign admission deadline reached; drain active cases")
+                    stop_new(
+                        "Campaign admission deadline reached; drain active cases"
+                    )
             except Exception as exc:
                 stop_new(str(exc))
 
@@ -1397,11 +1645,15 @@ def _execute_locked(plan, cases, process_helper):
                     if halt.is_set():
                         return
                     if time.monotonic() - started >= budgets["campaign_wall_s"]:
-                        raise Stop("Campaign admission deadline; draining active cases")
+                        raise Stop(
+                            "Campaign admission deadline; draining active cases"
+                        )
                     if (
-                        bytes_under(local) + sum(bytes_under(p) for p in known_runs)
+                        bytes_under(local)
+                        + sum(bytes_under(p) for p in known_runs)
                         >= budgets["local_bytes_cap"]
-                        or bytes_under(external) >= budgets["external_bytes_cap"]
+                        or bytes_under(external)
+                        >= budgets["external_bytes_cap"]
                     ):
                         raise Stop("Output cap; no new cases")
                     case = next(queue, None)
@@ -1427,7 +1679,11 @@ def _execute_locked(plan, cases, process_helper):
             case_root = local / case["case_id"]
             history = []
             for attempt in range(1, limit + 1):
-                folder = case_root if attempt == 1 else case_root / f"attempt-{attempt:02d}"
+                folder = (
+                    case_root
+                    if attempt == 1
+                    else case_root / f"attempt-{attempt:02d}"
+                )
                 folder.mkdir()
                 record = {
                     "case": case,
@@ -1465,28 +1721,48 @@ def _execute_locked(plan, cases, process_helper):
                                 "instance": lane["instance"],
                                 "stage": "FLYING",
                                 "started_utc": record["flight_started_utc"],
-                                "started_monotonic": record["flight_started_monotonic"],
-                                "updated_utc": datetime.now(timezone.utc).isoformat(),
+                                "started_monotonic": record[
+                                    "flight_started_monotonic"
+                                ],
+                                "updated_utc": datetime.now(
+                                    timezone.utc
+                                ).isoformat(),
                                 "updated_monotonic": now,
-                                "wall_elapsed_s": now - record["flight_started_monotonic"],
-                                "target_mission_seconds": duration_for(plan, case),
+                                "wall_elapsed_s": now
+                                - record["flight_started_monotonic"],
+                                "target_mission_seconds": duration_for(
+                                    plan, case
+                                ),
                                 **mission_progress.sample(monotonic_now=now),
                                 "campaign_process_metrics": resources.copy(),
                             },
                         )
-                        if plan.get("pretrain_cli_approval") and len(mission_progress.matches) == 1:
+                        if (
+                            plan.get("pretrain_cli_approval")
+                            and len(mission_progress.matches) == 1
+                        ):
                             from pretrain.socket_cleanup import claim
 
-                            run_path = runs / next(iter(mission_progress.matches))
-                            claim(run_path, lane["instance"], folder / "socket-claim.json")
+                            run_path = runs / next(
+                                iter(mission_progress.matches)
+                            )
+                            claim(
+                                run_path,
+                                lane["instance"],
+                                folder / "socket-claim.json",
+                            )
 
                 def active_check():
                     observe_limits()
                     flight_progress()
                     if memory_halt.is_set():
-                        raise Stop("Memory budget exceeded: stop owned active commands; no retry")
+                        raise Stop(
+                            "Memory budget exceeded: stop owned active commands; no retry"
+                        )
                     if halt.is_set() and plan.get("phase") == "benchmark":
-                        raise Stop("Benchmark failure: stop all owned active commands")
+                        raise Stop(
+                            "Benchmark failure: stop all owned active commands"
+                        )
                     # Peer/source/admission failure only closes admission. Own stage timeout
                     # still invokes the existing owner-verified cleanup helper.
 
@@ -1520,33 +1796,51 @@ def _execute_locked(plan, cases, process_helper):
                     ]
                     args += plan.get("producer_args", [])
                     if plan.get("speed_comparison"):
-                        args += ["--real-time-factor", str(plan["speed_comparison"]["factor"])]
+                        args += [
+                            "--real-time-factor",
+                            str(plan["speed_comparison"]["factor"]),
+                        ]
                     if plan["timing"]:
                         args += ["--timing"]
                     if case.get("fault_at_s") is not None:
                         args += ["--fault-at-s", str(case["fault_at_s"])]
                     if case.get("fault_after_mission_s") is not None:
-                        args += ["--fault-after-mission-s", str(case["fault_after_mission_s"])]
+                        args += [
+                            "--fault-after-mission-s",
+                            str(case["fault_after_mission_s"]),
+                        ]
                     if case.get("normal_variation") is not None:
                         args += [
                             "--normal-variation-json",
-                            json.dumps(case["normal_variation"], sort_keys=True),
+                            json.dumps(
+                                case["normal_variation"], sort_keys=True
+                            ),
                         ]
                     if case.get("operation_variation") is not None:
                         args += [
                             "--operation-variation",
-                            json.dumps(case["operation_variation"], sort_keys=True),
+                            json.dumps(
+                                case["operation_variation"], sort_keys=True
+                            ),
                         ]
                     tick = time.monotonic()
                     record["flight_started_monotonic"] = tick
-                    record["flight_started_utc"] = datetime.now(timezone.utc).isoformat()
+                    record["flight_started_utc"] = datetime.now(
+                        timezone.utc
+                    ).isoformat()
                     write_record(case["case_id"], record)
                     flight_progress(force=True)
                     active_check()
                     process_helper.command(
-                        args, root, folder / "producer.log", active_check, budgets["flight_wall_s"]
+                        args,
+                        root,
+                        folder / "producer.log",
+                        active_check,
+                        budgets["flight_wall_s"],
                     )
-                    record["timings_s"]["flight_command"] = time.monotonic() - tick
+                    record["timings_s"]["flight_command"] = (
+                        time.monotonic() - tick
+                    )
                     record["flight_finished_monotonic"] = time.monotonic()
                     flight_progress(force=True)
                     log = folder / "producer.log"
@@ -1554,7 +1848,9 @@ def _execute_locked(plan, cases, process_helper):
                         raise Stop("Unexpectedly large producer result")
                     result = read(log)
                     run = no_links(result["run"])
-                    if run.parent != runs or not re.fullmatch("[0-9a-f]{32}", run.name):
+                    if run.parent != runs or not re.fullmatch(
+                        "[0-9a-f]{32}", run.name
+                    ):
                         raise Stop("Producer returned invalid run UUID/path")
                     with admission:
                         if run.name in run_ids:
@@ -1562,26 +1858,41 @@ def _execute_locked(plan, cases, process_helper):
                         run_ids.add(run.name)
                         known_runs.append(run)
                     record["run_id"] = run.name
-                    meta, scenario = read(run / "run.json"), read(run / "evaluation/scenario.json")
+                    meta, scenario = (
+                        read(run / "run.json"),
+                        read(run / "evaluation/scenario.json"),
+                    )
                     if (
                         result["status"],
                         meta["status"],
                         meta["run_id"],
                         scenario["name"],
                         scenario["seed"],
-                    ) != ("completed", "completed", run.name, case["scenario"], case["seed"]):
+                    ) != (
+                        "completed",
+                        "completed",
+                        run.name,
+                        case["scenario"],
+                        case["seed"],
+                    ):
                         raise Stop("Run identity/status mismatch")
                     if (
                         meta.get("parent_attempt_id")
                         or scenario.get("continuity") != "independent_reset"
                     ):
                         raise Stop("Unexpected retry/continuation")
-                    if scenario.get("requested_duration_s") != duration_for(plan, case):
+                    if scenario.get("requested_duration_s") != duration_for(
+                        plan, case
+                    ):
                         raise Stop("Producer mission duration mismatch")
                     if scenario.get("operation_variation") != case.get(
                         "operation_variation"
-                    ) or scenario.get("fault_after_mission_s") != case.get("fault_after_mission_s"):
-                        raise Stop("Producer operation conditions/fault schedule mismatch")
+                    ) or scenario.get("fault_after_mission_s") != case.get(
+                        "fault_after_mission_s"
+                    ):
+                        raise Stop(
+                            "Producer operation conditions/fault schedule mismatch"
+                        )
                     if (
                         plan.get("speed_comparison")
                         and scenario.get("requested_real_time_factor")
@@ -1593,32 +1904,48 @@ def _execute_locked(plan, cases, process_helper):
                     if meta.get("process_exit_codes") and any(
                         x != 0 for x in meta["process_exit_codes"]
                     ):
-                        raise Stop("Owned producer process did not exit cleanly")
+                        raise Stop(
+                            "Owned producer process did not exit cleanly"
+                        )
                     if (
                         case["role"] not in {"anomaly_dev", "anomaly_test"}
-                        and scenario.get("health_eligibility") != "confirmed_healthy"
+                        and scenario.get("health_eligibility")
+                        != "confirmed_healthy"
                     ):
                         raise Stop("Normal health eligibility failed")
                     record["run_id"] = run.name
-                    record["producer_wall_duration_s"] = meta.get("wall_duration_s")
+                    record["producer_wall_duration_s"] = meta.get(
+                        "wall_duration_s"
+                    )
                     record["status"] = "WAITING_VERIFY_EXPORT"
                     write_record(case["case_id"], record)
                     wait_started = time.monotonic()
                     with exporter:
-                        record["timings_s"]["export_queue"] = time.monotonic() - wait_started
+                        record["timings_s"]["export_queue"] = (
+                            time.monotonic() - wait_started
+                        )
                         active_check()
                         record["status"] = "VERIFYING"
-                        record["verification_started_monotonic"] = time.monotonic()
+                        record["verification_started_monotonic"] = (
+                            time.monotonic()
+                        )
                         write_record(case["case_id"], record)
                         tick = time.monotonic()
                         process_helper.command(
-                            [str(root / "capstone-sim"), "verify", "--run", str(run)],
+                            [
+                                str(root / "capstone-sim"),
+                                "verify",
+                                "--run",
+                                str(run),
+                            ],
                             root,
                             folder / "verify.log",
                             active_check,
                             budgets["verify_wall_s"],
                         )
-                        record["timings_s"]["producer_verify"] = time.monotonic() - tick
+                        record["timings_s"]["producer_verify"] = (
+                            time.monotonic() - tick
+                        )
                         if plan.get("protocol") in COLLECTION_PROTOCOLS:
                             record["assessment"] = assess_run(
                                 plan,
@@ -1631,7 +1958,9 @@ def _execute_locked(plan, cases, process_helper):
                                 record["timings_s"]["flight_command"],
                             )
                         record["status"] = "ARCHIVING"
-                        record["verification_finished_monotonic"] = time.monotonic()
+                        record["verification_finished_monotonic"] = (
+                            time.monotonic()
+                        )
                         record["archive_started_monotonic"] = time.monotonic()
                         write_record(case["case_id"], record)
 
@@ -1644,7 +1973,11 @@ def _execute_locked(plan, cases, process_helper):
                                 raise
 
                         record["export"] = archive_run(
-                            run, external / (run.name + ".tar.gz"), folder, budgets, export_check
+                            run,
+                            external / (run.name + ".tar.gz"),
+                            folder,
+                            budgets,
+                            export_check,
                         )
                         record["archive_finished_monotonic"] = time.monotonic()
                     try:
@@ -1674,25 +2007,32 @@ def _execute_locked(plan, cases, process_helper):
                             + record["producer_termination_reason"]
                         )
                     if shared_failure(exc) or (
-                        not plan.get("continue_after_case_failure") and attempt >= limit
+                        not plan.get("continue_after_case_failure")
+                        and attempt >= limit
                     ):
                         stop_new(record["error"])
                     elif not halt.is_set():
                         # Reuse only a demonstrably free lane. Never unlink an unclaimed socket.
                         try:
-                            socket_path = Path(f"/tmp/px4-sock-{lane['instance']}")
+                            socket_path = Path(
+                                f"/tmp/px4-sock-{lane['instance']}"
+                            )
                             claim_path = folder / "socket-claim.json"
                             if socket_path.exists() and claim_path.exists():
                                 from pretrain.common import service_unit
                                 from pretrain.socket_cleanup import release
 
-                                task_path = Path(plan["pretrain_cli_approval"]).parent
+                                task_path = Path(
+                                    plan["pretrain_cli_approval"]
+                                ).parent
                                 record["socket_cleanup"] = release(
                                     read(claim_path), service_unit(task_path)
                                 )
                             check_instance_socket(lane["instance"])
                             for port in lane["ports"]:
-                                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                                with socket.socket(
+                                    socket.AF_INET, socket.SOCK_DGRAM
+                                ) as sock:
                                     sock.bind(("127.0.0.1", port))
                         except Exception as cleanup_exc:
                             record["lane_retired"] = str(cleanup_exc)
@@ -1731,7 +2071,9 @@ def _execute_locked(plan, cases, process_helper):
         except BaseException as exc:
             stop_new(f"Operator interruption: {type(exc).__name__}: {exc}")
     failed = [
-        key for key, value in records.items() if value["status"] != "ARCHIVED_PENDING_QUALITY"
+        key
+        for key, value in records.items()
+        if value["status"] != "ARCHIVED_PENDING_QUALITY"
     ]
     not_started = [c["case_id"] for c in cases if c["case_id"] not in records]
     final = {
@@ -1748,14 +2090,21 @@ def _execute_locked(plan, cases, process_helper):
         "data_pool_id": plan.get("data_pool_id"),
         "phase": plan.get("phase", "collection"),
         "training_eligible": False
-        if halt.is_set() or failed or not_started or plan.get("phase") in {"benchmark", "endurance"}
+        if halt.is_set()
+        or failed
+        or not_started
+        or plan.get("phase") in {"benchmark", "endurance"}
         else None,
         "cases": records,
         "not_started": not_started,
         "failed_cases": failed,
-        "continue_after_case_failure": plan.get("continue_after_case_failure", False),
+        "continue_after_case_failure": plan.get(
+            "continue_after_case_failure", False
+        ),
         "preserved_new_local_run_paths": [
-            str(p) for p in runs.iterdir() if p.is_dir() and p.name not in baseline_dirs
+            str(p)
+            for p in runs.iterdir()
+            if p.is_dir() and p.name not in baseline_dirs
         ],
         "storage": "one gzip tar per run; no persistent extracted consumer copy; local originals retained",
         "stop_reason": stop_reason,

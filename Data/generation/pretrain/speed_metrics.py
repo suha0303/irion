@@ -9,7 +9,11 @@ import numpy as np
 from .common import ROOT, read, runs_root
 
 PROTOCOL = "information-v2"
-INTERVALS = dict(anchor="mission", telemetry_seconds=[20, 110], window_origin_seconds=[60, 110])
+INTERVALS = dict(
+    anchor="mission",
+    telemetry_seconds=[20, 110],
+    window_origin_seconds=[60, 110],
+)
 
 
 def records(path, expected):
@@ -57,7 +61,9 @@ def topic_metrics(path, expected, run_id, topics, start, end):
             s["count"] += 1
             s["first"] = t if s["first"] is None else s["first"]
             s["last"] = t
-            s["invalid"] += sum(v != "valid" for v in event["field_quality"].values())
+            s["invalid"] += sum(
+                v != "valid" for v in event["field_quality"].values()
+            )
             s["max_availability_delay_us"] = max(
                 s["max_availability_delay_us"], event["available_time_us"] - t
             )
@@ -92,7 +98,9 @@ def metrics(canonical, record):
     landing = round(landings[0]["sim_time"] * 1e6)
     start, end = anchor + 20_000_000, anchor + 110_000_000
     if landing <= end + 1_000_000:
-        raise ValueError("Insufficient steady mission including forecast horizon")
+        raise ValueError(
+            "Insufficient steady mission including forecast horizon"
+        )
     summary = read(canonical / "summary.json")
     if summary["run_id"] != rid or not summary["closed"]:
         raise ValueError("Closed matching canonical run required")
@@ -101,16 +109,22 @@ def metrics(canonical, record):
         != inventory["observations/streams.jsonl"]["sha256"]
     ):
         raise ValueError("Canonical/raw input binding mismatch")
-    frames = list(records(canonical / "frames.jsonl", summary["output_hashes"]["frames"]))
+    frames = list(
+        records(canonical / "frames.jsonl", summary["output_hashes"]["frames"])
+    )
     names = summary["feature_order"]
     if any(f["run_id"] != rid or f["clock_id"] != "px4-boot" for f in frames):
         raise ValueError("Canonical identity/clock mismatch")
-    if any(b["time_us"] - a["time_us"] != 100_000 for a, b in zip(frames, frames[1:])):
+    if any(
+        b["time_us"] - a["time_us"] != 100_000
+        for a, b in zip(frames, frames[1:])
+    ):
         raise ValueError("Canonical10Hz information grid changed")
     valid = [
         f
         for f in frames
-        if f["operating_state"] == "airborne" and all(f["quality"][n] == "valid" for n in names)
+        if f["operating_state"] == "airborne"
+        and all(f["quality"][n] == "valid" for n in names)
     ]
     selected = [f for f in frames if start <= f["time_us"] < end]
     expected_frames = (end - start) // 100_000
@@ -123,18 +137,29 @@ def metrics(canonical, record):
     if len(time) < 2 or time[0] > grid[0] or time[-1] < grid[-1]:
         raise ValueError("Insufficient matched numerical comparison interval")
     values = np.asarray([[f["values"][n] for n in names] for f in valid])
-    aligned = np.stack([np.interp(grid, time, values[:, i]) for i in range(len(names))], axis=1)
+    aligned = np.stack(
+        [np.interp(grid, time, values[:, i]) for i in range(len(names))], axis=1
+    )
     lookup = {(f["clock_id"], f["segment_id"], f["time_us"]): f for f in frames}
     windows, eligible = 0, 0
-    for w in records(canonical / "windows.jsonl", summary["output_hashes"]["windows"]):
+    for w in records(
+        canonical / "windows.jsonl", summary["output_hashes"]["windows"]
+    ):
         if not anchor + 60_000_000 <= w["origin_us"] < end:
             continue
         eligible += 1
-        if w["context_start_us"] < anchor or min(w["history_times_us"]) < anchor:
+        if (
+            w["context_start_us"] < anchor
+            or min(w["history_times_us"]) < anchor
+        ):
             raise ValueError("Window context/history crosses mission boundary")
-        targets = [lookup.get((w["clock_id"], w["segment_id"], t)) for t in w["target_times_us"]]
+        targets = [
+            lookup.get((w["clock_id"], w["segment_id"], t))
+            for t in w["target_times_us"]
+        ]
         if targets and all(
-            f is not None and all(f["quality"][n] == "valid" for n in TARGETS) for f in targets
+            f is not None and all(f["quality"][n] == "valid" for n in TARGETS)
+            for f in targets
         ):
             windows += 1
     topics = topic_metrics(
@@ -164,5 +189,7 @@ def metrics(canonical, record):
         effective_rtf=record["assessment"].get("effective_rtf"),
         raw_run=rid,
         canonical=str(canonical),
-        whole_run_diagnostic=dict(windows=summary["windows"], frames=summary["frames"]),
+        whole_run_diagnostic=dict(
+            windows=summary["windows"], frames=summary["frames"]
+        ),
     )

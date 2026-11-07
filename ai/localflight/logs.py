@@ -10,7 +10,13 @@ from .catalog import digest
 from .timing import ClockAudit
 
 PX4_REQUIRED = {
-    "actuator_outputs": ["timestamp", "output[0]", "output[1]", "output[2]", "output[3]"],
+    "actuator_outputs": [
+        "timestamp",
+        "output[0]",
+        "output[1]",
+        "output[2]",
+        "output[3]",
+    ],
     "vehicle_angular_velocity": ["timestamp", "xyz[0]", "xyz[1]", "xyz[2]"],
     "vehicle_rates_setpoint": ["timestamp", "roll", "pitch", "yaw"],
     "vehicle_attitude": ["timestamp", "q[0]", "q[1]", "q[2]", "q[3]"],
@@ -55,7 +61,9 @@ def scan_bin(path):
             counts[kind] += 1
             record_count += 1
             if record_count > 10_000_000:
-                raise ValueError("Log exceeds ten million records; split flight logs")
+                raise ValueError(
+                    "Log exceeds ten million records; split flight logs"
+                )
             if kind not in ARDUPILOT_REQUIRED and kind not in {
                 "MSG",
                 "PARM",
@@ -72,7 +80,11 @@ def scan_bin(path):
                 and stamp >= 0
                 and (
                     kind in {"ARM", "EV", "ERR"}
-                    or (kind == "XKF4" and type(row.get("PI")) is int and row["PI"] != last_primary)
+                    or (
+                        kind == "XKF4"
+                        and type(row.get("PI")) is int
+                        and row["PI"] != last_primary
+                    )
                 )
             ):
                 if len(operational) < 20000:
@@ -82,7 +94,15 @@ def scan_bin(path):
                             **{
                                 k: v
                                 for k, v in row.items()
-                                if k in {"TimeUS", "PI", "Id", "Subsys", "ECode", "ArmState"}
+                                if k
+                                in {
+                                    "TimeUS",
+                                    "PI",
+                                    "Id",
+                                    "Subsys",
+                                    "ECode",
+                                    "ArmState",
+                                }
                                 and type(v) is int
                             },
                         )
@@ -97,9 +117,21 @@ def scan_bin(path):
             if kind == "PARM" and isinstance(row.get("Name"), str):
                 name = row["Name"]
                 if name.startswith(
-                    ("BATT", "MOT_", "SERVO", "FRAME", "LOG_", "AHRS", "INS_", "EK3_", "RC3_")
+                    (
+                        "BATT",
+                        "MOT_",
+                        "SERVO",
+                        "FRAME",
+                        "LOG_",
+                        "AHRS",
+                        "INS_",
+                        "EK3_",
+                        "RC3_",
+                    )
                 ):
-                    value = row.get("Value") if _number(row.get("Value")) else None
+                    value = (
+                        row.get("Value") if _number(row.get("Value")) else None
+                    )
                     if value is not None:
                         params[name] = value
                     values = parameter_values.setdefault(name, [])
@@ -111,7 +143,9 @@ def scan_bin(path):
             if _number(stamp):
                 instance = row.get("I", row.get("Instance", 0))
                 timing.add(f"{kind}:{instance}", stamp)
-                c = clocks.setdefault(kind, dict(first=stamp, last=stamp, samples=0, reversals=0))
+                c = clocks.setdefault(
+                    kind, dict(first=stamp, last=stamp, samples=0, reversals=0)
+                )
                 c["reversals"] += int(stamp < c["last"])
                 c["last"] = stamp
                 c["samples"] += 1
@@ -120,7 +154,9 @@ def scan_bin(path):
                 if type(instance) is int and 0 <= instance <= 255:
                     bucket = instances.setdefault(kind, {})
                     bucket[str(instance)] = bucket.get(str(instance), 0) + 1
-                for field, unit in zip(message.fmt.columns, message.fmt.units or []):
+                for field, unit in zip(
+                    message.fmt.columns, message.fmt.units or []
+                ):
                     unit_sets.setdefault(kind + "." + field, set()).add(unit)
                 for key, value in row.items():
                     if key != "TimeUS" and _number(value):
@@ -143,7 +179,11 @@ def scan_bin(path):
         timing=timing.result(),
         operational_events=operational,
         operational_events_truncated=truncated,
-        parser=dict(name="pymavlink.DFReader_binary", indexer="python", native_indexer=False),
+        parser=dict(
+            name="pymavlink.DFReader_binary",
+            indexer="python",
+            native_indexer=False,
+        ),
     )
 
 
@@ -171,19 +211,27 @@ def scan_ulog(path):
                 reversals=int(np.sum(stamps[1:] < stamps[:-1])),
             )
         for field, values in data.data.items():
-            if field.startswith("timestamp") or not np.issubdtype(values.dtype, np.number):
+            if field.startswith("timestamp") or not np.issubdtype(
+                values.dtype, np.number
+            ):
                 continue
             finite = values[np.isfinite(values)]
             if len(finite):
-                ranges[key + "." + field] = [float(finite.min()), float(finite.max())]
+                ranges[key + "." + field] = [
+                    float(finite.min()),
+                    float(finite.max()),
+                ]
     parameters = {
         k: v
         for k, v in ulog.initial_parameters.items()
-        if k.startswith(("BAT", "PWM", "DSHOT", "CA_ROTOR", "SYS_AUTOSTART")) and _number(v)
+        if k.startswith(("BAT", "PWM", "DSHOT", "CA_ROTOR", "SYS_AUTOSTART"))
+        and _number(v)
     }
     parameter_values = {k: [v] for k, v in parameters.items()}
     for _, name, value in ulog.changed_parameters:
-        if name.startswith(("BAT", "PWM", "DSHOT", "CA_ROTOR", "SYS_AUTOSTART")):
+        if name.startswith(
+            ("BAT", "PWM", "DSHOT", "CA_ROTOR", "SYS_AUTOSTART")
+        ):
             value = value if _number(value) else None
             values = parameter_values.setdefault(name, [])
             # An absent initial value cannot establish the configuration for the whole log.
@@ -229,7 +277,10 @@ def inspect_log(path):
         raise ValueError("Use an ArduPilot .BIN or PX4 .ulg onboard log")
     original = digest(path)
     warnings = io.StringIO()
-    with contextlib.redirect_stdout(warnings), contextlib.redirect_stderr(warnings):
+    with (
+        contextlib.redirect_stdout(warnings),
+        contextlib.redirect_stderr(warnings),
+    ):
         result = scan_bin(path) if suffix == ".bin" else scan_ulog(path)
     expected = ARDUPILOT_REQUIRED if suffix == ".bin" else PX4_REQUIRED
     missing = {}
@@ -237,11 +288,18 @@ def inspect_log(path):
         keys = (
             [topic]
             if suffix == ".bin"
-            else [key for key in result["fields"] if key.startswith(topic + ":")]
+            else [
+                key for key in result["fields"] if key.startswith(topic + ":")
+            ]
         )
         # A nonzero instance can be valid; do not combine fields across instances.
         key = (
-            min(keys, key=lambda k: len(set(fields) - set(result["fields"].get(k, []))))
+            min(
+                keys,
+                key=lambda k: len(
+                    set(fields) - set(result["fields"].get(k, []))
+                ),
+            )
             if keys
             else topic
         )

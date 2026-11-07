@@ -41,7 +41,9 @@ def test_policy_controls_real_scheduler_overlap_without_reflying_successes(
                     barrier.wait(timeout=10)
                 time.sleep(0.025 + job["instance"] * 0.001)
                 case = job["case"]
-                rid = hashlib.md5(case["case_id"].encode(), usedforsecurity=False).hexdigest()
+                rid = hashlib.md5(
+                    case["case_id"].encode(), usedforsecurity=False
+                ).hexdigest()
                 raw = tmp_path / "simulation/runs" / rid
                 common.write(
                     raw / "run.json",
@@ -64,7 +66,9 @@ def test_policy_controls_real_scheduler_overlap_without_reflying_successes(
                 time.sleep(0.005)
                 if job["action"] == "prepare":
                     output = Path(job["output"])
-                    common.write(output / "receipt.json", dict(fixture_only=True))
+                    common.write(
+                        output / "receipt.json", dict(fixture_only=True)
+                    )
                     common.write(output / "seal.json", dict(fixture_only=True))
                     result = dict(
                         files={},
@@ -74,10 +78,14 @@ def test_policy_controls_real_scheduler_overlap_without_reflying_successes(
                     )
                 elif job["action"] == "audit":
                     result = dict(
-                        export_receipt_sha256=common.sha(Path(job["output"]) / "receipt.json")
+                        export_receipt_sha256=common.sha(
+                            Path(job["output"]) / "receipt.json"
+                        )
                     )
                 elif job["action"] == "pair":
-                    result = dict(pair_receipt="fixture:" + job["case"]["group_id"])
+                    result = dict(
+                        pair_receipt="fixture:" + job["case"]["group_id"]
+                    )
                 else:
                     result = dict(fixture_only=True)
             common.write(job["receipt"], result)
@@ -97,14 +105,25 @@ def test_policy_controls_real_scheduler_overlap_without_reflying_successes(
     assert not set(flights) & set(before)
     assert peak == dict(flight=16, cpu=4)
     assert bool(overlap) is (not idle_only)
-    assert len(coordinator.ledger["cases"]) == len(coordinator.ledger["attempts"]) == 45
-    assert all(e.get("status") == "COMPLETE" for e in coordinator.ledger["cases"].values())
+    assert (
+        len(coordinator.ledger["cases"])
+        == len(coordinator.ledger["attempts"])
+        == 45
+    )
+    assert all(
+        e.get("status") == "COMPLETE"
+        for e in coordinator.ledger["cases"].values()
+    )
     for cid, old in before.items():
-        assert all(coordinator.ledger["cases"][cid][k] == v for k, v in old.items())
+        assert all(
+            coordinator.ledger["cases"][cid][k] == v for k, v in old.items()
+        )
 
 
 @pytest.mark.parametrize("value", [None, 1, "yes"])
-def test_admission_policy_rejects_ambiguous_configuration(monkeypatch, tmp_path, value):
+def test_admission_policy_rejects_ambiguous_configuration(
+    monkeypatch, tmp_path, value
+):
     task, _ = fixture(monkeypatch, tmp_path)
     cfg = common.read(task / "config.json")
     cfg["nonflight_when_flights_idle"] = value

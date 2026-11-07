@@ -5,12 +5,15 @@ import os
 import sys
 
 import pytest
-from test_reassessment import Progress, fixture_evaluation
-
 from execution.common import read, sha, write
-from execution.evaluate import default_protocol_manifest, evaluate, final_protocol
+from execution.evaluate import (
+    default_protocol_manifest,
+    evaluate,
+    final_protocol,
+)
 from learning import final_test as final
 from learning import operator
+from test_reassessment import Progress, fixture_evaluation
 
 
 def final_fixture(tmp_path):
@@ -18,7 +21,11 @@ def final_fixture(tmp_path):
     dataset = tmp_path / "dataset"
     manifest = read(dataset / "manifest.json")
     for row in manifest["runs"]:
-        row["role"] = "normal_test" if row["role"] == "normal_dev_eval" else "anomaly_test"
+        row["role"] = (
+            "normal_test"
+            if row["role"] == "normal_dev_eval"
+            else "anomaly_test"
+        )
     write(dataset / "manifest.json", manifest)
     seal = read(inference / "result-seal.json")
     seal.update(status="FINAL_INFERENCE_COMPLETE", final_test_used=True)
@@ -32,18 +39,24 @@ def final_fixture(tmp_path):
         calibration_authorized=False,
         source_protocol=default_protocol_manifest(),
         dataset_files={
-            str(p.relative_to(dataset)): sha(p) for p in dataset.rglob("*") if p.is_file()
+            str(p.relative_to(dataset)): sha(p)
+            for p in dataset.rglob("*")
+            if p.is_file()
         },
     )
     cfg["protocol"] = final_protocol(cfg["source_protocol"])
 
     def truth(row, target, progress):
-        target.write_bytes((old / "truth" / (row["run_id"] + ".jsonl")).read_bytes())
+        target.write_bytes(
+            (old / "truth" / (row["run_id"] + ".jsonl")).read_bytes()
+        )
 
     return cfg, inference, expected, truth
 
 
-def test_final_scoring_matches_development_math_without_fitting(tmp_path, monkeypatch):
+def test_final_scoring_matches_development_math_without_fitting(
+    tmp_path, monkeypatch
+):
     cfg, inference, expected, truth = final_fixture(tmp_path)
     import capstone_ai.detection_protocol as protocol
     import capstone_ai.training as training
@@ -71,7 +84,10 @@ def test_final_scoring_matches_development_math_without_fitting(tmp_path, monkey
     for name, model in actual["models"].items():
         for key in expected["models"][name].keys() - {"per_run"}:
             assert model[key] == expected["models"][name][key]
-        assert {r["role"] for r in model["per_run"]} == {"normal_test", "anomaly_test"}
+        assert {r["role"] for r in model["per_run"]} == {
+            "normal_test",
+            "anomaly_test",
+        }
     assert {path: sha(path) for path in before} == before
     assert read(output / "evidence.json")["final_test_used"] is True
     assert read(output / "report.json")["final_test_used"] is True
@@ -158,7 +174,9 @@ def test_failed_final_inference_never_submits_evaluator(tmp_path, monkeypatch):
         return dict(job_id="123", uid=os.getuid(), phase=phase)
 
     monkeypatch.setattr(final, "submit", submit)
-    failed = dict(released=True, slurm_state="FAILED", exit_code="1:0", queue=[])
+    failed = dict(
+        released=True, slurm_state="FAILED", exit_code="1:0", queue=[]
+    )
     monkeypatch.setattr(operator, "wait_release", lambda *a: failed)
     monkeypatch.setattr(operator, "snapshot", lambda *a: failed)
     with pytest.raises(RuntimeError):
@@ -171,14 +189,18 @@ def test_failed_final_inference_never_submits_evaluator(tmp_path, monkeypatch):
     assert submitted == ["infer"]
 
 
-def test_final_submit_is_pinned_single_gpu_and_never_retries(tmp_path, monkeypatch):
+def test_final_submit_is_pinned_single_gpu_and_never_retries(
+    tmp_path, monkeypatch
+):
     cfg = dict(wall_hours=24, evaluation_hours=12)
     monkeypatch.setattr(final, "checked", lambda root: (root, cfg))
     monkeypatch.setattr(final, "SUBMIT_LOCK", tmp_path / "lock")
     monkeypatch.setattr(final, "python_for", lambda *a, **k: sys.executable)
     monkeypatch.setattr(operator, "own_queue", lambda: "")
     commands = []
-    monkeypatch.setattr(operator, "command", lambda argv: commands.append(argv) or "123;cluster")
+    monkeypatch.setattr(
+        operator, "command", lambda argv: commands.append(argv) or "123;cluster"
+    )
     with pytest.raises(ValueError, match="no training"):
         final.submit(tmp_path, "fit", cfg)
     final.submit(tmp_path, "infer", cfg)
@@ -202,11 +224,16 @@ def test_final_submit_is_pinned_single_gpu_and_never_retries(tmp_path, monkeypat
 def test_final_submit_refuses_overlap_and_failed_release(tmp_path, monkeypatch):
     monkeypatch.setattr(final, "checked", lambda root: (root, {}))
     monkeypatch.setattr(final, "SUBMIT_LOCK", tmp_path / "lock")
-    monkeypatch.setattr(operator, "own_queue", lambda: "123|existing|RUNNING|DIS01")
+    monkeypatch.setattr(
+        operator, "own_queue", lambda: "123|existing|RUNNING|DIS01"
+    )
     with pytest.raises(ValueError, match="concurrent"):
         final.submit(tmp_path, "infer", {})
     monkeypatch.setattr(operator, "own_queue", lambda: "")
-    write(tmp_path / "release.json", dict(released=True, slurm_state="FAILED", exit_code="1:0"))
+    write(
+        tmp_path / "release.json",
+        dict(released=True, slurm_state="FAILED", exit_code="1:0"),
+    )
     with pytest.raises(RuntimeError):
         final.submit(tmp_path, "evaluate", {})
     assert not (tmp_path / "evaluate-submitted.claim").exists()
@@ -257,10 +284,19 @@ def test_manifest_rejects_mismatched_pair_and_unscaled_source():
 
 
 def test_final_console_does_not_claim_training_or_recalibration(tmp_path):
-    write(tmp_path / "input/config.json", dict(execution_scope=final.SCOPE, models=final.MODELS))
-    write(tmp_path / "controller.json", dict(status="RUNNING", stage="evaluate", job_id="123"))
+    write(
+        tmp_path / "input/config.json",
+        dict(execution_scope=final.SCOPE, models=final.MODELS),
+    )
+    write(
+        tmp_path / "controller.json",
+        dict(status="RUNNING", stage="evaluate", job_id="123"),
+    )
     write(tmp_path / "compute/progress.json", dict(models_completed=18))
-    write(tmp_path / "evaluation-progress.json", dict(done=23, total=324, stage="final_evaluation"))
+    write(
+        tmp_path / "evaluation-progress.json",
+        dict(done=23, total=324, stage="final_evaluation"),
+    )
     screen = operator.render(tmp_path)
     assert "학습 완료 신경망16 + baseline2" in screen
     assert "학습·보정·분석 없음" in screen
@@ -269,7 +305,9 @@ def test_final_console_does_not_claim_training_or_recalibration(tmp_path):
     assert "새 정상 보정" not in screen
 
 
-def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(tmp_path, monkeypatch):
+def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(
+    tmp_path, monkeypatch
+):
     import hashlib
     import importlib.util
     import io
@@ -281,13 +319,20 @@ def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(tmp_p
         Path(__file__).resolve().parents[1]
         / "reports/final-evaluation-20261103/attempt-01/operator/deploy.py"
     )
-    spec = importlib.util.spec_from_file_location("approved_final_deployment", script)
+    spec = importlib.util.spec_from_file_location(
+        "approved_final_deployment", script
+    )
     deploy = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(deploy)
     data, task, out = [tmp_path / n for n in ("data", "task", "output")]
     for p in (data, task, out):
         p.mkdir()
-    for key, value in [("ROOT", tmp_path), ("DATA", data), ("TASK", task), ("OUT", out)]:
+    for key, value in [
+        ("ROOT", tmp_path),
+        ("DATA", data),
+        ("TASK", task),
+        ("OUT", out),
+    ]:
         monkeypatch.setattr(deploy, key, value)
     manifest = manifest_fixture()
     manifest.update(canonical_sha256={}, protection={}, collection_ledger={})
@@ -302,12 +347,21 @@ def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(tmp_p
     for row in manifest["runs"]:
         folder = data / "canonical" / row["run_id"]
         folder.mkdir(parents=True)
-        for name in ["summary.json", "frames.jsonl", "windows.jsonl", "exclusions.jsonl"]:
+        for name in [
+            "summary.json",
+            "frames.jsonl",
+            "windows.jsonl",
+            "exclusions.jsonl",
+        ]:
             p = folder / name
-            p.write_text(json.dumps({"run_id": row["run_id"], "bytes": "한글"}) + "\n")
+            p.write_text(
+                json.dumps({"run_id": row["run_id"], "bytes": "한글"}) + "\n"
+            )
             manifest["canonical_sha256"][str(p)] = sha(p)
         raw = tmp_path / (row["run_id"] + ".tar.gz")
-        body = b"" if row["role"] == "normal_test" else b'{"event_id":"fixture"}\n'
+        body = (
+            b"" if row["role"] == "normal_test" else b'{"event_id":"fixture"}\n'
+        )
         with tarfile.open(raw, "w:gz") as archive:
             info = tarfile.TarInfo("evaluation/events.jsonl")
             info.size = len(body)
@@ -317,12 +371,17 @@ def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(tmp_p
             bytes=raw.stat().st_size,
             members={
                 "evaluation/events.jsonl": dict(
-                    kind="file", bytes=len(body), sha256=hashlib.sha256(body).hexdigest()
+                    kind="file",
+                    bytes=len(body),
+                    sha256=hashlib.sha256(body).hexdigest(),
                 )
             },
         )
     write(data / "sealed-manifest.json", manifest)
-    write(data / "seal.json", dict(manifest_sha256=sha(data / "sealed-manifest.json")))
+    write(
+        data / "seal.json",
+        dict(manifest_sha256=sha(data / "sealed-manifest.json")),
+    )
     write(
         tmp_path / "ai/reports/final-test-20261103/intake-01/intake.json",
         dict(manifest_sha256=sha(data / "sealed-manifest.json")),
@@ -330,10 +389,14 @@ def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(tmp_p
     target, digest = deploy.package_data()
     assert sha(target) == digest
     with tarfile.open(target, "r:gz") as archive:
-        content = {m.name: archive.extractfile(m).read() for m in archive if m.isfile()}
+        content = {
+            m.name: archive.extractfile(m).read() for m in archive if m.isfile()
+        }
     transfer = json.loads(content["transfer.json"])
     assert len([n for n in content if n.startswith("truth/")]) == 324
-    assert len([n for n in content if n.startswith("dataset/canonical/")]) == 1296
+    assert (
+        len([n for n in content if n.startswith("dataset/canonical/")]) == 1296
+    )
     for name, expected in transfer["files"].items():
         assert hashlib.sha256(content[name]).hexdigest() == expected
     with pytest.raises(FileExistsError):

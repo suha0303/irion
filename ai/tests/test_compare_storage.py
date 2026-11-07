@@ -7,24 +7,31 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from execution.common import ROOT
 from learning import prepare_compare
 
 
-def test_unmounted_external_root_is_rejected_without_creating_output(monkeypatch):
-    root = Path("/media/sa/X31/Data/X500/ROUND_001/R3_LONG15/gpu1200/uncreated-test")
+def test_unmounted_external_root_is_rejected_without_creating_output(
+    monkeypatch,
+):
+    root = Path(
+        "/media/sa/X31/Data/X500/ROUND_001/R3_LONG15/gpu1200/uncreated-test"
+    )
     monkeypatch.setattr(Path, "is_mount", lambda p: False)
     with pytest.raises(ValueError, match="Mounted external"):
         prepare_compare.external_root(root)
 
 
-def test_mutating_actions_reject_missing_mount_before_read_or_ssh(tmp_path, monkeypatch):
+def test_mutating_actions_reject_missing_mount_before_read_or_ssh(
+    tmp_path, monkeypatch
+):
     def unavailable(path):
         raise ValueError("Mounted external unavailable")
 
     monkeypatch.setattr(prepare_compare, "external_root", unavailable)
-    monkeypatch.setattr(prepare_compare.subprocess, "run", lambda *a, **k: pytest.fail("No SSH"))
+    monkeypatch.setattr(
+        prepare_compare.subprocess, "run", lambda *a, **k: pytest.fail("No SSH")
+    )
     from console.profile import write
 
     profile = tmp_path / "server-profile.json"
@@ -40,7 +47,13 @@ def test_mutating_actions_reject_missing_mount_before_read_or_ssh(tmp_path, monk
             output_root=str(tmp_path / "output"),
             ssh=None,
             slurm=dict(
-                partition="p02", node="DIS01", nodes=1, ntasks=1, gpus=1, cpus=4, memory_gib=16
+                partition="p02",
+                node="DIS01",
+                nodes=1,
+                ntasks=1,
+                gpus=1,
+                cpus=4,
+                memory_gib=16,
             ),
         ),
     )
@@ -48,14 +61,18 @@ def test_mutating_actions_reject_missing_mount_before_read_or_ssh(tmp_path, monk
     for action in (
         lambda: prepare_compare.authorize(tmp_path, True),
         lambda: prepare_compare.deploy(tmp_path),
-        lambda: prepare_compare.launchers(tmp_path, Path("/srv/drone-ai/fixture")),
+        lambda: prepare_compare.launchers(
+            tmp_path, Path("/srv/drone-ai/fixture")
+        ),
     ):
         with pytest.raises(ValueError, match="Mounted external"):
             action()
     assert list(tmp_path.iterdir()) == [profile]
 
 
-def test_mount_loss_stops_checks_and_prevents_status_write_fallback(tmp_path, monkeypatch):
+def test_mount_loss_stops_checks_and_prevents_status_write_fallback(
+    tmp_path, monkeypatch
+):
     mounted = True
 
     def external(path):
@@ -65,7 +82,9 @@ def test_mount_loss_stops_checks_and_prevents_status_write_fallback(tmp_path, mo
 
     monkeypatch.setattr(prepare_compare, "external_root", external)
     state = tmp_path / "progress.json"
-    progress = prepare_compare.PreparationProgress(state, storage_root=tmp_path, hours=1)
+    progress = prepare_compare.PreparationProgress(
+        state, storage_root=tmp_path, hours=1
+    )
     progress.update(stage="fixture")
     before = state.read_bytes()
     mounted = False
@@ -83,9 +102,17 @@ def test_external_root_rejects_traversal():
         )
 
 
-def test_deployed_snapshot_imports_without_pretrain_or_retired_r1_launchers(tmp_path):
+def test_deployed_snapshot_imports_without_pretrain_or_retired_r1_launchers(
+    tmp_path,
+):
     stage = tmp_path / "input/ai"
-    for folder in ("execution", "learning", "pipeline", "console", "src/capstone_ai"):
+    for folder in (
+        "execution",
+        "learning",
+        "pipeline",
+        "console",
+        "src/capstone_ai",
+    ):
         for source in (ROOT / "ai" / folder).rglob("*.py"):
             target = stage / source.relative_to(ROOT / "ai")
             target.parent.mkdir(parents=True, exist_ok=True)

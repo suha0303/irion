@@ -24,12 +24,17 @@ TASK = "SHORT_CYCLE_20261107"
 AUTH = ROOT / "ai/reports/short-cycle-20261107/attempt-01/authorization.json"
 
 
-def prepare_policy(native_policy_path, producer_binding_path, output, *, fixture_only=False):
+def prepare_policy(
+    native_policy_path, producer_binding_path, output, *, fixture_only=False
+):
     """Write a new AI projection only after explicit short auth and native180 policy."""
     from .joint_native import ORIGIN, WIND_CLOCK, check_policy
 
     auth = json_file(AUTH)
-    if auth.get("task_id") != TASK or auth.get("scope", {}).get("proposed_mission_seconds") != 180:
+    if (
+        auth.get("task_id") != TASK
+        or auth.get("scope", {}).get("proposed_mission_seconds") != 180
+    ):
         raise ValueError("Explicit short-cycle180 authorization required")
     native = json_file(native_policy_path)
     check_policy(native, duration_profile="short180")
@@ -63,7 +68,9 @@ def prepare_policy(native_policy_path, producer_binding_path, output, *, fixture
         ),
     )
     output = Path(output).absolute()
-    if ".." in output.parts or any(p.is_symlink() for p in (output, *output.parents)):
+    if ".." in output.parts or any(
+        p.is_symlink() for p in (output, *output.parents)
+    ):
         raise ValueError("New regular short policy output required")
     with output.open("x") as stream:
         stream.write(json.dumps(value, indent=2) + "\n")
@@ -76,12 +83,17 @@ def prepare_request(bundle_path, output):
 
     bundle_path = regular(bundle_path)
     bundle = json_file(bundle_path)
-    if bundle.get("schema") != "drone-ai.short-cycle.connector/1" or bundle.get("task_id") != TASK:
+    if (
+        bundle.get("schema") != "drone-ai.short-cycle.connector/1"
+        or bundle.get("task_id") != TASK
+    ):
         raise ValueError("Explicit short-cycle connector bundle required")
 
     def ref(path):
         path = Path(path)
-        path = regular(path if path.is_absolute() else bundle_path.parent / path)
+        path = regular(
+            path if path.is_absolute() else bundle_path.parent / path
+        )
         return dict(path=str(path), sha256=sha(path))
 
     names = (
@@ -108,26 +120,33 @@ def prepare_request(bundle_path, output):
         request.update(
             case_id=bundle["case_id"],
             case_origin={
-                key: ref(bundle["case_origin"][key]) for key in ("run", "execution", "origin")
+                key: ref(bundle["case_origin"][key])
+                for key in ("run", "execution", "origin")
             },
         )
         request["refs"].update({key: ref(paths[key]) for key in CASE_REFS})
         if paths.get("pair_receipt") is not None:
             request["refs"]["pair_receipt"] = ref(paths["pair_receipt"])
     if bundle["phase"] == "final":
-        request["case_receipts"] = [ref(path) for path in bundle["case_receipts"]]
+        request["case_receipts"] = [
+            ref(path) for path in bundle["case_receipts"]
+        ]
     for key in ("external_audit", "external_audits"):
         if key in bundle:
             request[key] = bundle[key]
     output = Path(output).absolute()
-    if ".." in output.parts or any(p.is_symlink() for p in (output, *output.parents)):
+    if ".." in output.parts or any(
+        p.is_symlink() for p in (output, *output.parents)
+    ):
         raise ValueError("New separate request output required")
     with output.open("x") as stream:
         stream.write(json.dumps(request, indent=2) + "\n")
     return request
 
 
-def consumer_inputs(ctx, *, scope_task=TASK, cohort=SHORT, usage="short_cycle_input_check"):
+def consumer_inputs(
+    ctx, *, scope_task=TASK, cohort=SHORT, usage="short_cycle_input_check"
+):
     """Shared generation/config verification; no campaign membership or count changes."""
     from learning.admission19 import FINAL16
 
@@ -140,7 +159,9 @@ def consumer_inputs(ctx, *, scope_task=TASK, cohort=SHORT, usage="short_cycle_in
         ctx.request.get("refs", {}).get(k) is not None
         for k in ("native_completion", "development_receipt")
     ):
-        raise ValueError("Short-cycle must not depend on historical development6 or pilot READY")
+        raise ValueError(
+            "Short-cycle must not depend on historical development6 or pilot READY"
+        )
     expected = ctx.doc("expected_producer")
     check_producer(expected, expected)
     ctx.ref("source_manifest")
@@ -148,9 +169,12 @@ def consumer_inputs(ctx, *, scope_task=TASK, cohort=SHORT, usage="short_cycle_in
     if (
         ctx.hashes["source_manifest"] != expected["source_manifest_sha256"]
         or ctx.hashes["runtime_manifest"] != expected["runtime_sha256"]
-        or runtime.get("source_manifest_sha256") != expected["source_manifest_sha256"]
+        or runtime.get("source_manifest_sha256")
+        != expected["source_manifest_sha256"]
     ):
-        raise ValueError("Short current generation source/runtime binding differs")
+        raise ValueError(
+            "Short current generation source/runtime binding differs"
+        )
     policy = policy_check(ctx, expected, short_cycle=True)
     if (
         policy.get("scope_task") != scope_task
@@ -158,7 +182,9 @@ def consumer_inputs(ctx, *, scope_task=TASK, cohort=SHORT, usage="short_cycle_in
         or policy.get("duration_profile") != "short180"
         or duration_us(policy) != 180000000
     ):
-        raise ValueError("A separate short180 policy is required, never old480 relabelling")
+        raise ValueError(
+            "A separate short180 policy is required, never old480 relabelling"
+        )
     capsule = ctx.doc("capsule")
     check_producer(capsule["producer"], expected)
     if (
@@ -168,11 +194,17 @@ def consumer_inputs(ctx, *, scope_task=TASK, cohort=SHORT, usage="short_cycle_in
         raise ValueError("Frozen short consumer capsule required")
     files = capsule["files"]
     entry = capsule["Data_entrypoint"]
-    if not entry.startswith("Data/generation/") or not set(CRITICAL) | {entry} <= set(files):
-        raise ValueError("Short capsule must include AI readers and actual Data entrypoint")
+    if not entry.startswith("Data/generation/") or not set(CRITICAL) | {
+        entry
+    } <= set(files):
+        raise ValueError(
+            "Short capsule must include AI readers and actual Data entrypoint"
+        )
     for name, digest in files.items():
         if not name.startswith(("ai/", "Data/generation/")):
-            raise ValueError("Only owned consumer source/config paths in capsule")
+            raise ValueError(
+                "Only owned consumer source/config paths in capsule"
+            )
         path = regular(ROOT / name)
         if (
             path.suffix not in {".py", ".json", ".sh"}
@@ -208,7 +240,9 @@ def prerequisites(ctx):
         or scope.get("logical_cases_per_cycle") != 45
         or scope.get("training_fit_model_forward_gpu") is not False
     ):
-        raise ValueError("Explicit180s45case no-fit short-cycle authority required")
+        raise ValueError(
+            "Explicit180s45case no-fit short-cycle authority required"
+        )
     ctx.hashes["short_authorization"] = sha(AUTH)
     expected, policy, registry = consumer_inputs(ctx)
     from .quality_rejection import verify_attempt
@@ -228,7 +262,9 @@ def prerequisites(ctx):
         ),
     )
     ctx.ledger_counts = counts
-    ctx.checked.append("short180_static_generation_capsule_full45_no_development6")
+    ctx.checked.append(
+        "short180_static_generation_capsule_full45_no_development6"
+    )
     return expected, policy, registry, cases, ledger, counts
 
 
@@ -237,7 +273,9 @@ def final_checks(ctx, cases, ledger):
     if refs is None:
         raise Pending("All45 actual case input receipts are required")
     if len(refs) != 45:
-        raise ValueError("Exactly45 case input receipts; no failed case removal")
+        raise ValueError(
+            "Exactly45 case input receipts; no failed case removal"
+        )
     seen = set()
     pairs = {}
     for i, ref in enumerate(refs):
@@ -262,10 +300,22 @@ def final_checks(ctx, cases, ledger):
             or r.get("frames", 0) <= 100
             or r.get("online", {}).get("windows", 0) <= 0
         ):
-            raise ValueError("All45 actual nonempty no-fit case checks required")
-        if entry["status"] != "completed" or r["run_id"] != entry["attempts"][-1]["run_id"]:
-            raise ValueError("Unresolved/failed/unavailable case remains in full45 denominator")
-        for key in ("source_manifest", "runtime_manifest", "paired_policy", "capsule"):
+            raise ValueError(
+                "All45 actual nonempty no-fit case checks required"
+            )
+        if (
+            entry["status"] != "completed"
+            or r["run_id"] != entry["attempts"][-1]["run_id"]
+        ):
+            raise ValueError(
+                "Unresolved/failed/unavailable case remains in full45 denominator"
+            )
+        for key in (
+            "source_manifest",
+            "runtime_manifest",
+            "paired_policy",
+            "capsule",
+        ):
             if r["evidence_sha256"].get(key) != ctx.hashes[key]:
                 raise ValueError("Case producer/policy/config changed")
         if c["case_kind"] != "normal_base":
@@ -279,7 +329,9 @@ def final_checks(ctx, cases, ledger):
         or any(len(v) != 2 or v[0] != v[1] for v in pairs.values())
         or len({v[0] for v in pairs.values()}) != 9
     ):
-        raise ValueError("Nine distinct native pair reports must bind all18 paired cases")
+        raise ValueError(
+            "Nine distinct native pair reports must bind all18 paired cases"
+        )
     return dict(
         status="SHORT45_INPUT_AND_PAIR_CHECKS_PASSED",
         cases_checked=45,
@@ -325,8 +377,12 @@ def main(request_path, output=None):
                 mission.get("duration_profile") != "short180"
                 or mission.get("mission_duration_us") != 180000000
             ):
-                raise ValueError("Short views require explicit short180 interval metadata")
-            result.update(duration_profile="short180", mission_duration_us=180000000)
+                raise ValueError(
+                    "Short views require explicit short180 interval metadata"
+                )
+            result.update(
+                duration_profile="short180", mission_duration_us=180000000
+            )
         elif phase == "final":
             result = final_checks(ctx, cases, ledger)
         else:
@@ -334,21 +390,37 @@ def main(request_path, output=None):
         fixture = request.get("fixture_only") is True
         if fixture:
             result["status"] = "SYNTHETIC_" + result["status"]
-        result.update(actual_data_verified=not fixture, fixture_only=fixture, ledger_counts=counts)
+        result.update(
+            actual_data_verified=not fixture,
+            fixture_only=fixture,
+            ledger_counts=counts,
+        )
         code = 0
     except (Pending, FileNotFoundError) as error:
         result, code = (
-            dict(status="BLOCKED_PENDING_INPUT", reason=str(error), actual_data_verified=False),
+            dict(
+                status="BLOCKED_PENDING_INPUT",
+                reason=str(error),
+                actual_data_verified=False,
+            ),
             2,
         )
     except Unavailable as error:
         result, code = (
-            dict(status="INPUT_UNAVAILABLE", reason=str(error), actual_data_verified=False),
+            dict(
+                status="INPUT_UNAVAILABLE",
+                reason=str(error),
+                actual_data_verified=False,
+            ),
             3,
         )
     except (ValueError, KeyError, TypeError, OSError, IndexError) as error:
         result, code = (
-            dict(status="FAILED_INPUT_CHECK", reason=str(error), actual_data_verified=False),
+            dict(
+                status="FAILED_INPUT_CHECK",
+                reason=str(error),
+                actual_data_verified=False,
+            ),
             1,
         )
     result.update(

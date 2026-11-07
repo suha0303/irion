@@ -11,12 +11,17 @@ from pretrain.common import RESOURCES, load, package_imports
 
 def freezer():
     package_imports()
-    return load("collection_source_lock_test", RESOURCES / "admission/freeze.py")
+    return load(
+        "collection_source_lock_test", RESOURCES / "admission/freeze.py"
+    )
 
 
 def digest(value, *, sorted_keys=False):
     return hashlib.sha256(
-        (json.dumps(value, indent=2, sort_keys=sorted_keys, allow_nan=False) + "\n").encode()
+        (
+            json.dumps(value, indent=2, sort_keys=sorted_keys, allow_nan=False)
+            + "\n"
+        ).encode()
     ).hexdigest()
 
 
@@ -29,7 +34,8 @@ SOURCE = {
 
 def test_order_only_difference_is_accepted():
     other = {
-        key: dict(reversed(list(value.items()))) for key, value in reversed(list(SOURCE.items()))
+        key: dict(reversed(list(value.items())))
+        for key, value in reversed(list(SOURCE.items()))
     }
     assert other == SOURCE and digest(other) != digest(SOURCE)
     revision = dict(
@@ -76,5 +82,8 @@ def test_unknown_hash_format_is_rejected():
         freezer().verify_source_lock(
             SOURCE,
             digest(SOURCE),
-            dict(producer_lock_hash_format="skip", producer_lock_sha256=digest(SOURCE)),
+            dict(
+                producer_lock_hash_format="skip",
+                producer_lock_sha256=digest(SOURCE),
+            ),
         )

@@ -6,19 +6,30 @@ from pathlib import Path
 
 import pytest
 
-spec = importlib.util.spec_from_file_location("handoff_runner", "ai/handoff/run_smoke.py")
+spec = importlib.util.spec_from_file_location(
+    "handoff_runner", "ai/handoff/run_smoke.py"
+)
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
 
 
 def package(tmp_path):
     (tmp_path / "data.bin").write_bytes(b"locked-input")
-    value = {"files": {"data.bin": {"sha256": runner.digest(tmp_path / "data.bin"), "bytes": 12}}}
+    value = {
+        "files": {
+            "data.bin": {
+                "sha256": runner.digest(tmp_path / "data.bin"),
+                "bytes": 12,
+            }
+        }
+    }
     (tmp_path / "MANIFEST.json").write_text(json.dumps(value))
-    (tmp_path / "SHA256SUMS").write_text("".join(
-        runner.digest(tmp_path / name) + "  " + name + "\n"
-        for name in ["data.bin", "MANIFEST.json"]
-    ))
+    (tmp_path / "SHA256SUMS").write_text(
+        "".join(
+            runner.digest(tmp_path / name) + "  " + name + "\n"
+            for name in ["data.bin", "MANIFEST.json"]
+        )
+    )
     return tmp_path
 
 
@@ -72,4 +83,7 @@ def test_packaged_source_matches_historical_v5():
     manifest = read_json(root / "MANIFEST.json")
     assert manifest["source_readiness_sha256"] == sha(readiness)
     assert runner.verify(root)["verified_files"] == len(manifest["files"])
-    assert all(sha(root / name) == digest for name, digest in old["source_hashes"].items())
+    assert all(
+        sha(root / name) == digest
+        for name, digest in old["source_hashes"].items()
+    )

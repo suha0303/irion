@@ -53,7 +53,8 @@ class Preprocessor:
         self.names = [
             n
             for n in FEATURES
-            if config["feature_profile"].startswith("common19") or "error" not in n
+            if config["feature_profile"].startswith("common19")
+            or "error" not in n
         ]
         self.frames, self.windows, self.exclusions = [], [], []
         self.diagnostics: Counter[str] = Counter()
@@ -65,7 +66,9 @@ class Preprocessor:
     def reset(self, reason):
         self.segment += 1
         self.signals, self.filters, self.instances = {}, {}, {}
-        self.history: deque[dict[str, Any]] = deque(maxlen=self.config["history"])
+        self.history: deque[dict[str, Any]] = deque(
+            maxlen=self.config["history"]
+        )
         self.bad_since = None
         self.gap_latched = False
         self.diagnostics["reset_" + reason] += 1
@@ -81,13 +84,25 @@ class Preprocessor:
                 raise ValueError("conflicting duplicate event")
             self.diagnostics["duplicates"] += 1
             return
-        if e["clock_id"] == self.clock and e["available_time_us"] <= self.watermark:
+        if (
+            e["clock_id"] == self.clock
+            and e["available_time_us"] <= self.watermark
+        ):
             raise ValueError("event arrived behind committed watermark")
         self.seen[key] = e
         # Both sample and availability must be in the past, even for malformed future samples.
         t = max(e["sample_time_us"], e["available_time_us"])
         heapq.heappush(
-            self.pending, (e["clock_id"], t, e["source"], e["topic"], e["instance"], e["seq"], e)
+            self.pending,
+            (
+                e["clock_id"],
+                t,
+                e["source"],
+                e["topic"],
+                e["instance"],
+                e["seq"],
+                e,
+            ),
         )
 
     def _event(self, e, t):
@@ -115,7 +130,9 @@ class Preprocessor:
                     or previous[1] != "valid"
                     or e["sample_time_us"] - previous[2] > self.age_limit(name)
                 ):
-                    self.filters[name] = LowPass(t, value, self.config["filter_tau_s"])
+                    self.filters[name] = LowPass(
+                        t, value, self.config["filter_tau_s"]
+                    )
                 else:
                     self.filters[name].update(t, value)
             self.signals[name] = (
@@ -155,8 +172,16 @@ class Preprocessor:
         values, quality = {}, {}
         for name in self.names:
             if "error" in name:
-                measured = "climb_rate" if name == "climb_rate_error" else "body_rate_" + name[-1]
-                target = "climb_target" if name == "climb_rate_error" else "rate_target_" + name[-1]
+                measured = (
+                    "climb_rate"
+                    if name == "climb_rate_error"
+                    else "body_rate_" + name[-1]
+                )
+                target = (
+                    "climb_target"
+                    if name == "climb_rate_error"
+                    else "rate_target_" + name[-1]
+                )
                 v, q = self._value(measured, t)
                 vt, qt = self._value(target, t)
                 values[name] = vt - v if q == qt == "valid" else None
@@ -167,7 +192,10 @@ class Preprocessor:
         if not valid:
             if self.bad_since is None:
                 self.bad_since = t
-            if not self.gap_latched and t - self.bad_since >= self.config["gap_reset_us"]:
+            if (
+                not self.gap_latched
+                and t - self.bad_since >= self.config["gap_reset_us"]
+            ):
                 self.reset("signal_gap")
                 self.bad_since, self.gap_latched = t, True
                 values = dict.fromkeys(self.names)
@@ -198,23 +226,37 @@ class Preprocessor:
             "operating_state": state,
             "source_clock_mode": self.metadata["clock"]["mode"],
             "lineage": {
-                k: {"sample_time_us": s[2], "available_time_us": s[3], "seq": s[4], "topic": s[5]}
+                k: {
+                    "sample_time_us": s[2],
+                    "available_time_us": s[3],
+                    "seq": s[4],
+                    "topic": s[5],
+                }
                 for k, s in self.signals.items()
             },
         }
         self.frames.append(frame)
         self.history.append(frame)
-        if (t - self.config["grid_anchor_us"]) % self.config["emit_every_us"] == 0:
+        if (t - self.config["grid_anchor_us"]) % self.config[
+            "emit_every_us"
+        ] == 0:
             reasons = []
             if len(self.history) != self.config["history"]:
                 reasons.append("history_short")
-            if any(any(q != "valid" for q in f["quality"].values()) for f in self.history):
+            if any(
+                any(q != "valid" for q in f["quality"].values())
+                for f in self.history
+            ):
                 reasons.append("invalid_history")
             if any(f["operating_state"] != "airborne" for f in self.history):
                 reasons.append("not_airborne")
             if reasons:
                 self.exclusions.append(
-                    {"time_us": t, "segment_id": self.segment, "reasons": reasons}
+                    {
+                        "time_us": t,
+                        "segment_id": self.segment,
+                        "reasons": reasons,
+                    }
                 )
             else:
                 self.windows.append(
@@ -223,9 +265,14 @@ class Preprocessor:
                         "clock_id": self.clock,
                         "segment_id": self.segment,
                         "origin_us": t,
-                        "history_times_us": [f["time_us"] for f in self.history],
+                        "history_times_us": [
+                            f["time_us"] for f in self.history
+                        ],
                         "feature_order": self.names,
-                        "X": [[f["values"][n] for n in self.names] for f in self.history],
+                        "X": [
+                            [f["values"][n] for n in self.names]
+                            for f in self.history
+                        ],
                         "target_times_us": [
                             t + (j + 1) * self.config["step_us"]
                             for j in range(self.config["future"])
@@ -279,8 +326,12 @@ def replay(run, out, config):
     run, out = Path(run), Path(out)
     if any(p.is_symlink() for p in (run, *run.parents, out, *out.parents)):
         raise ValueError("Replay symlink input/output forbidden")
-    if out.resolve().is_relative_to(run.resolve()) or run.resolve().is_relative_to(out.resolve()):
-        raise ValueError("Replay output must be separate from read-only raw source")
+    if out.resolve().is_relative_to(
+        run.resolve()
+    ) or run.resolve().is_relative_to(out.resolve()):
+        raise ValueError(
+            "Replay output must be separate from read-only raw source"
+        )
     out.mkdir(parents=True, exist_ok=False)
     engine = Preprocessor(read_json(run / "observations/metadata.json"), config)
     reader = DirectoryTail(run, engine)

@@ -34,15 +34,22 @@ def fixture(tmp_path, monkeypatch):
             sha256=sha(raw),
             members={
                 "evaluation/events.jsonl": dict(
-                    kind="file", bytes=len(body), sha256=hashlib.sha256(body).hexdigest()
+                    kind="file",
+                    bytes=len(body),
+                    sha256=hashlib.sha256(body).hexdigest(),
                 )
             },
         ),
     )
     write(dataset / "manifest.json", dict(runs=[row]))
     (dataset / "normal_train.npz").write_bytes(b"fixture array bytes" * 100)
-    write(root / "dataset-seal.json", {p.name: sha(p) for p in dataset.iterdir()})
-    write(root / "quality.json", dict(passed=True, train_only_scaler_verified=True))
+    write(
+        root / "dataset-seal.json", {p.name: sha(p) for p in dataset.iterdir()}
+    )
+    write(
+        root / "quality.json",
+        dict(passed=True, train_only_scaler_verified=True),
+    )
     write(root / "frozen-manifest.json", dict(runs=[row]))
     write(
         root / "handoff.json",
@@ -69,13 +76,16 @@ def test_lossless_restore_and_truth_separation(tmp_path, monkeypatch):
     receipt = storage.pack(root, out)
     assert receipt["raw_deleted"] is False
     assert all(
-        "streams" not in name and "events" not in name for name in receipt["dataset"]["members"]
+        "streams" not in name and "events" not in name
+        for name in receipt["dataset"]["members"]
     )
     restored = storage.restore(out, tmp_path / "restored")
     assert (restored / "dataset/normal_train.npz").read_bytes() == (
         root / "dataset/normal_train.npz"
     ).read_bytes()
-    assert read(restored / "evidence/handoff.json")["dataset"] == str(restored / "dataset")
+    assert read(restored / "evidence/handoff.json")["dataset"] == str(
+        restored / "dataset"
+    )
     truth = storage.restore(out, tmp_path / "evaluator", truth=True)
     assert (truth / "run1.jsonl").read_bytes() == b'{"event":"fixture"}\n'
     row = read(root / "dataset/manifest.json")["runs"][0]
@@ -84,7 +94,9 @@ def test_lossless_restore_and_truth_separation(tmp_path, monkeypatch):
     assert target.read_bytes() == (truth / "run1.jsonl").read_bytes()
     row["role"] = "normal_train"
     with pytest.raises(ValueError, match="development evaluator"):
-        storage.truth_provider(out)(row, tmp_path / "leak.jsonl", storage.Budget())
+        storage.truth_provider(out)(
+            row, tmp_path / "leak.jsonl", storage.Budget()
+        )
     assert (root / "handoff.json").read_bytes() == original
     with pytest.raises(FileExistsError):
         storage.pack(root, out)

@@ -11,9 +11,12 @@ import math
 from pathlib import Path
 
 import numpy as np
-
 from capstone_ai.detection import DomainAlarms
-from capstone_ai.detection_protocol import evaluation_metrics, event_result, point_metrics
+from capstone_ai.detection_protocol import (
+    evaluation_metrics,
+    event_result,
+    point_metrics,
+)
 from capstone_ai.detection_replay import records
 from execution.common import child, read, sha, verify, write
 from execution.evaluate import (
@@ -46,10 +49,18 @@ def checked_criteria(value):
         or not math.isfinite(limit)
         or limit < 0
     ):
-        raise ValueError("max_detection_delay_s must be null or finite nonnegative seconds")
+        raise ValueError(
+            "max_detection_delay_s must be null or finite nonnegative seconds"
+        )
     factors = np.asarray(result["threshold_multiplier"], dtype=float)
-    if factors.shape != (2,) or not np.isfinite(factors).all() or np.any(factors <= 0):
-        raise ValueError("threshold_multiplier requires positive propulsion,battery multipliers")
+    if (
+        factors.shape != (2,)
+        or not np.isfinite(factors).all()
+        or np.any(factors <= 0)
+    ):
+        raise ValueError(
+            "threshold_multiplier requires positive propulsion,battery multipliers"
+        )
     result["threshold_multiplier"] = factors.tolist()
     return result
 
@@ -62,7 +73,11 @@ def transformed_decisions(decisions, high, criteria):
     previous, detector = None, None
     result = []
     for decision in decisions:
-        scope = (decision["run_id"], decision["clock_id"], decision["segment_id"])
+        scope = (
+            decision["run_id"],
+            decision["clock_id"],
+            decision["segment_id"],
+        )
         if scope != previous:
             detector, previous = DomainAlarms(threshold), scope
         update = detector.update(decision["scores"], decision["origin_time_us"])
@@ -78,12 +93,16 @@ def matched_event(event, decisions, observation_start, criteria):
     if limit is not None:
         start = truth.get("observation_start_time_us") or observation_start
         if truth.get("onset_kind") != "pre_existing":
-            onset = truth.get("applied_time_us", truth.get("physical_onset_time_us"))
+            onset = truth.get(
+                "applied_time_us", truth.get("physical_onset_time_us")
+            )
             if onset is not None:
                 start = max(start, onset)
         end = start + int(round(limit * 1_000_000))
         truth["end_time_us"] = (
-            min(truth["end_time_us"], end) if truth.get("end_time_us") is not None else end
+            min(truth["end_time_us"], end)
+            if truth.get("end_time_us") is not None
+            else end
         )
     result = event_result(truth, decisions, observation_start)
     if criteria["event_success"] == "new_episode":
@@ -92,7 +111,9 @@ def matched_event(event, decisions, observation_start, criteria):
         result["detected"] = detected_at is not None
         onset = result["physical_onset_time_us"]
         result["onset_delay_s"] = (
-            (detected_at - onset) / 1e6 if detected_at is not None and onset is not None else None
+            (detected_at - onset) / 1e6
+            if detected_at is not None and onset is not None
+            else None
         )
         boundary = truth.get("degradation_boundary_time_us")
         boundary_at = next(
@@ -137,7 +158,9 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
     criteria = checked_criteria(criteria)
     evaluation, output = Path(evaluation).resolve(), Path(output).resolve()
     if output.exists() or output == evaluation or evaluation in output.parents:
-        raise ValueError("Use a fresh output outside the immutable base evaluation directory")
+        raise ValueError(
+            "Use a fresh output outside the immutable base evaluation directory"
+        )
     report = read(evaluation / "report.json")
     evidence = read(evaluation / "evidence.json")
     protocol = read(evaluation / "protocol.json")
@@ -152,7 +175,9 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
         raise ValueError("Base evaluation evidence/protocol seal mismatch")
     inference = Path(inference_root or evidence["inference_root"]).resolve()
     if output == inference or inference in output.parents:
-        raise ValueError("Use a fresh output outside the immutable inference directory")
+        raise ValueError(
+            "Use a fresh output outside the immutable inference directory"
+        )
     if sha(inference / "result-seal.json") != evidence["inference_seal_sha256"]:
         raise ValueError("Inference result seal changed")
     seal = read(inference / "result-seal.json")
@@ -165,12 +190,16 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
         or seal.get("truth_join") is not False
         or seal.get("status") != "TRAIN_CALIBRATION_INFERENCE_COMPLETE"
     ):
-        raise ValueError("Expected frozen development inference without truth access")
+        raise ValueError(
+            "Expected frozen development inference without truth access"
+        )
     rows = evidence["runs"]
     if (
         not rows
         or len({r["run_id"] for r in rows}) != len(rows)
-        or any(r["role"] not in ("normal_dev_eval", "anomaly_dev") for r in rows)
+        or any(
+            r["role"] not in ("normal_dev_eval", "anomaly_dev") for r in rows
+        )
     ):
         raise ValueError("Only unique development rows may be reassessed")
     output.mkdir(parents=True, exist_ok=False)
@@ -179,7 +208,9 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
         **criteria,
         "base_protocol_sha256": protocol_hash(protocol),
         "base_implementation_sha256": protocol["implementation_sha256"],
-        "implementation_sha256": default_protocol_manifest()["implementation_sha256"],
+        "implementation_sha256": default_protocol_manifest()[
+            "implementation_sha256"
+        ],
         "reassessment_implementation_sha256": sha(__file__),
         "threshold_fit": "unchanged normal-only calibration; fixed multiplier only",
         "point_metrics": "original event truth intervals, no matching-window truncation",
@@ -205,19 +236,31 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
         keyed_models = {}
         for name in names:
             prefix = f"calibration/{name}/{row['run_id']}"
-            for file in ("summary.json", "seal.json", "decisions.jsonl", "forecasts.jsonl"):
+            for file in (
+                "summary.json",
+                "seal.json",
+                "decisions.jsonl",
+                "forecasts.jsonl",
+            ):
                 key = prefix + "/" + file
                 verify(inference, {key: seal["files"][key]})
             replay = child(inference, prefix)
             verify(replay, read(replay / "seal.json")["files"])
             summary = read(replay / "summary.json")
             ds = transformed_decisions(
-                records(replay / "decisions.jsonl"), calibration[name]["high"], criteria
+                records(replay / "decisions.jsonl"),
+                calibration[name]["high"],
+                criteria,
             )
-            events = [matched_event(event, ds, first, criteria) for event in truth]
+            events = [
+                matched_event(event, ds, first, criteria) for event in truth
+            ]
             if summary["operational_seconds"] > 0:
                 metrics = evaluation_metrics(
-                    events, ds, summary["operational_seconds"], summary.get("operational_spans_us")
+                    events,
+                    ds,
+                    summary["operational_seconds"],
+                    summary.get("operational_spans_us"),
                 )
             else:
                 if ds:
@@ -226,7 +269,9 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
                     operational_seconds=0,
                     scored_seconds=0,
                     coverage=None,
-                    episodes={k: [] for k in ("union", "battery", "propulsion")},
+                    episodes={
+                        k: [] for k in ("union", "battery", "propulsion")
+                    },
                     reason="no_observed_airborne_exposure",
                 )
             per_model[name].append(
@@ -247,7 +292,11 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
             keyed = {}
             seen = set()
             for decision in ds:
-                key = (decision["clock_id"], decision["segment_id"], decision["origin_time_us"])
+                key = (
+                    decision["clock_id"],
+                    decision["segment_id"],
+                    decision["origin_time_us"],
+                )
                 if key in seen:
                     raise ValueError("Duplicate forecast origin")
                 seen.add(key)
@@ -258,7 +307,9 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
         common = set.intersection(*(set(v) for v in keyed_models.values()))
         common_count += len(common)
         for name in names:
-            common_errors[name].add([keyed_models[name][key] for key in sorted(common)])
+            common_errors[name].add(
+                [keyed_models[name][key] for key in sorted(common)]
+            )
     metrics = dict(
         evaluation_mode="development_reassessment",
         final_test_used=False,
@@ -268,7 +319,10 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
         protocol_sha256=protocol_hash(revised_protocol),
         models={
             name: summarize_model(
-                per_model[name], all_errors[name].result(), common_errors[name].result(), len(rows)
+                per_model[name],
+                all_errors[name].result(),
+                common_errors[name].result(),
+                len(rows),
             )
             for name in names
         },
@@ -320,7 +374,12 @@ def main(argv=None):
         help="Optional relocated inference directory with the same sealed contents",
     )
     args = parser.parse_args(argv)
-    reassess(args.evaluation, args.output, read(args.criteria), inference_root=args.inference_root)
+    reassess(
+        args.evaluation,
+        args.output,
+        read(args.criteria),
+        inference_root=args.inference_root,
+    )
     print(args.output / "report.json")
 
 

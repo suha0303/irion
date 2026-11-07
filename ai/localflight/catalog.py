@@ -34,13 +34,19 @@ class Catalog:
         if self.manifest.get("schema") != "drone-ai.final-delivery/1":
             raise ValueError("Unsupported model delivery")
         if set(self.manifest["models"]) != set(MODEL_IDS):
-            raise ValueError("Expected the frozen forecast 8 and run-health 8 model set")
+            raise ValueError(
+                "Expected the frozen forecast 8 and run-health 8 model set"
+            )
 
     def checked(self, relative):
         path = self.root / relative
-        if relative not in self.manifest["files"] or not path.is_relative_to(self.root):
+        if relative not in self.manifest["files"] or not path.is_relative_to(
+            self.root
+        ):
             raise ValueError("File is not in the model manifest")
-        if ".." in Path(relative).parts or any(p.is_symlink() for p in (path, *path.parents)):
+        if ".." in Path(relative).parts or any(
+            p.is_symlink() for p in (path, *path.parents)
+        ):
             raise ValueError("Symlink or traversal in model bundle")
         if digest(path) != self.manifest["files"][relative]:
             raise ValueError(f"Model bundle integrity mismatch: {relative}")
@@ -61,7 +67,9 @@ class Catalog:
             )
         }
         spec = read_json(files["model-spec.json"])
-        expected_id = f"{spec['task']}_{spec['name']}_h{spec['hidden']}_l{spec['layers']}"
+        expected_id = (
+            f"{spec['task']}_{spec['name']}_h{spec['hidden']}_l{spec['layers']}"
+        )
         if model_id != expected_id:
             raise ValueError("Model ID/specification mismatch")
         calibration = read_json(files["evaluation/calibration.json"])
@@ -82,7 +90,11 @@ class Catalog:
 
     def list(self):
         return [
-            {k: v for k, v in self.entry(mid).items() if k not in {"files", "calibration"}}
+            {
+                k: v
+                for k, v in self.entry(mid).items()
+                if k not in {"files", "calibration"}
+            }
             for mid in MODEL_IDS
         ]
 
@@ -91,4 +103,6 @@ class Catalog:
             relative = f"code/ai/learning/{name}/models.py"
             frozen = self.checked(relative)
             if digest(frozen) != digest(ROOT / f"ai/learning/{name}/models.py"):
-                raise ValueError(f"Model implementation differs from delivered code: {name}")
+                raise ValueError(
+                    f"Model implementation differs from delivered code: {name}"
+                )

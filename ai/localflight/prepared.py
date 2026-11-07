@@ -7,7 +7,6 @@ Unknown health is sufficient for prediction but never for normal adaptation.
 from pathlib import Path
 
 import numpy as np
-
 from capstone_ai.mapping import FEATURES
 from execution.prepare import npz_headers
 
@@ -23,7 +22,12 @@ def segment_ranges(metadata, length):
     ranges = []
     for segment in segments:
         a, b = segment["start_index"], segment["end_index"]
-        if type(a) is not int or type(b) is not int or a != cursor or not a + 110 <= b <= length:
+        if (
+            type(a) is not int
+            or type(b) is not int
+            or a != cursor
+            or not a + 110 <= b <= length
+        ):
             raise ValueError("Invalid contiguous segment boundaries")
         ranges.append((a, b))
         cursor = b
@@ -42,18 +46,30 @@ def load(path, *, normal=False):
         or m.get("feature_order") != FEATURES
         or m.get("preprocessing_revision") != REVISION
         or m.get("units") != "physical_pack_V_A"
-        or m.get("origin") not in {"px4_real", "ardupilot_real", "synthetic_unit_fixture"}
+        or m.get("origin")
+        not in {"px4_real", "ardupilot_real", "synthetic_unit_fixture"}
     ):
-        raise ValueError("A separately prepared real common19 manifest is required")
+        raise ValueError(
+            "A separately prepared real common19 manifest is required"
+        )
     p = m["profile"]
     e = eligibility(p)
     if not e["profile_complete"] or not e["model_structure_compatible"]:
-        raise ValueError("Aircraft mapping and nameplate are incomplete or unsupported")
+        raise ValueError(
+            "Aircraft mapping and nameplate are incomplete or unsupported"
+        )
     if m.get("mapping_verified") is not True or not m.get("mapping_evidence"):
         raise ValueError("An audited source-to-common19 mapping is required")
-    if m.get("role") not in {"adaptation", "development", "evaluation", "calibration"}:
+    if m.get("role") not in {
+        "adaptation",
+        "development",
+        "evaluation",
+        "calibration",
+    }:
         raise ValueError("Explicit flight role required")
-    if normal and (m.get("health") != "confirmed_normal" or not m.get("health_evidence")):
+    if normal and (
+        m.get("health") != "confirmed_normal" or not m.get("health_evidence")
+    ):
         raise ValueError(
             "Confirmed normal flight and its evidence required; probability is insufficient"
         )
@@ -61,9 +77,15 @@ def load(path, *, normal=False):
         raise ValueError("Original flight identity required")
     if m["origin"] != "synthetic_unit_fixture":
         raw = path.parent / m["source_path"]
-        if not raw.is_relative_to(path.parent) or ".." in Path(m["source_path"]).parts:
+        if (
+            not raw.is_relative_to(path.parent)
+            or ".." in Path(m["source_path"]).parts
+        ):
             raise ValueError("Raw path must stay inside its flight package")
-        if any(p.is_symlink() for p in (raw, *raw.parents)) or digest(raw) != m["source_sha256"]:
+        if (
+            any(p.is_symlink() for p in (raw, *raw.parents))
+            or digest(raw) != m["source_sha256"]
+        ):
             raise ValueError("Original log changed")
     name = m["file"]["path"]
     data_path = path.parent / name
@@ -94,8 +116,14 @@ def load(path, *, normal=False):
         or np.any(times < 0)
         or any(not np.all(np.diff(times[a:b]) == 100000) for a, b in ranges)
     ):
-        raise ValueError("Missing data/clock resets must be separated; never fill gaps")
-    if np.any(values[:, :4] < 0) or np.any(values[:, :4] > 1) or np.any(values[:, 17] <= 0):
+        raise ValueError(
+            "Missing data/clock resets must be separated; never fill gaps"
+        )
+    if (
+        np.any(values[:, :4] < 0)
+        or np.any(values[:, :4] > 1)
+        or np.any(values[:, 17] <= 0)
+    ):
         raise ValueError("Invalid actuator requests or voltage")
     return m, values.astype("f8"), times
 
@@ -106,7 +134,11 @@ def windows(metadata, values, times, scaler):
     physical[:, 17] /= metadata["profile"]["series_cells"]
     physical[:, 18] /= metadata["profile"]["capacity_ah"]
     indices = np.array(
-        [i for a, b in segment_ranges(metadata, len(values)) for i in range(a + 99, b - 10, 10)]
+        [
+            i
+            for a, b in segment_ranges(metadata, len(values))
+            for i in range(a + 99, b - 10, 10)
+        ]
     )
     if not len(indices):
         raise ValueError("No complete causal history and arrived future target")
@@ -115,7 +147,8 @@ def windows(metadata, values, times, scaler):
     x = ((x - scaler["x_mean"]) / scaler["x_scale"]).astype("f4")
     y = ((y - scaler["y_mean"]) / scaler["y_scale"]).astype("f4")
     persistence = (
-        (physical[indices][:, [4, 5, 6, 17]] - scaler["y_mean"]) / scaler["y_scale"]
+        (physical[indices][:, [4, 5, 6, 17]] - scaler["y_mean"])
+        / scaler["y_scale"]
     ).astype("f4")
     return x, y, persistence, times[indices]
 
@@ -123,10 +156,16 @@ def windows(metadata, values, times, scaler):
 def distinct_flights(records):
     hashes = [m["source_sha256"] for m in records]
     if len(hashes) != len(set(hashes)):
-        raise ValueError("The same flight cannot appear in multiple roles or duplicate files")
+        raise ValueError(
+            "The same flight cannot appear in multiple roles or duplicate files"
+        )
     profiles = [m["profile"] for m in records]
     if any(p != profiles[0] for p in profiles[1:]):
-        raise ValueError("Adaptation and comparison require the same aircraft profile version")
+        raise ValueError(
+            "Adaptation and comparison require the same aircraft profile version"
+        )
     origins = {m["origin"] for m in records}
     if len(origins) > 1:
-        raise ValueError("Do not mix synthetic and real flights or different input sources")
+        raise ValueError(
+            "Do not mix synthetic and real flights or different input sources"
+        )

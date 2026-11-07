@@ -10,7 +10,8 @@ def source(tmp_path, monkeypatch):
     monkeypatch.setattr(recovery, "HOME", tmp_path)
     task = tmp_path / "tasks/source"
     common.write(
-        task / "config.json", dict(mode="collect", collection_sets=1, collection_run_count=1)
+        task / "config.json",
+        dict(mode="collect", collection_sets=1, collection_run_count=1),
     )
     (task / "config.sha256").write_text(common.sha(task / "config.json"))
     common.write(
@@ -83,12 +84,20 @@ def test_resume_dispatch_cannot_collect(tmp_path, monkeypatch):
     monkeypatch.setattr(r, "resources", lambda: {})
     monkeypatch.setattr(runner, "external", lambda path: tmp_path / "external")
     monkeypatch.setattr(
-        recovery, "validated_collections", lambda path: [tmp_path / "source/collection"]
+        recovery,
+        "validated_collections",
+        lambda path: [tmp_path / "source/collection"],
     )
     prepared = []
-    monkeypatch.setattr(r, "prepare_collections", lambda folders: prepared.extend(folders))
-    monkeypatch.setattr(r, "collection_sets", lambda: pytest.fail("recollection invoked"))
-    monkeypatch.setattr(r, "benchmark", lambda: pytest.fail("flight test invoked"))
+    monkeypatch.setattr(
+        r, "prepare_collections", lambda folders: prepared.extend(folders)
+    )
+    monkeypatch.setattr(
+        r, "collection_sets", lambda: pytest.fail("recollection invoked")
+    )
+    monkeypatch.setattr(
+        r, "benchmark", lambda: pytest.fail("flight test invoked")
+    )
     r.run()
     assert prepared == [tmp_path / "source/collection"]
     assert r.state["status"] == "PRETRAIN_READY_STOPPED_PENDING_USER_REVIEW"
@@ -114,7 +123,13 @@ def test_resume_console_has_no_collection_flow(tmp_path):
     )
     common.write(
         task / "operator/state.json",
-        dict(status="FAILED_STOPPED", stage="freeze", started=0, finished=1, completed=[]),
+        dict(
+            status="FAILED_STOPPED",
+            stage="freeze",
+            started=0,
+            finished=1,
+            completed=[],
+        ),
     )
     result = cli.render(task)
     assert "재수집 없음" in result
@@ -122,11 +137,16 @@ def test_resume_console_has_no_collection_flow(tmp_path):
     assert "0/7" in result
 
 
-def test_recovery_freeze_output_is_new_not_original(source, tmp_path, monkeypatch):
+def test_recovery_freeze_output_is_new_not_original(
+    source, tmp_path, monkeypatch
+):
     from pretrain import collection
 
     task = tmp_path / "new"
-    common.write(task / "config.json", dict(mode="resume_preprocess", source_sha256={}, workers=16))
+    common.write(
+        task / "config.json",
+        dict(mode="resume_preprocess", source_sha256={}, workers=16),
+    )
     r = runner.Runner(task)
     original = source / "collection"
     before = {p: p.read_bytes() for p in source.rglob("*") if p.is_file()}
@@ -139,8 +159,12 @@ def test_recovery_freeze_output_is_new_not_original(source, tmp_path, monkeypatc
         return dict(runs=[dict(run_id="one")])
 
     monkeypatch.setattr(collection, "freeze_collection", freeze)
-    monkeypatch.setattr(collection, "combine_frozen", lambda task, parts: parts[0][1])
-    monkeypatch.setattr(r, "prepare", lambda *a, **k: tmp_path / "external/prepared")
+    monkeypatch.setattr(
+        collection, "combine_frozen", lambda task, parts: parts[0][1]
+    )
+    monkeypatch.setattr(
+        r, "prepare", lambda *a, **k: tmp_path / "external/prepared"
+    )
     r.prepare_collections([original])
     assert r.state["completed"] == ["freeze", "combine"]
     assert before == {p: p.read_bytes() for p in before}

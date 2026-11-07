@@ -2,14 +2,13 @@ import json
 
 import numpy as np
 import pytest
-from safetensors.torch import load_file
-
 from capstone_ai.mapping import FEATURES
 from localflight.adapt import fit
 from localflight.analysis import compare
 from localflight.catalog import DEFAULT_BUNDLE, digest
 from localflight.prepared import REVISION, load, windows
 from localflight.runtime import Runtime
+from safetensors.torch import load_file
 
 
 def flight(root, name, role, health="confirmed_normal"):
@@ -20,7 +19,11 @@ def flight(root, name, role, health="confirmed_normal"):
     values[:, 14] = -9.81
     values[:, 17] = 16 - np.arange(250) * 0.0001
     values[:, 18] = 8
-    np.savez(folder / "frames.npz", values=values, time_us=np.arange(250, dtype="i8") * 100000)
+    np.savez(
+        folder / "frames.npz",
+        values=values,
+        time_us=np.arange(250, dtype="i8") * 100000,
+    )
     profile = dict(
         schema="drone.real-aircraft/1",
         id="fixture-quad",
@@ -31,7 +34,9 @@ def flight(root, name, role, health="confirmed_normal"):
         series_cells=4,
         capacity_ah=12,
         battery_id="fixture-battery",
-        motor_channels=dict(front_right=1, front_left=2, rear_right=3, rear_left=4),
+        motor_channels=dict(
+            front_right=1, front_left=2, rear_right=3, rear_left=4
+        ),
         output_min=0,
         output_max=1000,
         mapping_evidence="synthetic test fixture",
@@ -64,18 +69,36 @@ def test_unknown_health_and_evaluation_cannot_fit(tmp_path):
         load(unknown, normal=True)
     evaluation = flight(tmp_path, "evaluation", "evaluation")
     with pytest.raises(ValueError, match="Evaluation"):
-        fit("forecast_lstm_h64_l2", [evaluation], [], tmp_path / "bad", bundle=DEFAULT_BUNDLE)
+        fit(
+            "forecast_lstm_h64_l2",
+            [evaluation],
+            [],
+            tmp_path / "bad",
+            bundle=DEFAULT_BUNDLE,
+        )
 
 
 @pytest.mark.parametrize(
-    "model_id", ["forecast_lstm_h64_l2", "run_health_lstm_h64_l2", "run_health_transformer_h64_l2"]
+    "model_id",
+    [
+        "forecast_lstm_h64_l2",
+        "run_health_lstm_h64_l2",
+        "run_health_transformer_h64_l2",
+    ],
 )
 def test_head_only_fit_restore_and_independent_comparison(tmp_path, model_id):
     train = flight(tmp_path, "train", "adaptation")
     dev = flight(tmp_path, "dev", "development")
     evaluation = flight(tmp_path, "test", "evaluation")
     base = Runtime(model_id).model.state_dict()
-    fit(model_id, [train], [dev], tmp_path / "full", bundle=DEFAULT_BUNDLE, epochs=2)
+    fit(
+        model_id,
+        [train],
+        [dev],
+        tmp_path / "full",
+        bundle=DEFAULT_BUNDLE,
+        epochs=2,
+    )
     fit(
         model_id,
         [train],
@@ -101,7 +124,9 @@ def test_head_only_fit_restore_and_independent_comparison(tmp_path, model_id):
         if not key.startswith("head."):
             np.testing.assert_array_equal(full[key].numpy(), base[key].numpy())
     assert any(
-        not np.array_equal(full[k].numpy(), base[k].numpy()) for k in full if k.startswith("head.")
+        not np.array_equal(full[k].numpy(), base[k].numpy())
+        for k in full
+        if k.startswith("head.")
     )
     r = compare(tmp_path / "full", evaluation, bundle=DEFAULT_BUNDLE)
     assert r["independent"] and not r["detection_performance_verified"]

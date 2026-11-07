@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 import pytest
-
 from localflight.distribution import build, copy_regular
 
 
@@ -14,12 +13,18 @@ def test_distribution_does_not_overwrite_or_follow_symlinks(tmp_path):
     link.symlink_to(original)
     with pytest.raises(ValueError, match="regular"):
         copy_regular(link, tmp_path / "copied")
-    assert original.read_text() == "preserve" and not (tmp_path / "copied").exists()
+    assert (
+        original.read_text() == "preserve"
+        and not (tmp_path / "copied").exists()
+    )
 
 
-def test_low_disk_stops_before_creating_partial_application(tmp_path, monkeypatch):
+def test_low_disk_stops_before_creating_partial_application(
+    tmp_path, monkeypatch
+):
     monkeypatch.setattr(
-        "localflight.distribution.shutil.disk_usage", lambda p: SimpleNamespace(free=0)
+        "localflight.distribution.shutil.disk_usage",
+        lambda p: SimpleNamespace(free=0),
     )
     with pytest.raises(ValueError, match="free space"):
         build(tmp_path / "output", tmp_path)
