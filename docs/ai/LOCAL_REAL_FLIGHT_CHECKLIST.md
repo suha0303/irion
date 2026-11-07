@@ -8,6 +8,12 @@ PX4 ULog·ArduPilot BIN 입력, 실기체 프로파일, CPU 적응 학습 및 �
 
 ## 현재 작업과 재개 지점
 
+- 소스 검수(2026-11-15): Google Python 기준 가독성 정리, 전체 런 중복 로딩 감소,
+  NPZ 파일/재생 자원 관리, UI 지연 로딩, 공개 clone 배포 경로를 개선했다.
+  기능 시험과 실기체 검증의 구분은 유지한다. 기존 RC12 압축 파일은 그대로다.
+  전체 범위·검사·보존 예외: `docs/development/CODE_REVIEW_RESULTS.md`.
+
+
 - 구현·브라우저 검증 완료: 로그 분석·실시간 종료 후 공통 전체 런 요약, 분석/미분석 구간과 제외 이유, 구간별 상세 UI. RC12 최종 배포 검증 완료. 보고서: `ai/reports/run-summary-20261114/REPORT.md`.
 
 - RC11 추가: 앱의 이착륙 기반 구간 선택·IMU 전환 분리·제어기 이벤트 표시, 선택형 시동 해제 자동 종료 구현. 실제 BIN 3개 자동 구간과 이전 분석 계획 일치. 상세 증거는 `ai/reports/local-followup-20261114/REPORT.md`.
