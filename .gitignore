@@ -72,6 +72,11 @@ core.[0-9]*
 /ai/operations/
 /ai/outputs/
 /ai/runs/
+/ai/releases/
+/ai/models/
+/simulation/data/public/*.csv
+/upload-branches/
+/irion-upload/
 /ai/**/*.safetensors
 /ai/**/*.pt
 /ai/**/*.pth

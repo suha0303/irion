@@ -21,6 +21,13 @@ Full SHA-256/metadata/download URL is in battery-fit.json. Current sign conversi
 Original CMU CSV/README and UIUC data remain in data/public; derived profiles are distinct.
 Manufacturer grams-force use9.80665m/s², RPM uses2π/60. No manufacturer throttle-percent to duty identity is assumed.
 
+명세 지정 작업 지침은 조회한 원문을 artifacts/sources에 보존했다.
+
+- attention-kind: https://github.com/alexgreensh/attention-span — output-styles/attention-kind.md
+- Karpathy guidelines: https://github.com/multica-ai/andrej-karpathy-skills — CLAUDE.md
+- anti-slop: https://github.com/dmmulroy/anti-slop — README (TS/JS 도구는 C++/Python에 적용하지 않음)
+- verification-before-completion: https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md
+
 실제 파일별 hash는 artifacts/provenance.json, 패치 재적용 도구는 sim/tools/patch_px4.py,
 적용된 텍스트 diff는 artifacts/px4-local.patch이다. RawCapture.hpp는 새 파일이므로 diff와 별도로
 sim/adapters 원본 및 provenance hash를 함께 사용한다. vendor의 원래 LICENSE 파일을 유지한다.

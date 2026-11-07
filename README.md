@@ -10,6 +10,12 @@ PX4·Gazebo에서 X500 비행로그를 수집하고, 정상 train 기준 공통 
 | [UI/](UI/README.md) | 비행 모니터링 대시보드·재생·실시간 수신·모델 결과 표시 |
 | [docs/](docs/README.md) | 명세·운영·개발 안내와 과거 보존 자료 |
 
+## 최신 로컬 실기체 분석 (2026-11-15)
+
+GPU 서버 없이 최신 forecast 8종과 run-health 8종을 선택하고, 기체 프로파일·PX4/ArduPilot 로그·기체별 출력층 파인튜닝·실시간 MAVLink 분석을 연결한다. 로그 분석과 비행 종료 결과는 전체 런 요약, 구간별 상세, 분석 제외 구간을 함께 표시한다.
+
+[설치·실행 안내](docs/ai/LOCAL_DESKTOP_UBUNTU.md), [기능 체크리스트](docs/ai/LOCAL_REAL_FLIGHT_CHECKLIST.md), [전체 코드 검수 마일스톤](docs/development/CODE_REVIEW_MILESTONES.md)을 참고한다. 모델 가중치·원시 비행 로그·개인 설정·설치형 바이너리는 Git 소스와 별도로 관리한다. 실기체 정확도·정상 판정 성능은 아직 검증되지 않았다.
+
 ## 다른 컴퓨터에서 시작
 
 지원 기준은 **Ubuntu 24.04 x86_64와 Python 3.12**다. 비행 수집에는 Gazebo Harmonic·PX4 빌드 의존성과 user systemd가 필요하다. 자세한 사전 조건과 단계별 실행은 [설치·이동 안내](docs/data/PORTABLE_SETUP.md)를 따른다.
