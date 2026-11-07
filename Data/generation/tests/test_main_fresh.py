@@ -4,9 +4,10 @@ import copy
 import json
 
 import pytest
+from test_main_factory import factory
+
 from pretrain import common, pilot45
 from pretrain import main_collection as main
-from test_main_factory import factory
 
 
 def old_campaign(monkeypatch, tmp_path):
@@ -63,6 +64,7 @@ def old_campaign(monkeypatch, tmp_path):
     return task, store, case, record, raw
 
 
+@pytest.mark.local_evidence
 def test_fresh_start_does_not_import_old_raw_attempts_or_modify_old_files(
     monkeypatch, tmp_path
 ):
@@ -101,6 +103,7 @@ def test_fresh_start_does_not_import_old_raw_attempts_or_modify_old_files(
     assert not (fresh / "operator/service.json").exists()
 
 
+@pytest.mark.local_evidence
 def test_new_campaign_cannot_read_or_write_legacy_catalog(
     monkeypatch, tmp_path
 ):
@@ -116,6 +119,7 @@ def test_new_campaign_cannot_read_or_write_legacy_catalog(
     assert common.sha(main.CATALOG / (case["case_id"] + ".json")) == original
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize(
     "mutation",
     [None, "cohort", "seed", "uuid", "hash", "retry", "unknown_task"],
@@ -151,6 +155,7 @@ def test_fresh_registry_accepts_same_condition_but_keeps_identity_exclusions(
     assert main.registry_identity(fresh, cfg, old, new) is (mutation is None)
 
 
+@pytest.mark.local_evidence
 def test_same_case_registry_append_uses_real_guard_without_a_child(
     monkeypatch, tmp_path
 ):
@@ -169,6 +174,7 @@ def test_same_case_registry_append_uses_real_guard_without_a_child(
     assert not list(fresh.glob("pilot/execution/*/*.process.json"))
 
 
+@pytest.mark.local_evidence
 def test_second_user_start_creates_another_empty_task_without_claim_reset(
     monkeypatch, tmp_path
 ):
@@ -188,6 +194,7 @@ def test_second_user_start_creates_another_empty_task_without_claim_reset(
     assert common.read(second / "ledger.json")["physical_attempts"] == 0
 
 
+@pytest.mark.local_evidence
 def test_existing_unknown_seed_remains_blocked_before_task_creation(
     monkeypatch, tmp_path
 ):

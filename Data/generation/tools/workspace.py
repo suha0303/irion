@@ -48,7 +48,16 @@ EXCLUDED = {
     "build",
     "runtime",
 }
-AI_RUNTIME_DIRECTORIES = {".local", "operations", "outputs", "runs"}
+AI_RUNTIME_DIRECTORIES = {
+    ".local",
+    "operations",
+    "outputs",
+    "runs",
+    "models",
+    "releases",
+    "results",
+    "ai",
+}
 ROOT_FILES = (
     "README.md",
     "AGENTS.md",

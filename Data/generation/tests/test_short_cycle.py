@@ -6,9 +6,11 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
+
 from pretrain import common, native_flight, pilot45, pilot_parallel
 
 
+@pytest.mark.local_evidence
 def test_default480_case_values_are_identical_to_reviewed_previous_source():
     previous = (
         common.ROOT
@@ -201,6 +203,7 @@ def test_short_bridge_uses_public_ai_connector_for_each_phase(
     monkeypatch, tmp_path, phase
 ):
     from learning.history19 import short_cycle
+
     from pretrain import pilot_bridge
 
     task = tmp_path / "task"
@@ -307,6 +310,7 @@ def test_short_global_registry_excludes_old_raw_without_blocking_own_new_cases(
     assert {"fit", "calibration", "final_test"} <= set(fresh["forbidden_uses"])
 
 
+@pytest.mark.local_evidence
 def test_short_draft_has_its_own_parallel_namespace_without_old_scope_authority(
     monkeypatch, tmp_path
 ):
@@ -339,6 +343,7 @@ def test_short_handoff_separates_static180_binding_from_old_ready(
     from types import SimpleNamespace
 
     from learning import admission19
+
     from pretrain import ai19, pilot_bridge
 
     producer = {k: "a" * 64 for k in admission19.PRODUCER_FIELDS}
@@ -461,6 +466,7 @@ def test_short_handoff_separates_static180_binding_from_old_ready(
             pilot_bridge.dependencies(path)
 
 
+@pytest.mark.local_evidence
 def test_bounded_short_repair_keeps_attempt1_false_and_admits_exact_parent_as_attempt2(
     monkeypatch, tmp_path
 ):

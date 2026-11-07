@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from pretrain import ai19, common
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -339,6 +340,7 @@ def exported_fixture(
     return output, result
 
 
+@pytest.mark.local_evidence
 def test_archive_extract_two_views_and_train_only_unique_scaler(
     tmp_path, monkeypatch
 ):
@@ -550,6 +552,7 @@ def admission_fixture(tmp_path, monkeypatch):
     return raw, binding, selection, integrity, run_assessment
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize(
     "damage", [None, "old_producer", "wrong_policy", "tamper", "failed_quality"]
 )

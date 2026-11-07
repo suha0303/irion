@@ -8,6 +8,7 @@ import tarfile
 from pathlib import Path
 
 import pytest
+
 from tools import workspace
 
 
@@ -118,7 +119,16 @@ def test_export_excludes_ai_profiles_jobs_and_weights_but_keeps_source_fixtures(
     tmp_path,
 ):
     root = tmp_path / "checkout"
-    for directory in ("ai/.local", "ai/operations", "ai/outputs", "ai/runs"):
+    for directory in (
+        "ai/.local",
+        "ai/operations",
+        "ai/outputs",
+        "ai/runs",
+        "ai/models",
+        "ai/releases",
+        "ai/results",
+        "ai/ai",
+    ):
         path = root / directory
         path.mkdir(parents=True)
         (path / "private.json").write_text("machine state")

@@ -273,11 +273,11 @@ def run(runner):
     class RestoreBudget(Budget):
         last_check = 0.0
 
-        def check(inner):
+        def check(self):
             super().check()
-            if time.monotonic() - inner.last_check > 1:
+            if time.monotonic() - self.last_check > 1:
                 runner.resources()
-                inner.last_check = time.monotonic()
+                self.last_check = time.monotonic()
 
     def progress(*, done, total):
         nonlocal last_update

@@ -6,10 +6,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
 from pretrain import cli, common, main_storage, pilot45, pilot_parallel
 from pretrain import main_collection as main
 
 
+@pytest.mark.local_evidence
 def test_frozen_main_contains_lr_once_and_all_approved_roles():
     _, full = main.plans("main")
     _, lr = main.plans("lr108")
@@ -76,83 +78,35 @@ def test_direct_collection_opens_screen_only_when_requested(
     assert calls == ["submitted"] + ([] if no_watch else [("screen", tmp_path)])
 
 
-def test_prepare_creates_archive_progress_parent_before_real_archive(
-    monkeypatch, tmp_path
-):
+def test_closed_raw_is_reused_without_intermediate_archive(tmp_path):
     from pretrain import ai19, main_views
 
-    ai19.ai_modules()
-    common.package_imports()
-    from learning import admission19
-    from pretrain import archive
-
-    class ArchiveCompleted(Exception):
-        pass
-
     raw = tmp_path / "raw"
-    common.write(raw / "integrity.json", {})
     for name in ai19.CONSUMER:
-        common.write(raw / name, {})
-    (raw / "observations.txt").write_text("fixture observations\n")
-    expected, protection = (
-        tmp_path / "expected.json",
-        tmp_path / "protection.json",
-    )
-    common.write(expected, {})
-    common.write(protection, {})
-    output = tmp_path / "processed/physical-01/attempt-01"
-    cache = tmp_path / "execution/archive-cache.json"
-    cache.parent.mkdir()
-    monkeypatch.setattr(ai19, "ai_modules", lambda: (None, None, None, None))
-    monkeypatch.setattr(ai19, "producer_binding", lambda: {})
-    monkeypatch.setattr(ai19, "lineage", lambda _: {})
-    monkeypatch.setattr(
-        ai19,
-        "admit",
-        lambda *a, **k: (
-            dict(path=str(raw)),
-            dict(mission_interval={}, assessment={}),
-        ),
-    )
-    monkeypatch.setattr(main_views.pilot19, "source_evidence", lambda *a: {})
-    common.write(raw / "evaluation/scenario.json", {})
-    for name in ("check_producer", "check_protection", "source_evidence"):
-        monkeypatch.setattr(admission19, name, lambda *a, **k: None)
-    monkeypatch.setattr(main_views, "STORE", tmp_path / "store")
-
-    def after_archive(*args):
-        saved = common.read(cache)
-        assert Path(saved["archive"]["archive"]).is_file()
-        assert (
-            common.read(output / "archive-evidence/archive-progress.json")[
-                "status"
-            ]
-            == "COMPLETED"
-        )
-        assert (
-            output / "archive-evidence/archive-verify-progress.json"
-        ).is_file()
-        raise ArchiveCompleted
-
-    monkeypatch.setattr(archive, "extract_consumer", after_archive)
-    with pytest.raises(ArchiveCompleted):
-        main_views.prepare(
-            dict(
-                cohort="normal_train",
-                purpose="train",
-                path=str(raw),
-                execution_task="fixture",
-            ),
-            output,
-            expected,
-            cache,
-            protection,
-            policy_bundle={},
-            case={},
-        )
-    assert raw.is_dir()
+        common.write(raw / name, {"fixture_only": True})
+    members = {
+        str(p.relative_to(raw)): {
+            "size": p.stat().st_size,
+            "sha256": common.sha(p),
+        }
+        for p in raw.rglob("*")
+        if p.is_file()
+    }
+    common.write(raw / "integrity.json", members)
+    before = {name: common.sha(raw / name) for name in members}
+    source = main_views.closed_source(raw)
+    assert source["kind"] == "closed_raw_directory"
+    assert source["intermediate_archive"] is False
+    assert source["replay_source"] == "original_read_only"
+    assert {name: common.sha(raw / name) for name in members} == before
+    assert not list(tmp_path.rglob("*.tar.*"))
+    changed = raw / next(iter(members))
+    changed.write_bytes(b"changed size")
+    with pytest.raises(ValueError, match="Closed raw size changed"):
+        main_views.closed_source(raw)
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize(
     "message,expected_calls",
     [("Case child exit1; fixture", 3), ("Available RAM below1GB", 1)],
@@ -241,6 +195,7 @@ def runtime(monkeypatch, tmp_path, count=17):
     return task, rows, cfg
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize("failures", [1, 3])
 def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
     monkeypatch, tmp_path, failures
@@ -249,7 +204,7 @@ def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
     counts = {}
     events = []
 
-    def child(_task, request, log, *, on_progress=None):
+    def child(_task, request, log, *, on_progress=None, resource_snapshot=None):
         j = common.read(request)
         c = j["case"]
         cid = c["case_id"]
@@ -451,7 +406,7 @@ def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(
     )
     actual = main_storage.pack_files
 
-    def crash(sources, path, budget):
+    def crash(sources, path, budget, **kwargs):
         Path(path).write_bytes(b"interrupted partial")
         raise RuntimeError("power loss before publication")
 
@@ -471,7 +426,12 @@ def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(
         and not consumer.exists()
         and protected.read_text() == "prior data"
     )
-    assert list(target.glob("*.partial.tar.xz"))
+    discarded = list(target.glob("*.partial.tar.xz.discarded.json"))
+    assert len(discarded) == 1
+    assert common.read(discarded[0])["discarded_bytes"] == len(
+        b"interrupted partial"
+    )
+    assert not list(target.glob("*.partial.tar.xz"))
     main_storage.committed(target / "commit.json")
 
 
@@ -504,6 +464,7 @@ def test_interrupted_deletion_has_durable_intent_and_exact_resume(
     assert len(common.read(target / "cleanup.json")["deleted"]) == 3
 
 
+@pytest.mark.local_evidence
 def test_worker_preflight_failure_is_visible_without_any_dispatch(
     monkeypatch, tmp_path
 ):
@@ -530,13 +491,20 @@ def test_worker_preflight_failure_is_visible_without_any_dispatch(
     assert state["status"] == "BLOCKED_STOPPED" and "source" in state["reason"]
 
 
+@pytest.mark.local_evidence
 def test_real_subprocess_shared_errno_survives_wrapped_child_error(
     monkeypatch, tmp_path
 ):
     import subprocess
 
     task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
-    cfg.update(policy_bundle={})
+    handoff = tmp_path / "handoff.json"
+    common.write(handoff, {"fixture_only": True})
+    cfg.update(
+        policy_bundle={},
+        dependency_handoff=str(handoff),
+        source_sha256={str(handoff): common.sha(handoff)},
+    )
     common.write(task / "config.json", cfg)
     (task / "config.sha256").write_text(common.sha(task / "config.json"))
     common.write(task / "manifest.json", dict(cases=rows))
@@ -600,6 +568,7 @@ m.case_entry(p)
     )
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize(
     "quality_failures,transform_failures", [(1, 0), (3, 0), (0, 2)]
 )
@@ -617,7 +586,7 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
         lambda cfg, case, prior: bool(prior and prior.get("quality_rejection")),
     )
 
-    def child(_task, request, log, *, on_progress=None):
+    def child(_task, request, log, *, on_progress=None, resource_snapshot=None):
         j = common.read(request)
         c = j["case"]
         action = j["action"]
@@ -1173,6 +1142,7 @@ def test_main_stop_and_cancel_address_only_the_requested_owned_task(
     assert calls == [(tmp_path, dict(immediate=immediate))]
 
 
+@pytest.mark.local_evidence
 def test_explicit_resume_recovers_known_completed_raw_without_a_new_flight(
     monkeypatch, tmp_path
 ):

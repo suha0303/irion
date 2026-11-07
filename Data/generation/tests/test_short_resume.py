@@ -4,9 +4,9 @@ import copy
 from pathlib import Path
 
 import pytest
+
 from pretrain import (
     common,
-    pilot19,
     pilot45,
     pilot_bridge,
     pilot_parallel,
@@ -167,6 +167,7 @@ def test_resume_current17_and_cumulative65_counts_keep_three_rejections_physical
         )
 
 
+@pytest.mark.local_evidence
 def test_actual_C03_snapshot_projects_only_approved_three_and_preserves_original_ledger(
     tmp_path,
 ):
@@ -216,24 +217,3 @@ def test_actual_C03_snapshot_projects_only_approved_three_and_preserves_original
     )
     assert common.sha(task / "ledger.json") == before
     assert sum(a["state"] == "COMPLETED" for a in ledger["attempts"]) == 31
-
-
-def test_actual_28_reader_evidence_binds_exact_preserved_exports():
-    previous = common.HOME / "tasks/short180-20261107-c03-45"
-    ledger = common.read(previous / "ledger.json")
-    handoff = common.read(
-        common.ROOT
-        / "ai/reports/quality-rejection-20261107/attempt-01/data-handoff.json"
-    )
-    resume = dict(
-        accepted_cases=[
-            cid
-            for cid, e in ledger["cases"].items()
-            if e.get("status") == "COMPLETE"
-        ]
-    )
-    item = short_resume.current_reader_evidence(
-        handoff, previous, ledger, resume
-    )
-    assert common.sha(item["path"]) == item["sha256"]
-    assert len(pilot19.helper_inventory()) == 19

@@ -8,8 +8,9 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from pretrain import ai19, common, pilot19, pilot45
 from test_ai19 import mission, raw_fixture, row
+
+from pretrain import ai19, common, pilot19, pilot45
 
 
 @pytest.mark.parametrize("seed", [0, 1, 2**32 - 1])
@@ -141,6 +142,7 @@ def init_fixture(monkeypatch, tmp_path):
     )
 
 
+@pytest.mark.local_evidence
 def test_init_single_scope_does_not_launch_and_os_seed_is_frozen(
     monkeypatch, tmp_path
 ):
@@ -167,6 +169,7 @@ def test_init_single_scope_does_not_launch_and_os_seed_is_frozen(
         pilot45.validate_manifest(manifest)
 
 
+@pytest.mark.local_evidence
 def test_45_cannot_launch_with_missing_or_fake_passed_receipts(
     monkeypatch, tmp_path
 ):
@@ -336,6 +339,7 @@ def test_foreign_service_is_never_stopped(monkeypatch, tmp_path):
     )
 
 
+@pytest.mark.local_evidence
 def test_standalone_worker_runs_one_case_then_stops_without_fit(
     monkeypatch, tmp_path
 ):

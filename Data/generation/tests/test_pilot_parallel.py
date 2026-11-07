@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
 from pretrain import common, native_flight, pilot45
 from pretrain import pilot_parallel as parallel
 
@@ -381,6 +382,7 @@ def test_resource_block_never_silently_runs_fewer_lanes_or_discards_denominator(
     assert len(c.ledger["cases"]) == 45 and len(c.ledger["attempts"]) == 3
 
 
+@pytest.mark.local_evidence
 def test_actual_child_processes_have_separate_records_and_do_not_write_shared_state(
     monkeypatch, tmp_path
 ):

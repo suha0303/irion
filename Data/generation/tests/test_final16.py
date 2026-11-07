@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
 from pretrain import common, final16, pilot45, pilot_bridge, pilot_parallel
 
 
@@ -61,6 +62,7 @@ def fixture(tmp_path):
     return task, rows
 
 
+@pytest.mark.local_evidence
 def test_actual_original_eight_pairs_match_coordinator_projection(tmp_path):
     task, rows = fixture(tmp_path)
     expected = common.read(
@@ -81,6 +83,7 @@ def test_actual_original_eight_pairs_match_coordinator_projection(tmp_path):
         pilot45.validate_cases(rows, duration=180)
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize(
     "mutation",
     [
@@ -117,6 +120,7 @@ def test_strict_manifest_rejects_changes(tmp_path, mutation):
         pilot45.validate_manifest(m)
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize(
     "key,value",
     [
@@ -142,6 +146,7 @@ def test_strict_config_rejects_scope_expansion(tmp_path, key, value):
         pilot_parallel.validate_config(cfg)
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize(
     "bad", ["inherited", "parent", "source", "second", "admin", "raw_duplicate"]
 )
@@ -173,6 +178,7 @@ def test_ledger_rejects_reuse_retry_and_unknown_admin(tmp_path, bad):
         final16.validate_ledger(task)
 
 
+@pytest.mark.local_evidence
 def test_all16_real_registration_boundaries_in_isolated_registry(
     monkeypatch, tmp_path
 ):
@@ -207,6 +213,7 @@ def test_all16_real_registration_boundaries_in_isolated_registry(
         c.begin_flight(dict(rows[0], case_id="third"), 0)
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize("wrong", ["native", "adapter", "both"])
 def test_native_revision_must_be_v2_even_if_both_wrong_values_match(
     monkeypatch, tmp_path, wrong
@@ -230,7 +237,24 @@ def test_native_revision_must_be_v2_even_if_both_wrong_values_match(
     spec["source_freeze"] = dict(path=str(freeze), sha256=common.sha(freeze))
     native = common.read(spec["paths"]["native_policy"])
     policy = common.read(spec["paths"]["paired_policy"])
-    producer = policy["producer"]
+    producer = dict(policy["producer"])
+    for name, key in (
+        ("source_manifest", "source_manifest_sha256"),
+        ("runtime_manifest", "runtime_sha256"),
+    ):
+        spec["sha256"][name] = common.sha(spec["paths"][name])
+        producer[key] = spec["sha256"][name]
+    expected = tmp_path / "expected-producer.json"
+    common.write(expected, producer)
+    spec["paths"]["expected_producer"] = str(expected)
+    spec["sha256"]["expected_producer"] = common.sha(expected)
+    spec["producer"] = policy["producer"] = producer
+    fixture_authority = copy.deepcopy(final16.authorization())
+    fixture_authority["producer"].update(
+        source_sha256=producer["source_manifest_sha256"],
+        runtime_sha256=producer["runtime_sha256"],
+    )
+    monkeypatch.setattr(final16, "authorization", lambda: fixture_authority)
     if wrong in {"native", "both"}:
         native["revision"] = "wrong-equal-revision"
     if wrong in {"adapter", "both"}:
@@ -249,6 +273,7 @@ def test_native_revision_must_be_v2_even_if_both_wrong_values_match(
         final16.dependencies(spec)
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize("fail", [False, True])
 def test_exact16_concurrent_then_cpu4_or_failure_drain(
     monkeypatch, tmp_path, fail

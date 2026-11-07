@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 
 import pytest
+
 from pretrain import common, pilot45
 from pretrain import main_collection as main
 

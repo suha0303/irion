@@ -3,10 +3,12 @@
 from pathlib import Path
 
 import pytest
-from pretrain import common, pilot45, pilot_bridge, pilot_flow
 from test_pilot45 import init_fixture
 
+from pretrain import common, pilot45, pilot_bridge, pilot_flow
 
+
+@pytest.mark.local_evidence
 def test_recovery_keeps_failed_attempt_and_exact_old_case(
     monkeypatch, tmp_path
 ):
@@ -74,6 +76,7 @@ def test_recovery_keeps_failed_attempt_and_exact_old_case(
         )
 
 
+@pytest.mark.local_evidence
 def test_ai_projection_keeps_all45_pending_and_no_fit_guard(
     monkeypatch, tmp_path
 ):

@@ -3,6 +3,8 @@
 import hashlib
 from pathlib import Path
 
+import pytest
+
 from pretrain import cli, common, pilot45, pilot_parallel
 from pretrain import main_collection as main
 
@@ -47,6 +49,7 @@ def factory(monkeypatch, tmp_path):
     return home, store
 
 
+@pytest.mark.local_evidence
 def test_main_factory_includes_existing_lr108_once_and_user_menu_submits_one_scope(
     monkeypatch, tmp_path
 ):

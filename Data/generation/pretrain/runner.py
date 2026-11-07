@@ -532,14 +532,16 @@ class Runner:
         self.begin(label + "-assemble", total=len(frozen["runs"]), workers=1)
         from . import assembly as pipeline
 
+        resource_check = self.resources
+
         class AssemblyBudget(Budget):
             last_check = 0.0
 
-            def check(inner):
+            def check(self):
                 super().check()
-                if time.monotonic() - inner.last_check >= 1:
-                    self.resources()
-                    inner.last_check = time.monotonic()
+                if time.monotonic() - self.last_check >= 1:
+                    resource_check()
+                    self.last_check = time.monotonic()
 
         def adopt(raw, target, config):
             source = canonical_sources.get(
@@ -676,14 +678,16 @@ class Runner:
         if self.config.get("collection_profile") == "balanced300":
             from . import assembly
 
+            resource_check = self.resources
+
             class QualityBudget(Budget):
                 last_check = 0.0
 
-                def check(inner):
+                def check(self):
                     super().check()
-                    if time.monotonic() - inner.last_check >= 1:
-                        self.resources()
-                        inner.last_check = time.monotonic()
+                    if time.monotonic() - self.last_check >= 1:
+                        resource_check()
+                        self.last_check = time.monotonic()
 
             quality = assembly.inspect_dataset(
                 dataset, frozen, QualityBudget(), inspect_run_fn=audited
@@ -741,14 +745,16 @@ class Runner:
             self.begin(label + "-portable", total=1, workers=1)
             portable = root.parent / (root.name + "-portable")
 
+            resource_check = self.resources
+
             class PackagingBudget(Budget):
                 last_check = 0.0
 
-                def check(inner):
+                def check(self):
                     super().check()
-                    if time.monotonic() - inner.last_check >= 1:
-                        self.resources()
-                        inner.last_check = time.monotonic()
+                    if time.monotonic() - self.last_check >= 1:
+                        resource_check()
+                        self.last_check = time.monotonic()
 
             receipt = pack(
                 root,

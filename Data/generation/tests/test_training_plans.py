@@ -4,6 +4,7 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
+
 from pretrain import cli, common, training19
 
 
@@ -123,6 +124,7 @@ def test_menu1_lr_dispatch_is_user_selected_and_does_not_start_main(
     assert calls == ["lr108", task]
 
 
+@pytest.mark.local_evidence
 def test_missing_main_approval_blocks_before_task_creation(
     monkeypatch, tmp_path
 ):

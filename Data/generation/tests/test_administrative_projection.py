@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+
 from pretrain import common, pilot45, short_resume
 
 REPORT = (
@@ -16,6 +17,7 @@ def proof_ref():
     return dict(path=str(p), sha256=common.sha(p))
 
 
+@pytest.mark.local_evidence
 def test_exact_actual_C04_projection_preserves_original52_and_keeps51_physical():
     before = common.sha(PREVIOUS / "ledger.json")
     old = common.read(PREVIOUS / "ledger.json")
@@ -38,6 +40,7 @@ def test_exact_actual_C04_projection_preserves_original52_and_keeps51_physical()
     assert common.sha(PREVIOUS / "ledger.json") == before
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize(
     "mutation",
     ["absent_proof", "bad_hash", "budget_true", "wrong_record", "fake_uuid"],
@@ -71,6 +74,7 @@ def test_uncertified_or_mismatched_unknown_is_never_discarded(
         short_resume.physical_projection(PREVIOUS, value, copy.deepcopy(old))
 
 
+@pytest.mark.local_evidence
 @pytest.mark.parametrize("failure", [None, "failed", "unknown", "retry"])
 def test_C05_counter_fixture_separates14_new31_reused_and_one_administrative_record(
     failure,

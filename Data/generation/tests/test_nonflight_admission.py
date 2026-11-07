@@ -7,9 +7,10 @@ import time
 from pathlib import Path
 
 import pytest
+from test_pilot_parallel import fixture
+
 from pretrain import common, pilot45
 from pretrain import pilot_parallel as parallel
-from test_pilot_parallel import fixture
 
 
 @pytest.mark.parametrize("idle_only", [False, True])

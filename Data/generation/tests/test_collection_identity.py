@@ -3,6 +3,7 @@
 import copy
 
 import pytest
+
 from pretrain import collection, common
 
 
@@ -143,6 +144,7 @@ def test_preprocessor_alias_validates_names_without_rewriting_original(
 ):
     common.package_imports()
     from capstone_ai.preprocessing import Preprocessor
+
     from pretrain.preprocessing_compat import (
         make_preprocessor,
         verify_metadata_alias,

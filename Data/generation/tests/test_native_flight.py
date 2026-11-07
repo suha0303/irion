@@ -6,9 +6,11 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
 from pretrain import common, native_flight, pilot45
 
 
+@pytest.mark.local_evidence
 def test_actual_sim_launcher_imports_runtime_while_data_lacks_pymavlink():
     assert importlib.util.find_spec("pymavlink") is None
     result = native_flight.environment_check()
@@ -58,6 +60,7 @@ def test_paired_cli_resolves_current_case_id_and_keeps_only_pair_members_equal()
     assert selected(cases[-2]) == selected(cases[-1])
 
 
+@pytest.mark.local_evidence
 def test_child_collects_json_after_real_other_interpreter_exits(
     monkeypatch, tmp_path
 ):
