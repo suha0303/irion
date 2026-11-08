@@ -3,6 +3,7 @@ C03 raws.
 """
 
 import csv
+import hashlib
 import json
 from pathlib import Path
 
@@ -103,7 +104,6 @@ def _evidence(catalog, run_id, fixture_only):
         sort_keys=True,
         separators=(",", ":"),
     )
-    import hashlib
 
     if (
         scenario.get("seed") != case["seed"]

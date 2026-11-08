@@ -1,3 +1,7 @@
+"""Check profile suggestions against recorded log evidence and conflicts."""
+
+import copy
+
 from localflight.profile_from_log import suggest
 from localflight.profiles import eligibility, save_profile
 
@@ -38,8 +42,6 @@ def test_voltage_estimate_is_editable_and_not_a_confirmed_measurement(tmp_path):
 
 
 def test_voltage_estimate_requires_consistent_unambiguous_evidence():
-    import copy
-
     row = voltage_audit()
     variants = []
     for key in (
@@ -112,7 +114,7 @@ def test_logged_values_fill_only_known_configuration():
     assert result["eligibility"]["timeline_ready"]
 
 
-def test_changed_parameters_duplicate_routing_and_sensor_switch_require_confirmation():
+def test_parameter_and_sensor_conflicts_require_confirmation():
     changed = audit()
     changed["parameter_values"]["MOT_PWM_MAX"] = [2000, 1900]
     changed["parameter_values"]["BATT_CAPACITY"] = [44000, 22000]

@@ -52,9 +52,7 @@ def factory(monkeypatch, tmp_path):
 
 
 @pytest.mark.local_evidence
-def test_main_factory_includes_existing_lr108_once_and_user_menu_submits_one_scope(
-    monkeypatch, tmp_path
-):
+def test_factory_reuses_lr108_and_menu_submits_one_scope(monkeypatch, tmp_path):
     home, store = factory(monkeypatch, tmp_path)
     lr = main.create("lr108", storage_root=store, name="main19-fixture-lr108")
     cfg = common.read(lr / "config.json")

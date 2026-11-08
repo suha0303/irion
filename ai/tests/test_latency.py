@@ -1,4 +1,7 @@
+"""Check causal timing, immutable forecasts and measured inference latency."""
+
 import copy
+import io
 import json
 import pickle
 import time
@@ -237,8 +240,6 @@ def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(
 def test_handover_persists_causal_state_without_mutating_event_archive(
     tmp_path,
 ):
-    import io
-
     from test_preprocessing import run
 
     from capstone_ai.resume_state import StateReader, save_handover_state

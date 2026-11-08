@@ -1,3 +1,5 @@
+"""Check flight-event boundaries and usable interval selection."""
+
 import os
 
 import pytest

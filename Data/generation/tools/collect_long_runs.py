@@ -2118,9 +2118,11 @@ def _execute_locked(plan, cases, process_helper):
                         error=f"{type(exc).__name__}: {exc}",
                     )
                     if record.get("producer_status") == "failed":
+                        stage_label = (
+                            record.get("producer_stage") or "unknown stage"
+                        )
                         record["error"] += (
-                            f"; producer "
-                            f"{record.get('producer_stage') or 'unknown stage'}: "
+                            f"; producer {stage_label}: "
                         ) + record["producer_termination_reason"]
                     if shared_failure(exc) or (
                         not plan.get("continue_after_case_failure")

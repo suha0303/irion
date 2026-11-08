@@ -1,3 +1,5 @@
+"""Check bounded learning-rate plans and independent continuation evidence."""
+
 import copy
 
 from learning.parallel19.control import read, write

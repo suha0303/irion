@@ -5,6 +5,7 @@ rewritten.
 import hashlib
 import json
 import zipfile
+from contextlib import closing
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -44,7 +45,6 @@ class Store:
             return
         # Only this migration imports sqlite3. The source is opened read-only.
         import sqlite3
-        from contextlib import closing
 
         backup = self.root / "backups" / "before-file-storage.sqlite3"
         backup.parent.mkdir(exist_ok=True)

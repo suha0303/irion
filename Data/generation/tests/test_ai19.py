@@ -113,7 +113,7 @@ def test_shared_engine_no_context_and_physical_vs_online_units(tmp_path):
     engine, alias = ai19.replay(raw, CONFIG)
     assert engine.__class__.__module__ == "learning.history19.preprocessing"
     assert len(engine.frames) == 261 and len(engine.windows) > 0
-    arrays, excluded = ai19.online_arrays(engine)
+    arrays, _ = ai19.online_arrays(engine)
     physical, coverage = ai19.run_array(engine, mission())
     assert set(arrays) == {
         "X",

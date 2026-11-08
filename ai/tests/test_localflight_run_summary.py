@@ -1,3 +1,5 @@
+"""Check whole-run coverage, per-segment evidence and model reuse."""
+
 import json
 
 import numpy as np

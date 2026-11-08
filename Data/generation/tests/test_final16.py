@@ -285,7 +285,7 @@ def test_native_revision_must_be_v2_even_if_both_wrong_values_match(
 def test_exact16_concurrent_then_cpu4_or_failure_drain(
     monkeypatch, tmp_path, fail
 ):
-    task, rows = fixture(tmp_path)
+    task, _ = fixture(tmp_path)
     monkeypatch.setattr(pilot_parallel, "ROOT", tmp_path)
     monkeypatch.setattr(pilot_parallel, "STORE", tmp_path)
     monkeypatch.setattr(pilot_parallel, "check_ports", lambda *a: None)
@@ -300,7 +300,7 @@ def test_exact16_concurrent_then_cpu4_or_failure_drain(
     active, peak = dict(flight=0, cpu=0), dict(flight=0, cpu=0)
     calls, overlap = [], []
 
-    def child(_task, request, log, *, on_progress=None):
+    def child(unused_task, request, log, *, on_progress=None):
         j = common.read(request)
         kind = "flight" if j["action"] == "flight" else "cpu"
         with lock:

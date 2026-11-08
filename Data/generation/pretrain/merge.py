@@ -252,7 +252,7 @@ def run(runner):
 
     runner.update(planned_stage_count=7)
     runner.begin("merge-inputs", workers=1)
-    parts, frozen, cases, _ = inputs(runner.config["merge_bundles"])
+    parts, frozen, _, _ = inputs(runner.config["merge_bundles"])
     root = external(STORE / "processed/pretrain" / runner.task.name)
     root.mkdir(parents=True, exist_ok=False)
     prepared = root / "prepared"

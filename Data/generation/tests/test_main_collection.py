@@ -4,6 +4,8 @@ native dispatch0.
 
 import hashlib
 import json
+import os
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -45,7 +47,7 @@ def test_real_menu_dispatches_selected_finite_scope_once(
     monkeypatch.setattr(
         main, "user_start", lambda selected: calls.append(selected) or task
     )
-    monkeypatch.setattr(cli, "watch", lambda selected: calls.append(selected))
+    monkeypatch.setattr(cli, "watch", calls.append)
     cli.menu()
     assert calls == [scope, task]
 
@@ -113,12 +115,12 @@ def test_closed_raw_is_reused_without_intermediate_archive(tmp_path):
     "message,expected_calls",
     [("Case child exit1; fixture", 3), ("Available RAM below1GB", 1)],
 )
-def test_explicit_unit_failure_retries_wrapped_exit_but_not_parent_resource_stop(
+def test_unit_exit_retries_but_parent_resource_stop_does_not(
     monkeypatch, tmp_path, message, expected_calls
 ):
     from concurrent.futures import ThreadPoolExecutor
 
-    task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
+    task, rows, _ = runtime(monkeypatch, tmp_path, count=1)
     c = main.Campaign(task)
     entry = c.ledger["cases"][rows[0]["case_id"]]
     raw = str(tmp_path / "valid-raw")
@@ -202,11 +204,13 @@ def runtime(monkeypatch, tmp_path, count=17):
 def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
     monkeypatch, tmp_path, failures
 ):
-    task, rows, cfg = runtime(monkeypatch, tmp_path)
+    task, rows, _ = runtime(monkeypatch, tmp_path)
     counts = {}
     events = []
 
-    def child(_task, request, log, *, on_progress=None, resource_snapshot=None):
+    def child(
+        unused_task, request, log, *, on_progress=None, resource_snapshot=None
+    ):
         j = common.read(request)
         c = j["case"]
         cid = c["case_id"]
@@ -472,13 +476,11 @@ def test_interrupted_deletion_has_durable_intent_and_exact_resume(
 def test_worker_preflight_failure_is_visible_without_any_dispatch(
     monkeypatch, tmp_path
 ):
-    import os
-
-    task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
+    task, _, cfg = runtime(monkeypatch, tmp_path, count=1)
     cfg.update(owner_uid=os.getuid())
     common.write(task / "config.json", cfg)
     common.write(task / "operator/state.json", dict(status="READY_NOT_STARTED"))
-    monkeypatch.setattr(pilot45, "task_path", lambda p: Path(p))
+    monkeypatch.setattr(pilot45, "task_path", Path)
 
     def blocked(task):
         raise ValueError("source preflight mismatch")
@@ -499,8 +501,6 @@ def test_worker_preflight_failure_is_visible_without_any_dispatch(
 def test_real_subprocess_shared_errno_survives_wrapped_child_error(
     monkeypatch, tmp_path
 ):
-    import subprocess
-
     task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
     handoff = tmp_path / "handoff.json"
     common.write(handoff, {"fixture_only": True})
@@ -584,7 +584,7 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
 ):
     from pretrain import main_quality
 
-    task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
+    task, rows, _ = runtime(monkeypatch, tmp_path, count=1)
     native = []
     prepare = []
     monkeypatch.setattr(
@@ -593,7 +593,9 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
         lambda cfg, case, prior: bool(prior and prior.get("quality_rejection")),
     )
 
-    def child(_task, request, log, *, on_progress=None, resource_snapshot=None):
+    def child(
+        unused_task, request, log, *, on_progress=None, resource_snapshot=None
+    ):
         j = common.read(request)
         c = j["case"]
         action = j["action"]
@@ -733,8 +735,6 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
 def test_input_pass_is_not_final_stopped_without_actual_exit_and_cleanup(
     change,
 ):
-    import os
-
     cfg = dict(
         mode="main19",
         owner_uid=os.getuid(),
@@ -811,8 +811,6 @@ def test_input_pass_is_not_final_stopped_without_actual_exit_and_cleanup(
 def test_collected_unit_gc_requires_bound_real_exit_and_released_owner(
     monkeypatch, tmp_path, broken
 ):
-    import os
-
     task = tmp_path / "task"
     unit, inv = "drone-pretrain-task.service", "c" * 32
     cfg = dict(mode="main19", owner_uid=os.getuid(), service_unit=unit)
@@ -924,7 +922,7 @@ def test_same_bytes_symlink_cannot_be_a_main_handoff_input(
         main.dependencies(handoff)
 
 
-def test_scope_checkpoint_reuses_main_after_lr_failure_and_rejects_changed_bytes(
+def test_checkpoint_reuses_main_and_rejects_changed_bytes(
     tmp_path,
 ):
     task = tmp_path / "task"
@@ -1155,7 +1153,7 @@ def test_explicit_resume_recovers_known_completed_raw_without_a_new_flight(
 ):
     task, rows, cfg = runtime(monkeypatch, tmp_path, count=1)
     case = rows[0]
-    monkeypatch.setattr(pilot45, "task_path", lambda path: Path(path))
+    monkeypatch.setattr(pilot45, "task_path", Path)
     monkeypatch.setattr(
         pilot45,
         "service_identity",
@@ -1226,7 +1224,7 @@ def test_explicit_resume_recovers_known_completed_raw_without_a_new_flight(
     ] == common.sha(task / "config.json")
 
 
-def test_budget_is_standalone_and_separates_extrapolation_from_actual_measurements():
+def test_budget_separates_estimates_from_measurements():
     value = main.storage_budget(1674)
     assert value["raw_all_cases_extrapolation_bytes"] > 1_000_000_000_000
     assert (

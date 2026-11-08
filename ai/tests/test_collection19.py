@@ -104,14 +104,16 @@ def export(
         dtype=np.int64,
     )
     at = {int(t): i for i, t in enumerate(times)}
-    X = np.array(
+    input_windows = np.array(
         [transformed[at[int(t)] - 99 : at[int(t)] + 1] for t in origins]
     )
-    Y = np.array([targets[at[int(t)] + 1 : at[int(t)] + 11] for t in origins])
+    target_windows = np.array(
+        [targets[at[int(t)] + 1 : at[int(t)] + 11] for t in origins]
+    )
     np.savez(
         root / "online.npz",
-        X=X,
-        Y=Y,
+        X=input_windows,
+        Y=target_windows,
         run_id=np.full(len(origins), rid),
         clock_id=np.full(len(origins), "px4-boot"),
         segment_id=np.zeros(len(origins), dtype=np.int64),
@@ -192,7 +194,7 @@ def registry():
     return dict(schema="drone-ai.global-protection/1", entries=[])
 
 
-def test_bounded_dataset_matches_current_readers_and_exact_train_only_statistics(
+def test_dataset_matches_current_readers_and_train_statistics(
     records, tmp_path
 ):
     events = []
@@ -359,7 +361,7 @@ def test_lr_scaler_uses_same_source_subset_without_new_collection(
     assert json_file(lr / "scaler-provenance.json")["scope"] == "lr108"
 
 
-def test_aggregate_calls_independent_audit_once_and_returns_both_sealed_receipts(
+def test_aggregate_audits_once_and_returns_both_receipts(
     records, tmp_path, monkeypatch
 ):
     calls = []
@@ -539,7 +541,7 @@ def test_zip64_writer_and_moments_match_independent_small_array(tmp_path):
     np.testing.assert_allclose(scale, array.std(0), atol=1e-12)
 
 
-def test_large_whole_input_is_sharded_and_existing_iterator_keeps_small_loader_guard(
+def test_whole_input_shards_preserve_small_loader_guard(
     tmp_path,
 ):
     from learning.run_health19.data import load_manifest
@@ -616,7 +618,7 @@ def test_canonical_stats_never_include_calibration_or_final_data(
     ]
 
 
-def test_preserved_native_pair_proof_is_auditable_after_original_raw_paths_are_retired(
+def test_native_pair_proof_survives_raw_path_retirement(
     tmp_path,
 ):
     proof = dict(

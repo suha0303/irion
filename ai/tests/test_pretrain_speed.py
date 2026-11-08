@@ -41,7 +41,7 @@ def test_speed_gate_rejects_information_loss_and_changed_contract():
 
 
 @pytest.mark.parametrize("protocol", ["information-v1", "information-v2"])
-def test_matched_seed_exception_is_test_only_and_requires_prior_owned_completion(
+def test_matched_seed_requires_test_role_and_owned_completion(
     tmp_path, protocol
 ):
     collector = common.collector()

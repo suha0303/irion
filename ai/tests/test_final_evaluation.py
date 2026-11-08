@@ -3,8 +3,12 @@ boundaries.
 """
 
 import copy
+import hashlib
+import io
+import json
 import os
 import sys
+from pathlib import Path
 
 import pytest
 from test_reassessment import Progress, fixture_evaluation
@@ -313,12 +317,8 @@ def test_final_console_does_not_claim_training_or_recalibration(tmp_path):
 def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(
     tmp_path, monkeypatch
 ):
-    import hashlib
     import importlib.util
-    import io
-    import json
     import tarfile
-    from pathlib import Path
 
     script = (
         Path(__file__).resolve().parents[1]

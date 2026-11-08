@@ -1,3 +1,5 @@
+"""Check final streaming preparation and sealed source bindings."""
+
 import copy
 
 import pytest

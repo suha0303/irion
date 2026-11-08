@@ -1,8 +1,11 @@
+"""Check NPZ export, journal recovery and replay cache ownership."""
+
 import hashlib
 import io
 import json
 import sqlite3
 import time
+import weakref
 from copy import deepcopy
 
 import numpy as np
@@ -301,9 +304,9 @@ def test_sqlite_one_time_read_only_migration_and_provider_identity(tmp_path):
     raw_path = tmp_path / "original.jsonl"
     raw_path.write_bytes(raw)
     sha = hashlib.sha256(raw).hexdigest()
-    id = "run-" + sha[:16]
+    run_id = "run-" + sha[:16]
     event = {
-        "run_id": id,
+        "run_id": run_id,
         "event_id": "legacy-event",
         "model_version": "old",
         "origin": "model",
@@ -320,17 +323,17 @@ def test_sqlite_one_time_read_only_migration_and_provider_identity(tmp_path):
         )
         db.execute(
             "INSERT INTO runs VALUES(?,?,?,?,?)",
-            (id, sha, "기존 비행", str(raw_path), "2026-10-10"),
+            (run_id, sha, "기존 비행", str(raw_path), "2026-10-10"),
         )
         db.execute("INSERT INTO detections VALUES(?)", (json.dumps(event),))
     before = database.read_bytes()
     store = StoreV2(tmp_path)
     assert (
-        store.get(id).sha256 == sha
+        store.get(run_id=run_id).sha256 == sha
         and raw_path.read_bytes() == raw
         and database.read_bytes() == before
     )
-    assert store.analysis(id)[0]["provider_id"] == "legacy"
+    assert store.analysis(run_id)[0]["provider_id"] == "legacy"
     assert (tmp_path / "backups" / "before-file-storage.sqlite3").exists()
     marker = (tmp_path / "backups" / "file-migration.json").read_bytes()
     StoreV2(tmp_path)
@@ -576,7 +579,6 @@ def test_replay_recovers_legacy_sequence_fields_without_guessing_gaps(tmp_path):
 
 def test_closed_store_and_replay_are_not_retained_by_shared_caches(tmp_path):
     import gc
-    import weakref
 
     def make_closed():
         store = StoreV2(tmp_path)

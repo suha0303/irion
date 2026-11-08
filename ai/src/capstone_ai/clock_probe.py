@@ -2,6 +2,7 @@
 commands.
 """
 
+import json
 import socket
 import time
 
@@ -25,8 +26,6 @@ class ClockProbe:
         self.count = 0
 
     def query(self):
-        import json
-
         nonce = time.monotonic_ns()
         packet = self.codec.timesync_encode(0, nonce).pack(self.codec)
         sent = time.monotonic_ns()

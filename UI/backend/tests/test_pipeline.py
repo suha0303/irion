@@ -1,3 +1,5 @@
+"""Check provider contracts, processed inputs and result binding."""
+
 import asyncio
 import hashlib
 import io
@@ -207,7 +209,7 @@ def service(tmp_path):
 
 
 def test_import_idempotent_and_manifest(service):
-    client, app, manifest, content = service
+    client, _, manifest, content = service
     r = client.post(
         "/api/runs/import", files={"file": ("duplicate.jsonl", content)}
     )
@@ -228,7 +230,7 @@ def test_bad_input_is_reported(service):
 
 
 def test_demo_is_explicit_and_rewind_hides_future(service):
-    client, app, m, _ = service
+    client, _, m, _ = service
     run_id = m["run_id"]
     initial = client.get(f"/api/runs/{run_id}/frame").json()
     assert (
@@ -265,7 +267,7 @@ def test_mismatch_and_cross_epoch_results_rejected(service):
 
 
 def test_npz_report_does_not_merge_mismatched_source(service):
-    client, app, m, _ = service
+    client, _, m, _ = service
     archive = io.BytesIO()
     metadata = {
         "features": [{"name": "voltage", "unit": "V"}],

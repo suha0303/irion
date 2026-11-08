@@ -1,3 +1,5 @@
+"""Check portable source packaging and installed application discovery."""
+
 from types import SimpleNamespace
 
 import pytest

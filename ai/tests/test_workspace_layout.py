@@ -2,6 +2,9 @@
 collection only.
 """
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from test_collect_long_runs import c, setup  # noqa: F401
@@ -41,7 +44,7 @@ def test_installed_runtime_and_sealed_package():
     assert not any(p.is_symlink() for p in PACKAGE.parents)
 
 
-def test_collection_with_physical_simulator_root_without_aliases(setup):  # noqa: F811
+def test_collection_uses_physical_simulator_root(setup):  # noqa: F811
     plan, cases, helper, _ = setup
     root = Path(plan["root"])
     runs = root / "runs"
@@ -54,10 +57,6 @@ def test_collection_with_physical_simulator_root_without_aliases(setup):  # noqa
 
 
 def test_headless_cli_plans_collection_without_legacy_import_paths(tmp_path):
-    import os
-    import subprocess
-    import sys
-
     code = r"""
 from pathlib import Path
 import shutil,sys

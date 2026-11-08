@@ -444,8 +444,8 @@ def test_fixture_archive_shared_frames_two_views_and_independent_audit(
     store = tmp_path / "store"
     monkeypatch.setattr(pilot19, "STORE", store)
     monkeypatch.setattr(archive, "STORAGE", store)
-    monkeypatch.setattr(archive, "storage_path", lambda p: Path(p))
-    monkeypatch.setattr(ai19, "external", lambda p: Path(p))
+    monkeypatch.setattr(archive, "storage_path", Path)
+    monkeypatch.setattr(ai19, "external", Path)
     binding = dict(
         source_hashes={}, vehicle_profile_revision=ai19.PROFILE_REVISION
     )

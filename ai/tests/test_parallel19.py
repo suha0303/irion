@@ -1,3 +1,5 @@
+"""Check fixed training plans, resource admission and bounded execution."""
+
 import numpy as np
 import pytest
 import torch

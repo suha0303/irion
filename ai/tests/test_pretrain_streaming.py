@@ -30,7 +30,7 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
     )
     monkeypatch.setattr(streaming, "ROOT", root)
     monkeypatch.setattr(streaming, "STORE", store)
-    monkeypatch.setattr(streaming, "external", lambda p: Path(p))
+    monkeypatch.setattr(streaming, "external", Path)
 
     class Runner:
         config = dict(mode="collect", storage_profile="stream_compact")
@@ -346,7 +346,7 @@ def test_final_package_replaces_working_dataset_and_remains_restorable(
     failure = prepared / "audit-work/.failed/old-evidence"
     failure.mkdir(parents=True)
     (failure / "log.txt").write_text("preserve", encoding="utf-8")
-    monkeypatch.setattr(storage, "external", lambda p: Path(p))
+    monkeypatch.setattr(storage, "external", Path)
     portable = prepared.parent / "prepared-portable"
     storage.pack(prepared, portable)
     f.runner.begin = lambda *a, **k: None

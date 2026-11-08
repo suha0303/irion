@@ -185,7 +185,6 @@ def package_imports():
     """Select the hash-locked preprocessing_core/preprocessing_tools package
     paths.
     """
-    import sys
 
     sys.dont_write_bytecode = (
         True  # The sealed package must never gain __pycache__ files.

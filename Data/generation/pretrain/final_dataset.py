@@ -3,7 +3,9 @@ a model.
 """
 
 import copy
+import math
 import random
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -54,8 +56,6 @@ def normal_scenario(motion, environment):
 
 def operating_conditions(motion, environment, seed, stratum):
     """Freeze path and environment independently of fault/health parameters."""
-    import math
-    import sys
 
     from .common import SIMULATION
 

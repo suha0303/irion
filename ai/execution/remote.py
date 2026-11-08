@@ -129,7 +129,7 @@ def submit(root):
             ),
         )
         response = command(argv)
-        identifier = response.split(";")[0]
+        identifier = response.split(";", maxsplit=1)[0]
         if not identifier.isdigit():
             raise ValueError(
                 "Unknown submission response; do not retry: " + response
@@ -251,7 +251,7 @@ def worker(root, inventory_sha):
     out = root.parent / "output"
     progress = Progress(out / "progress.json")
 
-    def interrupted(number, _frame):
+    def interrupted(number, unused_frame):
         raise InterruptedError("Job interrupted by signal " + str(number))
 
     signal.signal(signal.SIGTERM, interrupted)

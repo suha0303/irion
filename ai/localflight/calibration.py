@@ -7,6 +7,7 @@ window count is never presented as a count of independent flights.
 
 import math
 import re
+import shutil
 import time
 from pathlib import Path
 
@@ -298,7 +299,6 @@ def admit_completed(manifest, output, *, role, health, evidence):
     """New declared role/version; original recorded flight and hash stay
     immutable.
     """
-    import shutil
 
     metadata, values, _ = load(manifest)
     if metadata.get("timing", {}).get("clock") != "receipt_monotonic":

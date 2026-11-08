@@ -3,6 +3,9 @@ scoring.
 """
 
 import copy
+import json
+import os
+import subprocess
 from collections import Counter, defaultdict
 from pathlib import Path
 from types import SimpleNamespace
@@ -519,10 +522,6 @@ def test_final_admission_checks_metadata_roles_and_protection(
 def test_final_roles_preprocess_and_audit_without_training_dependencies(
     tmp_path,
 ):
-    import json
-    import os
-    import subprocess
-
     fixture = common.load(
         "final_raw_fixture", common.ROOT / "ai/tests/test_preprocessing.py"
     )

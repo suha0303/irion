@@ -3,6 +3,7 @@ flight.
 """
 
 import hashlib
+import json
 import threading
 import time
 from collections import Counter
@@ -123,7 +124,7 @@ def test_invalid_instance_is_rejected(instance):
 def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
     monkeypatch, tmp_path
 ):
-    task, cases = fixture(monkeypatch, tmp_path)
+    task, _ = fixture(monkeypatch, tmp_path)
     owner = threading.get_ident()
     writes, registry, launches, actions = [], [], [], []
     lock, barrier = threading.Lock(), threading.Barrier(16)
@@ -385,11 +386,7 @@ def test_resource_block_never_silently_runs_fewer_lanes_or_discards_denominator(
 
 
 @pytest.mark.local_evidence
-def test_actual_child_processes_have_separate_records_and_do_not_write_shared_state(
-    monkeypatch, tmp_path
-):
-    import json
-
+def test_children_keep_separate_records_and_shared_state(monkeypatch, tmp_path):
     task = tmp_path / "task"
     (tmp_path / "simulation/runs").mkdir(parents=True)
     common.write(task / "config.json", dict(parallel16=True, source_sha256={}))

@@ -4,6 +4,7 @@ safety.
 
 import json
 import shutil
+from contextlib import contextmanager
 
 import numpy as np
 import pytest
@@ -148,7 +149,7 @@ def test_cpu_worker_failure_propagates_without_success_seal_or_retry(tmp_path):
 
 
 def test_precomputed_forecast_count_must_match_causal_origins(tmp_path):
-    dataset, bundle, rows = inputs(tmp_path)
+    dataset, bundle, _ = inputs(tmp_path)
     data = read_development(dataset / "canonical/run-0", bundle)
     with pytest.raises(ValueError, match="count"):
         finish_development(
@@ -192,8 +193,6 @@ def test_post_training_parallel_scope_is_fixed(change):
 def test_shared_normal_inputs_keep_fresh_calibration_identical(
     tmp_path, monkeypatch
 ):
-    from contextlib import contextmanager
-
     from execution import engine
     from execution.common import read, write
 

@@ -23,6 +23,20 @@ from .profiles import PROFILES, select_batch, specs
 from .training import run_fit
 
 
+def _comparison_line(row):
+    """Format one measured batch result for the plain-text report."""
+    selected = row["selected"]
+    peak_gib = selected["peak_reserved_bytes"] / 1024**3
+    return (
+        f"{row['profile']} {row['model']['name']}: "
+        f"batch{selected['batch']}, "
+        f"{selected['windows_per_s']:.1f} windows/s, "
+        f"peak{peak_gib:.2f}GiB, "
+        f"20epoch TRAIN ONLY "
+        f"{row['estimated20epoch_train_minutes']:.1f}min"
+    )
+
+
 def same(a, b):
     if torch.is_tensor(a):
         return torch.equal(a, b)
@@ -275,16 +289,7 @@ def main_run(root):
                 rows.append(row)
                 write(root / "output/comparison.json", rows)
                 (root / "output/report.txt").write_text(
-                    "\n".join(
-                        f"{r['profile']} {r['model']['name']}: "
-                        f"batch{r['selected']['batch']}, "
-                        f"{r['selected']['windows_per_s']:.1f} windows/s, "
-                        f"peak{r['selected']['peak_reserved_bytes'] / 1024**3:.2f}GiB, "
-                        f"20epoch TRAIN ONLY "
-                        f"{r['estimated20epoch_train_minutes']:.1f}min"
-                        for r in rows
-                    )
-                    + "\n",
+                    "\n".join(_comparison_line(row) for row in rows) + "\n",
                     encoding="utf-8",
                 )
                 gc.collect()

@@ -444,13 +444,13 @@ def make_request(folder, *, phase="case", paired=False):
     transformed[:, 17] /= 4
     transformed[:, 18] /= 12
     at = {int(t): i for i, t in enumerate(times)}
-    X = np.array(
+    input_windows = np.array(
         [
             [transformed[at[int(t) + j * 100000]] for j in range(-99, 1)]
             for t in origins
         ]
     )
-    Y = np.array(
+    target_windows = np.array(
         [
             [
                 transformed[at[int(t) + j * 100000]][
@@ -464,8 +464,8 @@ def make_request(folder, *, phase="case", paired=False):
     online = folder / "online.npz"
     np.savez(
         online,
-        X=X,
-        Y=Y,
+        X=input_windows,
+        Y=target_windows,
         origin_us=origins,
         segment_id=np.zeros(len(origins), dtype=np.int64),
         run_id=np.full(len(origins), rid),

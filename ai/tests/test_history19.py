@@ -263,10 +263,10 @@ def test_chunked_streaming_uses_identical_engine_and_missing_targets_excluded():
     )
 
 
-def test_new_dataset_loader_has_no_C_and_keeps_train_scaler(tmp_path):
+def test_new_dataset_loader_has_no_c_and_keeps_train_scaler(tmp_path):
     manifest = fixture_dataset(tmp_path / "data")
     before = sha(manifest.parent / "normal_train.npz")
-    arrays, scaler, binding = data.load(manifest, cache=tmp_path / "cache")
+    arrays, scaler, _ = data.load(manifest, cache=tmp_path / "cache")
     assert set(arrays["normal_train"]) == {"X", "Y"}
     assert isinstance(arrays["normal_train"]["X"], np.memmap)
     assert np.mean(arrays["normal_train"]["X"]) == 0
@@ -357,7 +357,7 @@ def test_scaler_recomputed_from_unique_train_frames(tmp_path, bad):
 
 
 @pytest.mark.parametrize("name", ["lstm", "transformer"])
-def test_SGD_separate_process_train_resume_export(tmp_path, name):
+def test_sgd_separate_process_train_resume_export(tmp_path, name):
     torch.set_num_threads(2)
     manifest = fixture_dataset(tmp_path / "dataset")
     script = tmp_path / "run.py"
@@ -368,11 +368,25 @@ from learning.history19.data import load
 from learning.history19.models import ModelSpec
 from learning.history19.training import run_fit
 from learning.optimization import policy_for
-phase,name,manifest,out,resume=sys.argv[1:]
-a,scaler,binding=load(manifest); binding['sources']='synthetic-history19'
-run_fit(ModelSpec(name,8),a['normal_train'],a['normal_validation'],out,binding=binding,
-seed=0,batch_size=2,epochs=4,patience=5,learning_rate=.01,optimization=policy_for('sgd'),
-resume=None if resume=='-' else resume,stop_after_epoch=2 if phase=='partial' else None)
+
+phase, name, manifest, out, resume = sys.argv[1:]
+a, scaler, binding = load(manifest)
+binding["sources"] = "synthetic-history19"
+run_fit(
+    ModelSpec(name, 8),
+    a["normal_train"],
+    a["normal_validation"],
+    out,
+    binding=binding,
+    seed=0,
+    batch_size=2,
+    epochs=4,
+    patience=5,
+    learning_rate=0.01,
+    optimization=policy_for("sgd"),
+    resume=None if resume == "-" else resume,
+    stop_after_epoch=2 if phase == "partial" else None,
+)
 """,
         encoding="utf-8",
     )
@@ -435,7 +449,7 @@ resume=None if resume=='-' else resume,stop_after_epoch=2 if phase=='partial' el
     )
 
 
-def test_no_Adam_no_context_no_silent_GPU(tmp_path):
+def test_no_adam_no_context_no_silent_gpu(tmp_path):
     a = {"X": np.zeros((4, 100, 19)), "Y": np.zeros((4, 10, 4))}
     with pytest.raises(ValueError, match="SGD only"):
         run_fit(
@@ -455,7 +469,7 @@ def test_no_Adam_no_context_no_silent_GPU(tmp_path):
     assert not (tmp_path / "must-not-exist").exists()
 
 
-def test_new_CLI_help_without_profile():
+def test_new_cli_help_without_profile():
     result = subprocess.run(
         [str(ROOT / "ai/drone-ai"), "train", "history19", "--help"],
         capture_output=True,
@@ -467,7 +481,7 @@ def test_new_CLI_help_without_profile():
     assert "validate" in result.stdout and "preprocess" in result.stdout
 
 
-def test_finite_three_rate_selection_is_SGD_only(tmp_path, monkeypatch):
+def test_finite_three_rate_selection_is_sgd_only(tmp_path, monkeypatch):
     cfg = runner.config()
     calls = []
 
@@ -506,7 +520,7 @@ def test_finite_three_rate_selection_is_SGD_only(tmp_path, monkeypatch):
     )
 
 
-def test_bounded_CPU_benchmark_uses_new_X_only_model(tmp_path):
+def test_bounded_cpu_benchmark_uses_new_x_only_model(tmp_path):
     from learning.history19.benchmark import measure
 
     arrays = {"X": np.zeros((4, 100, 19)), "Y": np.zeros((4, 10, 4))}

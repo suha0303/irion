@@ -58,6 +58,10 @@ def execute(request):
             )
 
             class ExtractionBudget(Budget):
+                """Enforce extraction limits and report verified byte
+                progress.
+                """
+
                 last = 0
 
                 def check(self):

@@ -254,6 +254,9 @@ def render(state):
         )
         flight = worker["flight"]
         simulation_elapsed = flight.get("observed_simulation_elapsed_s")
+        elapsed_label = (
+            simulation_elapsed if simulation_elapsed is not None else "미확인"
+        )
         live_rtf = flight.get("live_rtf")
         wall = (
             worker.get("flight_wall_s")
@@ -262,7 +265,7 @@ def render(state):
         )
         lines.append(
             f"  비행 simulation 경과 "
-            f"{simulation_elapsed if simulation_elapsed is not None else '미확인'} / 목표 {worker['target_mission_seconds']}s; "
+            f"{elapsed_label} / 목표 {worker['target_mission_seconds']}s; "
             f"wall {round(wall, 1) if wall is not None else '미확인'}s "
             f"(기록값); 실시간 RTF {live_rtf if live_rtf is not None else '미확인'}"
         )

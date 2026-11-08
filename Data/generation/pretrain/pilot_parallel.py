@@ -9,7 +9,7 @@ import os
 import queue
 import socket
 import time
-from collections import deque
+from collections import Counter, deque
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import ExitStack
 from pathlib import Path
@@ -155,7 +155,6 @@ def current_execution_counts(task, ledger, *, planned_case_ids=None):
     """Keep cumulative attempts intact; report only this execution in a
     second denominator.
     """
-    from collections import Counter
 
     current = [
         a for a in ledger["attempts"] if a.get("execution_task") == str(task)

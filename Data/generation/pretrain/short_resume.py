@@ -4,6 +4,7 @@ never submit.
 
 import ast
 import copy
+import json
 import os
 from pathlib import Path
 
@@ -84,7 +85,6 @@ def physical_projection(previous, value, original):
     snapshot = proof["registry_snapshot"]
     if sha(snapshot["path"]) != snapshot["sha256"]:
         raise pilot45.Blocked("Closed registry snapshot changed")
-    import json
 
     if any(
         r.get("task") == previous.name

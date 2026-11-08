@@ -1033,7 +1033,7 @@ def checked(root):
 
 
 def start(root):
-    root, cfg = checked(root)
+    root, _ = checked(root)
     approved_python = python_for(root, required=True)
     if Path(sys.executable).resolve() != Path(
         approved_python
@@ -1161,7 +1161,7 @@ def submit(root, phase, cfg):
             dict(argv=argv, time=time.time(), automatic_retry=False),
         )
         response = operator.command(argv)
-        identifier = response.split(";")[0]
+        identifier = response.split(";", maxsplit=1)[0]
         if not identifier.isdigit():
             raise ValueError(
                 "Unknown submission outcome; no retry: " + response

@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import sys
 
 from .common import (
     ADMISSION,
@@ -430,7 +431,6 @@ def source_revision():
             "build/current/libDronePowertrain.so",
         )
     }
-    import sys
 
     sys.path.insert(0, str(SIMULATION / "sim/src"))
     from capstone_sim import collection_config

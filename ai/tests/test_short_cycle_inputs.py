@@ -2,6 +2,7 @@
 execution.
 """
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -275,13 +276,13 @@ def short_request(folder, *, phase="case"):
     values = physical.copy()
     values[:, 17] /= 4
     values[:, 18] /= 12
-    X = np.array(
+    input_windows = np.array(
         [
             [values[at[int(t) + j * 100000]] for j in range(-99, 1)]
             for t in origins
         ]
     )
-    Y = np.array(
+    target_windows = np.array(
         [
             [
                 values[at[int(t) + j * 100000]][
@@ -295,8 +296,8 @@ def short_request(folder, *, phase="case"):
     onpz = path.parent / "short-online.npz"
     np.savez(
         onpz,
-        X=X,
-        Y=Y,
+        X=input_windows,
+        Y=target_windows,
         origin_us=origins,
         segment_id=np.zeros(len(origins), dtype=np.int64),
         run_id=np.full(len(origins), rid),
@@ -357,7 +358,7 @@ def test_short_static_gate_has_no_native6_dependency(tmp_path, capsys):
 def test_short_native_mismatch_is_rejected_without_cropping_or_relabelling(
     tmp_path, damage
 ):
-    args, policy_path, policy = native180(tmp_path / "unit")
+    _, _, policy = native180(tmp_path / "unit")
     raw = tmp_path / "unit/synthetic-0-normal"
     if damage in {"reference_rows", "counter_conflict", "gap"}:
         p = raw / joint_native.CHECK
@@ -392,7 +393,7 @@ def test_short_native_mismatch_is_rejected_without_cropping_or_relabelling(
 
 
 def test_short_pair_uses_all180001_weather_ticks(tmp_path):
-    args, pp, policy = native180(tmp_path / "unit")
+    args, _, policy = native180(tmp_path / "unit")
     assert joint_native.pair(args["pair_checks"][0], policy, fixture=True)[
         "passed"
     ]
@@ -428,8 +429,6 @@ def test_short_final_cannot_pass_with_missing_actual_case_receipts(
 def test_final45_and_nine_pairs_are_required_even_for_a_synthetic_campaign(
     tmp_path, capsys, damage
 ):
-    import hashlib
-
     path = short_request(tmp_path / "unit", phase="final")
     r = json_file(path)
     plan = json_file(r["refs"]["pilot_manifest"]["path"])

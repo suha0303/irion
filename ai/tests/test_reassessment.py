@@ -1,3 +1,5 @@
+"""Check diagnostic reassessment without rewriting frozen calibration."""
+
 import json
 
 import numpy as np

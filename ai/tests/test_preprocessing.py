@@ -1,3 +1,5 @@
+"""Check causal frame construction, quality flags and window boundaries."""
+
 import copy
 import json
 import math

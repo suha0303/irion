@@ -2,6 +2,7 @@
 data.
 """
 
+import hashlib
 import io
 import tarfile
 
@@ -25,7 +26,6 @@ def fixture(tmp_path, monkeypatch):
         info = tarfile.TarInfo("observations/streams.jsonl")
         info.size = 3
         tar.addfile(info, io.BytesIO(b"raw"))
-    import hashlib
 
     row = dict(
         run_id="run1",

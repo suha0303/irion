@@ -155,7 +155,7 @@ class Preprocessor:
         s = self.signals.get(name)
         if s is None:
             return None, "unavailable"
-        value, quality, sample, available, _, _ = s
+        value, quality, sample, _, _, _ = s
         if quality == "valid" and t - sample > self.age_limit(name):
             quality = "stale"
         if quality != "valid":
@@ -200,7 +200,7 @@ class Preprocessor:
             self.bad_since, self.gap_latched = None, False
         arm, aq = self._value("arming_state", t)
         landed, lq = self._value("landed", t)
-        nav, nq = self._value("nav_state", t)
+        _, nq = self._value("nav_state", t)
         state = (
             "insufficient_data"
             if "valid" not in {aq} or lq != "valid" or nq != "valid"

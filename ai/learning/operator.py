@@ -226,7 +226,7 @@ def submit(root, phase, cfg):
             dict(argv=argv, time=time.time(), automatic_retry=False),
         )
         response = command(argv)
-        identifier = response.split(";")[0]
+        identifier = response.split(";", maxsplit=1)[0]
         if not identifier.isdigit():
             raise ValueError(
                 "Unknown submission outcome; no retry: " + response

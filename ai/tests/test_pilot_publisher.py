@@ -331,7 +331,7 @@ def test_publisher_fails_closed_and_never_repairs_or_filters_failed_evidence(
 
 def test_publication_never_overwrites_prior_snapshot(tmp_path):
     arguments = fixture(tmp_path / "unit")
-    code, first = publish(**arguments)
+    code, _ = publish(**arguments)
     frozen = sha(arguments["output_dir"] / "publication-receipt.json")
     code, second = publish(**arguments)
     assert code == 1 and second["status"] == "FAILED"
@@ -340,7 +340,7 @@ def test_publication_never_overwrites_prior_snapshot(tmp_path):
 
 def test_pair_projection_rejects_wrong_caller_pair(tmp_path):
     arguments = fixture(tmp_path / "unit")
-    code, result = publish(**arguments)
+    _, _ = publish(**arguments)
     policy = json_file(arguments["output_dir"] / "paired-policy.json")
     with pytest.raises(ValueError, match="another physical pair"):
         native.pair(

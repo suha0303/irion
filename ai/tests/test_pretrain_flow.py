@@ -12,7 +12,7 @@ import pytest
 from pretrain import cli, collection, common, display, flow, streaming
 
 
-def test_real_300_manifest_groups_same_duration_without_changing_split_or_seed():
+def test_300_manifest_groups_preserve_duration_split_and_seed():
     rows = collection.cases(202680000, "balanced300")["cases"]
     original = copy.deepcopy(rows)
     groups = flow.homogeneous_batches(rows, 16)
@@ -35,6 +35,8 @@ def test_real_300_manifest_groups_same_duration_without_changing_split_or_seed()
 
 
 class FixtureRunner:
+    """Record preparation stages while keeping the fixture CPU-only."""
+
     def __init__(self, task):
         self.task = task
         self.config = dict(flight_workers=2)

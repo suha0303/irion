@@ -2,8 +2,10 @@
 production data.
 """
 
+import io
 import json
 import os
+import subprocess
 import sys
 
 import numpy as np
@@ -334,7 +336,6 @@ def test_package_paths_reject_traversal(tmp_path):
 def test_four_model_end_to_end_synthetic_cpu_and_fixed_development_evaluator(
     tmp_path, next_version
 ):
-    import io
     import tarfile
 
     from capstone_ai.mapping import FEATURES
@@ -565,7 +566,6 @@ def test_purged_squeue_job_requires_successful_accounting(
     tmp_path, monkeypatch
 ):
     import pwd
-    import subprocess
 
     root = tmp_path / "input"
     root.mkdir()

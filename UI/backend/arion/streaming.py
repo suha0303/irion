@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+import math
 import os
 import socket
 import time
@@ -39,8 +40,6 @@ def encode(value):
 
 
 def safe(value):
-    import math
-
     if isinstance(value, (bytes, bytearray)):
         return {"$bytes": bytes(value).hex()}
     if isinstance(value, float) and not math.isfinite(value):
@@ -829,8 +828,6 @@ class LiveSources:
                             "fields": fields,
                         }
                     )
-        except asyncio.CancelledError:
-            raise
         except Exception as e:
             run.state = "error"
             run.error = f"{type(e).__name__}: {e}"[:300]

@@ -53,10 +53,22 @@ def command(case, parent=None, paired_options=(), instance=0, timing=False):
 
 def environment_check():
     """Real interpreter/import/CLI boundary, with no run dispatch or flight."""
-    probe = """import json,sys,pymavlink
+    probe = """import json, sys, pymavlink
 from capstone_sim.runner import run_flight
-print(json.dumps(dict(executable=sys.executable,prefix=sys.prefix,version=sys.version,
-    pymavlink_path=pymavlink.__file__,run_flight_imported=callable(run_flight),flight_started=False)))"""
+
+print(
+    json.dumps(
+        dict(
+            executable=sys.executable,
+            prefix=sys.prefix,
+            version=sys.version,
+            pymavlink_path=pymavlink.__file__,
+            run_flight_imported=callable(run_flight),
+            flight_started=False,
+        )
+    )
+)
+"""
     env = dict(os.environ, PYTHONPATH=str(ROOT / "simulation/sim/src"))
     args = [str(ROOT / "simulation/.venv/bin/python"), "-B", "-c", probe]
     result = subprocess.run(

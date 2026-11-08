@@ -1,3 +1,6 @@
+"""Check bounded adaptation, resume and independent flight comparison."""
+
+import hashlib
 import json
 
 import numpy as np
@@ -42,7 +45,6 @@ def flight(root, name, role, health="confirmed_normal"):
         output_max=1000,
         mapping_evidence="synthetic test fixture",
     )
-    import hashlib
 
     m = dict(
         schema="drone.real-common19/1",
@@ -151,7 +153,7 @@ def test_windows_are_causal_and_scaler_is_frozen(tmp_path):
     m, v, t = load(path)
     scaler = Runtime("forecast_lstm_h64_l2").scaler
     before = {k: a.copy() for k, a in scaler.items()}
-    x, y, p, origins = windows(m, v, t, scaler)
+    x, y, _, origins = windows(m, v, t, scaler)
     v2 = v.copy()
     v2[t > origins[0], 17] += 1
     x2, y2, _, _ = windows(m, v2, t, scaler)

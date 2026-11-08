@@ -11,7 +11,7 @@ from pretrain import main_collection as main
 
 
 @pytest.mark.parametrize("fresh", [False, True])
-def test_fresh_preflight_reports_estimate_shortfall_without_disabling_actual_guard(
+def test_preflight_reports_shortfall_and_preserves_guard(
     monkeypatch, tmp_path, fresh
 ):
     cfg = dict(

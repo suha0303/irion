@@ -13,6 +13,7 @@ import io
 import json
 import math
 import shutil
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -425,7 +426,6 @@ def causal_frames(
             start = None
         if valid and start is None:
             start = i
-    from collections import Counter
 
     reasons = Counter(name for names in invalid for name in names)
     excluded = []

@@ -7,6 +7,8 @@ from capstone_sim.runner import capture_health
 
 
 class CaptureHealthChecks(unittest.TestCase):
+    """Check preserved capture evidence without starting a new flight."""
+
     def test_recorded_stall(self):
         result = capture_health(
             SimpleNamespace(through=14070000, count=3866), 19.584, 12.018

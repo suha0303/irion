@@ -17,9 +17,7 @@ from pretrain import (
 
 
 @pytest.mark.parametrize("kind", ["quality", "native"])
-def test_exact_reviewed_parent_can_enter_once_without_reclassifying_physical_state(
-    tmp_path, kind
-):
+def test_reviewed_parent_enters_once_without_reclassification(tmp_path, kind):
     cid = "case"
     old = dict(
         number=1,
@@ -86,7 +84,7 @@ def test_ordinary_accepted_completed_raw_has_no_retry_exception(tmp_path):
 @pytest.mark.parametrize(
     "mutation", [None, "missing", "new_failure", "extra_retry", "fake_reuse"]
 )
-def test_resume_current17_and_cumulative65_counts_keep_three_rejections_physical_completed(
+def test_resume_counts_keep_rejections_physically_complete(
     mutation,
 ):
     task = Path("current")
@@ -170,7 +168,7 @@ def test_resume_current17_and_cumulative65_counts_keep_three_rejections_physical
 
 
 @pytest.mark.local_evidence
-def test_actual_C03_snapshot_projects_only_approved_three_and_preserves_original_ledger(
+def test_c03_projects_approved_three_and_preserves_ledger(
     tmp_path,
 ):
     previous = common.HOME / "tasks/short180-20261107-c03-45"

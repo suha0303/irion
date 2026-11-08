@@ -13,7 +13,7 @@ from pretrain import main_collection as main
 
 
 def old_campaign(monkeypatch, tmp_path):
-    home, store = factory(monkeypatch, tmp_path)
+    _, store = factory(monkeypatch, tmp_path)
     task = main.create("main", storage_root=store, name="old-main")
     cfg = common.read(task / "config.json")
     cases = common.read(task / "manifest.json")["cases"]
@@ -70,7 +70,7 @@ def old_campaign(monkeypatch, tmp_path):
 def test_fresh_start_does_not_import_old_raw_attempts_or_modify_old_files(
     monkeypatch, tmp_path
 ):
-    previous, store, case, record, raw = old_campaign(monkeypatch, tmp_path)
+    previous, store, case, _, raw = old_campaign(monkeypatch, tmp_path)
     preserved = {
         str(p): common.sha(p) for p in previous.rglob("*") if p.is_file()
     }
@@ -109,7 +109,7 @@ def test_fresh_start_does_not_import_old_raw_attempts_or_modify_old_files(
 def test_new_campaign_cannot_read_or_write_legacy_catalog(
     monkeypatch, tmp_path
 ):
-    previous, store, case, _, _ = old_campaign(monkeypatch, tmp_path)
+    _, store, case, _, _ = old_campaign(monkeypatch, tmp_path)
     fresh = main.create(
         "main", storage_root=store, name="fresh-catalog", fresh=True
     )
@@ -129,7 +129,7 @@ def test_new_campaign_cannot_read_or_write_legacy_catalog(
 def test_fresh_registry_accepts_same_condition_but_keeps_identity_exclusions(
     monkeypatch, tmp_path, mutation
 ):
-    previous, store, case, old, raw = old_campaign(monkeypatch, tmp_path)
+    _, store, case, old, _ = old_campaign(monkeypatch, tmp_path)
     fresh = main.create(
         "main", storage_root=store, name="fresh-registry", fresh=True
     )
@@ -161,7 +161,7 @@ def test_fresh_registry_accepts_same_condition_but_keeps_identity_exclusions(
 def test_same_case_registry_append_uses_real_guard_without_a_child(
     monkeypatch, tmp_path
 ):
-    previous, store, case, old, raw = old_campaign(monkeypatch, tmp_path)
+    _, store, case, old, _ = old_campaign(monkeypatch, tmp_path)
     fresh = main.create(
         "main", storage_root=store, name="fresh-append", fresh=True
     )
@@ -180,11 +180,9 @@ def test_same_case_registry_append_uses_real_guard_without_a_child(
 def test_second_user_start_creates_another_empty_task_without_claim_reset(
     monkeypatch, tmp_path
 ):
-    previous, store, case, old, raw = old_campaign(monkeypatch, tmp_path)
+    _, store, _, _, _ = old_campaign(monkeypatch, tmp_path)
     submitted = []
-    monkeypatch.setattr(
-        "pretrain.cli.start", lambda task: submitted.append(task)
-    )
+    monkeypatch.setattr("pretrain.cli.start", submitted.append)
     first = main.user_start("main", storage_root=store, name="fresh-a")
     common.write(first / "operator/service.json", dict(unit="fixture-stopped"))
     (first / "operator/claimed").write_text(

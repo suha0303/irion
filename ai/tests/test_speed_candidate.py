@@ -163,7 +163,7 @@ def test_single_candidate_never_repeats_baseline_or_runs_more_flights(
 
     monkeypatch.setattr(speed_test, "ROOT", tmp_path)
     monkeypatch.setattr(speed_test, "STORE", tmp_path / "store")
-    monkeypatch.setattr(speed_test, "external", lambda p: Path(p))
+    monkeypatch.setattr(speed_test, "external", Path)
     baseline = dict(
         results=[dict(measured=samples()), dict(measured=samples())]
     )
@@ -174,6 +174,8 @@ def test_single_candidate_never_repeats_baseline_or_runs_more_flights(
     calls = []
 
     class Runner:
+        """Record candidate stages and reject extra collection work."""
+
         task = tmp_path / "single"
         config = dict(
             seed_base=100,

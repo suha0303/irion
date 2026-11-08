@@ -20,6 +20,7 @@ class NpzReplay(SessionRun):
     """Replay archived frames with a bounded cache owned by this instance."""
 
     def __init__(self, journal, archive, summary=None):
+        # Use indexed chunks instead of SessionRun's full journal scan.
         self.path = Path(journal)
         self.archive = archive
         self.run_id = archive.run_id
@@ -119,7 +120,7 @@ class NpzReplay(SessionRun):
 
     def _load_chunk(self, index):
         chunk = self.archive.data["chunks"][index]
-        meta, arrays = load_npz(self.archive.path / chunk["filename"])
+        _, arrays = load_npz(self.archive.path / chunk["filename"])
         if hash_file(self.archive.path / chunk["filename"]) != chunk["sha256"]:
             raise ValueError("NPZ 구간 파일 해시 불일치")
         return [json.loads(str(r)) for r in arrays["rows"]]

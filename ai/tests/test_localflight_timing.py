@@ -1,3 +1,5 @@
+"""Check retained intervals, clock repair and damaged-log exclusion."""
+
 import json
 from types import SimpleNamespace
 
@@ -215,6 +217,8 @@ def test_bin_keeps_only_file_prefix_at_first_reset_or_corruption(
     import localflight.bin_reader as reader_module
 
     class Reader:
+        """Yield controlled BIN records to exercise prefix preservation."""
+
         offset = 0
         closed = False
 

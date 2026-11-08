@@ -4,6 +4,7 @@ The policy/receipt schemas here are AI consumer projections, not a replacement
 for the Sim raw contract. Native field mappings must be frozen by the owners.
 """
 
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -104,8 +105,6 @@ def regular(path):
 
 
 def sha(path):
-    import hashlib
-
     value = hashlib.sha256()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1 << 20), b""):

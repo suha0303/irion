@@ -60,7 +60,7 @@ def export(base):
         str(state["allocation"]["leader"]),
         *(str(i) for i in state["allocation"]["components"].values()),
     }
-    if any(x.split("+")[0] in ids for x in queue.split()):
+    if any(x.split("+", maxsplit=1)[0] in ids for x in queue.split()):
         raise ValueError("Own allocation still present")
     selected = read(output / "selected-models.json")
     results = read(output / "final-results.json")

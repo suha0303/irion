@@ -1,3 +1,7 @@
+"""Check model catalog integrity, CPU inputs and aircraft profile
+eligibility.
+"""
+
 import copy
 
 import numpy as np

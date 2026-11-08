@@ -267,7 +267,7 @@ def controller_fixture(tmp_path, monkeypatch):
 def test_diagnostic_control_releases_one_job_and_never_calibrates(
     tmp_path, monkeypatch
 ):
-    cfg, phases = controller_fixture(tmp_path, monkeypatch)
+    _, phases = controller_fixture(tmp_path, monkeypatch)
 
     def release(root, record, state, budget):
         assert phases == ["diagnose"]

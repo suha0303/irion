@@ -1,6 +1,7 @@
 """Current collection names retain the unchanged sealed preprocessing guards."""
 
 import copy
+from datetime import datetime, timezone
 
 import pytest
 
@@ -90,8 +91,6 @@ def test_generic_collector_protocol_keeps_legacy_read_identity_separate():
 def test_progress_reader_accepts_only_current_and_historical_configuration(
     tmp_path, configuration
 ):
-    from datetime import datetime, timezone
-
     module = common.collector()
     run_id = "a" * 32
     run = tmp_path / "runs" / run_id

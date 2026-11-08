@@ -110,7 +110,7 @@ def fit_settings(root, cfg, name):
 
 
 def gate_child(root, name, phase):
-    root, cfg, upstream, out = paths(root)
+    root, cfg, _, out = paths(root)
     if name not in neural_ids(cfg) or phase not in {
         "full",
         "partial",

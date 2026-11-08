@@ -127,7 +127,7 @@ def create_partial(source, name):
     from . import cli
 
     source = Path(source).resolve()
-    root, frozen, completed, failed, evidence = inputs(source)
+    _, frozen, completed, failed, evidence = inputs(source)
     original = read(source / "config.json")
     args = cli.parser().parse_args(
         ["init", "--name", name, "--mode", "collect"]

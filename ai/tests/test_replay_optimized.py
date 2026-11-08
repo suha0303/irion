@@ -23,6 +23,8 @@ spec.loader.exec_module(reference)
 
 
 class FixturePredictor:
+    """Return deterministic predictions for replay-equivalence checks."""
+
     def __init__(self, folder, model=None):
         self.folder = folder
         self.model = model
@@ -130,15 +132,13 @@ def sequential_reference(predictor, frames, windows):
     return ledger
 
 
-def test_sequential_replay_matches_prior_causal_decisions_and_syncs_only_at_seal(
+def test_replay_matches_causal_decisions_and_syncs_at_seal(
     tmp_path, monkeypatch
 ):
     canonical, bundle, frames, windows = case(tmp_path)
     expected = sequential_reference(FixturePredictor(bundle), frames, windows)
     synced = []
-    monkeypatch.setattr(
-        "capstone_ai.detection_replay.os.fsync", lambda fd: synced.append(fd)
-    )
+    monkeypatch.setattr("capstone_ai.detection_replay.os.fsync", synced.append)
     predictor = FixturePredictor(bundle)
     out = tmp_path / "result"
     replay(

@@ -2,6 +2,9 @@
 is immutable.
 """
 
+import os
+from pathlib import Path
+
 from . import ai19
 from .common import read, verify
 
@@ -32,8 +35,6 @@ def publish(raw, case, binding, assessment_path, output, *, policy_bundle):
         ),
         output=output,
     )
-    import os
-    from pathlib import Path
 
     for path in (assessment_path, result["path"]):
         with Path(path).open("rb") as stream:

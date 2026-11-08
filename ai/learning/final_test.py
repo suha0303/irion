@@ -17,6 +17,7 @@ import signal
 import subprocess
 import sys
 import time
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from execution.common import (
@@ -40,8 +41,6 @@ COUNTS = {"normal_test": 216, "anomaly_test": 108}
 
 
 def validate_manifest(manifest):
-    from collections import Counter, defaultdict
-
     fixed = dict(
         schema="drone.final-test-dataset/1",
         status="FINAL_DATASET_SEALED_STOPPED",
@@ -539,7 +538,7 @@ def submit(root, phase, cfg):
             root / (phase + "-submission-intent.json"),
             dict(argv=argv, time=time.time(), automatic_retry=False),
         )
-        identifier = operator.command(argv).split(";")[0]
+        identifier = operator.command(argv).split(";", maxsplit=1)[0]
         if not identifier.isdigit():
             raise ValueError("Unknown submission outcome; no retry")
         record = dict(

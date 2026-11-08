@@ -103,7 +103,7 @@ def test_live_scheduler_overrides_stale_controller_pending():
         dict(released=True, slurm_state="FAILED", exit_code="1:0"),
     ],
 )
-def test_finished_evaluation_is_not_final_completion_without_successful_releases(
+def test_evaluation_requires_successful_releases_for_completion(
     release,
 ):
     value = data()
@@ -120,7 +120,7 @@ def test_finished_evaluation_is_not_final_completion_without_successful_releases
     assert "전체 완료 확인 NO" in text
 
 
-def test_both_successful_releases_are_shown_without_reading_performance_results():
+def test_release_display_does_not_read_performance_results():
     value = data()
     value["inference"]["models_completed"] = 18
     value["controller"].update(status="REPORT_READY_STOPPED", stage="stopped")

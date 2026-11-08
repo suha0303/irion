@@ -1,3 +1,5 @@
+"""Check the exact frozen model delivery and its integrity evidence."""
+
 import pytest
 
 from execution.delivery import export_final as e

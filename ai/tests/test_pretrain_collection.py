@@ -2,6 +2,9 @@
 optional gates.
 """
 
+import hashlib
+import io
+import json
 from pathlib import Path
 
 import pytest
@@ -16,7 +19,7 @@ from test_collect_long_runs import (  # noqa: F401 - pytest fixture dependencies
 from pretrain.collection import lanes
 
 
-def test_expanded_memory_only_for_bound_benchmark(collection_setup):  # noqa: F811
+def test_benchmark_requires_bound_memory(collection_setup):  # noqa: F811
     plan, _, _, tmp = collection_setup
     config_path, memory_path = tmp / "config.json", tmp / "memory.json"
     dump(
@@ -191,9 +194,6 @@ def test_optional_gate_sixteen_collection_and_exports(
 
 
 def test_fresh_benchmark_freeze_reads_only_new_archives(tmp_path, monkeypatch):
-    import hashlib
-    import io
-    import json
     import tarfile
 
     from pretrain import collection, common

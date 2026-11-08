@@ -20,7 +20,7 @@ def proof_ref():
 
 
 @pytest.mark.local_evidence
-def test_exact_actual_C04_projection_preserves_original52_and_keeps51_physical():
+def test_c04_projection_keeps_original52_and_physical51():
     before = common.sha(PREVIOUS / "ledger.json")
     old = common.read(PREVIOUS / "ledger.json")
     projected = short_resume.physical_projection(
@@ -78,7 +78,7 @@ def test_uncertified_or_mismatched_unknown_is_never_discarded(
 
 @pytest.mark.local_evidence
 @pytest.mark.parametrize("failure", [None, "failed", "unknown", "retry"])
-def test_C05_counter_fixture_separates14_new31_reused_and_one_administrative_record(
+def test_c05_counts_new_reused_and_administrative_records(
     failure,
 ):
     from pretrain import pilot_parallel

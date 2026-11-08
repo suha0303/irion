@@ -114,7 +114,7 @@ def test_padding_partial_tail_and_later_block_load_independence(
         assert model(changed, lengths)[0, 204] != first[0, 204]
 
 
-def test_loss_equal_per_run_initial_padding_excluded_and_short_run_unavailable():
+def test_run_loss_excludes_initial_padding_and_short_runs():
     prediction = torch.zeros(2, 205)
     observed = torch.zeros_like(prediction)
     observed[0, 100:105] = 1
@@ -228,7 +228,7 @@ def test_normal_calibration_independence_small_sample_test_data_rejected():
         )
 
 
-def test_manifest_fixed_order_hash_truth_rejection_and_no_old_dataset_conversion(
+def test_manifest_order_hash_truth_and_legacy_rejection(
     tmp_path,
 ):
     run = normal_runs("normal_train", 1)[0]

@@ -80,7 +80,7 @@ def validate_torch_environment(
     version_ok = (
         torch_version == expected["torch"]
         if profile == "mamba25"
-        else torch_version.split("+")[0] == expected["torch"]
+        else torch_version.split("+", maxsplit=1)[0] == expected["torch"]
     )
     if tuple(python_version[:2]) != (3, 10) or not version_ok:
         raise ValueError(
@@ -120,7 +120,7 @@ def batch_backward(root, device, profile="torch21"):
     version = (
         torch.__version__
         if profile == "mamba25"
-        else torch.__version__.split("+")[0]
+        else torch.__version__.split("+", maxsplit=1)[0]
     )
     if version != expected["torch"]:
         raise ValueError("model test runtime differs from selected profile")

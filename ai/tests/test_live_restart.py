@@ -37,6 +37,8 @@ def test_resume_does_not_close_pending_at_replayed_segment_boundary(
     clock = {"time": 0, "nonce": 0}
 
     class Tail:
+        """Supply a resumed frame boundary without closing pending forecasts."""
+
         def __init__(self, path, consumer):
             self.engine, self.index, self.closed, self.last_mark = (
                 consumer,
@@ -65,6 +67,8 @@ def test_resume_does_not_close_pending_at_replayed_segment_boundary(
             assert checkpoint == {"fixture": True}
 
     class Probe:
+        """Provide deterministic clock evidence for the resumed stream."""
+
         def __init__(self, *args):
             self.count, self.errors = 0, 0
 

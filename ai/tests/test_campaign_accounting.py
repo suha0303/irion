@@ -1,3 +1,5 @@
+"""Check campaign accounting without altering preserved physical outcomes."""
+
 import importlib.util
 from pathlib import Path
 

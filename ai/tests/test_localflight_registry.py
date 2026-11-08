@@ -1,3 +1,5 @@
+"""Check versioned model registration, activation and aircraft binding."""
+
 import json
 import zipfile
 

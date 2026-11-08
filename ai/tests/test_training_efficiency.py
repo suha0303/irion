@@ -135,7 +135,7 @@ def test_no_gradients_and_nonfinite_loss_still_stop_before_update():
     assert not optimizer.state
 
 
-def test_normalization_throttles_writes_but_preserves_checks_values_and_final_status(
+def test_normalization_throttles_writes_and_preserves_checks(
     tmp_path, monkeypatch
 ):
     rng = np.random.default_rng(0)

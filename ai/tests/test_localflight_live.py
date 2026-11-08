@@ -1,3 +1,7 @@
+"""Check causal live inputs, stale data, reset handling and flight
+completion.
+"""
+
 import json
 
 import numpy as np
@@ -162,7 +166,7 @@ def test_clock_source_isolation_and_gaps():
     row["raw"]["source_system"] = 2
     assert mapper.accept(row) == [] and mapper.base is None
     events = [e for row in samples(13) for e in mapper.accept(row)]
-    values, times, report = causal_frames(events, 0, 13000000)
+    values, _, report = causal_frames(events, 0, 13000000)
     assert report["candidate_segments"][0]["usable"]
     assert np.isfinite(values).all() and np.all(values[:, :4] == 0.4)
     assert np.all(values[:, 17] == 16)

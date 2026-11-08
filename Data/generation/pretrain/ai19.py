@@ -413,7 +413,7 @@ def mission_interval(run, *, policy_bundle=None, external_audit=None):
 
 
 def replay(consumer, config, *, expected_profile_revision=None):
-    mapping, source, _, module = ai_modules()
+    _, source, _, module = ai_modules()
     metadata = read(consumer / "observations/metadata.json")
     vehicle = metadata["vehicle"]
     if expected_profile_revision is None:
@@ -463,7 +463,7 @@ def replay(consumer, config, *, expected_profile_revision=None):
 
 
 def online_arrays(engine, mission=None):
-    mapping, _, data, _ = ai_modules()
+    _, _, data, _ = ai_modules()
     if not engine.windows:
         return None, [dict(reason="no_valid_history_windows")]
     try:

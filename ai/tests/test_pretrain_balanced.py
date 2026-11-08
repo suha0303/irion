@@ -4,6 +4,7 @@ policy.
 
 import copy
 import shutil
+import sys
 from collections import Counter
 from types import SimpleNamespace
 
@@ -50,8 +51,6 @@ def test_balanced_300_counts_coverage_and_independent_multipliers():
 
 
 def test_mixed_programs_retain_their_existing_motion_bounds():
-    import sys
-
     sys.path.insert(0, str(common.ROOT / "simulation/sim/src"))
     from capstone_sim.normal_variation import target
 

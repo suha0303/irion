@@ -1,5 +1,8 @@
+"""Check portable dataset merge, source lineage and scaler separation."""
+
 import copy
 import shutil
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -112,8 +115,6 @@ def test_merge_cli_does_not_render_unstarted_collection_counters(tmp_path):
 
 
 def test_merge_memory_policy_reserves_one_gigabyte(monkeypatch):
-    from types import SimpleNamespace
-
     from pretrain import cli
 
     monkeypatch.setattr(

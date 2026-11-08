@@ -93,7 +93,7 @@ def environment(root, device):
     if not re.fullmatch(r"cpu|cuda(?::[0-9]+)?", device):
         raise ValueError("explicit cpu or cuda[:index] device required")
     if (
-        importlib.metadata.version("torch").split("+")[0]
+        importlib.metadata.version("torch").split("+", maxsplit=1)[0]
         != policy["torch_release"]
     ):
         raise ValueError("torch " + policy["torch_release"] + " required")

@@ -1,3 +1,5 @@
+"""Check refinement selection, process ownership and bounded dispatch."""
+
 import subprocess
 import sys
 
@@ -27,7 +29,7 @@ def item():
 
 def test_fresh_rates_do_not_repeat_and_two_small_improvements_stop():
     x = item()
-    for n in range(2):
+    for _ in range(2):
         rates = candidates(x)
         assert len(rates) == 2
         assert all(key(r) not in x["tested"] for r in rates)
@@ -47,7 +49,7 @@ def test_fresh_rates_do_not_repeat_and_two_small_improvements_stop():
     assert x["rounds"] == 2
 
 
-def test_significant_improvement_resets_stagnation_and_divergence_not_selected():
+def test_improvement_resets_stagnation_and_rejects_divergence():
     x = item()
     x["no_improvement"] = 1
     finish_round(

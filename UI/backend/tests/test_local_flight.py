@@ -1,5 +1,12 @@
+"""Check local CPU jobs, immutable profiles and API validation."""
+
 import asyncio
+import hashlib
 import json
+import os
+import subprocess
+import time
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -120,11 +127,6 @@ def test_new_jobs_require_completed_sources_and_reject_unknown_resume(tmp_path):
 def test_real_cpu_worker_analyzes_adapts_and_compares_synthetic_segments(
     tmp_path,
 ):
-    import hashlib
-    import subprocess
-    import time
-    from pathlib import Path
-
     project = Path(__file__).resolve().parents[4]
     # Generate explicit synthetic fixtures in the AI environment; no real log is
     # asserted healthy, and the UI interpreter never imports PyTorch.
@@ -136,7 +138,6 @@ root=Path(sys.argv[1])
 roles = {'adaptation':'adaptation','evaluation':'evaluation','cal-a':'calibration','cal-b':'calibration'}
 print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.items()}))
 """
-    import os
 
     env = {
         **os.environ,

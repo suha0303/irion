@@ -49,7 +49,7 @@ def diagnose(profile):
             or (
                 name == "torch"
                 and profile["runtime_profile"] == "torch21"
-                and actual.split("+")[0] == expected
+                and actual.split("+", maxsplit=1)[0] == expected
             )
         )
         check(

@@ -78,7 +78,7 @@ def test_input_conversion_once_and_tail():
     data = arrays()
     source = data["X"].copy()
     loader = Batches(data, 4, "cpu")
-    x, c, y = loader.get([4])
+    x, _, _ = loader.get([4])
     assert x.dtype == torch.float32 and x.shape == (1, 100, 19)
     np.testing.assert_array_equal(data["X"], source)
     with pytest.raises(ValueError, match="capacity"):
@@ -107,12 +107,24 @@ def test_three_fresh_process_resume(tmp_path, name):
     np.savez(data, **arrays(4))
     runner = tmp_path / "run.py"
     runner.write_text(
-        """import sys,numpy as np
+        """import sys, numpy as np
 from learning.models import ModelSpec
 from learning.training import run_fit
-phase,name,path,out,resume=sys.argv[1:]
-a=dict(np.load(path))
-run_fit(ModelSpec(name,8),a,a,out,binding={'data':'fixture','scaler':'fixture','sources':'fixture'},batch_size=2,epochs=4,patience=5,resume=None if resume=='-' else resume,stop_after_epoch=2 if phase=='partial' else None)
+
+phase, name, path, out, resume = sys.argv[1:]
+a = dict(np.load(path))
+run_fit(
+    ModelSpec(name, 8),
+    a,
+    a,
+    out,
+    binding={"data": "fixture", "scaler": "fixture", "sources": "fixture"},
+    batch_size=2,
+    epochs=4,
+    patience=5,
+    resume=None if resume == "-" else resume,
+    stop_after_epoch=2 if phase == "partial" else None,
+)
 """,
         encoding="utf-8",
     )

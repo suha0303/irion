@@ -4,6 +4,7 @@ import importlib.util
 import json
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location(
@@ -205,8 +206,6 @@ def test_eta_uses_measured_campaign_throughput_and_failure_disables_it():
 def test_live_simulation_clock_display_and_stale_suppression(
     tmp_path, monkeypatch
 ):
-    from datetime import datetime, timezone
-
     now = datetime(2026, 10, 15, tzinfo=timezone.utc)
     plan = tmp_path / "plan.json"
     plan.write_text(

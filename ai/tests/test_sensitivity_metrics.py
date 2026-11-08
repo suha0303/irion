@@ -81,7 +81,7 @@ def test_known_alarm_entry_and_exit_trajectories_are_preserved():
     assert data["policy"] == snapshot["policy"]
 
 
-def test_tiny_prediction_delta_can_fail_alarm_equivalence_with_all_numeric_budgets_passing():
+def test_small_numeric_delta_can_change_alarm_decision():
     data = inputs(5)
     data["actual_scaled"][:, :, :3] = 1.0
     data["batch256"][:, :, :3] = -1e-6

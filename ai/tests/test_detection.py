@@ -1,4 +1,7 @@
+"""Check normal calibration, alarm decisions and independent evaluation."""
+
 import copy
+import json
 
 import numpy as np
 import pytest
@@ -256,8 +259,6 @@ def test_holdout_rejects_old_raw_retry_pair_and_allows_new_pair():
 
 
 def test_truth_join_preserves_sealed_forecasts_and_refuses_tamper(tmp_path):
-    import json
-
     from capstone_ai.detection_replay import evaluate_sealed
     from capstone_ai.source import dump, sha
 

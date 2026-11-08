@@ -2,6 +2,7 @@
 fitting.
 """
 
+import json
 from collections import Counter
 from pathlib import Path
 
@@ -90,8 +91,6 @@ def check_scope():
 
 
 def write_new(path, value):
-    import json
-
     path = Path(path).absolute()
     if ".." in path.parts or any(p.is_symlink() for p in (path, *path.parents)):
         raise ValueError("New regular collection output required")
@@ -219,7 +218,6 @@ def read_protection(value, identities=None):
     """Old JSON registries or bounded JSONL entries; never an unbounded
     global ledger.
     """
-    import json
 
     if isinstance(value, dict):
         return value

@@ -1,3 +1,5 @@
+"""Check aircraft-bound calibration and explicit unavailable decisions."""
+
 import json
 
 import numpy as np

@@ -178,7 +178,7 @@ def test_data_launcher_shell_syntax():
         assert result.returncode == 0, result.stderr
 
 
-def test_current_collector_loads_exact_preserved_process_helper_without_execution():
+def test_collector_loads_preserved_helper_without_execution():
     from pretrain.common import ROOT, collector, sha
 
     runner = collector()
@@ -306,7 +306,7 @@ def test_service_identity_retains_exact_current_or_historical_unit(
         service_unit(task)
 
 
-def test_service_identity_uses_frozen_config_when_submission_exits_before_receipt(
+def test_service_uses_frozen_config_before_receipt(
     tmp_path,
 ):
     from pretrain.common import service_unit, write

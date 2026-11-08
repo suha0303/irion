@@ -11,6 +11,8 @@ from capstone_sim import collection_config
 
 
 class SixteenPorts(unittest.TestCase):
+    """Check private port separation for the sixteen supported PX4 instances."""
+
     def test_actual_start_commands_separate_gcs_and_control(self):
         upstream = (
             collection_config.ROOT

@@ -1,3 +1,5 @@
+"""Check GPU package and allocation guards using controlled local fixtures."""
+
 import importlib.util
 import json
 import os

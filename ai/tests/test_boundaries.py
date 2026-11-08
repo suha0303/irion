@@ -1,3 +1,5 @@
+"""Check timing, split and data-boundary rejection conditions."""
+
 import copy
 from pathlib import Path
 

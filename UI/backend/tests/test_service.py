@@ -1,3 +1,5 @@
+"""Check the local HTTP service, imports and user-facing errors."""
+
 import json
 import signal
 

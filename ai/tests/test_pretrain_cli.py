@@ -7,6 +7,7 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -86,7 +87,6 @@ def test_memory_violation_snapshot_survives_recovery(
     )
     r = runner.Runner(task)
     monkeypatch.setattr(runner, "external", lambda path: path)
-    from types import SimpleNamespace
 
     monkeypatch.setattr(
         runner.shutil,
@@ -127,8 +127,6 @@ def test_impossible_sixteen_stops_before_extract(tmp_path, monkeypatch):
 
 
 def test_one_gb_floor_keeps_rss_limit(tmp_path, monkeypatch):
-    from types import SimpleNamespace
-
     task = tmp_path / "task"
     common.write(
         task / "config.json",
@@ -149,7 +147,7 @@ def test_one_gb_floor_keeps_rss_limit(tmp_path, monkeypatch):
     sample = dict(
         available_bytes=1_000_000_000, owned_tree_rss_bytes=7_000_000_000
     )
-    monkeypatch.setattr(r.c, "memory_snapshot", lambda: sample.copy())
+    monkeypatch.setattr(r.c, "memory_snapshot", sample.copy)
     r.resources()
     sample["available_bytes"] = 999_999_999
     with pytest.raises(runner.ResourceBlocked, match="min1"):
@@ -237,8 +235,6 @@ def test_levels_all_and_bad_value():
 
 
 def test_expanded_memory_service_uses_available_minus_reserve(monkeypatch):
-    from types import SimpleNamespace
-
     sample = dict(available_bytes=14_000_000_000)
     monkeypatch.setattr(
         cli,
@@ -266,7 +262,7 @@ def test_lr_menu_routes_to_current_collection_without_legacy_create(
         "user_start",
         lambda scope: calls.append(scope) or Path("fixture"),
     )
-    monkeypatch.setattr(cli, "watch", lambda path: calls.append(path))
+    monkeypatch.setattr(cli, "watch", calls.append)
     monkeypatch.setattr(
         cli,
         "create",
@@ -277,8 +273,6 @@ def test_lr_menu_routes_to_current_collection_without_legacy_create(
 
 
 def test_expanded_rss_over_eight_and_floor_preserved(tmp_path, monkeypatch):
-    from types import SimpleNamespace
-
     r = fake_runner(tmp_path, monkeypatch)
     r.config.update(
         use_available_ram=True,
@@ -295,7 +289,7 @@ def test_expanded_rss_over_eight_and_floor_preserved(tmp_path, monkeypatch):
     sample = dict(
         available_bytes=1_100_000_000, owned_tree_rss_bytes=12_000_000_000
     )
-    monkeypatch.setattr(r.c, "memory_snapshot", lambda: sample.copy())
+    monkeypatch.setattr(r.c, "memory_snapshot", sample.copy)
     runner.Runner.resources(r)
     assert r.cpu_admission(16, "preprocess", sample["available_bytes"])[
         "allowed"
@@ -390,8 +384,6 @@ def test_main_collection_menu_propagates_current_admission_failure(monkeypatch):
 def test_expanded_memory_includes_postcollection_cpu(
     tmp_path, monkeypatch, mode
 ):
-    from types import SimpleNamespace
-
     r = fake_runner(tmp_path, monkeypatch)
     r.config.update(mode=mode, use_available_ram=True, min_available_ram_gb=1)
     assert r.cpu_admission(16, "preprocess", 11_000_000_000)["allowed"]
@@ -522,8 +514,6 @@ def test_start_uses_independent_service_without_wait_or_restart(
 
 
 def test_start_expanded_service_removes_old_fixed_caps(tmp_path, monkeypatch):
-    from types import SimpleNamespace
-
     home = tmp_path / "home"
     task = home / "tasks/unit-test"
     common.write(
@@ -716,6 +706,8 @@ def test_scheduler_launch_bound_and_completion(tmp_path, monkeypatch, count):
     launched = []
 
     class Child:
+        """Represent a child that completes under the scheduler limit."""
+
         def __init__(self, argv, **kwargs):
             self.pid = 1000 + len(launched)
             req = common.read(argv[-1])
@@ -806,7 +798,7 @@ def test_parallel_handoff_uses_existing_numeric_algorithms(
         common.write(folder / "summary.json", summary)
     r = fake_runner(tmp_path, monkeypatch)
     monkeypatch.setattr(runner, "STORE", tmp_path / "external")
-    monkeypatch.setattr(runner, "external", lambda path: Path(path))
+    monkeypatch.setattr(runner, "external", Path)
 
     def batch(name, action, rows, workers, out, **kwargs):
         out.mkdir(parents=True)
@@ -1046,6 +1038,8 @@ def test_cpu_failure_records_and_runs_remaining_units(tmp_path, monkeypatch):
     launched = []
 
     class Child:
+        """Expose a controlled exit code without starting a subprocess."""
+
         def __init__(self, argv, **kwargs):
             request = common.read(argv[-1])
             launched.append(request["row"]["run_id"])
@@ -1125,6 +1119,8 @@ def test_unit_retry_bound_preserves_partials_and_moves_on(
     raw.mkdir()
 
     class Child:
+        """Represent one bounded unit attempt for retry accounting."""
+
         def __init__(self, argv, **kwargs):
             req = common.read(argv[-1])
             rid = req["row"]["run_id"]
@@ -1197,6 +1193,8 @@ def test_shared_failure_does_not_retry_or_admit_next(
     launched = []
 
     class Child:
+        """Represent a child while testing a shared-resource stop."""
+
         pid = 1234
 
         def __init__(self, argv, **kwargs):

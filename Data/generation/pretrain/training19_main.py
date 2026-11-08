@@ -4,6 +4,7 @@ collection/training.
 
 import copy
 import secrets
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -41,7 +42,6 @@ def build(lr, seed, excluded):
     """Independent groups get unique seeds; each evaluation pair shares one
     seed.
     """
-    import sys
 
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
     from capstone_sim import (

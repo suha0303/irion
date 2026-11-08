@@ -396,8 +396,8 @@ def test_real_restore_and_final_package_keep_source_capsule(
 
     monkeypatch.setattr(collection, "combine_frozen", lambda *a: frozen)
     monkeypatch.setattr(recovery, "STORE", streaming.STORE)
-    monkeypatch.setattr(recovery, "external", lambda p: Path(p))
-    monkeypatch.setattr(storage, "external", lambda p: Path(p))
+    monkeypatch.setattr(recovery, "external", Path)
+    monkeypatch.setattr(storage, "external", Path)
 
     def finalize(frozen, prepared, label, workers, preaudited):
         assert workers == 4 and row["run_id"] in preaudited

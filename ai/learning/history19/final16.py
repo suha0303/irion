@@ -98,7 +98,10 @@ def expected_plan(namespace, *, fixture_only=False):
         or not namespace.startswith("final16")
         or any(
             c
-            not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+            not in (
+                "abcdefghijklmnopqrstuvwxyz"
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"
+            )
             for c in namespace
         )
     ):
@@ -552,7 +555,7 @@ def main(request_path, output=None):
             or ctx.request.get("purpose") != FINAL16
         ):
             raise ValueError("Explicit FINAL16 request required")
-        expected, policy, registry, cases, ledger, counts = prerequisites(ctx)
+        expected, policy, registry, cases, ledger, _ = prerequisites(ctx)
         phase = ctx.request.get("phase")
         if phase == "prerequisites":
             result = dict(status="FINAL16_STATIC_INPUTS_CHECKED_NO_FLIGHTS")

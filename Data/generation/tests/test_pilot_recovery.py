@@ -2,7 +2,9 @@
 unexecuted.
 """
 
+import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from test_pilot45 import init_fixture
@@ -201,7 +203,7 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(
         return tmp_path / "one"
 
     monkeypatch.setattr(pilot45, "init", init)
-    monkeypatch.setattr(pilot45, "task_path", lambda path: Path(path))
+    monkeypatch.setattr(pilot45, "task_path", Path)
     monkeypatch.setattr(
         pilot45, "prepare_pilot", lambda *args, **kwargs: tmp_path / "pilot45"
     )
@@ -264,9 +266,6 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(
 def test_successful_exited_unit_is_stopped_before_stop_hook_audit(
     monkeypatch, tmp_path, failure
 ):
-    import os
-    from types import SimpleNamespace
-
     root = tmp_path
     flow, child = root / "flow", root / "child"
     unit = "drone-pretrain-child.service"

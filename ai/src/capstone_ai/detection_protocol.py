@@ -103,7 +103,7 @@ def fit_calibration(
         raise ValueError(
             "finite nonempty normal validation/calibration residuals required"
         )
-    if not (len(cal) == len(run_ids) == len(segments) == len(origins)):
+    if not len(cal) == len(run_ids) == len(segments) == len(origins):
         raise ValueError("calibration identity length mismatch")
     scale = np.maximum(np.quantile(val**2, 0.95, axis=0), 1e-8)
     contribution = cal**2 / scale

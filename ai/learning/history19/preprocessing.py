@@ -2,8 +2,11 @@
 
 import copy
 import heapq
+import json
 import math
+import time
 from collections import Counter, deque
+from pathlib import Path
 from typing import Any
 
 from capstone_ai.mapping import FEATURES, RATES, mapped
@@ -168,7 +171,7 @@ class Preprocessor:
         s = self.signals.get(name)
         if s is None:
             return None, "unavailable"
-        value, quality, sample, available, _, _ = s
+        value, quality, sample, _, _, _ = s
         if quality == "valid" and t - sample > self.age_limit(name):
             quality = "stale"
         if quality != "valid":
@@ -213,7 +216,7 @@ class Preprocessor:
             self.bad_since, self.gap_latched = None, False
         arm, aq = self._value("arming_state", t)
         landed, lq = self._value("landed", t)
-        nav, nq = self._value("nav_state", t)
+        _, nq = self._value("nav_state", t)
         state = (
             "insufficient_data"
             if "valid" not in {aq} or lq != "valid" or nq != "valid"
@@ -329,9 +332,6 @@ def replay(run, out, config):
     """One finite, read-only raw replay using the shared watermark directory
     reader.
     """
-    import json
-    import time
-    from pathlib import Path
 
     from capstone_ai.source import DirectoryTail, read_json, sha
 

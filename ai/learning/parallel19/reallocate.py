@@ -21,7 +21,8 @@ def owns_job(lines, allocation):
         *(str(x) for x in allocation["components"].values()),
     }
     return any(
-        row.split("|")[0].split("+")[0] in ids for row in lines.splitlines()
+        row.split("|")[0].split("+", maxsplit=1)[0] in ids
+        for row in lines.splitlines()
     )
 
 

@@ -798,7 +798,7 @@ class Runner:
             receipt = pack(
                 root,
                 portable,
-                progress=lambda **kw: self.update(**kw),
+                progress=self.update,
                 budget=PackagingBudget(),
             )
             self.finish(

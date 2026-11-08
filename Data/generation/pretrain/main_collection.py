@@ -241,8 +241,6 @@ def resources(cfg, *, scratch=0):
 
 
 def preflight(task):
-    import subprocess
-
     state_path = task / "operator/state.json"
     previous_state = read(state_path) if state_path.exists() else {}
     if (
@@ -1061,6 +1059,8 @@ class Campaign(pilot_parallel.Coordinator):
     """
 
     def __init__(self, task):
+        # Main campaigns validate and project a different ledger from pilots.
+        # Only the coordinator's child-management methods are shared.
         self.task = Path(task)
         self.cfg, self.manifest = validate(self.task)
         self.flight_limits = {}
@@ -2166,8 +2166,10 @@ class Campaign(pilot_parallel.Coordinator):
                                 for member in grouped[c["group_id"]]:
                                     entries[member["case_id"]].update(
                                         status="UNAVAILABLE",
-                                        failure_reason="Independent pair verification: "
-                                        + str(exc),
+                                        failure_reason=(
+                                            "Independent pair "
+                                            "verification: " + str(exc)
+                                        ),
                                     )
                                     self.batch_ids.add(member["case_id"])
                             elif e.get("storage_attempts", 0) >= 3:
@@ -2686,8 +2688,6 @@ def worker_body(task):
 
 
 def resume(task):
-    import subprocess
-
     from .cli import start
 
     task = pilot45.task_path(task)

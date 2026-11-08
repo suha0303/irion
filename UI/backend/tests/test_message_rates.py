@@ -1,3 +1,5 @@
+"""Check MAVLink rate negotiation, acknowledgments and fallback."""
+
 import asyncio
 import os
 import pty

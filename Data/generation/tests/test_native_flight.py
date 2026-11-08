@@ -43,7 +43,7 @@ def test_native_argv_keeps_parent_operation_and_health_selection():
         native_flight.command(case, paired_options={"invented_kwarg": True})
 
 
-def test_paired_cli_resolves_current_case_id_and_keeps_only_pair_members_equal():
+def test_paired_cli_resolves_case_and_matches_pair_members():
     cases = pilot45.build_cases(99)
     options = [
         "--phase-policy",

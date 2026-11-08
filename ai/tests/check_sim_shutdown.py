@@ -14,6 +14,8 @@ from capstone_sim.runner import COLLECTION_PHASE_WAIT_S, stop_owned_process
 
 
 class ShutdownChecks(unittest.TestCase):
+    """Check simulator shutdown evidence and retained process records."""
+
     def service_process(self):
         process = Mock(pid=123, returncode=None)
         process.poll.side_effect = lambda: process.returncode

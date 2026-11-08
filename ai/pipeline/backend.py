@@ -48,6 +48,8 @@ def backend_scope(config):
 
 
 def execution_environment(device):
+    deterministic = torch.are_deterministic_algorithms_enabled()
+    warn_only = torch.is_deterministic_algorithms_warn_only_enabled()
     return {
         "python": platform.python_version(),
         "torch": str(torch.__version__),
@@ -57,8 +59,8 @@ def execution_environment(device):
         "cuda_build": torch.version.cuda,
         "cudnn_version": torch.backends.cudnn.version(),
         "cudnn_flags": cudnn_flags(),
-        "deterministic_algorithms": torch.are_deterministic_algorithms_enabled(),
-        "deterministic_warn_only": torch.is_deterministic_algorithms_warn_only_enabled(),
+        "deterministic_algorithms": deterministic,
+        "deterministic_warn_only": warn_only,
         "matmul_tf32": torch.backends.cuda.matmul.allow_tf32,
         "float32_matmul_precision": torch.get_float32_matmul_precision(),
         "mkldnn_enabled": torch.backends.mkldnn.enabled,

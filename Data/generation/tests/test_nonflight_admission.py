@@ -27,7 +27,7 @@ def test_policy_controls_real_scheduler_overlap_without_reflying_successes(
     active, peak = dict(flight=0, cpu=0), dict(flight=0, cpu=0)
     overlap, flights = [], []
 
-    def child(_task, request, log, *, on_progress=None):
+    def child(unused_task, request, log, *, on_progress=None):
         job = common.read(request)
         kind = "flight" if job["action"] == "flight" else "cpu"
         with lock:

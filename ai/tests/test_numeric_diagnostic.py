@@ -1,3 +1,5 @@
+"""Check numeric-diagnostic inputs, output scope and failure handling."""
+
 from types import SimpleNamespace
 
 import numpy as np

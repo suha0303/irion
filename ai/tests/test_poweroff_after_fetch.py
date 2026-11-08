@@ -1,3 +1,5 @@
+"""Check verified fetch completion and explicit shutdown authorization."""
+
 import hashlib
 import json
 

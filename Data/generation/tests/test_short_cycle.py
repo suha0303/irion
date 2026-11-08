@@ -6,6 +6,7 @@ import copy
 import importlib.util
 from collections import Counter
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -73,7 +74,7 @@ def test_short_manifest_requires_exact_scope_and_new_duration(monkeypatch):
         pilot45.validate_cases(rows)
 
 
-def test_short_argv_carries180_actual_instance_and_timing_without_quality_override():
+def test_short_argv_preserves_instance_timing_and_quality():
     case = pilot45.build_cases(1, duration=180, case_prefix="s180")[-1]
     argv = native_flight.command(
         case,
@@ -112,8 +113,6 @@ def test_progress_sampler_receives_requested_duration(monkeypatch, tmp_path):
     def progress(root, baseline, selected, lane, duration, **kwargs):
         observed.append((lane["instance"], duration))
         raise Done
-
-    from types import SimpleNamespace
 
     monkeypatch.setattr(pilot45, "ROOT", tmp_path)
     monkeypatch.setattr(
@@ -254,7 +253,7 @@ def test_short_bridge_uses_public_ai_connector_for_each_phase(
         common.write(output / member, {})
     monkeypatch.setattr(pilot_bridge, "ROOT", tmp_path)
 
-    def snapshot(_task, directory):
+    def snapshot(unused_task, directory):
         common.write(directory / "registry.json", {})
         common.write(directory / "ledger.json", {})
 
@@ -343,8 +342,6 @@ def test_short_draft_has_its_own_parallel_namespace_without_old_scope_authority(
 def test_short_handoff_separates_static180_binding_from_old_ready(
     monkeypatch, tmp_path, change
 ):
-    from types import SimpleNamespace
-
     from learning import admission19
 
     from pretrain import ai19, pilot_bridge
@@ -470,7 +467,7 @@ def test_short_handoff_separates_static180_binding_from_old_ready(
 
 
 @pytest.mark.local_evidence
-def test_bounded_short_repair_keeps_attempt1_false_and_admits_exact_parent_as_attempt2(
+def test_short_repair_preserves_failure_and_binds_second_attempt(
     monkeypatch, tmp_path
 ):
     from test_pilot_parallel import fixture

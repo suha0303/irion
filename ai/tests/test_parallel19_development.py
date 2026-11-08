@@ -1,3 +1,9 @@
+"""Check development continuation without promoting results to final
+evidence.
+"""
+
+import contextlib
+
 from learning.parallel19.control import read, sha, write
 from learning.parallel19.final_verify import summarize
 from learning.parallel19.refine import development_done, enqueue_development
@@ -73,7 +79,6 @@ def test_divergent_lr_is_not_sent_for_detection_evaluation(tmp_path):
 
 def test_development_worker_never_requires_final_inputs(tmp_path, monkeypatch):
     import argparse
-    import contextlib
 
     import numpy as np
     import safetensors.torch

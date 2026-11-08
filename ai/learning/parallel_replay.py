@@ -2,13 +2,19 @@
 retries.
 """
 
+import hashlib
+import json
 import multiprocessing
+import os
+import shutil
 import time
 from collections import deque
 from concurrent.futures import (
     ProcessPoolExecutor,
     ThreadPoolExecutor,
-    TimeoutError,
+)
+from concurrent.futures import (
+    TimeoutError as FuturesTimeoutError,
 )
 from pathlib import Path
 
@@ -160,7 +166,7 @@ class ParallelDevelopment:
                 try:
                     future.result(timeout=2)
                     break
-                except TimeoutError:
+                except FuturesTimeoutError:
                     self.progress.update(
                         force=False,
                         stage="development_cpu_finish",
@@ -336,8 +342,6 @@ def semantic_replay(path):
     """Compare every forecast/decision/metric; only measured latency fields
     may differ.
     """
-    import hashlib
-    import json
 
     path = Path(path)
     forecasts = [
@@ -380,8 +384,6 @@ def benchmark_workers(upstream, out, cfg, progress):
     proxy, not independent flights, cold-I/O measurements or detector
     evaluation.
     """
-    import os
-    import shutil
     import statistics
 
     import numpy as np

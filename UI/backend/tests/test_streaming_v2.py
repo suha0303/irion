@@ -1,3 +1,5 @@
+"""Check streaming epochs, reconnects, source validation and replay."""
+
 import asyncio
 import json
 import os
@@ -102,8 +104,8 @@ def test_ordering_gap_epoch_and_replay_journal(store):
     assert run.frame(2500)["epoch"] == 1
     assert run.frame(2499)["values"]["battery_current_a"]["status"] == "stale"
     before = run.frame(2500)
-    id = run.run_id
-    replay = store.finish_session(id)
+    run_id = run.run_id
+    replay = store.finish_session(run_id)
     assert replay.frame(2500) == before and replay.sha256
     assert any(
         p["values"]["battery_current_a"] is None
@@ -424,8 +426,8 @@ def test_live_pause_keeps_recording_and_return_live(tmp_path):
                 f"/api/sessions/{run.run_id}/frames",
                 json=normalized(run, 2, 100),
             )
-            next = ws.receive_json()
-            assert next["frame"]["t_ms"] == paused and run.accepted == 2
+            next_frame = ws.receive_json()
+            assert next_frame["frame"]["t_ms"] == paused and run.accepted == 2
             ws.send_json({"action": "go_live"})
             current = ws.receive_json()
             assert (

@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections import Counter
 from contextlib import ExitStack
 from pathlib import Path
 
@@ -256,8 +257,6 @@ def build_cases(seed, *, duration=480, case_prefix="p27"):
 
 
 def validate_cases(rows, *, duration=480):
-    from collections import Counter
-
     offsets = mission_contract(duration)
     if (
         len(rows) != 45
@@ -696,7 +695,7 @@ def recovery_context(previous, receipt):
         raise Blocked(
             "Prior completed/unknown raw cannot be replaced by a new flight"
         )
-    unit, pid, props = service_identity(previous)
+    _, pid, props = service_identity(previous)
     if pid or props.get("ActiveState") in {
         "active",
         "activating",
@@ -793,7 +792,7 @@ def short_repair_context(previous, receipt):
                 "be regenerated"
             )
         )
-    unit, pid, props = service_identity(previous)
+    _, pid, props = service_identity(previous)
     if pid or props.get("ActiveState") != "failed" or props.get("ControlGroup"):
         raise Blocked(
             "Prior owned startup-failure service must be completely stopped"
@@ -1706,7 +1705,7 @@ def reconcile_completed(task, ledger):
 
 def stop(task, immediate=False):
     task = task_path(task)
-    unit, pid, props = service_identity(task, require_running=True)
+    unit, pid, _ = service_identity(task, require_running=True)
     write(
         task / "operator/stop-request.json",
         dict(
@@ -1844,10 +1843,10 @@ def register(task, record):
                 repair = cfg.get("short_repair", {})
                 if repair and old["task"] == Path(repair["previous_task"]).name:
                     verify(repair["files"])
+                    repair_case_id = record.get("case_id")
                     allowed = (
-                        old.get("case_id")
-                        == record.get("case_id")
-                        in repair["failures"]
+                        old.get("case_id") == repair_case_id
+                        and repair_case_id in repair["failures"]
                     )
                 resumed = cfg.get("short_resume", {})
                 if resumed and old["task"] in resumed["previous_task_names"]:
@@ -2739,8 +2738,6 @@ def worker(task):
 
 
 def quality_snapshot(task, ledger, state):
-    from collections import Counter
-
     manifest = read(task / "manifest.json")
     total = len(manifest["cases"])
     reports = [

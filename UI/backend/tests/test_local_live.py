@@ -1,3 +1,5 @@
+"""Check live CPU analysis, staleness and end-of-flight results."""
+
 import json
 import os
 import socket
@@ -13,8 +15,6 @@ from arion.main import create_app
 
 
 def test_udp_bind_address_accepts_lan_not_arbitrary_hostname():
-    import pytest
-
     assert SourceConfig(host="0.0.0.0").host == "0.0.0.0"
     assert SourceConfig(host="192.168.1.10").host == "192.168.1.10"
     with pytest.raises(ValueError):
@@ -84,6 +84,7 @@ def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
         # Continue receiving while the CPU initializes; old journal rows alone
         # must never be advertised as current predictions.
         while time.monotonic() < deadline:
+            next_sample_at = time.monotonic() + 0.1
             for original in data["rows"][-8:]:
                 item = json.loads(json.dumps(original))
                 raw = item["raw"]
@@ -98,7 +99,8 @@ def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
             state = client.get(url).json()
             if state["status"] in ("predicting", "error"):
                 break
-            time.sleep(0.1)
+            # Journal fsync is part of the 10 Hz interval, not extra delay.
+            time.sleep(max(0.0, next_sample_at - time.monotonic()))
         assert state["status"] == "predicting", state
         assert len(state["prediction"]["values"]) == 4
         assert state["health_verdict"] is None
@@ -159,7 +161,6 @@ def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
 
 
 def test_configured_ui_port_websocket_origin(tmp_path, monkeypatch):
-    import pytest
     from starlette.websockets import WebSocketDisconnect
 
     monkeypatch.setenv("ARION_PORT", "8879")

@@ -7,6 +7,7 @@ import sys
 import tarfile
 import threading
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -208,7 +209,7 @@ def test_byte_accounting_tolerates_retired_previous_group(tmp_path):
 
 
 def test_two_lanes_isolated_and_lossless(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     result = c.execute(plan, cases, helper)
     assert result["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
     events = [
@@ -264,7 +265,7 @@ def test_external_parent_creation_requires_real_mount(tmp_path, monkeypatch):
     mount.mkdir()
     output = mount / "Data/X500/archives/new-task"
     checked = []
-    helper = SimpleNamespace(check_mount=lambda path: checked.append(path))
+    helper = SimpleNamespace(check_mount=checked.append)
     monkeypatch.setattr(Path, "is_mount", lambda self: False)
     with pytest.raises(c.Stop, match="External mount absent"):
         c.prepare_external_parent(output, helper, mount)
@@ -279,7 +280,7 @@ def test_external_parent_creation_requires_real_mount(tmp_path, monkeypatch):
 
 
 def test_first_failure_drains_peer_and_no_third_start(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     cases[0]["scenario"] = "fail"
     result = c.execute(plan, cases, helper)
     assert result["status"] == "FAILED_DRAINED_STOPPED"
@@ -314,7 +315,7 @@ def test_byte_progress_timeout_does_not_use_heartbeat(tmp_path):
 
 
 def test_source_change_stops_new_cases_but_preserves_peers(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     original = helper.command
     changed = [False]
 
@@ -338,7 +339,7 @@ def test_source_change_stops_new_cases_but_preserves_peers(setup):
 
 
 def test_claim_prevents_duplicate_after_failure(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     cases[0]["scenario"] = "fail"
     c.execute(plan, cases, helper)
     with pytest.raises(FileExistsError):
@@ -346,7 +347,7 @@ def test_claim_prevents_duplicate_after_failure(setup):
 
 
 def test_bound_dry_run_no_process_or_writes(setup, monkeypatch):
-    plan, cases, helper, tmp = setup
+    plan, cases, _, tmp = setup
     plan["execution_authorized"] = False
     pp, mp, ap = [
         tmp / x for x in ("plan.json", "manifest.json", "approval.json")
@@ -386,7 +387,7 @@ def test_bound_dry_run_no_process_or_writes(setup, monkeypatch):
 
 
 def test_reject_split_overlap_and_short_duration(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, _, tmp = setup
     pp, mp, ap = [
         tmp / x for x in ("plan.json", "manifest.json", "approval.json")
     ]
@@ -416,7 +417,7 @@ def test_reject_split_overlap_and_short_duration(setup):
 
 
 def test_verify_and_archive_share_one_serial_slot(setup, monkeypatch):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     lock = threading.Lock()
     active = [0]
     peak = [0]
@@ -680,7 +681,7 @@ def test_collection_mixed_duration_and_measured_rtf(collection_setup):
     plan, cases = c.bound(*binding_files(plan, cases, tmp))
     result = c.execute(plan, cases, helper)
     assert result["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
-    for row, duration in zip(result["cases"].values(), (180, 480, 900)):
+    for row, _ in zip(result["cases"].values(), (180, 480, 900)):
         # Compare by declared case, since threads can finish in either order.
         actual = row["case"]["mission_seconds"]
         assert row["assessment"]["observed_valid_seconds"] == actual * 0.9
@@ -846,7 +847,7 @@ def test_final_producer_cannot_silently_ignore_requested_conditions(
 
 @pytest.mark.parametrize("lanes", [4, 8])
 def test_collection_four_and_eight_lanes_bind(collection_setup, lanes):
-    plan, cases, helper, tmp = collection_setup
+    plan, cases, _, tmp = collection_setup
     plan["concurrency"] = lanes
     plan["lanes"] = [
         dict(
@@ -912,7 +913,7 @@ def test_collection_rejects_missing_or_wrong_evidence(collection_setup, issue):
 def test_collection_parallel_synthetic_commands_are_isolated(
     collection_setup, count
 ):
-    plan, cases, helper, tmp = collection_setup
+    plan, cases, helper, _ = collection_setup
     plan["concurrency"] = count
     plan["attempts_max"] = count
     plan["lanes"] = [
@@ -949,7 +950,7 @@ def test_collection_parallel_synthetic_commands_are_isolated(
 def test_collection_benchmark_cannot_use_collection_entrypoint(
     collection_setup,
 ):
-    plan, cases, helper, tmp = collection_setup
+    plan, cases, _, tmp = collection_setup
     plan.update(phase="benchmark", mission_seconds=120)
     for row in cases:
         row.update(role="benchmark", mission_seconds=120)
@@ -960,7 +961,7 @@ def test_collection_benchmark_cannot_use_collection_entrypoint(
 
 
 def test_collection_benchmark_failure_stops_active_peer(collection_setup):
-    plan, cases, helper, tmp = collection_setup
+    plan, cases, helper, _ = collection_setup
     plan.update(phase="benchmark", mission_seconds=120)
     for row in cases:
         row.update(role="benchmark", mission_seconds=120)
@@ -975,7 +976,7 @@ def test_collection_benchmark_failure_stops_active_peer(collection_setup):
 
 
 def test_project_lock_blocks_direct_execute_before_processes(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     lock = Path(plan["root"]) / "Data/operations/collection.lock"
     lock.parent.mkdir(parents=True)
     with lock.open("a", encoding="utf-8") as stream:
@@ -999,8 +1000,6 @@ def test_size_accounting_tolerates_atomic_status_replacement(
 
 @pytest.fixture
 def mission_progress_fixture(tmp_path):
-    from datetime import datetime, timezone
-
     root = tmp_path / "progress-repo"
     run = root / "runs" / ("a" * 32)
     now = datetime(2026, 10, 15, 0, 0, tzinfo=timezone.utc)
@@ -1030,8 +1029,6 @@ def mission_progress_fixture(tmp_path):
 def test_live_progress_uuid_cache_and_measured_interval_rtf(
     mission_progress_fixture, monkeypatch
 ):
-    from datetime import timedelta
-
     tracker, run, state, now = mission_progress_fixture
     seen = []
     original = tracker.small_json
@@ -1061,7 +1058,7 @@ def test_live_progress_uuid_cache_and_measured_interval_rtf(
 
 
 def test_failed_producer_retains_uuid_and_landing_reason(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     plan.update(concurrency=1)
     plan["lanes"] = plan["lanes"][:1]
     run_id = "a" * 32
@@ -1167,8 +1164,6 @@ def test_terminal_evidence_rechecks_identity_without_live_clock_requirement(
 def test_live_progress_rejects_ambiguous_or_wrong_evidence(
     mission_progress_fixture, issue
 ):
-    from datetime import timedelta
-
     tracker, run, state, now = mission_progress_fixture
     if issue == "instance":
         state["instance"] = 4
@@ -1214,8 +1209,6 @@ def test_live_progress_rejects_ambiguous_or_wrong_evidence(
 def test_live_progress_clock_regression_and_initial_metadata(
     mission_progress_fixture,
 ):
-    from datetime import timedelta
-
     tracker, run, state, now = mission_progress_fixture
     initial = {
         k: v for k, v in state.items() if k not in {"instance", "configuration"}
@@ -1238,7 +1231,7 @@ def test_live_progress_clock_regression_and_initial_metadata(
 
 
 def test_continue_policy_attempts_next_case_and_never_reports_success(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     plan["continue_after_case_failure"] = True
     cases[0]["scenario"] = "fail"
     result = c.execute(plan, cases, helper)
@@ -1270,7 +1263,7 @@ def test_continue_policy_attempts_next_case_and_never_reports_success(setup):
 def test_continue_policy_still_stops_on_shared_resource_failure(
     setup, monkeypatch
 ):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     plan["continue_after_case_failure"] = True
     monkeypatch.setattr(
         c,
@@ -1284,7 +1277,7 @@ def test_continue_policy_still_stops_on_shared_resource_failure(
 
 @pytest.mark.parametrize("failures", [2, 3])
 def test_bounded_case_retries_preserve_raw_and_continue(setup, failures):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     plan.update(
         unit_attempts_max=3, continue_after_case_failure=True, concurrency=1
     )
@@ -1329,7 +1322,7 @@ def test_bounded_case_retries_preserve_raw_and_continue(setup, failures):
 def test_shared_storage_failure_never_retries(setup):
     import errno
 
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     plan.update(
         unit_attempts_max=3, continue_after_case_failure=True, concurrency=1
     )
@@ -1348,7 +1341,7 @@ def test_shared_storage_failure_never_retries(setup):
 
 
 def test_unsafe_lane_is_not_retried(setup, monkeypatch):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     plan.update(
         unit_attempts_max=3, continue_after_case_failure=True, concurrency=1
     )
@@ -1372,14 +1365,14 @@ def test_unsafe_lane_is_not_retried(setup, monkeypatch):
 
 @pytest.mark.parametrize("limit", [0, 4, True, "3"])
 def test_invalid_retry_limit_is_rejected(setup, limit):
-    plan, cases, helper, tmp = setup
+    plan, cases, helper, _ = setup
     plan["unit_attempts_max"] = limit
     with pytest.raises(c.Stop, match="attempt limit"):
         c.execute(plan, cases, helper)
 
 
 def test_retry_limit_requires_matching_task_config(setup):
-    plan, cases, helper, tmp = setup
+    plan, cases, _, tmp = setup
     plan["unit_attempts_max"] = 3
     approval = tmp / "task-config.json"
     dump(approval, dict(unit_attempts_max=1))

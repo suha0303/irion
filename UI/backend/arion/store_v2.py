@@ -101,10 +101,10 @@ class StoreV2(Store):
     def profiles(self):
         return sorted(self._profiles.values(), key=lambda p: p["profile_id"])
 
-    def profile(self, id):
-        if id not in self._profiles:
+    def profile(self, profile_id):
+        if profile_id not in self._profiles:
             raise ValueError("등록되지 않은 데이터 프로필입니다.")
-        return InputProfile.model_validate(self._profiles[id])
+        return InputProfile.model_validate(self._profiles[profile_id])
 
     def register_profile(self, p):
         with self.lock:
@@ -120,10 +120,10 @@ class StoreV2(Store):
     def providers(self):
         return sorted(self._providers.values(), key=lambda p: p["provider_id"])
 
-    def provider(self, id):
-        if id not in self._providers:
-            raise KeyError(id)
-        return Provider.model_validate(self._providers[id])
+    def provider(self, provider_id):
+        if provider_id not in self._providers:
+            raise KeyError(provider_id)
+        return Provider.model_validate(self._providers[provider_id])
 
     def register_provider(self, p):
         if p.provider_id == "legacy":
@@ -139,78 +139,85 @@ class StoreV2(Store):
             profile.input_format == "normalized"
         ):
             raise ValueError("입력 경로와 프로필 형식이 다릅니다.")
-        id = "live-" + uuid.uuid4().hex[:16]
+        run_id = "live-" + uuid.uuid4().hex[:16]
         run = SessionRun(
-            self.root / "sessions" / (id + ".jsonl"), config, profile, id
+            self.root / "sessions" / (run_id + ".jsonl"),
+            config,
+            profile,
+            run_id,
         )
         with self.lock:
-            self.catalog["sessions"][id] = {
-                "id": id,
+            self.catalog["sessions"][run_id] = {
+                "id": run_id,
                 "path": str(run.path),
                 "sha": None,
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
             self._catalog_save()
-            self.active[id] = run
+            self.active[run_id] = run
         return run
 
-    def finish_session(self, id):
-        run = self.active[id]
+    def finish_session(self, run_id):
+        run = self.active[run_id]
         sha = run.finish()
         atomic_json(
-            self.root / "records" / id / "manifest.json", run.manifest()
+            self.root / "records" / run_id / "manifest.json", run.manifest()
         )
         with self.lock:
-            self.catalog["sessions"][id]["sha"] = sha
+            self.catalog["sessions"][run_id]["sha"] = sha
             self._catalog_save()
-            self.active.pop(id)
+            self.active.pop(run_id)
         self._journal_cache.cache_clear()
-        return self.get(id)
+        return self.get(run_id)
 
-    def archive_for(self, id):
-        return self._archive_cache(id)
+    def archive_for(self, run_id):
+        return self._archive_cache(run_id)
 
-    def _load_archive(self, id):
-        if id in self.active:
-            return self.active[id].archive
-        row = self.catalog["sessions"].get(id)
+    def _load_archive(self, run_id):
+        if run_id in self.active:
+            return self.active[run_id].archive
+        row = self.catalog["sessions"].get(run_id)
         if not row:
-            if id in self.catalog["runs"]:
+            if run_id in self.catalog["runs"]:
                 return None
-            raise KeyError(id)
+            raise KeyError(run_id)
         path = Path(row["path"])
         with path.open("rb") as f:
             header = json.loads(f.readline())
         if header["config"]["kind"] != "normalized":
             return None
         profile = InputProfile.model_validate(header["profile"])
-        archive = NpzArchive(path.parent / id / "npz", path, profile, id)
+        archive = NpzArchive(
+            path.parent / run_id / "npz", path, profile, run_id
+        )
         if not archive.data["finished"] or archive.data["jobs"]:
             archive.recover()
         if archive.data["received_rows"] == 0 and path.stat().st_size:
             archive.recover()
         return archive
 
-    def journal(self, id, path):
-        return self._journal_cache(id, path)
+    def journal(self, run_id, path):
+        return self._journal_cache(run_id, path)
 
-    def _load_journal(self, id, path):
-        archive = self.archive_for(id)
+    def _load_journal(self, run_id, path):
+        archive = self.archive_for(run_id)
         if archive and archive.data["chunks"]:
-            summary = read_json(self.root / "records" / id / "manifest.json")
+            summary = read_json(
+                self.root / "records" / run_id / "manifest.json"
+            )
             return NpzReplay(Path(path), archive, summary)
         return SessionRun(Path(path))
 
-    def get(self, id):
-        if id in self.active:
-            return self.active[id]
-        row = self.catalog["sessions"].get(id)
+    def get(self, run_id):
+        if run_id in self.active:
+            return self.active[run_id]
+        row = self.catalog["sessions"].get(run_id)
         if row:
-            run = self.journal(id, row["path"])
+            run = self.journal(run_id, row["path"])
             if row.get("input_npz_sha256"):
                 run.sha256 = row["input_npz_sha256"]
             return run
-        return super().get(id)
+        return super().get(run_id)
 
     def list(self):
         rows = super().list()
@@ -243,9 +250,9 @@ class StoreV2(Store):
                 :2000
             ]
 
-    def chunks(self, id):
-        self.get(id)
-        archive = self.archive_for(id)
+    def chunks(self, run_id):
+        self.get(run_id)
+        archive = self.archive_for(run_id)
         if not archive:
             return {"npz": None, "chunks": []}
         with archive.lock:
@@ -254,18 +261,18 @@ class StoreV2(Store):
                 "chunks": deepcopy(archive.data["chunks"]),
             }
 
-    def request_export(self, id):
-        run = self.get(id)
+    def request_export(self, run_id):
+        run = self.get(run_id)
         if run.live:
             raise ValueError("수집을 종료한 후 전체 NPZ를 내보내세요.")
-        archive = self.archive_for(id)
+        archive = self.archive_for(run_id)
         if archive is None:
             raise ValueError(
                 "외부 전처리 입력으로 기록한 비행만 NPZ 내보내기를 지원합니다."
             )
         job = {
             "job_id": "export-" + uuid.uuid4().hex[:16],
-            "run_id": id,
+            "run_id": run_id,
             "state": "queued",
             "error": "",
             "download_url": None,
@@ -295,21 +302,21 @@ class StoreV2(Store):
             job.update(state="error", error=str(e)[:500])
         atomic_json(path, job)
 
-    def export_status(self, id):
-        if not id.startswith("export-") or any(
-            c not in "abcdefghijklmnopqrstuvwxyz0123456789-" for c in id
+    def export_status(self, job_id):
+        if not job_id.startswith("export-") or any(
+            c not in "abcdefghijklmnopqrstuvwxyz0123456789-" for c in job_id
         ):
-            raise KeyError(id)
-        job = read_json(self.root / "exports" / (id + ".json"))
+            raise KeyError(job_id)
+        job = read_json(self.root / "exports" / (job_id + ".json"))
         if job is None:
-            raise KeyError(id)
+            raise KeyError(job_id)
         return job
 
     def import_npz(self, content, name):
         sha = hashlib.sha256(content).hexdigest()
-        id = "npz-" + sha[:16]
-        if id in self.catalog["sessions"]:
-            return self.get(id)
+        run_id = "npz-" + sha[:16]
+        if run_id in self.catalog["sessions"]:
+            return self.get(run_id)
         meta, arrays = load_npz(io.BytesIO(content))
         features = meta["features"]
         config = meta.get("config", {})
@@ -361,7 +368,7 @@ class StoreV2(Store):
         )
         provenance = meta.get("source", config)
         run = SessionRun(
-            staging / (id + ".jsonl"),
+            staging / (run_id + ".jsonl"),
             SourceConfig(
                 name=Path(name).name,
                 kind="normalized",
@@ -370,7 +377,7 @@ class StoreV2(Store):
                 source_component=provenance.get("source_component"),
             ),
             profile,
-            id,
+            run_id,
         )
         run.archive.data["metadata"]["imported_source"] = {
             "sha256": sha,
@@ -432,7 +439,7 @@ class StoreV2(Store):
                 run.append_normalized(
                     {
                         "schema_version": "arion-processed-v1",
-                        "session_id": id,
+                        "session_id": run_id,
                         "profile_id": profile.profile_id,
                         "sequence": i + 1,
                         "epoch": int(epochs[i]),
@@ -447,22 +454,24 @@ class StoreV2(Store):
             run.finish()
             summary = run.manifest()
             summary.update(source="NPZ 독립 기록", input_sha256=sha)
-            atomic_json(self.root / "records" / id / "manifest.json", summary)
+            atomic_json(
+                self.root / "records" / run_id / "manifest.json", summary
+            )
             with self.lock:
-                if id in self.catalog["sessions"]:
-                    return self.get(id)
-                destination = self.root / "sessions" / (id + ".jsonl")
+                if run_id in self.catalog["sessions"]:
+                    return self.get(run_id)
+                destination = self.root / "sessions" / (run_id + ".jsonl")
                 destination.parent.mkdir(exist_ok=True)
                 os.replace(run.path, destination)
-                archive_destination = destination.parent / id
+                archive_destination = destination.parent / run_id
                 if archive_destination.exists():
                     archive_destination.rename(
                         destination.parent
-                        / (id + "-orphan-" + uuid.uuid4().hex[:8])
+                        / (run_id + "-orphan-" + uuid.uuid4().hex[:8])
                     )
-                (staging / id).rename(archive_destination)
-                self.catalog["sessions"][id] = {
-                    "id": id,
+                (staging / run_id).rename(archive_destination)
+                self.catalog["sessions"][run_id] = {
+                    "id": run_id,
                     "path": str(destination),
                     "sha": hash_file(destination),
                     "input_npz_sha256": sha,
@@ -470,7 +479,7 @@ class StoreV2(Store):
                     "created_at": datetime.now(timezone.utc).isoformat(),
                 }
                 self._catalog_save()
-            return self.get(id)
+            return self.get(run_id)
         except Exception:
             run.finish()
             # Unaccepted files remain inspectable, never listed as successful
@@ -480,8 +489,8 @@ class StoreV2(Store):
             shutil.rmtree(staging, ignore_errors=True)
 
     def close(self):
-        for id in list(self.active):
-            self.finish_session(id)
+        for run_id in list(self.active):
+            self.finish_session(run_id)
         for archive in list(self.archives()):
             archive.close()
         if self.export_executor:
@@ -491,9 +500,9 @@ class StoreV2(Store):
         super().close()
 
     def archives(self):
-        for id in self.catalog["sessions"]:
+        for run_id in self.catalog["sessions"]:
             try:
-                archive = self.archive_for(id)
+                archive = self.archive_for(run_id)
                 if archive:
                     yield archive
             except (OSError, ValueError):

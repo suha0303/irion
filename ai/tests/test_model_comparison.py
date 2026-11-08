@@ -478,7 +478,7 @@ def admitted(tmp_path):
 
 
 def test_portable_admission_never_uses_retired_paths(admitted):
-    rows, seal, headers = comparison.admission(admitted)
+    rows, _, headers = comparison.admission(admitted)
     assert len(rows) == 1200 and len(headers) == 3
     memory = comparison.memory_plan(headers)
     assert memory["primal_matrix_bytes"] == 1907**2 * 8
@@ -628,7 +628,7 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
         Progress(),
     )
     for ref in (data_ref, truth_ref):
-        ref["path"] = ref["path"].split("/")[-1]
+        ref["path"] = ref["path"].rsplit("/", maxsplit=1)[-1]
     write(
         bundle / "receipt.json",
         dict(

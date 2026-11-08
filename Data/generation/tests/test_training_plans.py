@@ -66,7 +66,7 @@ def test_prepare_only_creates_lr_plan_never_main_task_or_data(
 ):
     root = tmp_path / "plans"
     monkeypatch.setattr(training19, "PLANS", root)
-    monkeypatch.setattr(training19, "prior_seeds", lambda: set())
+    monkeypatch.setattr(training19, "prior_seeds", set)
     path = training19.prepare_plan(root / "lr", seed=123)
     m = common.read(path / "manifest.json")
     assert len(m["cases"]) == 108 and m["preliminary_data_connected"] is False
@@ -121,7 +121,7 @@ def test_menu1_lr_dispatch_is_user_selected_and_does_not_start_main(
     monkeypatch.setattr(
         main_collection, "user_start", lambda scope: calls.append(scope) or task
     )
-    monkeypatch.setattr(cli, "watch", lambda selected: calls.append(selected))
+    monkeypatch.setattr(cli, "watch", calls.append)
     cli.menu()
     assert calls == ["lr108", task]
 
@@ -148,7 +148,7 @@ def test_approved_main_menu_dispatches_the_whole_scope(monkeypatch):
     monkeypatch.setattr(
         main_collection, "user_start", lambda scope: calls.append(scope) or task
     )
-    monkeypatch.setattr(cli, "watch", lambda selected: calls.append(selected))
+    monkeypatch.setattr(cli, "watch", calls.append)
     cli.menu()
     assert calls == ["main", task]
 

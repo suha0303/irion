@@ -93,9 +93,7 @@ def test_resume_dispatch_cannot_collect(tmp_path, monkeypatch):
         lambda path: [tmp_path / "source/collection"],
     )
     prepared = []
-    monkeypatch.setattr(
-        r, "prepare_collections", lambda folders: prepared.extend(folders)
-    )
+    monkeypatch.setattr(r, "prepare_collections", prepared.extend)
     monkeypatch.setattr(
         r, "collection_sets", lambda: pytest.fail("recollection invoked")
     )

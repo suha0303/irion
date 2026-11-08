@@ -302,6 +302,8 @@ def test_layout_verification_loads_only_identity_members_and_labels_its_limit(
     accesses = []
 
     class IdentityOnly:
+        """Expose identity members while rejecting access to data arrays."""
+
         def __init__(self, path, **kwargs):
             self.archive = original(path, **kwargs)
 

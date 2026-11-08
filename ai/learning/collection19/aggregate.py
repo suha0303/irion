@@ -1,7 +1,10 @@
 """Bounded dataset/scaler construction and an independent canonical re-audit."""
 
 import json
+import os
+import re
 import shutil
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -105,9 +108,6 @@ def _input_path(record, key):
 def _progress(
     root, stage, done, total, callback=None, *, status="running", **details
 ):
-    import os
-    import time
-
     value = dict(
         stage=stage,
         done=done,
@@ -512,7 +512,6 @@ def _compile(
     """
     root = _new_root(output)
     records = sorted(records, key=lambda r: r["row"]["run_id"])
-    import re
 
     if any(
         not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", r["row"]["run_id"])

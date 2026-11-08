@@ -1,3 +1,5 @@
+"""Check replay batch equivalence and rejection of incompatible inputs."""
+
 from types import SimpleNamespace
 
 import numpy as np

@@ -3,6 +3,7 @@ real data.
 """
 
 import copy
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -333,8 +334,6 @@ def test_worker_allocation_failure_preserved_before_data_or_model(
 
 
 def legacy_fixture(upstream):
-    import shutil
-
     fixture(upstream)
     shutil.rmtree(upstream / "evidence")
     manifest_path = upstream / "dataset/manifest.json"

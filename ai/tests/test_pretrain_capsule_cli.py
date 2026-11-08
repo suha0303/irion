@@ -1,6 +1,7 @@
 """Capsule recovery is exposed as a non-flight, finite task."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -23,8 +24,6 @@ def test_capsule_recovery_never_enters_flight():
 
 
 def test_capsule_recovery_uses_existing_memory_reserve(monkeypatch):
-    from types import SimpleNamespace
-
     monkeypatch.setattr(
         cli,
         "collector",
