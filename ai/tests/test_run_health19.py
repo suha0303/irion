@@ -255,19 +255,19 @@ def test_manifest_fixed_order_hash_truth_rejection_and_no_old_dataset_conversion
         runs=[item],
     )
     path = tmp_path / "manifest.json"
-    path.write_text(json.dumps(manifest))
+    path.write_text(json.dumps(manifest), encoding="utf-8")
     assert len(data.load_manifest(path)[0].values) == 205
     manifest.pop("interval_policy")
-    path.write_text(json.dumps(manifest))
+    path.write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ValueError, match="mission-only"):
         data.load_manifest(path)
     manifest["interval_policy"] = data.INTERVAL_POLICY
     item["mission_interval"]["start_us"] = 100000
-    path.write_text(json.dumps(manifest))
+    path.write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ValueError, match="Complete declared mission"):
         data.load_manifest(path)
     item["mission_interval"]["start_us"] = 0
-    path.write_text(json.dumps(manifest))
+    path.write_text(json.dumps(manifest), encoding="utf-8")
     source.write_bytes(b"modified")
     with pytest.raises(ValueError, match="hash mismatch"):
         data.load_manifest(path)
@@ -275,7 +275,7 @@ def test_manifest_fixed_order_hash_truth_rejection_and_no_old_dataset_conversion
         source, values=run.values, time_us=run.time_us, truth=np.zeros(205)
     )
     item["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
-    path.write_text(json.dumps(manifest))
+    path.write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ValueError, match="truth/context"):
         data.load_manifest(path)
 
@@ -307,7 +307,7 @@ def test_cpu_normal_fit_validation_fresh_process_resume_export(
             *arguments,
         ]
         result = subprocess.run(
-            command, env=env, capture_output=True, text=True
+            command, env=env, capture_output=True, text=True, check=False
         )
         assert result.returncode == 0, result.stdout + result.stderr
         return json.loads(result.stdout)
@@ -356,7 +356,9 @@ def test_cpu_normal_fit_validation_fresh_process_resume_export(
 def test_config_eight_run_models_match_online_sizes_and_optimizer():
     from execution.common import ROOT
 
-    cfg = json.loads((ROOT / "ai/configs/run-health19.json").read_text())
+    cfg = json.loads(
+        (ROOT / "ai/configs/run-health19.json").read_text(encoding="utf-8")
+    )
     expected = {
         (name, hidden, layers)
         for name in ("lstm", "transformer")
@@ -371,7 +373,9 @@ def test_config_eight_run_models_match_online_sizes_and_optimizer():
         cfg["optimizer"] == "sgd" and cfg["production"]["authorized"] is False
     )
     assert cfg["gpu"]["authorized"] is False
-    online = json.loads((ROOT / "ai/configs/history19-sgd.json").read_text())
+    online = json.loads(
+        (ROOT / "ai/configs/history19-sgd.json").read_text(encoding="utf-8")
+    )
     assert len(online["variants"]) == 8
     assert {
         (v["name"], v["hidden"], v["layers"]) for v in online["variants"]

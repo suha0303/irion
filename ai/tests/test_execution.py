@@ -245,7 +245,7 @@ def test_submission_pinned_once_and_no_cuda_environment_override(
         "--mem=16G",
     ):
         assert arg in argv
-    script = (root.parent / "job.sh").read_text()
+    script = (root.parent / "job.sh").read_text(encoding="utf-8")
     assert "CUDA_VISIBLE_DEVICES" not in script
     assert "CUBLAS_WORKSPACE_CONFIG=:4096:8" in script
     with pytest.raises(FileExistsError):
@@ -453,7 +453,7 @@ def test_four_model_end_to_end_synthetic_cpu_and_fixed_development_evaluator(
         ]
         for name, values in [("frames", frames), ("windows", windows)]:
             (folder / (name + ".jsonl")).write_text(
-                "".join(json.dumps(r) + "\n" for r in values)
+                "".join(json.dumps(r) + "\n" for r in values), encoding="utf-8"
             )
         common.write(
             folder / "summary.json",
@@ -629,7 +629,7 @@ def test_duplicate_controller_preserves_active_state(tmp_path, monkeypatch):
         task / "controller.json", {"status": "RUNNING", "job_id": "123"}
     )
     previous = (task / "controller.json").read_bytes()
-    with (tmp_path / "controller.lock").open("a") as lock:
+    with (tmp_path / "controller.lock").open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with pytest.raises(BlockingIOError):
             cli.launch("recover", task)

@@ -15,7 +15,9 @@ from tools import workspace
 def test_source_distribution_has_complete_sealed_package_and_no_machine_state():
     files = workspace.source_files()
     prefix = "Data/generation/pretrain/resources/preprocessing/"
-    package = json.loads((workspace.ROOT / prefix / "PACKAGE.json").read_text())
+    package = json.loads(
+        (workspace.ROOT / prefix / "PACKAGE.json").read_text(encoding="utf-8")
+    )
     assert all(prefix + name in files for name in package["files"])
     assert all(
         workspace.sha(files[prefix + name]) == digest
@@ -54,7 +56,7 @@ def test_source_export_is_verified_and_launcher_is_relocatable(
     with tarfile.open(archive) as stream:
         stream.extractall(tmp_path / "clone with spaces", filter="data")
     clone = tmp_path / "clone with spaces/Capstone"
-    record = json.loads((clone / "SOURCES.json").read_text())
+    record = json.loads((clone / "SOURCES.json").read_text(encoding="utf-8"))
     assert all(
         workspace.sha(clone / name) == digest
         for name, digest in record["files"].items()
@@ -64,7 +66,11 @@ def test_source_export_is_verified_and_launcher_is_relocatable(
     )
     command = clone / "Data/generation/drone-data"
     result = subprocess.run(
-        [str(command), "--help"], cwd="/tmp", text=True, capture_output=True
+        [str(command), "--help"],
+        cwd="/tmp",
+        text=True,
+        capture_output=True,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert all(name in result.stdout for name in ("setup", "doctor", "export"))
@@ -74,6 +80,7 @@ def test_source_export_is_verified_and_launcher_is_relocatable(
         cwd="/tmp",
         text=True,
         capture_output=True,
+        check=False,
     )
     assert result.returncode == 3
     assert "setup" in result.stderr
@@ -87,10 +94,14 @@ def test_source_export_rejects_source_symlinks_and_excludes_credentials(
 ):
     root = tmp_path / "checkout"
     (root / "Data/generation").mkdir(parents=True)
-    (root / "Data/generation/.env").write_text("private")
-    (root / "Data/generation/private.key").write_text("private")
-    (root / "Data/generation/id_ed25519").write_text("private")
-    (root / "Data/generation/source.py").write_text("pass\n")
+    (root / "Data/generation/.env").write_text("private", encoding="utf-8")
+    (root / "Data/generation/private.key").write_text(
+        "private", encoding="utf-8"
+    )
+    (root / "Data/generation/id_ed25519").write_text(
+        "private", encoding="utf-8"
+    )
+    (root / "Data/generation/source.py").write_text("pass\n", encoding="utf-8")
     files = workspace.source_files(root)
     assert set(files) == {"Data/generation/source.py"}
     (root / "Data/generation/link.py").symlink_to(
@@ -104,12 +115,18 @@ def test_source_export_excludes_generated_python_packaging_metadata(tmp_path):
     root = tmp_path / "checkout"
     source = root / "ai/src/capstone_ai"
     source.mkdir(parents=True)
-    (source / "__init__.py").write_text('"""Actual package source."""\n')
+    (source / "__init__.py").write_text(
+        '"""Actual package source."""\n', encoding="utf-8"
+    )
     for suffix in (".egg-info", ".dist-info"):
         metadata = source.parent / ("capstone_ai" + suffix)
         metadata.mkdir()
-        (metadata / "PKG-INFO").write_text("Generated on the original host\n")
-        (metadata / "SOURCES.txt").write_text("generated metadata\n")
+        (metadata / "PKG-INFO").write_text(
+            "Generated on the original host\n", encoding="utf-8"
+        )
+        (metadata / "SOURCES.txt").write_text(
+            "generated metadata\n", encoding="utf-8"
+        )
     assert set(workspace.source_files(root)) == {
         "ai/src/capstone_ai/__init__.py"
     }
@@ -131,14 +148,14 @@ def test_export_excludes_ai_profiles_jobs_and_weights_but_keeps_source_fixtures(
     ):
         path = root / directory
         path.mkdir(parents=True)
-        (path / "private.json").write_text("machine state")
+        (path / "private.json").write_text("machine state", encoding="utf-8")
     package = root / "ai/console"
     package.mkdir(parents=True)
-    (package / "__init__.py").write_text("")
+    (package / "__init__.py").write_text("", encoding="utf-8")
     (package / "model.safetensors").write_bytes(b"weights")
     fixture = root / "simulation/sim/tests/runs"
     fixture.mkdir(parents=True)
-    (fixture / "case.json").write_text("{}")
+    (fixture / "case.json").write_text("{}", encoding="utf-8")
     assert set(workspace.source_files(root)) == {
         "ai/console/__init__.py",
         "simulation/sim/tests/runs/case.json",
@@ -153,6 +170,7 @@ def test_data_launcher_shell_syntax():
             [shell, "-n", str(workspace.ROOT / "Data/generation" / name)],
             capture_output=True,
             text=True,
+            check=False,
         )
         assert result.returncode == 0, result.stderr
 
@@ -176,7 +194,7 @@ def test_setup_refuses_an_active_pipeline_before_installing(
     monkeypatch.setattr(workspace, "ROOT", tmp_path)
     path = tmp_path / "Data/operations/pretrain/pretrain.lock"
     path.parent.mkdir(parents=True)
-    with path.open("a") as active:
+    with path.open("a", encoding="utf-8") as active:
         fcntl.flock(active, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with pytest.raises(ValueError, match="pipeline is active"):
             with workspace.setup_lock():
@@ -208,7 +226,7 @@ def test_export_failure_preserves_previous_failure_evidence(
     tmp_path, monkeypatch
 ):
     source = tmp_path / "source.py"
-    source.write_text("original\n")
+    source.write_text("original\n", encoding="utf-8")
     output = tmp_path / "export.tar.gz"
     previous = tmp_path / "export.tar.gz.incomplete"
     previous.write_bytes(b"previous failure evidence")
@@ -250,7 +268,9 @@ def test_service_start_does_not_expand_dollar_in_project_path(
         task / "config.json",
         dict(source_sha256={}, external_storage=str(tmp_path / "store")),
     )
-    (task / "config.sha256").write_text(sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        sha(task / "config.json"), encoding="utf-8"
+    )
     calls = []
     monkeypatch.setattr(cli, "HOME", home)
     monkeypatch.setattr(

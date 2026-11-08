@@ -549,14 +549,19 @@ def test_replay_recovers_legacy_sequence_fields_without_guessing_gaps(tmp_path):
     for sequence in range(1, 5):
         run.append_normalized(processed(run, sequence, (sequence - 1) * 100))
     replay = store.finish_session(run.run_id)
-    rows = [json.loads(line) for line in run.path.read_text().splitlines()]
+    rows = [
+        json.loads(line)
+        for line in run.path.read_text(encoding="utf-8").splitlines()
+    ]
     samples = [item for item in rows if item.get("type") == "sample"]
     for item in samples:
         item["raw"].pop("epoch", None)
     samples[1]["raw"].pop("sequence", None)
     samples[-1]["raw"]["sequence"] = 6
     legacy = tmp_path / "legacy-copy.jsonl"
-    legacy.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    legacy.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
     recovered = NpzReplay(legacy, replay.archive)
     assert recovered.dropped_sequences == 2
     assert recovered.frame(300)["values"] == replay.frame(300)["values"]

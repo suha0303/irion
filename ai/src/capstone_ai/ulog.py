@@ -100,7 +100,11 @@ def parity(run, out):
     errors = []
     # Raw JSON uses nine significant digits. Tolerance fixed before parity execution.
     atol, rtol = 1e-6, 1e-6
-    for line in (run / "observations/streams.jsonl").read_text().splitlines():
+    for line in (
+        (run / "observations/streams.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ):
         raw = json.loads(line)
         key = (raw["topic"], raw["instance"], raw["sample_time_us"])
         event = index.get(key)

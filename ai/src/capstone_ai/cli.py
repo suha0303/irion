@@ -28,7 +28,7 @@ def output(engine, tail, out, mode, evidence):
     ]:
         p = out / (name + ".jsonl")
         tmp = p.with_suffix(".tmp")
-        with tmp.open("w") as f:
+        with tmp.open("w", encoding="utf-8") as f:
             for row in rows:
                 f.write(
                     json.dumps(row, allow_nan=False, separators=(",", ":"))
@@ -188,11 +188,15 @@ def compare(left, right, config):
     for name in ["frames", "windows", "exclusions"]:
         x = [
             json.loads(s)
-            for s in (Path(left) / (name + ".jsonl")).read_text().splitlines()
+            for s in (Path(left) / (name + ".jsonl"))
+            .read_text(encoding="utf-8")
+            .splitlines()
         ]
         y = [
             json.loads(s)
-            for s in (Path(right) / (name + ".jsonl")).read_text().splitlines()
+            for s in (Path(right) / (name + ".jsonl"))
+            .read_text(encoding="utf-8")
+            .splitlines()
         ]
         equal(x, y, name)
     if (

@@ -18,7 +18,7 @@ from .runtime import Runtime
 
 def check(bundle, dataset):
     catalog, dataset = Catalog(bundle), Path(dataset)
-    with (dataset / "online-index.jsonl").open() as f:
+    with (dataset / "online-index.jsonl").open(encoding="utf-8") as f:
         import json
 
         reference = next(

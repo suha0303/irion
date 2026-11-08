@@ -162,11 +162,11 @@ def test_final_workflow_preserves_existing_consumer_directory(final_extraction):
     fixture = final_extraction
     fixture.consumer.mkdir(parents=True)
     sentinel = fixture.consumer / "previous-evidence"
-    sentinel.write_text("preserve")
+    sentinel.write_text("preserve", encoding="utf-8")
     with pytest.raises(FileExistsError):
         final.run(fixture.runner)
     assert fixture.actions == []
-    assert sentinel.read_text() == "preserve"
+    assert sentinel.read_text(encoding="utf-8") == "preserve"
     assert not Path(fixture.row["path"]).exists()
 
 

@@ -72,7 +72,7 @@ def run(args):
                     / str(args.pid)
                     / "children"
                 )
-                .read_text()
+                .read_text(encoding="utf-8")
                 .split()
             }
             declared = {r["pid"] for r in snapshot.get("active", [])}

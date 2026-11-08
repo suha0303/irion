@@ -300,7 +300,7 @@ def test_worker_allocation_failure_preserved_before_data_or_model(
     output = tmp_path / "output"
     root = output / "attempt/compute"
     profile_file = tmp_path / "profile.json"
-    profile_file.write_text("profile fixture")
+    profile_file.write_text("profile fixture", encoding="utf-8")
     monkeypatch.setattr(
         profile,
         "load",
@@ -454,7 +454,7 @@ def test_gpu_telemetry_closes_on_gate_failure_without_declaring_success(
     output = tmp_path / "output"
     root = output / "attempt/compute"
     profile_file = tmp_path / "profile.json"
-    profile_file.write_text("profile fixture")
+    profile_file.write_text("profile fixture", encoding="utf-8")
     monkeypatch.setattr(
         profile,
         "load",

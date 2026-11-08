@@ -195,7 +195,7 @@ class Store:
             return cache[1]
         rows = {}
         if path.exists():
-            with path.open() as f:
+            with path.open(encoding="utf-8") as f:
                 for line in f:
                     try:
                         e = json.loads(line)

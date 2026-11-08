@@ -184,7 +184,8 @@ def test_new_schedule_resume_in_separate_processes(tmp_path, name, optimizer):
         Y=rng.normal(size=(4, 10, 4)),
     )
     runner = tmp_path / "run.py"
-    runner.write_text("""import sys,numpy as np
+    runner.write_text(
+        """import sys,numpy as np
 from pathlib import Path
 from learning.models import StudySpec
 from learning.optimization import policy_for
@@ -197,7 +198,9 @@ run_fit(StudySpec(name,8),arrays,arrays,root/phase,
     optimization=policy_for(optimizer),
     stop_after_epoch=2 if phase=='partial' else None,
     resume=root/'partial/last.pt' if phase=='resume' else None)
-""")
+""",
+        encoding="utf-8",
+    )
     for phase in ("full", "partial", "resume"):
         subprocess.run(
             [
@@ -243,7 +246,9 @@ run_fit(StudySpec(name,8),arrays,arrays,root/phase,
     assert (tmp_path / "full/model.safetensors").read_bytes() == (
         tmp_path / "resume/model.safetensors"
     ).read_bytes()
-    initial = json.loads((tmp_path / "full/initialization.json").read_text())
+    initial = json.loads(
+        (tmp_path / "full/initialization.json").read_text(encoding="utf-8")
+    )
     assert initial["state_sha256"] == full["initial_state_sha256"]
     # The model was trained/exported in another process. Restore through the public reader.
     from capstone_ai.mapping import FEATURES, TARGETS

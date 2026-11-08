@@ -22,7 +22,7 @@ SPEC.loader.exec_module(c)
 
 def dump(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value))
+    path.write_text(json.dumps(value), encoding="utf-8")
 
 
 @pytest.fixture
@@ -64,7 +64,8 @@ integrity={str(p.relative_to(run)):dict(size=p.stat().st_size,sha256=hashlib.sha
 put(run/'integrity.json',integrity)
 event({'event':'end','seed':seed,'instance':instance,'time':time.monotonic()})
 print(json.dumps({'status':'completed','run':str(run)}))
-"""
+""",
+        encoding="utf-8",
     )
     producer.chmod(0o755)
     plan = dict(
@@ -130,6 +131,7 @@ print(json.dumps({'status':'completed','run':str(run)}))
                 stdout=f,
                 stderr=subprocess.STDOUT,
                 timeout=seconds,
+                check=False,
             )
         check()
         if result.returncode:
@@ -210,7 +212,9 @@ def test_two_lanes_isolated_and_lossless(setup):
     assert result["status"] == "COLLECTED_PENDING_QUALITY_STOPPED"
     events = [
         json.loads(x)
-        for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()
+        for x in (Path(plan["root"]) / "events.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     starts = [x for x in events if x["event"] == "start"]
     ends = [x for x in events if x["event"] == "end"]
@@ -283,7 +287,9 @@ def test_first_failure_drains_peer_and_no_third_start(setup):
     assert result["not_started"] == ["c3"]
     events = [
         json.loads(x)
-        for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()
+        for x in (Path(plan["root"]) / "events.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     assert {x["seed"] for x in events if x["event"] == "start"} == {1, 2}
     assert any(
@@ -315,7 +321,9 @@ def test_source_change_stops_new_cases_but_preserves_peers(setup):
         original(args, *rest)
         if args[1] == "verify" and not changed[0]:
             changed[0] = True
-            with Path(plan["root"], "capstone-sim").open("a") as f:
+            with Path(plan["root"], "capstone-sim").open(
+                "a", encoding="utf-8"
+            ) as f:
                 f.write("\n# changed\n")
 
     helper.command = mutate_after_verify
@@ -501,7 +509,7 @@ def collection_setup(setup):
     ):
         path = Path(plan["root"]) / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("synthetic fixture: " + name)
+        path.write_text("synthetic fixture: " + name, encoding="utf-8")
         plan["source_hashes"][name] = c.sha(path)
         if name != "build/libDronePowertrain.so":
             runtime[name] = c.sha(path)
@@ -729,7 +737,7 @@ def test_final_low_soc_anomaly_binds_and_producer_receives_operating_request(
     starts = [
         json.loads(line)
         for line in (Path(plan["root"]) / "events.jsonl")
-        .read_text()
+        .read_text(encoding="utf-8")
         .splitlines()
     ]
     starts = {
@@ -969,7 +977,7 @@ def test_project_lock_blocks_direct_execute_before_processes(setup):
     plan, cases, helper, tmp = setup
     lock = Path(plan["root"]) / "Data/operations/collection.lock"
     lock.parent.mkdir(parents=True)
-    with lock.open("a") as stream:
+    with lock.open("a", encoding="utf-8") as stream:
         c.fcntl.flock(stream, c.fcntl.LOCK_EX | c.fcntl.LOCK_NB)
         with pytest.raises(c.Stop, match="Project collection lock"):
             c.execute(plan, cases, helper)
@@ -1244,7 +1252,9 @@ def test_continue_policy_attempts_next_case_and_never_reports_success(setup):
     )
     events = [
         json.loads(x)
-        for x in (Path(plan["root"]) / "events.jsonl").read_text().splitlines()
+        for x in (Path(plan["root"]) / "events.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     assert sorted(x["seed"] for x in events if x["event"] == "start") == [
         1,
@@ -1306,7 +1316,7 @@ def test_bounded_case_retries_preserve_raw_and_continue(setup, failures):
         proof = json.loads(
             (
                 Path(plan["execution_dir"]) / folder / "attempt-result.json"
-            ).read_text()
+            ).read_text(encoding="utf-8")
         )
         assert proof["status"] in {
             "FAILED_PRESERVED",

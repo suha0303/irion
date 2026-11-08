@@ -262,20 +262,27 @@ def test_truth_join_preserves_sealed_forecasts_and_refuses_tamper(tmp_path):
     from capstone_ai.source import dump, sha
 
     forecast = tmp_path / "forecasts.jsonl"
-    forecast.write_text('{"fixture": "immutable prediction"}\n')
+    forecast.write_text(
+        '{"fixture": "immutable prediction"}\n', encoding="utf-8"
+    )
     decisions = tmp_path / "decisions.jsonl"
-    decisions.write_text(json.dumps(decision(1000000, True, True)) + "\n")
+    decisions.write_text(
+        json.dumps(decision(1000000, True, True)) + "\n", encoding="utf-8"
+    )
     dump(
         tmp_path / "seal.json",
         {"files": {p.name: sha(p) for p in [forecast, decisions]}},
     )
     dump(tmp_path / "summary.json", {"operational_seconds": 10})
     events = tmp_path / "truth.jsonl"
-    events.write_text('{"event_id":"a","onset_kind":"pre_existing"}\n')
+    events.write_text(
+        '{"event_id":"a","onset_kind":"pre_existing"}\n', encoding="utf-8"
+    )
     original = sha(forecast)
     a = evaluate_sealed(tmp_path, events, 0)
     events.write_text(
-        '{"event_id":"b","onset_kind":"in_flight_step","applied_time_us":2000000}\n'
+        '{"event_id":"b","onset_kind":"in_flight_step","applied_time_us":2000000}\n',
+        encoding="utf-8",
     )
     b = evaluate_sealed(tmp_path, events, 0)
     assert (
@@ -283,7 +290,9 @@ def test_truth_join_preserves_sealed_forecasts_and_refuses_tamper(tmp_path):
         and b["metrics"]["events_detected"] == 0
     )
     assert sha(forecast) == original
-    decisions.write_text(decisions.read_text() + "\n")
+    decisions.write_text(
+        decisions.read_text(encoding="utf-8") + "\n", encoding="utf-8"
+    )
     with pytest.raises(ValueError, match="sealed"):
         evaluate_sealed(tmp_path, events, 0)
 

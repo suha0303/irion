@@ -216,7 +216,9 @@ def test_final_submit_is_pinned_single_gpu_and_never_retries(
         "--no-requeue",
     ]:
         assert flag in commands[0]
-    assert "CUDA_VISIBLE_DEVICES" not in (tmp_path / "infer-job.sh").read_text()
+    assert "CUDA_VISIBLE_DEVICES" not in (tmp_path / "infer-job.sh").read_text(
+        encoding="utf-8"
+    )
     with pytest.raises(FileExistsError):
         final.submit(tmp_path, "infer", cfg)
     assert len(commands) == 1
@@ -356,7 +358,8 @@ def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(
         ]:
             p = folder / name
             p.write_text(
-                json.dumps({"run_id": row["run_id"], "bytes": "한글"}) + "\n"
+                json.dumps({"run_id": row["run_id"], "bytes": "한글"}) + "\n",
+                encoding="utf-8",
             )
             manifest["canonical_sha256"][str(p)] = sha(p)
         raw = tmp_path / (row["run_id"] + ".tar.gz")

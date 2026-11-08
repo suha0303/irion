@@ -43,7 +43,7 @@ CPU_WORKER_BYTES = dict(
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def service_unit(task, config=None):
@@ -68,7 +68,9 @@ def write(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + f".{os.getpid()}.tmp")
-    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+    temporary.write_text(
+        json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
     temporary.replace(path)
 
 
@@ -194,7 +196,12 @@ def external(path):
 
 def identity(pid):
     try:
-        fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+        fields = (
+            Path(f"/proc/{pid}/stat")
+            .read_text(encoding="utf-8")
+            .rsplit(")", 1)[1]
+            .split()
+        )
         return None if fields[0] == "Z" else fields[19]
     except (OSError, IndexError):
         return None

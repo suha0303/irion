@@ -70,14 +70,14 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
             excluded_targets=None,
         )
         if row["role"] in FIT:
-            with (folder / "frames.jsonl").open() as stream:
+            with (folder / "frames.jsonl").open(encoding="utf-8") as stream:
                 frames = [json.loads(line) for line in stream if line.strip()]
             lookup = {
                 (f["clock_id"], f["segment_id"], f["time_us"]): f
                 for f in frames
             }
             samples, windows = [], 0
-            with (folder / "windows.jsonl").open() as stream:
+            with (folder / "windows.jsonl").open(encoding="utf-8") as stream:
                 for line in stream:
                     if not line.strip():
                         continue

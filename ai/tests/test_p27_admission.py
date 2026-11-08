@@ -63,7 +63,7 @@ def manifest(tmp_path, instance):
         runs=[row],
     )
     path = tmp_path / (instance.run_id + ".json")
-    path.write_text(json.dumps(value))
+    path.write_text(json.dumps(value), encoding="utf-8")
     return path, value
 
 
@@ -92,7 +92,7 @@ def test_per_role_manifests_must_be_checked_together(tmp_path):
     a, av = manifest(tmp_path, run("anomaly_test", rid="abnormal"))
     assert len(list(data.iter_manifests([n, a]))) == 2
     av["runs"][0]["cohort"] = "final"
-    a.write_text(json.dumps(av))
+    a.write_text(json.dumps(av), encoding="utf-8")
     (tmp_path / "abnormal.npz").unlink()
     with pytest.raises(ValueError, match="cohorts"):
         list(
@@ -109,12 +109,12 @@ def test_units_tail_boundaries_and_stream_release(tmp_path):
     )
     assert len(first.values) - 100 == 105 and len(first.values) % 100 == 5
     value["units"] = admission.ONLINE_UNITS
-    n.write_text(json.dumps(value))
+    n.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError, match="units"):
         data.load_manifest(n)
     value["units"] = admission.RUN_UNITS
     value["runs"][0]["mission_interval"]["start_us"] = 100000
-    n.write_text(json.dumps(value))
+    n.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError, match="Complete declared mission"):
         data.load_manifest(n)
     n, _ = manifest(tmp_path, run())
@@ -312,7 +312,7 @@ def test_normal_selection_metadata_path():
 def test_actual_run_cannot_enter_without_an_external_seal(tmp_path):
     path, value = manifest(tmp_path, run())
     value["runs"][0]["origin"] = "px4_sitl"
-    path.write_text(json.dumps(value))
+    path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError, match="frozen expected"):
         data.load_manifest(path)
 
@@ -345,7 +345,7 @@ def test_bad_run_is_rejected_without_quality_trimming(tmp_path, damage):
     value["runs"][0]["mission_interval"]["end_us_exclusive"] = (
         int(instance.time_us[-1]) + 100000
     )
-    path.write_text(json.dumps(value))
+    path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError):
         data.load_manifest(path)
 
@@ -469,19 +469,19 @@ def test_per_run_online_inspection_needs_no_train_val_or_scaler(tmp_path):
         ),
     )
     path = tmp_path / "online.json"
-    path.write_text(json.dumps(value))
+    path.write_text(json.dumps(value), encoding="utf-8")
     result = inspect_run(path)
     assert result["windows"] == 6 and result["target_points"] == 60
     assert result["status"] == "INPUT_SCHEMA_VALIDATED_NOT_TRAINED"
     value["units"] = admission.RUN_UNITS
-    path.write_text(json.dumps(value))
+    path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError, match="units"):
         inspect_run(path)
     value["units"] = admission.ONLINE_UNITS
     arrays["Y"][0, 0, 0] = np.nan
     np.savez(source, **arrays)
     value["file"]["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
-    path.write_text(json.dumps(value))
+    path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError, match="arrived target"):
         inspect_run(path)
 

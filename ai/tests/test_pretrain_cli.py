@@ -35,7 +35,9 @@ def test_capacity_never_silently_downgrades():
 def test_runner_creates_storage_before_space_check(tmp_path, monkeypatch):
     task = tmp_path / "task"
     common.write(task / "config.json", {"mode": "test", "source_sha256": {}})
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     (task / "operator").mkdir()
     store = tmp_path / "mounted/Data/X500"
     monkeypatch.setattr(runner, "STORE", store)
@@ -491,7 +493,9 @@ def test_start_uses_independent_service_without_wait_or_restart(
         task / "config.json",
         {"source_sha256": {}, "external_storage": str(tmp_path / "Data")},
     )
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     monkeypatch.setattr(cli, "HOME", home)
     commands = []
     monkeypatch.setattr(
@@ -529,7 +533,9 @@ def test_start_expanded_service_removes_old_fixed_caps(tmp_path, monkeypatch):
             external_storage=str(tmp_path / "Data"),
         ),
     )
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     monkeypatch.setattr(cli, "HOME", home)
     monkeypatch.setattr(
         cli,
@@ -909,7 +915,7 @@ def test_real_worker_on_small_synthetic_raw_stream(tmp_path):
     for event in events:
         event["run_id"] = run_id
     (raw / "observations/streams.jsonl").write_text(
-        "".join(json.dumps(e) + "\n" for e in events)
+        "".join(json.dumps(e) + "\n" for e in events), encoding="utf-8"
     )
     (raw / "observations/watermarks.jsonl").write_text(
         json.dumps(
@@ -922,7 +928,8 @@ def test_real_worker_on_small_synthetic_raw_stream(tmp_path):
                 closed=True,
             )
         )
-        + "\n"
+        + "\n",
+        encoding="utf-8",
     )
     (raw / "observations/diagnostics.jsonl").touch()
     inventory = {
@@ -985,6 +992,7 @@ def test_real_worker_on_small_synthetic_raw_stream(tmp_path):
         capture_output=True,
         text=True,
         timeout=20,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert (
@@ -1121,11 +1129,11 @@ def test_unit_retry_bound_preserves_partials_and_moves_on(
             self.code = 2 if rid == "r0" and attempt <= failures else 0
             dest = Path(req["out"])
             dest.mkdir()
-            (dest / "marker").write_text(str(attempt))
+            (dest / "marker").write_text(str(attempt), encoding="utf-8")
             if action == "extract":
                 consumer = Path(req["row"]["path"])
                 consumer.mkdir()
-                (consumer / "raw").write_text(str(attempt))
+                (consumer / "raw").write_text(str(attempt), encoding="utf-8")
             common.write(
                 req["status"],
                 dict(
@@ -1164,7 +1172,7 @@ def test_unit_retry_bound_preserves_partials_and_moves_on(
     for attempt in (1, 2):
         assert (
             tmp_path / f"output/.failed/r0/attempt-{attempt:02d}/marker"
-        ).read_text() == str(attempt)
+        ).read_text(encoding="utf-8") == str(attempt)
         if action == "extract":
             assert (raw / f".failed/r0/attempt-{attempt:02d}/raw").exists()
     result = common.read(r.task / "units/retry/result.json")
@@ -1220,7 +1228,7 @@ def test_extract_retry_never_moves_preexisting_unowned_directory(
     r.config.update(unit_attempts_max=3, continue_after_case_failure=True)
     raw = tmp_path / "raw"
     raw.mkdir()
-    (raw / "keep").write_text("keep")
+    (raw / "keep").write_text("keep", encoding="utf-8")
     monkeypatch.setattr(
         runner.subprocess, "Popen", lambda *a, **k: pytest.fail("no launch")
     )
@@ -1232,4 +1240,4 @@ def test_extract_retry_never_moves_preexisting_unowned_directory(
             1,
             tmp_path / "out",
         )
-    assert (raw / "keep").read_text() == "keep"
+    assert (raw / "keep").read_text(encoding="utf-8") == "keep"

@@ -44,7 +44,7 @@ def main():
         "npz": store.inspect_npz(run.run_id, args.npz) if args.npz else None,
     }
     (args.data_dir / "baseline-inspection.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2)
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(
         json.dumps(

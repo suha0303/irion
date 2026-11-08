@@ -30,7 +30,7 @@ def canonical_blocks(path, row, *, chunk=256):
     interval = row["mission_interval"]
     previous, segment, count = first - 100000, None, 0
     values, times = [], []
-    with regular(path).open() as stream:
+    with regular(path).open(encoding="utf-8") as stream:
         for line in stream:
             if len(line) > 65536:
                 raise ValueError("Canonical frame exceeds64KiB")

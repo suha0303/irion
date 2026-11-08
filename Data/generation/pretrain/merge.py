@@ -209,7 +209,9 @@ def create(bundles, name):
     config["source_sha256"][str(planned)] = sha(planned)
     config["source_sha256"].update(pins)
     write(task / "config.json", config)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     write(
         task / "cases.json",
         dict(

@@ -63,7 +63,7 @@ def source_evidence(raw, binding, scenario):
     }
     endpoints = {}
     if active:
-        with (raw / "evaluation/truth.jsonl").open() as stream:
+        with (raw / "evaluation/truth.jsonl").open(encoding="utf-8") as stream:
             for line in stream:
                 point = json.loads(line)
                 for system in active:
@@ -292,7 +292,7 @@ def prepare_one(
         expected_profile_revision=binding["vehicle_profile_revision"],
     )
     for name in ("frames", "windows", "exclusions"):
-        with (output / (name + ".jsonl")).open("x") as stream:
+        with (output / (name + ".jsonl")).open("x", encoding="utf-8") as stream:
             for point in getattr(engine, name):
                 stream.write(json.dumps(point, allow_nan=False) + "\n")
     arrays, exclusions = ai19.online_arrays(engine, row["mission_interval"])
@@ -446,7 +446,7 @@ def audit_one(output, expected_path, *, short_cycle=False, final16=False):
     protection = read(output / "protection.json")
     mission = receipt["run"]["mission_interval"]
     frames = {}
-    with (output / "frames.jsonl").open() as stream:
+    with (output / "frames.jsonl").open(encoding="utf-8") as stream:
         for line in stream:
             frame = json.loads(line)
             if (

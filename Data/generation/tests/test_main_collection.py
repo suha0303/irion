@@ -302,7 +302,9 @@ def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
         assert not any(action == "aggregate" for action, cid in events)
     index = [
         json.loads(line)
-        for line in (task / "exports.jsonl").read_text().splitlines()
+        for line in (task / "exports.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     assert len(index) == 17
     assert index[0]["status"] == ("accepted" if failures == 1 else "failed")
@@ -342,7 +344,7 @@ def storage_fixture(monkeypatch, tmp_path):
     raw.mkdir(parents=True)
     consumer.mkdir(parents=True)
     archive.parent.mkdir(parents=True)
-    (raw / "run.json").write_text('{"status":"completed"}')
+    (raw / "run.json").write_text('{"status":"completed"}', encoding="utf-8")
     (consumer / "streams").write_bytes(b"consumer")
     archive.write_bytes(b"verified gzip")
     common.write(task / "config.json", dict(external_storage=str(store)))
@@ -394,7 +396,7 @@ def storage_fixture(monkeypatch, tmp_path):
     )
     target = store / "capsules/main19/current/case"
     protected = tmp_path / "protected"
-    protected.write_text("prior data")
+    protected.write_text("prior data", encoding="utf-8")
     return task, entry, target, raw, archive, consumer, protected
 
 
@@ -424,7 +426,7 @@ def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(
         not raw.exists()
         and not archive.exists()
         and not consumer.exists()
-        and protected.read_text() == "prior data"
+        and protected.read_text(encoding="utf-8") == "prior data"
     )
     discarded = list(target.glob("*.partial.tar.xz.discarded.json"))
     assert len(discarded) == 1
@@ -459,7 +461,7 @@ def test_interrupted_deletion_has_durable_intent_and_exact_resume(
     assert (
         not archive.exists()
         and not consumer.exists()
-        and protected.read_text() == "prior data"
+        and protected.read_text(encoding="utf-8") == "prior data"
     )
     assert len(common.read(target / "cleanup.json")["deleted"]) == 3
 
@@ -506,7 +508,9 @@ def test_real_subprocess_shared_errno_survives_wrapped_child_error(
         source_sha256={str(handoff): common.sha(handoff)},
     )
     common.write(task / "config.json", cfg)
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     common.write(task / "manifest.json", dict(cases=rows))
     raw = tmp_path / "simulation/runs" / ("c" * 32)
     entry = common.read(task / "cases" / (rows[0]["case_id"] + ".json"))
@@ -540,6 +544,7 @@ m.case_entry(p)
         [str(common.PYTHON), "-B", "-c", script, str(job["request"])],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode != 0
     assert Path(job["request"]).with_suffix(".failure.json").exists(), (
@@ -894,7 +899,7 @@ def test_same_bytes_symlink_cannot_be_a_main_handoff_input(
     monkeypatch.setattr(main, "ROOT", tmp_path)
     source = tmp_path / "ai/source.py"
     source.parent.mkdir()
-    source.write_text("# fixture\n")
+    source.write_text("# fixture\n", encoding="utf-8")
     freeze = tmp_path / "freeze.json"
     common.write(freeze, dict(files={"ai/source.py": common.sha(source)}))
     alias = tmp_path / "alias.json"
@@ -926,7 +931,7 @@ def test_scope_checkpoint_reuses_main_after_lr_failure_and_rejects_changed_bytes
     common.write(task / "expected-producer.json", {})
     common.write(task / "global-protection.json", {})
     index = task / "exports.jsonl"
-    index.write_text("fixture\n")
+    index.write_text("fixture\n", encoding="utf-8")
     calls = []
 
     def aggregate(index, output, *, scope, **_):

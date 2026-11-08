@@ -66,13 +66,15 @@ def main(argv=None):
         return check_input(args.request, args.output)
     if args.command == "validate":
         expected = (
-            json.loads(args.producer_binding.read_text())
+            json.loads(args.producer_binding.read_text(encoding="utf-8"))
             if args.producer_binding
             else None
         )
         count, frames = 0, 0
         protection = (
-            json.loads(args.protection.read_text()) if args.protection else None
+            json.loads(args.protection.read_text(encoding="utf-8"))
+            if args.protection
+            else None
         )
         for run in iter_manifests(
             args.manifest,

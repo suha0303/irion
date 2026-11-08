@@ -84,7 +84,8 @@ def start():
         result = health()
         if result and result.get("instance_id") == token:
             STATE.write_text(
-                json.dumps({"pid": proc.pid, "instance_id": token, "url": URL})
+                json.dumps({"pid": proc.pid, "instance_id": token, "url": URL}),
+                encoding="utf-8",
             )
             print(
                 f"대시보드 실행 완료: {URL}\n로그: {log_path}\n종료: ./server.sh stop"
@@ -105,7 +106,7 @@ def stop():
             "이 실행 도구가 시작한 서버 기록이 없습니다. 다른 서버를 종료하지 않았습니다."
         )
         return 0
-    saved = json.loads(STATE.read_text())
+    saved = json.loads(STATE.read_text(encoding="utf-8"))
     result = health()
     if not result:
         print(

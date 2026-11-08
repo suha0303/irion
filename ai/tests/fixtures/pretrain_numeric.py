@@ -11,11 +11,13 @@ from preprocessing_tools import derived as audit
 
 def write(path, value):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(json.dumps(value, indent=2) + "\n")
+    Path(path).write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
 
 def jsonlines(path, rows):
-    Path(path).write_text("".join(json.dumps(r) + "\n" for r in rows))
+    Path(path).write_text(
+        "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+    )
 
 
 def make_dataset(root, rows=None):

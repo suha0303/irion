@@ -6,7 +6,7 @@ extend-exclude = ["**/resources/**", "tools/collection_support.py"]
 force-exclude = true
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I"]
+select = ["E4", "E7", "E9", "F", "I", "PLW1510"]
 
 [tool.pytest.ini_options]
 markers = [

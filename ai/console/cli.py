@@ -134,7 +134,7 @@ def snapshot(root):
         path = root / relative
         if path.is_file() and not path.is_symlink():
             try:
-                records[relative] = json.loads(path.read_text())
+                records[relative] = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 records[relative] = {"status": "UNREADABLE"}
     if "reconciliation.json" in records:
@@ -159,7 +159,7 @@ def snapshot(root):
     if gpu_files:
         latest = max(gpu_files, key=lambda p: p.stat().st_mtime)
         try:
-            records["gpu"] = json.loads(latest.read_text())
+            records["gpu"] = json.loads(latest.read_text(encoding="utf-8"))
             records["gpu"]["source"] = str(latest)
         except (OSError, ValueError):
             records["gpu"] = {"status": "UNREADABLE"}

@@ -21,7 +21,8 @@ def fixture(tmp_path):
     manifest.write_text(
         json.dumps(
             {"models": names, "files": {"example": "hash"}, "source": "remote"}
-        )
+        ),
+        encoding="utf-8",
     )
     config = {"destination": str(tmp_path), "remote_base": "remote"}
     receipt = {
@@ -47,7 +48,9 @@ def test_transfer_or_hash_validation_in_progress_cannot_shutdown(tmp_path):
 def test_only_verified_matching_complete_bundle_is_ready(tmp_path):
     config, receipt, manifest = fixture(tmp_path)
     assert ready(config, receipt)
-    manifest.write_text(manifest.read_text() + " ")
+    manifest.write_text(
+        manifest.read_text(encoding="utf-8") + " ", encoding="utf-8"
+    )
     with pytest.raises(ValueError, match="manifest"):
         ready(config, receipt)
 

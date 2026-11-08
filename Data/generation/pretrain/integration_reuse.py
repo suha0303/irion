@@ -64,7 +64,10 @@ def historical_termination(task):
     if not cgroup.endswith("/" + unit):
         raise ValueError("Historical owned cgroup identity mismatch")
     group = Path("/sys/fs/cgroup") / cgroup
-    if group.exists() and (group / "cgroup.procs").read_text().strip():
+    if (
+        group.exists()
+        and (group / "cgroup.procs").read_text(encoding="utf-8").strip()
+    ):
         raise ValueError("Historical integration cgroup still has processes")
     processes = []
     for stage in ("flight", "prepare", "audit"):
@@ -105,10 +108,10 @@ def accept(task, output):
     verify(
         {
             str(task / "config.json"): (task / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip(),
             str(task / "manifest.json"): (task / "manifest.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip(),
         }
     )

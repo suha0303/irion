@@ -18,7 +18,7 @@ from learning.history19.pilot_connector import native_mission_interval
 
 def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value) + "\n")
+    path.write_text(json.dumps(value) + "\n", encoding="utf-8")
     return dict(path=str(path.absolute()), sha256=sha(path))
 
 
@@ -235,7 +235,7 @@ def short_request(folder, *, phase="case"):
     physical = np.tile(np.arange(19) * 0.01, (len(times), 1))
     physical[:, 17:] = [16, 24]
     canonical = path.parent / "short-frames.jsonl"
-    with canonical.open("w") as stream:
+    with canonical.open("w", encoding="utf-8") as stream:
         for t, values in zip(times, physical):
             stream.write(
                 json.dumps(

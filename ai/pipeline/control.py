@@ -38,11 +38,13 @@ def sha(path):
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def write(path, value):
-    Path(path).write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+    Path(path).write_text(
+        json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
 
 
 def approval(plan, authorization):
@@ -154,7 +156,7 @@ def claim(output, ledger, stage):
         raise ValueError("output already exists")
     ledger.mkdir(parents=True, exist_ok=True)
     marker = ledger / (stage + ".claimed")
-    with marker.open("x") as stream:
+    with marker.open("x", encoding="utf-8") as stream:
         json.dump(
             {"stage": stage, "output": str(output), "pid": os.getpid()}, stream
         )

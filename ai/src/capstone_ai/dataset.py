@@ -164,11 +164,15 @@ def build(config_path, out):
             )
         frames = [
             json.loads(s)
-            for s in (folder / "frames.jsonl").read_text().splitlines()
+            for s in (folder / "frames.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
         ]
         windows = [
             json.loads(s)
-            for s in (folder / "windows.jsonl").read_text().splitlines()
+            for s in (folder / "windows.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
         ]
         lookup = {
             (f["clock_id"], f["segment_id"], f["time_us"]): f for f in frames

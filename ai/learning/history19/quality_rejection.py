@@ -143,7 +143,7 @@ def _evidence(catalog, run_id, fixture_only):
     end = json_file(paths["native_landing"])["actual_time_us"]
     count, max_gap, over, previous, payload = 0, 0, 0, None, None
     indices = set()
-    with paths["native_consumption"].open() as stream:
+    with paths["native_consumption"].open(encoding="utf-8") as stream:
         for row in csv.DictReader(stream):
             stamp, index = int(row["source_us"]), int(row["index"])
             current = {k: v for k, v in row.items() if k != "sequence"}
@@ -222,7 +222,7 @@ def publish(run_id, output, *, fixture_only=False):
         p.is_symlink() for p in (output, *output.parents)
     ):
         raise ValueError("Separate new regular rejection output required")
-    with output.open("x") as stream:
+    with output.open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(value, indent=2) + "\n")
     return dict(path=str(output), sha256=sha(output))
 

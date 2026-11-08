@@ -348,7 +348,7 @@ def replay(run, out, config):
         ("exclusions", engine.exclusions),
     ):
         path = out / (name + ".jsonl")
-        with path.open("x") as stream:
+        with path.open("x", encoding="utf-8") as stream:
             for row in rows:
                 stream.write(json.dumps(row, allow_nan=False) + "\n")
         inventory[path.name] = sha(path)
@@ -362,7 +362,9 @@ def replay(run, out, config):
         source_run=str(run),
         live_verified=False,
     )
-    (out / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
+    (out / "summary.json").write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8"
+    )
     if not reader.closed:
         raise ValueError("Final closed watermark required")
     return report

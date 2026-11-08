@@ -134,7 +134,7 @@ def batch_backward(root, device, profile="torch21"):
 
     if Path(models.__file__).resolve() != root / "ai/src/capstone_ai/models.py":
         raise ValueError("unexpected model import path")
-    cfg = json.loads((root / "input/config.json").read_text())
+    cfg = json.loads((root / "input/config.json").read_text(encoding="utf-8"))
     with (
         np.load(root / "input/train.npz", allow_pickle=False) as data,
         np.load(root / "input/scaler.npz", allow_pickle=False) as scaler,
@@ -215,7 +215,8 @@ def main():
 
     def save():
         (out / "result.json").write_text(
-            json.dumps(report, indent=2, allow_nan=False) + "\n"
+            json.dumps(report, indent=2, allow_nan=False) + "\n",
+            encoding="utf-8",
         )
 
     save()
@@ -257,7 +258,9 @@ def main():
             ]
             if k in job
         }
-        (out / "verified-job-id.txt").write_text(job_id + "\n")
+        (out / "verified-job-id.txt").write_text(
+            job_id + "\n", encoding="utf-8"
+        )
         report["runtime_packages"] = {}
         for name in ["torch", "numpy", "safetensors"]:
             try:
@@ -277,6 +280,7 @@ def main():
                 capture_output=True,
                 text=True,
                 timeout=10,
+                check=False,
             )
             report["driver_inventory"] = {
                 "exit_code": driver.returncode,

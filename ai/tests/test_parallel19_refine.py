@@ -234,7 +234,9 @@ def test_scheduler_fills_five_idle_slots_before_other_four_baselines_finish(
 
     def start(plan, root, entry, path, node, phase="search"):
         starts.append(node)
-        return Process(len(starts)), open(tmp_path / f"log{len(starts)}", "w")
+        return Process(len(starts)), open(
+            tmp_path / f"log{len(starts)}", "w", encoding="utf-8"
+        )
 
     monkeypatch.setattr(r, "start_trial", start)
 

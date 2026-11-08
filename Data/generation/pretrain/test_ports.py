@@ -77,7 +77,7 @@ class SixteenPorts(unittest.TestCase):
         before = hashlib.sha256((upstream / relative).read_bytes()).hexdigest()
         with tempfile.TemporaryDirectory() as temp:
             target = collection_config.prepare_fc(Path(temp), upstream)
-            text = (target / relative).read_text()
+            text = (target / relative).read_text(encoding="utf-8")
             assignments = text.split("# GCS link", 1)[0]
             ports = []
             for lane in range(16):

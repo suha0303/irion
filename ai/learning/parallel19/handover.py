@@ -19,7 +19,7 @@ def identity(pid):
     root = Path("/proc") / str(pid)
     if root.stat().st_uid != os.getuid():
         raise ValueError("Dispatcher owner mismatch")
-    text = (root / "stat").read_text().rsplit(")", 1)[1].split()
+    text = (root / "stat").read_text(encoding="utf-8").rsplit(")", 1)[1].split()
     return (root / "cmdline").read_bytes(), text[19]
 
 

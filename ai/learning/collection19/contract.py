@@ -91,7 +91,7 @@ def write_new(path, value):
     path = Path(path).absolute()
     if ".." in path.parts or any(p.is_symlink() for p in (path, *path.parents)):
         raise ValueError("New regular collection output required")
-    with path.open("x") as stream:
+    with path.open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(value, indent=2) + "\n")
     return dict(path=str(path), sha256=sha(path))
 
@@ -217,7 +217,7 @@ def read_protection(value, identities=None):
     if path.suffix != ".jsonl":
         return json_file(path)
     entries = []
-    with path.open() as stream:
+    with path.open(encoding="utf-8") as stream:
         for line in stream:
             if len(line) > 65536:
                 raise ValueError("Protection JSONL entry exceeds64KiB")

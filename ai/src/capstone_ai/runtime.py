@@ -24,15 +24,17 @@ def replay_forecasts(canonical, bundle, out):
     if summary["config"] != read_json(bundle / "preprocessing.json"):
         raise ValueError("bundle preprocessing mismatch")
     windows = {}
-    for line in (canonical / "windows.jsonl").read_text().splitlines():
+    for line in (
+        (canonical / "windows.jsonl").read_text(encoding="utf-8").splitlines()
+    ):
         w = json.loads(line)
         windows[(w["clock_id"], w["segment_id"], w["origin_us"])] = w
     ledger = PendingForecasts(cal["error_scale"], cal["high"])
     written = set()
     last_time = None
     with (
-        (out / "forecasts.jsonl").open("w") as forecasts,
-        (out / "decisions.jsonl").open("w") as decisions,
+        (out / "forecasts.jsonl").open("w", encoding="utf-8") as forecasts,
+        (out / "decisions.jsonl").open("w", encoding="utf-8") as decisions,
     ):
 
         def emit():
@@ -43,7 +45,11 @@ def replay_forecasts(canonical, bundle, out):
                     written.add(k)
 
         previous_segment = None
-        for line in (canonical / "frames.jsonl").read_text().splitlines():
+        for line in (
+            (canonical / "frames.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ):
             frame = json.loads(line)
             t = frame["time_us"]
             last_time = t

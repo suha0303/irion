@@ -133,7 +133,7 @@ def prepare(
         expected_profile_revision=binding["vehicle_profile_revision"],
     )
     for name in ("frames", "windows", "exclusions"):
-        with (output / (name + ".jsonl")).open("x") as stream:
+        with (output / (name + ".jsonl")).open("x", encoding="utf-8") as stream:
             for point in getattr(engine, name):
                 stream.write(json.dumps(point, allow_nan=False) + "\n")
     arrays, exclusions = ai19.online_arrays(engine, row["mission_interval"])

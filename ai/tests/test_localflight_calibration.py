@@ -12,7 +12,7 @@ from localflight.catalog import DEFAULT_BUNDLE, digest
 
 def make_flight(root, name, role, *, clock=None):
     path = flight(root, name, role)
-    m = json.loads(path.read_text())
+    m = json.loads(path.read_text(encoding="utf-8"))
     with np.load(path.parent / "frames.npz") as data:
         values = np.tile(data["values"], (2, 1))
     np.savez(
@@ -23,7 +23,7 @@ def make_flight(root, name, role, *, clock=None):
     m["file"]["sha256"] = digest(path.parent / "frames.npz")
     if clock:
         m["timing"] = dict(clock=clock)
-    path.write_text(json.dumps(m))
+    path.write_text(json.dumps(m), encoding="utf-8")
     return path
 
 
@@ -71,9 +71,9 @@ def test_calibration_roundtrip_decision_binding_and_independent_rates(
         is None
     )
     p = tmp_path / "calibrations" / (record["id"] + ".json")
-    value = json.loads(p.read_text())
+    value = json.loads(p.read_text(encoding="utf-8"))
     value["threshold"] = 1e20
-    p.write_text(json.dumps(value))
+    p.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(ValueError, match="integrity"):
         calibration.select(tmp_path, record["id"])
 
@@ -85,16 +85,16 @@ def test_calibration_rejects_leakage_unknown_roles_and_changed_clock(tmp_path):
         calibration.fit(
             tmp_path, "forecast_lstm_h64_l2", [a, a], bundle=DEFAULT_BUNDLE
         )
-    m = json.loads(b.read_text())
+    m = json.loads(b.read_text(encoding="utf-8"))
     m["health"] = "unknown"
-    b.write_text(json.dumps(m))
+    b.write_text(json.dumps(m), encoding="utf-8")
     with pytest.raises(ValueError, match="Confirmed normal"):
         calibration.fit(
             tmp_path, "forecast_lstm_h64_l2", [a, b], bundle=DEFAULT_BUNDLE
         )
     m["health"] = "confirmed_normal"
     m["timing"] = {"clock": "receipt_monotonic"}
-    b.write_text(json.dumps(m))
+    b.write_text(json.dumps(m), encoding="utf-8")
     with pytest.raises(ValueError, match="identical clock"):
         calibration.fit(
             tmp_path, "forecast_lstm_h64_l2", [a, b], bundle=DEFAULT_BUNDLE
@@ -108,9 +108,9 @@ def test_calibration_rejects_leakage_unknown_roles_and_changed_clock(tmp_path):
         bundle=DEFAULT_BUNDLE,
         epochs=1,
     )
-    m = json.loads(train.read_text())
+    m = json.loads(train.read_text(encoding="utf-8"))
     m["role"] = "calibration"
-    train.write_text(json.dumps(m))
+    train.write_text(json.dumps(m), encoding="utf-8")
     with pytest.raises(ValueError, match="재사용"):
         calibration.fit(
             tmp_path,

@@ -123,7 +123,7 @@ def test_onboard_units_cm_per_second_are_respected():
 
 def test_prepared_segments_feed_only_contained_windows(tmp_path, monkeypatch):
     fixture = flight(tmp_path, "fixture", "evaluation")
-    profile = json.loads(fixture.read_text())["profile"]
+    profile = json.loads(fixture.read_text(encoding="utf-8"))["profile"]
     profile.update(imu_instance=0, battery_instance=0, actuator_instance=0)
     raw = tmp_path / "log.ulg"
     raw.write_bytes(b"synthetic raw used only through test decoder")
@@ -173,7 +173,7 @@ def test_prepared_segments_feed_only_contained_windows(tmp_path, monkeypatch):
     # A manually merged gap must not pass the loader.
     m["segments"] = [dict(start_index=0, end_index=len(t))]
     path = tmp_path / "prepared/manifest.json"
-    path.write_text(json.dumps(m))
+    path.write_text(json.dumps(m), encoding="utf-8")
     with pytest.raises(ValueError, match="Missing data"):
         load(path)
 
@@ -262,7 +262,7 @@ def test_segmented_health_does_not_carry_context_between_segments(tmp_path):
     from localflight.catalog import DEFAULT_BUNDLE
 
     path = flight(tmp_path, "segmented", "evaluation")
-    m = json.loads(path.read_text())
+    m = json.loads(path.read_text(encoding="utf-8"))
     data = path.parent / "frames.npz"
     with np.load(data) as z:
         v, t = z["values"], z["time_us"]
@@ -273,12 +273,12 @@ def test_segmented_health_does_not_carry_context_between_segments(tmp_path):
     ]
     np.savez(data, values=v, time_us=t)
     m["file"]["sha256"] = digest(data)
-    path.write_text(json.dumps(m))
+    path.write_text(json.dumps(m), encoding="utf-8")
     first = analyze("run_health_lstm_h64_l2", path, bundle=DEFAULT_BUNDLE)
     v[125:, 17] += 3
     np.savez(data, values=v, time_us=t)
     m["file"]["sha256"] = digest(data)
-    path.write_text(json.dumps(m))
+    path.write_text(json.dumps(m), encoding="utf-8")
     second = analyze("run_health_lstm_h64_l2", path, bundle=DEFAULT_BUNDLE)
     assert first["metrics"]["segments"][0] == second["metrics"]["segments"][0]
     assert first["metrics"]["segments"][1] != second["metrics"]["segments"][1]

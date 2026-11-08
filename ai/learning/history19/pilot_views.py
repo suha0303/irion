@@ -237,7 +237,7 @@ def check_case(
     ctx.checked.append("actual_case_receipt_and_both_view_identity")
     canonical = ctx.ref("canonical_frames")
     frames, scope, count = {}, set(), 0
-    with canonical.open() as stream:
+    with canonical.open(encoding="utf-8") as stream:
         for line in iter(lambda: stream.readline(1 << 20), ""):
             if not line.strip():
                 continue

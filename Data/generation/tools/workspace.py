@@ -108,7 +108,7 @@ def setup_lock():
 
     path = ROOT / "Data/operations/pretrain/pretrain.lock"
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a") as stream:
+    with path.open("a", encoding="utf-8") as stream:
         try:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
@@ -183,7 +183,12 @@ def install_environment(args):
 def probe(command):
     try:
         result = subprocess.run(
-            command, cwd=ROOT, text=True, capture_output=True, timeout=30
+            command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            timeout=30,
+            check=False,
         )
         return dict(
             passed=result.returncode == 0,

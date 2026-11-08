@@ -377,7 +377,12 @@ def baseline_occupancy(plan):
         try:
             if p.stat().st_uid != os.getuid():
                 raise ValueError("Old worker owner changed")
-            state = (p / "stat").read_text().rsplit(")", 1)[1].split()[0]
+            state = (
+                (p / "stat")
+                .read_text(encoding="utf-8")
+                .rsplit(")", 1)[1]
+                .split()[0]
+            )
             cmd = (p / "cmdline").read_bytes()
         except FileNotFoundError:
             continue
@@ -677,7 +682,12 @@ def adopted_occupancy(plan, state):
         try:
             if root.stat().st_uid != os.getuid():
                 raise ValueError("Adopted worker owner changed")
-            fields = (root / "stat").read_text().rsplit(")", 1)[1].split()
+            fields = (
+                (root / "stat")
+                .read_text(encoding="utf-8")
+                .rsplit(")", 1)[1]
+                .split()
+            )
             if fields[19] != row["start"]:
                 raise ValueError("Adopted worker PID reused")
             alive = fields[0] != "Z"
@@ -717,7 +727,7 @@ def campaign(template):
         os.environ["SLURM_JOB_ID_HET_GROUP_" + str(group)] = str(
             plan["allocation"]["components"][node]
         )
-    lock = (root / "controller.lock").open("w")
+    lock = (root / "controller.lock").open("w", encoding="utf-8")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     for name, digest in plan["source_sha256"].items():
         if sha(Path(plan["code"]) / name) != digest:

@@ -20,7 +20,9 @@ from .models import ModelSpec, make_model, normal_loss
 
 
 def write(path, value):
-    Path(path).write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+    Path(path).write_text(
+        json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
 
 
 def fit_cpu(
@@ -137,7 +139,9 @@ def fit_cpu(
             raise ValueError(
                 "Resume requires the saved, regular last.pt checkpoint"
             )
-        integrity = json.loads((resume.parent / "integrity.json").read_text())
+        integrity = json.loads(
+            (resume.parent / "integrity.json").read_text(encoding="utf-8")
+        )
         if (
             hashlib.sha256(resume.read_bytes()).hexdigest()
             != integrity["last.pt"]
@@ -254,7 +258,9 @@ def restore(folder):
     folder = Path(folder)
     if any(p.is_symlink() for p in (folder, *folder.parents)):
         raise ValueError("Symlink model folder unsupported")
-    manifest = json.loads((folder / "integrity.json").read_text())
+    manifest = json.loads(
+        (folder / "integrity.json").read_text(encoding="utf-8")
+    )
     for name in (
         "plan.json",
         "model-spec.json",
@@ -269,9 +275,13 @@ def restore(folder):
         ):
             raise ValueError("Saved model integrity mismatch")
     model = make_model(
-        ModelSpec(**json.loads((folder / "model-spec.json").read_text()))
+        ModelSpec(
+            **json.loads(
+                (folder / "model-spec.json").read_text(encoding="utf-8")
+            )
+        )
     )
     model.load_state_dict(load_file(folder / "model.safetensors"))
     return model.eval(), Scaler.from_dict(
-        json.loads((folder / "scaler.json").read_text())
+        json.loads((folder / "scaler.json").read_text(encoding="utf-8"))
     )

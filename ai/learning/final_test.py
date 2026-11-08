@@ -464,7 +464,7 @@ def submit(root, phase, cfg):
             "Final inference and evaluation only; no training/calibration"
         )
     checked(root)
-    with SUBMIT_LOCK.open("a") as lock:
+    with SUBMIT_LOCK.open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if operator.own_queue():
             raise ValueError(
@@ -473,7 +473,9 @@ def submit(root, phase, cfg):
         if phase == "evaluate":
             operator.require_success(read(root / "release.json"))
             inference_seal(root, cfg)
-        with (root / (phase + "-submitted.claim")).open("x") as f:
+        with (root / (phase + "-submitted.claim")).open(
+            "x", encoding="utf-8"
+        ) as f:
             f.write("One submission. Unknown outcomes must never be retried.\n")
         script = root / (phase + "-job.sh")
         script.write_text(
@@ -496,7 +498,8 @@ def submit(root, phase, cfg):
                     str(root),
                 ]
             )
-            + "\n"
+            + "\n",
+            encoding="utf-8",
         )
         hours = (
             cfg["wall_hours"] if phase == "infer" else cfg["evaluation_hours"]
@@ -559,7 +562,7 @@ def control(root):
     root, cfg = checked(root)
     if os.environ.get("SLURM_JOB_ID") or not os.environ.get("TMUX"):
         raise ValueError("Final controller requires server login-node tmux")
-    with (root / "controller.claim").open("x") as f:
+    with (root / "controller.claim").open("x", encoding="utf-8") as f:
         f.write("One final evaluation; no retry or next round.\n")
     state = dict(
         status="RUNNING",
@@ -664,7 +667,7 @@ def start(root):
         != Path(python_for(root, required=True)).resolve()
     ):
         raise ValueError("Start with selected server Python on login node")
-    with (root / "start.claim").open("x") as f:
+    with (root / "start.claim").open("x", encoding="utf-8") as f:
         f.write("One final evaluation controller launch; no retry.\n")
     name = "drone-ai-final-" + root.name
     command = (
@@ -836,7 +839,9 @@ def worker(root, phase):
                     completion_status="EVALUATION_COMPLETE_PENDING_RELEASE",
                 )
             # Record fixed metrics in model declaration order. Never rank, select or interpret.
-            with (root / "evaluation/model-results.csv").open("x") as f:
+            with (root / "evaluation/model-results.csv").open(
+                "x", encoding="utf-8"
+            ) as f:
                 writer = csv.writer(f)
                 writer.writerow(
                     [

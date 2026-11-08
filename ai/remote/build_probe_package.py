@@ -107,7 +107,7 @@ def main():
                 tar.addfile(info, io.BytesIO(data))
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     archive.with_name(archive.name + ".sha256").write_text(
-        digest + "  " + archive.name + "\n"
+        digest + "  " + archive.name + "\n", encoding="utf-8"
     )
     print(
         json.dumps(

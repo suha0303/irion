@@ -131,7 +131,9 @@ def _inspect(
     end = json_file(raw / "evaluation/joint-landing.json")["actual_time_us"]
     first = previous = None
     maximum, over, indices = 0, 0, set()
-    with (raw / "evaluation/joint-consumption.csv").open() as stream:
+    with (raw / "evaluation/joint-consumption.csv").open(
+        encoding="utf-8"
+    ) as stream:
         for row in csv.DictReader(stream):
             stamp = int(row["source_us"])
             first = stamp if first is None else first

@@ -87,18 +87,18 @@ def run(template):
                 ".drone-ai-gpu.lock",
                 ".x500-ai-gpu.lock",
             ):
-                handle = (Path.home() / name).open("a")
+                handle = (Path.home() / name).open("a", encoding="utf-8")
                 handles.append(handle)
                 deadline = time.monotonic() + 120
                 while True:
                     try:
                         fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
                         break
-                    except BlockingIOError:
+                    except BlockingIOError as error:
                         if time.monotonic() > deadline:
                             raise RuntimeError(
                                 "Project lock busy; no new allocation"
-                            )
+                            ) from error
                         time.sleep(2)
             if queue(plan["owner"]):
                 raise RuntimeError(

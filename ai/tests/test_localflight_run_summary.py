@@ -15,7 +15,7 @@ from localflight.run_summary import aggregate, partition, source_context
 
 def fixture(root, name="summary"):
     manifest = flight(root, name, "evaluation")
-    m = json.loads(manifest.read_text())
+    m = json.loads(manifest.read_text(encoding="utf-8"))
     x, t, r = causal_frames(
         events(seconds=40, gap=(15_000_000, 20_000_000)), 0, 40_000_000
     )
@@ -45,7 +45,7 @@ def fixture(root, name="summary"):
         notes=[],
     )
     m["interval"] = dict(start_us=0, end_us=40_000_000)
-    manifest.write_text(json.dumps(m))
+    manifest.write_text(json.dumps(m), encoding="utf-8")
     return manifest
 
 
@@ -141,7 +141,7 @@ def test_summary_decision_preserves_partial_and_unavailable(tmp_path):
 
 def test_live_no_usable_data_has_complete_exclusion_summary(tmp_path):
     journal = tmp_path / "journal.jsonl"
-    journal.write_text("")
+    journal.write_text("", encoding="utf-8")
     for length, reason in [
         (5_000_000, "too_short"),
         (30_000_000, "missing_or_stale"),
@@ -224,7 +224,7 @@ def test_separate_packages_match_one_segmented_package(tmp_path, monkeypatch):
         part["segments"] = [dict(start_index=0, end_index=b - a)]
         part["file"]["sha256"] = digest(folder / "frames.npz")
         p = folder / "manifest.json"
-        p.write_text(json.dumps(part))
+        p.write_text(json.dumps(part), encoding="utf-8")
         paths.append(str(p))
     models = ["forecast_lstm_h64_l2", "run_health_lstm_h64_l2"]
     one = analyze_run(models, [str(original)], bundle=DEFAULT_BUNDLE)[
@@ -247,9 +247,9 @@ def test_separate_packages_match_one_segmented_package(tmp_path, monkeypatch):
     for a, b in zip(one["models"], joined["models"]):
         np.testing.assert_allclose(a["rmse"], b["rmse"], rtol=1e-6)
     p = tmp_path / "part1/manifest.json"
-    part = json.loads(p.read_text())
+    part = json.loads(p.read_text(encoding="utf-8"))
     part["timing"]["clock_corrections"] = {"test": "different"}
-    p.write_text(json.dumps(part))
+    p.write_text(json.dumps(part), encoding="utf-8")
     with pytest.raises(ValueError, match="same clock"):
         analyze_run(models, paths, bundle=DEFAULT_BUNDLE)
 

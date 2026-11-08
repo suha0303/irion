@@ -12,14 +12,14 @@ def show(root):
     if not p.exists():
         print("할당·인수 준비 중:", root)
         return
-    d = json.loads(p.read_text())
+    d = json.loads(p.read_text(encoding="utf-8"))
     print("X500 · 16모델 LR / 본학습")
     print(
         d["status"], "|", d["stage"], "|", d.get("completed_models", 0), "/16"
     )
     for e in d.get("active", []):
         q = root / e["model"] / d["stage"] / "progress.json"
-        s = json.loads(q.read_text()) if q.exists() else {}
+        s = json.loads(q.read_text(encoding="utf-8")) if q.exists() else {}
         print(
             e["node"],
             e["model"],

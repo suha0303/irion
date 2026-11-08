@@ -21,17 +21,19 @@ def fixture_run(tmp_path):
     run.mkdir()
     for name in ("observations", "reference", "evaluation", "px4"):
         (run / name).mkdir()
-    (run / "run.json").write_text('{"status":"completed"}')
-    (run / "observations/streams.jsonl").write_text('{"x":1}\n')
-    (run / "reference/profile.json").write_text("{}")
-    (run / "evaluation/scenario.json").write_text("{}")
+    (run / "run.json").write_text('{"status":"completed"}', encoding="utf-8")
+    (run / "observations/streams.jsonl").write_text(
+        '{"x":1}\n', encoding="utf-8"
+    )
+    (run / "reference/profile.json").write_text("{}", encoding="utf-8")
+    (run / "evaluation/scenario.json").write_text("{}", encoding="utf-8")
     (run / "px4/native.ulg").write_bytes(b"native bytes")
     inventory = {
         str(p.relative_to(run)): {"size": p.stat().st_size, "sha256": c.sha(p)}
         for p in run.rglob("*")
         if p.is_file()
     }
-    (run / "integrity.json").write_text(json.dumps(inventory))
+    (run / "integrity.json").write_text(json.dumps(inventory), encoding="utf-8")
     return run
 
 
@@ -40,7 +42,7 @@ def test_export_hashes_and_never_follows_native_symlink(tmp_path):
     outside = tmp_path / "outside-dir"
     outside.mkdir()
     secret = outside / "outside"
-    secret.write_text("outside bytes must not be archived")
+    secret.write_text("outside bytes must not be archived", encoding="utf-8")
     (run / "px4/external").symlink_to(outside)
     before = c.sha(secret)
     result = c.export_run(run, tmp_path / "export", lambda: None)
@@ -76,7 +78,9 @@ def test_export_detects_source_mutation(tmp_path):
     def mutate():
         nonlocal changed
         if not changed:
-            (run / "observations/streams.jsonl").write_text("changed")
+            (run / "observations/streams.jsonl").write_text(
+                "changed", encoding="utf-8"
+            )
             changed = True
 
     with pytest.raises(c.Stop, match="mismatch|changed"):
@@ -88,7 +92,9 @@ def test_corrupt_external_export_not_published(tmp_path):
     run = fixture_run(tmp_path)
 
     def corrupt(path):
-        (path / "observations/streams.jsonl").write_text("corrupt")
+        (path / "observations/streams.jsonl").write_text(
+            "corrupt", encoding="utf-8"
+        )
 
     with pytest.raises(c.Stop, match="changed before publication"):
         c.export_run(run, tmp_path / "export", lambda: None, corrupt)
@@ -128,7 +134,7 @@ def test_limits_stop(args):
 def test_missing_start_rejected_before_output(tmp_path):
     p, m, r = (tmp_path / n for n in ("plan", "cases", "receipt"))
     for file in (p, m, r):
-        file.write_text("{}")
+        file.write_text("{}", encoding="utf-8")
     with pytest.raises(c.Stop, match="START"):
         c.validate(p, m, r)
     assert len(list(tmp_path.iterdir())) == 3
@@ -140,11 +146,11 @@ def test_hash_bound_start_accepts_fixed_plan_then_rejects_drift(tmp_path):
     cases = tmp_path / "case_manifest.json"
     coordinator = tmp_path / "coordinator.yaml"
     coordinator.write_bytes((base / "coordinator-plan.yaml").read_bytes())
-    fixture_plan = json.loads((base / "plan.json").read_text())
+    fixture_plan = json.loads((base / "plan.json").read_text(encoding="utf-8"))
     fixture_plan["coordinator_plan"] = dict(
         path=str(coordinator), sha256=c.sha(coordinator)
     )
-    plan.write_text(json.dumps(fixture_plan))
+    plan.write_text(json.dumps(fixture_plan), encoding="utf-8")
     cases.write_bytes((base / "case_manifest.json").read_bytes())
     receipt = tmp_path / "receipt.json"
     receipt.write_text(
@@ -157,7 +163,8 @@ def test_hash_bound_start_accepts_fixed_plan_then_rejects_drift(tmp_path):
                 case_manifest_sha256=c.sha(cases),
                 wrapper_sha256=c.sha(c.__file__),
             )
-        )
+        ),
+        encoding="utf-8",
     )
     actual, selected = c.validate(plan, cases, receipt)
     assert len(selected["cases"]) == 30
@@ -167,7 +174,7 @@ def test_hash_bound_start_accepts_fixed_plan_then_rejects_drift(tmp_path):
     with pytest.raises(c.Stop, match="Coordinator plan drift"):
         c.validate(plan, cases, receipt)
     coordinator.write_bytes(original)
-    cases.write_text(cases.read_text() + "\n")
+    cases.write_text(cases.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     with pytest.raises(c.Stop, match="START"):
         c.validate(plan, cases, receipt)
 
@@ -186,7 +193,9 @@ def test_command_stop_and_owned_cleanup(tmp_path):
             lambda: None,
             0.8,
         )
-    evidence = json.loads(Path(str(log) + ".processes.json").read_text())
+    evidence = json.loads(
+        Path(str(log) + ".processes.json").read_text(encoding="utf-8")
+    )
     assert evidence["remaining"] == []
     assert len(evidence["owned"]) >= 2
 
@@ -206,7 +215,7 @@ def test_pid_identity_mismatch_not_signalled(monkeypatch):
 def test_first_failure_stops_preserves_local_partial(tmp_path, monkeypatch):
     root = tmp_path / "root"
     (root / "runs/old").mkdir(parents=True)
-    (root / "runs/old/keep").write_text("unchanged")
+    (root / "runs/old/keep").write_text("unchanged", encoding="utf-8")
     external = tmp_path / "external"
     external.mkdir()
     (external / "raw").mkdir()  # coordinator pre-created empty reservation
@@ -229,7 +238,9 @@ def test_first_failure_stops_preserves_local_partial(tmp_path, monkeypatch):
     def fail(*args):
         calls.append(args)
         (root / "runs/newpartial").mkdir()
-        (root / "runs/newpartial/partial").write_text("preserve")
+        (root / "runs/newpartial/partial").write_text(
+            "preserve", encoding="utf-8"
+        )
         raise c.Stop("synthetic first failure")
 
     monkeypatch.setattr(c, "command", fail)
@@ -237,10 +248,12 @@ def test_first_failure_stops_preserves_local_partial(tmp_path, monkeypatch):
     with pytest.raises(c.Stop, match="first failure"):
         c.collect(plan, {"cases": [case, case]})
     assert len(calls) == 1
-    assert (root / "runs/old/keep").read_text() == "unchanged"
-    assert (root / "runs/newpartial/partial").read_text() == "preserve"
+    assert (root / "runs/old/keep").read_text(encoding="utf-8") == "unchanged"
+    assert (root / "runs/newpartial/partial").read_text(
+        encoding="utf-8"
+    ) == "preserve"
     assert (
-        json.loads((work / "ledger.json").read_text())["status"]
+        json.loads((work / "ledger.json").read_text(encoding="utf-8"))["status"]
         == "FAILED_STOPPED"
     )
 
@@ -249,10 +262,10 @@ def test_empty_raw_reservation_and_nonempty_rejection(tmp_path):
     raw = tmp_path / "raw"
     raw.mkdir()
     c.reserve_raw(raw)
-    (raw / "keep").write_text("preserve")
+    (raw / "keep").write_text("preserve", encoding="utf-8")
     with pytest.raises(c.Stop, match="empty"):
         c.reserve_raw(raw)
-    assert (raw / "keep").read_text() == "preserve"
+    assert (raw / "keep").read_text(encoding="utf-8") == "preserve"
 
 
 def test_mount_loss_and_symlink_path_stop(tmp_path, monkeypatch):

@@ -66,7 +66,9 @@ def test_cancel_before_worker_starts_and_restart(tmp_path):
         await service.close()
         assert service.active is None
         assert (
-            json.loads(service.job_path(job["id"]).read_text())["status"]
+            json.loads(service.job_path(job["id"]).read_text(encoding="utf-8"))[
+                "status"
+            ]
             == "cancelled"
         )
         with pytest.raises(ValueError):
@@ -75,10 +77,13 @@ def test_cancel_before_worker_starts_and_restart(tmp_path):
     asyncio.run(run())
     path = tmp_path / "jobs" / ("b" * 32 + ".json")
     path.write_text(
-        json.dumps(dict(id="b" * 32, status="running", created_at=0))
+        json.dumps(dict(id="b" * 32, status="running", created_at=0)),
+        encoding="utf-8",
     )
     LocalFlight(tmp_path)
-    assert json.loads(path.read_text())["status"] == "interrupted"
+    assert (
+        json.loads(path.read_text(encoding="utf-8"))["status"] == "interrupted"
+    )
 
 
 def test_new_jobs_require_completed_sources_and_reject_unknown_resume(tmp_path):
@@ -166,7 +171,8 @@ print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.i
                             manifest=path, role=role, health="confirmed_normal"
                         ),
                     )
-                )
+                ),
+                encoding="utf-8",
             )
 
         def complete(endpoint, body):
@@ -370,7 +376,8 @@ def test_auto_interval_keeps_saved_profile_and_binds_source(
                         ),
                     ),
                 )
-            )
+            ),
+            encoding="utf-8",
         )
         monkeypatch.setattr(
             LocalFlight, "create_job", lambda self, request: request

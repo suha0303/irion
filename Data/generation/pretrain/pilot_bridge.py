@@ -535,7 +535,7 @@ def pair(task, spec, normal_id, anomaly_id):
             "Reviewed Sim pair verification CLI required; flight/control commands forbidden"
         )
     if not output.exists():
-        with (directory / "verify.log").open("x") as log:
+        with (directory / "verify.log").open("x", encoding="utf-8") as log:
             subprocess.run(
                 argv,
                 cwd=ROOT,

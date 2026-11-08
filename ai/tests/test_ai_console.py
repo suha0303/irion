@@ -582,7 +582,8 @@ def test_status_reports_compute_success_as_pending_until_controller_release(
                 "status": "SMOKE_COMPUTE_FINISHED_PENDING_RELEASE",
                 "training_eligible": False,
             }
-        )
+        ),
+        encoding="utf-8",
     )
     value = cli.snapshot(tmp_path)
     assert "control.json" not in value["records"]
@@ -767,7 +768,7 @@ def finished_smoke(root, machine, tmp_path):
             "inputs_sha256": control.file_sha(compute / "inputs.npz"),
         },
     )
-    (compute / "verified-job-id.txt").write_text("19348\n")
+    (compute / "verified-job-id.txt").write_text("19348\n", encoding="utf-8")
     control.write(compute / "environment.json", {"job": allocated_job()})
     check_names = {
         "model",

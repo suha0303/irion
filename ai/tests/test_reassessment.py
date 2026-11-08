@@ -36,7 +36,9 @@ def fixture_evaluation(tmp_path):
         rows.append(row)
         folder = dataset / "canonical" / row["run_id"]
         folder.mkdir(parents=True)
-        (folder / "frames.jsonl").write_text('{"time_us":0}\n')
+        (folder / "frames.jsonl").write_text(
+            '{"time_us":0}\n', encoding="utf-8"
+        )
         for name in names:
             detector = DomainAlarms([1, 1])
             decisions = []
@@ -61,9 +63,12 @@ def fixture_evaluation(tmp_path):
             replay = inference / "calibration" / name / row["run_id"]
             replay.mkdir(parents=True)
             (replay / "decisions.jsonl").write_text(
-                "".join(json.dumps(d) + "\n" for d in decisions)
+                "".join(json.dumps(d) + "\n" for d in decisions),
+                encoding="utf-8",
             )
-            (replay / "forecasts.jsonl").write_text('{"fixture":"frozen"}\n')
+            (replay / "forecasts.jsonl").write_text(
+                '{"fixture":"frozen"}\n', encoding="utf-8"
+            )
             write(
                 replay / "summary.json",
                 dict(
@@ -128,7 +133,7 @@ def fixture_evaluation(tmp_path):
                 json.dumps(dict(event_id="existing", onset_kind="pre_existing"))
                 + "\n"
             )
-        path.write_text(value)
+        path.write_text(value, encoding="utf-8")
 
     output = tmp_path / "evaluation"
     metrics = evaluate(
@@ -251,7 +256,9 @@ def test_changed_immutable_evidence_rejected(tmp_path, tamper):
         "protocol": evaluation / "protocol.json",
         "evidence": evaluation / "evidence.json",
     }[tamper]
-    target.write_text(target.read_text() + "\n")
+    target.write_text(
+        target.read_text(encoding="utf-8") + "\n", encoding="utf-8"
+    )
     # A whitespace-only protocol change preserves its canonical semantic hash;
     # change a value to test protocol protection.
     if tamper == "protocol":

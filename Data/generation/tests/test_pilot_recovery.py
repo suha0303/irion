@@ -32,7 +32,9 @@ def test_recovery_keeps_failed_attempt_and_exact_old_case(
     )
     log = old / "pilot/execution" / case["case_id"] / "flight-01.log"
     log.parent.mkdir(parents=True)
-    log.write_text("ModuleNotFoundError: No module named 'pymavlink'\n")
+    log.write_text(
+        "ModuleNotFoundError: No module named 'pymavlink'\n", encoding="utf-8"
+    )
     audit = (
         tmp_path
         / "ai/reports/ai19-single-run-integration-20261107/attempt-02/result-review-01/termination-audit.json"
@@ -173,7 +175,7 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(
     common.write(task / "ledger.json", dict(cases={}, attempts=[], phases={}))
     (task / "operator").mkdir()
     (task / "final-admission-regression.log").write_text(
-        "fixture control-stage proof\n"
+        "fixture control-stage proof\n", encoding="utf-8"
     )
     common.write(task / "final-admission-regression.json", dict(exit_code=0))
     monkeypatch.setattr(pilot_flow, "HOME", tmp_path)
@@ -449,8 +451,8 @@ def test_reuse_source_gate_only_allows_controller_fix(monkeypatch, tmp_path):
         tmp_path / "controller.py",
         tmp_path / "preprocess.py",
     )
-    control.write_text("old control")
-    preprocessor.write_text("same preprocessing")
+    control.write_text("old control", encoding="utf-8")
+    preprocessor.write_text("same preprocessing", encoding="utf-8")
     common.write(
         task / "config.json",
         dict(
@@ -460,10 +462,10 @@ def test_reuse_source_gate_only_allows_controller_fix(monkeypatch, tmp_path):
         ),
     )
     monkeypatch.setattr(integration_reuse, "CONTROL_FILES", {str(control)})
-    control.write_text("reviewed termination correction")
+    control.write_text("reviewed termination correction", encoding="utf-8")
     result = integration_reuse.compatible_sources(task)
     assert set(result["reviewed_control_changes"]) == {str(control)}
-    preprocessor.write_text("changed signal processing")
+    preprocessor.write_text("changed signal processing", encoding="utf-8")
     with pytest.raises(ValueError, match="dependency changed"):
         integration_reuse.compatible_sources(task)
 

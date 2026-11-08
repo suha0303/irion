@@ -81,7 +81,7 @@ def signed(tmp_path):
         {"config.json": sha(source / "input/config.json")},
     )
     for n in ("worker.py", "control.py"):
-        (source / n).write_text("# preserved runner\n")
+        (source / n).write_text("# preserved runner\n", encoding="utf-8")
     write(
         source / "server-profile.json",
         dict(
@@ -154,7 +154,7 @@ def test_signed_preparation_without_fabricating_evidence(signed):
 )
 def test_signed_preparation_rejects_mutated_files(signed, name):
     source, cfg, auth = signed
-    with (source / name).open("a") as f:
+    with (source / name).open("a", encoding="utf-8") as f:
         f.write("\nchanged")
     with pytest.raises(ValueError):
         post.training_preparation_proof(source, cfg, auth)

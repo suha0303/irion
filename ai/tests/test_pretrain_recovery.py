@@ -13,7 +13,9 @@ def source(tmp_path, monkeypatch):
         task / "config.json",
         dict(mode="collect", collection_sets=1, collection_run_count=1),
     )
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     common.write(
         task / "operator/state.json",
         dict(
@@ -78,7 +80,9 @@ def test_resume_dispatch_cannot_collect(tmp_path, monkeypatch):
         resume_collections=[str(tmp_path / "source/collection")],
     )
     common.write(task / "config.json", config)
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     (task / "operator").mkdir()
     r = runner.Runner(task)
     monkeypatch.setattr(r, "resources", lambda: {})

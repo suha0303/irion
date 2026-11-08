@@ -100,7 +100,7 @@ def resume_gate(root, arrays, progress):
             progress.check()
             progress.update(stage="resume_gate", model=name, phase=phase)
             with (root / "output" / f"gate-{name}-{phase}.log").open(
-                "x"
+                "x", encoding="utf-8"
             ) as log:
                 subprocess.run(
                     [
@@ -280,6 +280,7 @@ def main_run(root):
                         for r in rows
                     )
                     + "\n",
+                    encoding="utf-8",
                 )
                 gc.collect()
                 torch.cuda.empty_cache()

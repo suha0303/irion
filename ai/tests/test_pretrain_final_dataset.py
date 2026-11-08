@@ -548,7 +548,8 @@ def test_final_roles_preprocess_and_audit_without_training_dependencies(
         for event in events:
             event["run_id"] = rid
         (raw / "observations/streams.jsonl").write_text(
-            "".join(json.dumps(event) + "\n" for event in events)
+            "".join(json.dumps(event) + "\n" for event in events),
+            encoding="utf-8",
         )
         (raw / "observations/watermarks.jsonl").write_text(
             json.dumps(
@@ -562,6 +563,7 @@ def test_final_roles_preprocess_and_audit_without_training_dependencies(
                 )
             )
             + "\n",
+            encoding="utf-8",
         )
         (raw / "observations/diagnostics.jsonl").touch()
         files = {
@@ -613,6 +615,7 @@ if action=='audit':
                 capture_output=True,
                 text=True,
                 timeout=30,
+                check=False,
             )
             assert result.returncode == 0, result.stdout + result.stderr
 

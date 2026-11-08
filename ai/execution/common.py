@@ -57,7 +57,7 @@ def python_for(root=None, *, required=False):
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def write(path, value):
@@ -65,7 +65,8 @@ def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + f".{os.getpid()}.tmp")
     temporary.write_text(
-        json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+        json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
+        encoding="utf-8",
     )
     temporary.replace(path)
 
@@ -167,7 +168,9 @@ def _cache_credit(folder, version, current):
     """
     result = dict(stats={}, credited_cache_bytes=0, basis="no cache credit")
     try:
-        for line in (folder / "memory.stat").read_text().splitlines():
+        for line in (
+            (folder / "memory.stat").read_text(encoding="utf-8").splitlines()
+        ):
             key, text = line.split()
             value = int(text)
             if value < 0 or key in result["stats"]:
@@ -183,7 +186,11 @@ def _cache_credit(folder, version, current):
             )
             result["stats_scope"] = "hierarchical"
         else:
-            hierarchy = (folder / "memory.use_hierarchy").read_text().strip()
+            hierarchy = (
+                (folder / "memory.use_hierarchy")
+                .read_text(encoding="utf-8")
+                .strip()
+            )
             result["use_hierarchy"] = hierarchy
             if hierarchy not in {"0", "1"}:
                 raise ValueError("Unknown v1 hierarchy accounting")
@@ -231,14 +238,16 @@ def memory_snapshot(proc_root=Path("/proc")):
     try:
         fields = dict(
             line.split(":", 1)
-            for line in (proc_root / "meminfo").read_text().splitlines()
+            for line in (proc_root / "meminfo")
+            .read_text(encoding="utf-8")
+            .splitlines()
         )
         available = int(fields["MemAvailable"].split()[0]) * 1024
         if available < 0:
             raise ValueError("Negative node MemAvailable")
         result["node_available_bytes"] = available
-        membership = (proc_root / "self/cgroup").read_text()
-        mountinfo = (proc_root / "self/mountinfo").read_text()
+        membership = (proc_root / "self/cgroup").read_text(encoding="utf-8")
+        mountinfo = (proc_root / "self/mountinfo").read_text(encoding="utf-8")
         result["membership"] = membership
         seen = set()
         for version, mount, folder in _memory_mounts(membership, mountinfo):
@@ -269,11 +278,17 @@ def memory_snapshot(proc_root=Path("/proc")):
                             and version == "cgroup2"
                         ):
                             row["limit_bytes"] = None
-                            row["current_bytes"] = int(current_path.read_text())
+                            row["current_bytes"] = int(
+                                current_path.read_text(encoding="utf-8")
+                            )
                         else:
-                            text = limit_path.read_text().strip()
+                            text = limit_path.read_text(
+                                encoding="utf-8"
+                            ).strip()
                             limit = None if text == "max" else int(text)
-                            current = int(current_path.read_text())
+                            current = int(
+                                current_path.read_text(encoding="utf-8")
+                            )
                             if current < 0 or (limit is not None and limit < 0):
                                 raise ValueError(
                                     "Negative cgroup memory counter"

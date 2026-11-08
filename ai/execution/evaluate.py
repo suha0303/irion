@@ -403,7 +403,7 @@ def evaluate(
             != config["dataset_files"][str(frame_path.relative_to(dataset))]
         ):
             raise ValueError("Evaluation canonical changed")
-        with frame_path.open() as stream:
+        with frame_path.open(encoding="utf-8") as stream:
             first = __import__("json").loads(next(stream))["time_us"]
         evidence_rows.append(
             {

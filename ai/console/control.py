@@ -36,13 +36,14 @@ def write(path, value):
     path = Path(path)
     temporary = path.with_name(path.name + f".{os.getpid()}.tmp")
     temporary.write_text(
-        json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+        json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
+        encoding="utf-8",
     )
     temporary.replace(path)
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def command(args):
@@ -378,7 +379,9 @@ def reconcile(root):
         or (cfg.get("inputs_sha256") != file_sha(compute / "inputs.npz"))
     ):
         raise ValueError("Smoke input/profile binding changed")
-    if (compute / "verified-job-id.txt").read_text().strip() != job_id:
+    if (compute / "verified-job-id.txt").read_text(
+        encoding="utf-8"
+    ).strip() != job_id:
         raise ValueError(
             "Worker allocation evidence differs from the submitted job"
         )
@@ -456,7 +459,7 @@ def reconcile(root):
         "scope": "Read-only Slurm reconciliation of one existing smoke; no GPU operation or retry",
     }
     # Exclusive write preserves both original control.json and any previous reconciliation.
-    with (root / "reconciliation.json").open("x") as stream:
+    with (root / "reconciliation.json").open("x", encoding="utf-8") as stream:
         json.dump(reconciliation, stream, indent=2, ensure_ascii=False)
         stream.write("\n")
     return reconciliation
@@ -498,7 +501,9 @@ def controller(root):
     update()
     lock = None
     try:
-        lock = (Path.home() / ".drone-ai-submit.lock").open("a+")
+        lock = (Path.home() / ".drone-ai-submit.lock").open(
+            "a+", encoding="utf-8"
+        )
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if own_queue():
             raise RuntimeError(

@@ -39,7 +39,7 @@ def test_fast_runtime_restore_partial_rows_queued_marks_and_duplicate_semantics(
             }
         )
     (obs / "watermarks.jsonl").write_text(
-        "".join(json.dumps(m) + "\n" for m in marks)
+        "".join(json.dumps(m) + "\n" for m in marks), encoding="utf-8"
     )
     engine = Preprocessor(META, CONFIG)
     tail = DirectoryTail(tmp_path, engine, len(original) + 1)
@@ -112,7 +112,9 @@ def test_json_storage_shares_labels_without_changing_values(tmp_path):
         0.0  # Numeric Python equality remains unchanged.
     )
     path = tmp_path / "events.jsonl"
-    path.write_text(json.dumps(first) + "\n" + json.dumps(second) + "\n")
+    path.write_text(
+        json.dumps(first) + "\n" + json.dumps(second) + "\n", encoding="utf-8"
+    )
     decoded = Lines(path).poll(10000)
     assert decoded == [first, second]
     assert decoded[0]["topic"] is decoded[1]["topic"]
@@ -140,7 +142,9 @@ def test_consumed_watermark_tracking_is_released_with_repeated_marks(tmp_path):
         "recorded_events": 0,
         "closed": False,
     }
-    (obs / "watermarks.jsonl").write_text((json.dumps(mark) + "\n") * 3)
+    (obs / "watermarks.jsonl").write_text(
+        (json.dumps(mark) + "\n") * 3, encoding="utf-8"
+    )
     tail = DirectoryTail(tmp_path, Preprocessor(META, CONFIG))
     tail.poll()
     assert tail.mark_seen == {}
@@ -181,9 +185,9 @@ def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(
     es = list(events(64))
 
     def append(chunk, through, count):
-        with source.open("a") as file:
+        with source.open("a", encoding="utf-8") as file:
             file.write("".join(json.dumps(e) + "\n" for e in chunk))
-        with marks.open("a") as file:
+        with marks.open("a", encoding="utf-8") as file:
             file.write(
                 json.dumps(
                     {

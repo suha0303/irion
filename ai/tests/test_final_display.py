@@ -132,7 +132,7 @@ def test_both_successful_releases_are_shown_without_reading_performance_results(
     text = screen.render(value, now=200)
     assert "전체 완료 확인 YES" in text
     assert "완료 · 반납·정지 확인" in text
-    source = SCRIPT.read_text()
+    source = SCRIPT.read_text(encoding="utf-8")
     assert "metrics.json" not in source and "model-results.csv" not in source
     assert (
         "scancel" not in source

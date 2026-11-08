@@ -118,15 +118,15 @@ def test_child_collects_json_after_real_other_interpreter_exits(
     result = pilot45.child(task, request, log)
     assert result["exit_code"] == 0
     assert common.read(receipt) == dict(run=str(raw), status="completed")
-    assert log.read_text().strip() == "fixture stderr"
-    assert json.loads(Path(result["stdout_path"]).read_text())["run"] == str(
-        raw
-    )
+    assert log.read_text(encoding="utf-8").strip() == "fixture stderr"
+    assert json.loads(Path(result["stdout_path"]).read_text(encoding="utf-8"))[
+        "run"
+    ] == str(raw)
 
 
 def test_invalid_stdout_is_preserved_instead_of_fabricating_result(tmp_path):
     p = tmp_path / "stdout.json"
-    p.write_text('diagnostic\n{"status":"completed"}')
+    p.write_text('diagnostic\n{"status":"completed"}', encoding="utf-8")
     with pytest.raises(ValueError):
         native_flight.read_result(p)
-    assert p.read_text().startswith("diagnostic")
+    assert p.read_text(encoding="utf-8").startswith("diagnostic")

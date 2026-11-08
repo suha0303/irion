@@ -265,7 +265,12 @@ def preflight(task):
         check=True,
     )
     own = "drone-pretrain-" + task.name + ".service"
-    in_own = Path("/proc/self/cgroup").read_text().rstrip().endswith("/" + own)
+    in_own = (
+        Path("/proc/self/cgroup")
+        .read_text(encoding="utf-8")
+        .rstrip()
+        .endswith("/" + own)
+    )
     if any(
         line.split()[0] != own or not in_own
         for line in active.stdout.splitlines()
@@ -277,7 +282,7 @@ def preflight(task):
     verify(
         {
             str(task / "config.json"): (task / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -388,7 +393,7 @@ def load_entry(path, case):
 def prior_inventory():
     protected = pilot45.protection()
     if pilot45.REGISTRY.exists():
-        with pilot45.REGISTRY.open() as stream:
+        with pilot45.REGISTRY.open(encoding="utf-8") as stream:
             for line in stream:
                 value = json.loads(line)
                 protected["records"].append(value)
@@ -479,7 +484,13 @@ def fresh_history(binding):
             continue
         task = config.parent
         validate(task)
-        verify({str(config): (task / "config.sha256").read_text().strip()})
+        verify(
+            {
+                str(config): (task / "config.sha256")
+                .read_text(encoding="utf-8")
+                .strip()
+            }
+        )
         if cfg.get("owner_uid") != os.getuid() or (
             cfg.get("producer") != binding
             and cfg.get("producer") not in compatible
@@ -830,7 +841,9 @@ def create(scope, *, storage_root=STORE, name=None, fresh=False):
         sources[str(task / "fresh-start.json")] = sha(task / "fresh-start.json")
     cfg["source_sha256"] = sources
     write(task / "config.json", cfg)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     write(
         task / "operator/state.json",
         dict(
@@ -1313,7 +1326,7 @@ class Campaign(pilot_parallel.Coordinator):
                     proc.stat().st_uid != os.getuid()
                     or os.getpgid(pid) != group
                     or not (proc / "cgroup")
-                    .read_text()
+                    .read_text(encoding="utf-8")
                     .rstrip()
                     .endswith("/" + self.cfg["service_unit"])
                 ):
@@ -1324,7 +1337,7 @@ class Campaign(pilot_parallel.Coordinator):
                     map(
                         int,
                         (proc / "task" / str(pid) / "children")
-                        .read_text()
+                        .read_text(encoding="utf-8")
                         .split(),
                     )
                 )
@@ -1722,7 +1735,7 @@ class Campaign(pilot_parallel.Coordinator):
 
     def write_index(self):
         index = self.task / "exports.jsonl"
-        with index.with_suffix(".tmp").open("w") as stream:
+        with index.with_suffix(".tmp").open("w", encoding="utf-8") as stream:
             for c in self.manifest["cases"]:
                 e = self.ledger["cases"][c["case_id"]]
                 lineage = [
@@ -2274,7 +2287,7 @@ def execute_case(request):
     verify(
         {
             str(task / "config.json"): (task / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -2531,7 +2544,7 @@ def worker_body(task):
             CATALOG.parent / "catalog.lock",
         ):
             p.parent.mkdir(parents=True, exist_ok=True)
-            handle = stack.enter_context(p.open("a"))
+            handle = stack.enter_context(p.open("a", encoding="utf-8"))
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if (task / "operator/claimed").exists():
             request = task / "operator/resume-request.json"
@@ -2552,7 +2565,7 @@ def worker_body(task):
                     )
                 )
         else:
-            (task / "operator/claimed").write_text(now())
+            (task / "operator/claimed").write_text(now(), encoding="utf-8")
         record_worker_identity(task)
         campaign = Campaign(task)
         try:
@@ -2675,7 +2688,7 @@ def user_start(scope, *, storage_root=STORE, name=None):
 
     lock_path = CATALOG.parent / "submission.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a") as lock:
+    with lock_path.open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         task = create(scope, storage_root=storage_root, name=name, fresh=True)
         if (task / "operator/claimed").exists() or (
@@ -2696,7 +2709,7 @@ def record_worker_identity(task):
     """The worker records its own invocation before any physical dispatch."""
     cfg = read(task / "config.json")
     invocation = os.environ.get("INVOCATION_ID", "")
-    group = Path("/proc/self/cgroup").read_text().strip()
+    group = Path("/proc/self/cgroup").read_text(encoding="utf-8").strip()
     unit = service_unit(task, cfg)
     if not re.fullmatch(r"[0-9a-f]{32}", invocation) or not group.endswith(
         "/" + unit
@@ -2854,7 +2867,8 @@ def worker_processes_released(owner):
         return False
     folder = Path("/sys/fs/cgroup") / group[3:].lstrip("/")
     return not folder.exists() or all(
-        not p.read_text().strip() for p in folder.rglob("cgroup.procs")
+        not p.read_text(encoding="utf-8").strip()
+        for p in folder.rglob("cgroup.procs")
     )
 
 

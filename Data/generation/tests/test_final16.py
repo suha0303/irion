@@ -188,9 +188,12 @@ def test_all16_real_registration_boundaries_in_isolated_registry(
     registry.write_text(
         "".join(
             line
-            for line in pilot45.REGISTRY.read_text().splitlines(keepends=True)
+            for line in pilot45.REGISTRY.read_text(encoding="utf-8").splitlines(
+                keepends=True
+            )
             if json.loads(line)["task"] != "final16-20261107-01-16"
-        )
+        ),
+        encoding="utf-8",
     )
     monkeypatch.setattr(pilot45, "REGISTRY", registry)
     c = pilot_parallel.Coordinator(task)
@@ -199,7 +202,7 @@ def test_all16_real_registration_boundaries_in_isolated_registry(
     final16.validate_ledger(task)
     events = [
         json.loads(line)
-        for line in registry.read_text().splitlines()
+        for line in registry.read_text(encoding="utf-8").splitlines()
         if json.loads(line)["task"] == task.name
     ]
     assert len(events) == 16 and len(c.ledger["attempts"]) == 16

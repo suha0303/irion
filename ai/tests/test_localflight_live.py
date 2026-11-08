@@ -191,7 +191,9 @@ def test_end_report_runs_real_cpu_without_health_claim(tmp_path):
     rows = list(samples())
     events = [e for row in rows for e in mapper.accept(row)]
     journal = tmp_path / "journal.jsonl"
-    journal.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+    journal.write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8"
+    )
     result = completed(
         events, journal, tmp_path / "out", r, "synthetic_unit_fixture"
     )

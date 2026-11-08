@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def ready(config, receipt):
@@ -59,7 +59,8 @@ def run(config_path, grace=120):
         tmp = status_path.with_suffix(".tmp")
         tmp.write_text(
             json.dumps(dict(status=status, at=time.time(), **details), indent=2)
-            + "\n"
+            + "\n",
+            encoding="utf-8",
         )
         tmp.replace(status_path)
 
@@ -131,6 +132,7 @@ def run(config_path, grace=120):
                     text=True,
                     capture_output=True,
                     timeout=30,
+                    check=False,
                 )
                 if result.returncode:
                     raise RuntimeError(result.stderr[-1500:])
@@ -146,6 +148,7 @@ def run(config_path, grace=120):
                 text=True,
                 capture_output=True,
                 timeout=15,
+                check=False,
             )
             if service.returncode:
                 raise RuntimeError(

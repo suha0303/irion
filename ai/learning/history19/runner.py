@@ -239,7 +239,7 @@ def gates(cfg, out, train, val, binding, selected, progress):
                     resume=str(folder / (name + "-partial/last.pt")),
                 ),
             )
-            with request.with_suffix(".log").open("x") as log:
+            with request.with_suffix(".log").open("x", encoding="utf-8") as log:
                 subprocess.run(
                     [
                         sys.executable,

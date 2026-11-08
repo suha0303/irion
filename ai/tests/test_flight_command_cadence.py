@@ -10,7 +10,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def schedule():
     tree = ast.parse(
-        (ROOT / "simulation/sim/src/capstone_sim/runner.py").read_text()
+        (ROOT / "simulation/sim/src/capstone_sim/runner.py").read_text(
+            encoding="utf-8"
+        )
     )
     function = next(
         n

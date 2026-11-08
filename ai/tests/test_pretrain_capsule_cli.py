@@ -87,7 +87,9 @@ def test_recovery_service_sets_allocator_before_python_starts(
             external_storage=str(tmp_path / "Data"),
         ),
     )
-    (task / "config.sha256").write_text(sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        sha(task / "config.json"), encoding="utf-8"
+    )
     monkeypatch.setattr(cli, "HOME", home)
     commands = []
     monkeypatch.setattr(
@@ -110,7 +112,9 @@ def test_worker_rejects_missing_allocator_before_claim(tmp_path, monkeypatch):
             python_allocator="debug",
         ),
     )
-    (tmp_path / "config.sha256").write_text(sha(tmp_path / "config.json"))
+    (tmp_path / "config.sha256").write_text(
+        sha(tmp_path / "config.json"), encoding="utf-8"
+    )
     monkeypatch.delenv("PYTHONMALLOC", raising=False)
     with pytest.raises(ValueError, match="allocator mismatch"):
         runner.Runner(tmp_path).run()

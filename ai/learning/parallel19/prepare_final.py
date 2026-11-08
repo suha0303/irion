@@ -49,7 +49,9 @@ def prepare(task, output, cohort="final"):
             whole[row["run_id"]] = (row, p.parent)
     rows = [
         json.loads(line)
-        for line in (root / "online-index.jsonl").read_text().splitlines()
+        for line in (root / "online-index.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     selected = [
         r

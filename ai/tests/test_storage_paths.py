@@ -53,7 +53,9 @@ def test_task_storage_is_frozen_into_plan_and_independent_launch(
         source_sha256={},
     )
     common.write(task / "config.json", config)
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     cases = collection.cases(8_000_000, "balanced300")["cases"]
     folder = collection.plan(
         task, "collection", 16, cases, "local", export_workers=4
@@ -165,6 +167,7 @@ def test_real_extraction_worker_uses_custom_disk_without_x31(tmp_path):
         capture_output=True,
         text=True,
         timeout=20,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     status = common.read(request["status"])

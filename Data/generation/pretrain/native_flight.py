@@ -97,7 +97,7 @@ def read_result(path):
         raise ValueError(
             "Producer stdout exceeds bounded JSON result size; preserve for review"
         )
-    value = json.loads(path.read_text())
+    value = json.loads(path.read_text(encoding="utf-8"))
     if value.get("status") not in {"completed", "failed"} or not isinstance(
         value.get("run"), str
     ):

@@ -1,17 +1,16 @@
 """Historical dataset and asset fixtures; never starts collection or training."""
 
 import copy
-import json
 
 import pytest
 
 from capstone_ai.dataset import validate_split, verify_input
 from capstone_ai.evaluation import flight_bootstrap, match_event
-from capstone_ai.source import dump, sha
+from capstone_ai.source import dump, read_json, sha
 
 
 def test_actual_new_selection_is_group_independent():
-    rows = json.load(open("ai/configs/remediation/dataset.json"))["runs"]
+    rows = read_json("ai/configs/remediation/dataset.json")["runs"]
     assert len(validate_split(rows)) == 28
     assert {r["split"] for r in rows if r["seed"] == 601} == {"test"}
     assert {r["scenario"] for r in rows if r["split"] == "train"} == {
@@ -34,11 +33,11 @@ def test_integrity_tamper_and_escape(tmp_path):
     for name in names:
         p = tmp_path / name
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text("{}")
+        p.write_text("{}", encoding="utf-8")
     integrity = {n: {"size": 2, "sha256": sha(tmp_path / n)} for n in names}
     dump(tmp_path / "integrity.json", integrity)
     verify_input(tmp_path, {})
-    (tmp_path / "run.json").write_text("[]")
+    (tmp_path / "run.json").write_text("[]", encoding="utf-8")
     with pytest.raises(ValueError, match="integrity mismatch"):
         verify_input(tmp_path, {})
     dump(tmp_path / "integrity.json", {"../outside": {"size": 0, "sha256": ""}})
@@ -92,10 +91,8 @@ def test_bootstrap_identical_exposure():
 def test_asset_replacement_and_missing_conditions():
     from capstone_ai.trend import comparison_gate
 
-    records = json.load(
-        open(
-            "simulation/artifacts/remediation-20261014/asset-fixtures/asset-registry.json"
-        )
+    records = read_json(
+        "simulation/artifacts/remediation-20261014/asset-fixtures/asset-registry.json"
     )["records"]
     a = comparison_gate(records[0], records[1])
     b = comparison_gate(records[1], records[2])

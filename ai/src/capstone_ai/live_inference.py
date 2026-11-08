@@ -70,7 +70,9 @@ def live_forecast(
         )
     out.mkdir(parents=True, exist_ok=True)
     runtime_config = runtime_config or {"poll_interval_ms": 20, "trace": False}
-    trace_file = (out / "timing.jsonl").open("a", buffering=65536)
+    trace_file = (out / "timing.jsonl").open(
+        "a", buffering=65536, encoding="utf-8"
+    )
 
     def trace(record):
         if runtime_config.get("trace"):
@@ -178,10 +180,12 @@ def live_forecast(
         evidence["resume_count"] += 1
         written = {
             json.loads(line)["forecast_id"]
-            for line in (out / "decisions.jsonl").read_text().splitlines()
+            for line in (out / "decisions.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
         }
         startup["restore_done_ns"] = time.monotonic_ns()
-    files = {n: (out / n).open("a") for n in journal_names}
+    files = {n: (out / n).open("a", encoding="utf-8") for n in journal_names}
     probe = ClockProbe(instance, metadata["run_id"], files["clock.jsonl"])
     if "clock_timeout_s" in runtime_config:
         probe.timeout = runtime_config["clock_timeout_s"]
@@ -501,11 +505,15 @@ def live_forecast(
         trace_file.close()
     forecasts = [
         json.loads(s)
-        for s in (out / "forecasts.jsonl").read_text().splitlines()
+        for s in (out / "forecasts.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     decisions = [
         json.loads(s)
-        for s in (out / "decisions.jsonl").read_text().splitlines()
+        for s in (out / "decisions.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     counts = Counter(f["timing_certificate"]["status"] for f in forecasts)
     result = {

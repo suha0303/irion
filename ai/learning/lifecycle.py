@@ -189,7 +189,9 @@ def gates(root, cfg, out, train, val, progress):
             progress.update(
                 stage="batch256_resume_gate", model=name, gate_phase=phase
             )
-            with (folder / f"{name}-{phase}.log").open("x") as log:
+            with (folder / f"{name}-{phase}.log").open(
+                "x", encoding="utf-8"
+            ) as log:
                 subprocess.run(
                     [
                         sys.executable,

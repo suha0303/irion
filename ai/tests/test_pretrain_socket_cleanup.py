@@ -101,10 +101,10 @@ def test_replaced_path_preserved(layout, owned, replacement):
         with socket.socket(socket.AF_UNIX) as new:
             new.bind(str(path))
     elif replacement == "file":
-        path.write_text("must survive")
+        path.write_text("must survive", encoding="utf-8")
     else:
         target = path.with_name("target")
-        target.write_text("must survive")
+        target.write_text("must survive", encoding="utf-8")
         path.symlink_to(target)
     with pytest.raises(ValueError):
         cleanup.release(read(receipt), "x500-pretrain-fixture.service")
@@ -151,7 +151,7 @@ def test_locked_project_preserves_socket_and_state(layout, owned):
     child.wait(timeout=5)
     write(task / "operator/state.json", dict(status="RUNNING"))
     before = (task / "operator/state.json").read_bytes()
-    with (home / "pretrain.lock").open("a") as lock:
+    with (home / "pretrain.lock").open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         result = cleanup.cleanup(task)
     assert result["errors"] and path.exists()

@@ -299,7 +299,7 @@ def test_released_artifact_invalid_json_or_status_never_waits(
 ):
     path = tmp_path / "compute/result-seal.json"
     path.parent.mkdir()
-    path.write_text(invalid)
+    path.write_text(invalid, encoding="utf-8")
     sleeps = visibility_clock(monkeypatch)
     state = {}
     with pytest.raises(ValueError):
@@ -361,7 +361,9 @@ def test_controller_keeps_single_hash_verification_after_visibility(
     monkeypatch.setattr(
         operator,
         "report",
-        lambda root, cfg: (root / "report.txt").write_text("report"),
+        lambda root, cfg: (root / "report.txt").write_text(
+            "report", encoding="utf-8"
+        ),
     )
     sleeps = visibility_clock(monkeypatch)
     if corrupt:

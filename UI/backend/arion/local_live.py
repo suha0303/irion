@@ -20,7 +20,7 @@ class LocalLive:
         self.root = service.root / "live"
         self.root.mkdir(exist_ok=True)
         for path in self.root.glob("*/state.json"):
-            state = json.loads(path.read_text())
+            state = json.loads(path.read_text(encoding="utf-8"))
             if state.get("status") not in ("finished", "error", "interrupted"):
                 state.update(
                     status="interrupted",
@@ -42,7 +42,7 @@ class LocalLive:
                 status="unconfigured",
                 message="기체 프로파일과 로컬 모델을 연결하세요.",
             )
-        state = json.loads(path.read_text())
+        state = json.loads(path.read_text(encoding="utf-8"))
         if (
             state.get("status") == "predicting"
             and time.time() - state.get("updated_at", 0) > 3
@@ -237,12 +237,14 @@ def attach(app, service, store):
         result["rates"] = app.state.sources.rates.status(run_id)
         saved = store.get(run_id).path.with_suffix(".rates.json")
         if result["rates"]["state"] == "not_requested" and saved.exists():
-            result["rates"] = dict(json.loads(saved.read_text()), recorded=True)
+            result["rates"] = dict(
+                json.loads(saved.read_text(encoding="utf-8")), recorded=True
+            )
         error_file = live.folder(run_id) / "rate-error.json"
         if error_file.exists():
-            result["rates"]["error"] = json.loads(error_file.read_text())[
-                "error"
-            ]
+            result["rates"]["error"] = json.loads(
+                error_file.read_text(encoding="utf-8")
+            )["error"]
         return result
 
     @app.post("/api/sessions/{run_id}/local-ai")
@@ -256,7 +258,9 @@ def attach(app, service, store):
     async def configure_rates(run_id: str):
         try:
             request = json.loads(
-                (live.folder(run_id) / "request.json").read_text()
+                (live.folder(run_id) / "request.json").read_text(
+                    encoding="utf-8"
+                )
             )
             result = app.state.sources.rates.start(store.get(run_id), request)
             (live.folder(run_id) / "rate-error.json").unlink(missing_ok=True)

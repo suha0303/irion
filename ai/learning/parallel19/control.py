@@ -11,14 +11,14 @@ from pathlib import Path
 
 
 def read(p):
-    return json.loads(Path(p).read_text())
+    return json.loads(Path(p).read_text(encoding="utf-8"))
 
 
 def write(p, value):
     p = Path(p)
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_name(p.name + ".tmp")
-    tmp.write_text(json.dumps(value, indent=2) + "\n")
+    tmp.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
     tmp.replace(p)
 
 
@@ -113,7 +113,7 @@ def campaign(template):
     plan = allocations(read(template))
     root = Path(plan["output"])
     root.mkdir(parents=True, exist_ok=False)
-    lock = (root / "controller.lock").open("w")
+    lock = (root / "controller.lock").open("w", encoding="utf-8")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     if sha(Path(plan["inputs"]) / "cache.json") != plan["cache_sha256"]:
         raise ValueError("Cache manifest changed")

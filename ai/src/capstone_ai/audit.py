@@ -31,7 +31,7 @@ def audit(run, out):
     cadence, delay = defaultdict(list), defaultdict(list)
     examples: dict[str, Any] = {}
     errors: list[dict[str, Any]] = []
-    with (run / "observations/streams.jsonl").open() as f:
+    with (run / "observations/streams.jsonl").open(encoding="utf-8") as f:
         for i, line in enumerate(f):
             if not line.strip():
                 continue
@@ -96,7 +96,7 @@ def audit(run, out):
     diag = [
         json.loads(s)
         for s in (run / "observations/diagnostics.jsonl")
-        .read_text()
+        .read_text(encoding="utf-8")
         .splitlines()
         if s.strip()
     ]

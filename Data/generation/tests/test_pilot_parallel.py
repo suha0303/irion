@@ -479,7 +479,7 @@ def test_prior_termination_fix_requires_exact_historical_acceptance(
         / ("ai19.py" if fault == "other_file" else "pilot_flow.py")
     )
     p.parent.mkdir(parents=True)
-    p.write_text("reviewed control fix\n")
+    p.write_text("reviewed control fix\n", encoding="utf-8")
     task = tmp_path / "old-integration"
     old = "0" * 64
     common.write(task / "config.json", dict(source_sha256={str(p): old}))

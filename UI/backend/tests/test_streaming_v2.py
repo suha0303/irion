@@ -122,7 +122,9 @@ def test_units_and_large_ns_are_preserved(store):
     p["values"]["battery_current_a"]["unit"] = "A"
     run.append_normalized(p)
     run.finish()
-    rows = [json.loads(x) for x in run.path.read_text().splitlines()]
+    rows = [
+        json.loads(x) for x in run.path.read_text(encoding="utf-8").splitlines()
+    ]
     assert rows[-1]["raw"]["source_time_ns"] == 1_000_000_000_000_000_123
 
 
@@ -445,7 +447,10 @@ def test_unknown_mavlink_binary_payload_is_preserved_without_stopping(store):
         record("ATTITUDE", 100, {"roll": 0, "pitch": 0, "yaw": 0})
     )
     run.finish()
-    rows = [json.loads(line) for line in run.path.read_text().splitlines()]
+    rows = [
+        json.loads(line)
+        for line in run.path.read_text(encoding="utf-8").splitlines()
+    ]
     assert rows[1]["raw"]["fields"]["custom_version"] == {"$bytes": "00ff01"}
     assert run.accepted == 1
 

@@ -89,12 +89,12 @@ def fixture_dataset(path):
         files=files,
         fixture_only=True,
     )
-    (path / "manifest.json").write_text(json.dumps(manifest))
+    (path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     return path / "manifest.json"
 
 
 def change_array(manifest_path, key, transform):
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     role = "normal_train"
     source = manifest_path.parent / (role + ".npz")
     with np.load(source) as archive:
@@ -102,7 +102,7 @@ def change_array(manifest_path, key, transform):
     transform(values)
     np.savez(source, **values)
     manifest["files"][role]["sha256"] = sha(source)
-    manifest_path.write_text(json.dumps(manifest))
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
 
 @pytest.mark.parametrize("name", ["lstm", "transformer"])
@@ -151,7 +151,11 @@ def test_only19_features_same_sizes_norm_initialization(
 
 
 def test_old_conditions_preserved_sgd_only():
-    old = json.loads((ROOT / "ai/configs/normalization-study.json").read_text())
+    old = json.loads(
+        (ROOT / "ai/configs/normalization-study.json").read_text(
+            encoding="utf-8"
+        )
+    )
     new = runner.config()
     for key in (
         "normalization",
@@ -178,10 +182,12 @@ def test_old_conditions_preserved_sgd_only():
         (
             ROOT
             / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
-        ).read_text()
+        ).read_text(encoding="utf-8")
     )
     new_preprocess = json.loads(
-        (ROOT / "ai/learning/history19/preprocessing.json").read_text()
+        (ROOT / "ai/learning/history19/preprocessing.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert new_preprocess == {
         **old_preprocess,
@@ -295,7 +301,7 @@ def test_bad_or_legacy_dataset_rejected_even_after_rehash(tmp_path, bad):
 )
 def test_split_and_future_input_rejection(tmp_path, bad):
     path = fixture_dataset(tmp_path / "data")
-    manifest = json.loads(path.read_text())
+    manifest = json.loads(path.read_text(encoding="utf-8"))
     field = {
         "group": "group_id",
         "pair": "paired_case_id",
@@ -311,7 +317,7 @@ def test_split_and_future_input_rejection(tmp_path, bad):
         manifest["scaler_fit_run_ids"].append(manifest["runs"][1]["run_id"])
     else:
         manifest["feature_order"] = FEATURES + ["future_voltage"]
-    path.write_text(json.dumps(manifest))
+    path.write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ValueError):
         data.load(path)
 
@@ -321,7 +327,7 @@ def test_split_and_future_input_rejection(tmp_path, bad):
 )
 def test_scaler_recomputed_from_unique_train_frames(tmp_path, bad):
     path = fixture_dataset(tmp_path / "data")
-    manifest = json.loads(path.read_text())
+    manifest = json.loads(path.read_text(encoding="utf-8"))
     if bad == "validation_scaler":
         source = path.parent / "scaler.npz"
         with np.load(source) as saved:
@@ -340,7 +346,7 @@ def test_scaler_recomputed_from_unique_train_frames(tmp_path, bad):
             values["run_id"][0] = manifest["runs"][1]["run_id"]
         np.savez(source, **values)
         manifest["files"]["normal_train_frames"]["sha256"] = sha(source)
-    path.write_text(json.dumps(manifest))
+    path.write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ValueError):
         data.load(path)
 
@@ -350,7 +356,8 @@ def test_SGD_separate_process_train_resume_export(tmp_path, name):
     torch.set_num_threads(2)
     manifest = fixture_dataset(tmp_path / "dataset")
     script = tmp_path / "run.py"
-    script.write_text("""import sys
+    script.write_text(
+        """import sys
 from pathlib import Path
 from learning.history19.data import load
 from learning.history19.models import ModelSpec
@@ -361,7 +368,9 @@ a,scaler,binding=load(manifest); binding['sources']='synthetic-history19'
 run_fit(ModelSpec(name,8),a['normal_train'],a['normal_validation'],out,binding=binding,
 seed=0,batch_size=2,epochs=4,patience=5,learning_rate=.01,optimization=policy_for('sgd'),
 resume=None if resume=='-' else resume,stop_after_epoch=2 if phase=='partial' else None)
-""")
+""",
+        encoding="utf-8",
+    )
     for phase in ("full", "partial", "resume"):
         subprocess.run(
             [
@@ -447,6 +456,7 @@ def test_new_CLI_help_without_profile():
         capture_output=True,
         text=True,
         timeout=20,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert "validate" in result.stdout and "preprocess" in result.stdout
@@ -471,10 +481,11 @@ def test_finite_three_rate_selection_is_SGD_only(tmp_path, monkeypatch):
                     + str(spec.hidden)
                     + str(spec.layers)
                 }
-            )
+            ),
+            encoding="utf-8",
         )
         rows = [{"validation_loss": abs(kwargs["learning_rate"] - 0.01)}] * 3
-        (folder / "history.json").write_text(json.dumps(rows))
+        (folder / "history.json").write_text(json.dumps(rows), encoding="utf-8")
         return rows
 
     monkeypatch.setattr(runner, "run_fit", fixture_fit)
@@ -522,11 +533,16 @@ def test_raw_file_replay_is_synthetic_and_source_is_unchanged(tmp_path):
                 origin="synthetic_fixture",
                 status="completed",
             )
-        )
+        ),
+        encoding="utf-8",
     )
-    (run / "observations/metadata.json").write_text(json.dumps(META))
+    (run / "observations/metadata.json").write_text(
+        json.dumps(META), encoding="utf-8"
+    )
     stream = run / "observations/streams.jsonl"
-    stream.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    stream.write_text(
+        "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+    )
     (run / "observations/watermarks.jsonl").write_text(
         json.dumps(
             dict(
@@ -538,7 +554,8 @@ def test_raw_file_replay_is_synthetic_and_source_is_unchanged(tmp_path):
                 closed=True,
             )
         )
-        + "\n"
+        + "\n",
+        encoding="utf-8",
     )
     before = sha(stream)
     report = replay(

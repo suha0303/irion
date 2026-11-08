@@ -535,7 +535,7 @@ def project_lock(device):
         return
     from execution.remote import REMOTE_LOCK
 
-    with REMOTE_LOCK.open("a") as lock:
+    with REMOTE_LOCK.open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         yield
 

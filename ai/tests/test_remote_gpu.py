@@ -156,9 +156,12 @@ def test_real_cli_refuses_local_non_slurm_execution(tmp_path):
         ],
         capture_output=True,
         text=True,
+        check=False,
     )
     assert result.returncode == 2
-    report = json.loads((tmp_path / "out/result.json").read_text())
+    report = json.loads(
+        (tmp_path / "out/result.json").read_text(encoding="utf-8")
+    )
     assert "no Slurm allocation" in report["error"]
     assert report["gpu_operation"] == "not_executed"
     assert report["model_batch"] == "not_executed"
@@ -198,7 +201,9 @@ def test_launcher_fixed_resources_and_existing_jobs(tmp_path, own_jobs):
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     queue = bin_dir / "squeue"
-    queue.write_text("#!/bin/sh\nprintf '%s' '" + own_jobs + "'\n")
+    queue.write_text(
+        "#!/bin/sh\nprintf '%s' '" + own_jobs + "'\n", encoding="utf-8"
+    )
     queue.chmod(0o755)
     submit = bin_dir / "srun"
     submit.write_text(
@@ -207,12 +212,13 @@ def test_launcher_fixed_resources_and_existing_jobs(tmp_path, own_jobs):
         + "\nimport json,sys,os\nfrom pathlib import Path\n"
         "Path(os.environ['STUB_CALL']).write_text(json.dumps(sys.argv[1:]))\n"
         "out=Path(sys.argv[sys.argv.index('--out')+1]); out.mkdir()\n"
-        "(out/'verified-job-id.txt').write_text('123\\n')\n"
+        "(out/'verified-job-id.txt').write_text('123\\n')\n",
+        encoding="utf-8",
     )
     submit.chmod(0o755)
     package = tmp_path / "package"
     package.mkdir()
-    (package / "MANIFEST.json").write_text("{}")
+    (package / "MANIFEST.json").write_text("{}", encoding="utf-8")
     env = dict(
         os.environ,
         PATH=str(bin_dir) + os.pathsep + os.environ["PATH"],
@@ -231,13 +237,16 @@ def test_launcher_fixed_resources_and_existing_jobs(tmp_path, own_jobs):
         env=env,
         text=True,
         capture_output=True,
+        check=False,
     )
     if own_jobs:
         assert result.returncode == 3
         assert not (tmp_path / "stub-call.json").exists()
     else:
         assert result.returncode == 0
-        args = json.loads((tmp_path / "stub-call.json").read_text())
+        args = json.loads(
+            (tmp_path / "stub-call.json").read_text(encoding="utf-8")
+        )
         assert args[:5] == [
             "--partition=p02",
             "--nodelist=DIS01",
@@ -245,9 +254,9 @@ def test_launcher_fixed_resources_and_existing_jobs(tmp_path, own_jobs):
             "--ntasks=1",
             "--gres=gpu:1",
         ]
-        assert (
-            "allocation released" in (tmp_path / "out/release.txt").read_text()
-        )
+        assert "allocation released" in (
+            tmp_path / "out/release.txt"
+        ).read_text(encoding="utf-8")
 
 
 def test_explicit_mamba25_profile_requires_exact_runtime():

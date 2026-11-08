@@ -449,7 +449,9 @@ def create(name, handoff):
         ),
     }.items():
         write(task / member, value)
-    (task / "manifest.sha256").write_text(sha(task / "manifest.json") + "\n")
+    (task / "manifest.sha256").write_text(
+        sha(task / "manifest.json") + "\n", encoding="utf-8"
+    )
     write(task / "ai-manifest.json", pilot_bridge.plan(task))
     write(task / "consumer-capsule.json", pilot_bridge.capsule(task, spec))
     checked = pilot_bridge.check(task, spec)
@@ -477,7 +479,9 @@ def create(name, handoff):
     )
     cfg.update(sealed=True, ai_ready=checked, source_sha256=sources)
     write(task / "config.json", cfg)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     validate_ledger(task, pristine=True)
     write(
         task / "operator/state.json",
@@ -499,7 +503,9 @@ def create(name, handoff):
     fc["source_sha256"][str(task / "config.json")] = sha(task / "config.json")
     flow.mkdir()
     write(flow / "config.json", fc)
-    (flow / "config.sha256").write_text(sha(flow / "config.json") + "\n")
+    (flow / "config.sha256").write_text(
+        sha(flow / "config.json") + "\n", encoding="utf-8"
+    )
     write(
         flow / "ledger.json",
         dict(cases={}, attempts=[], phases=dict(final16=dict(task=str(task)))),

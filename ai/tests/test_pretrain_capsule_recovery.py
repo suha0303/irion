@@ -207,7 +207,9 @@ def source(tmp_path, monkeypatch):
         },
     )
     common.write(source / "config.json", config)
-    (source / "config.sha256").write_text(common.sha(source / "config.json"))
+    (source / "config.sha256").write_text(
+        common.sha(source / "config.json"), encoding="utf-8"
+    )
     return SimpleNamespace(
         path=source,
         store=store,

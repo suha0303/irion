@@ -26,7 +26,7 @@ ag = importlib.import_module("learning.collection19.aggregate")
 
 def put(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value) + "\n")
+    path.write_text(json.dumps(value) + "\n", encoding="utf-8")
     return dict(path=str(path), sha256=sha(path))
 
 
@@ -109,7 +109,7 @@ def full480(tmp_path, monkeypatch, request):
 
     rows = list(joint_phase.reference_rows(case["operation_variation"], 480))
     reference = raw / "evaluation/joint-reference.csv"
-    with reference.open("w") as f:
+    with reference.open("w", encoding="utf-8") as f:
         csv.writer(f, lineterminator="\n").writerows(rows)
     scenario = dict(
         name=case["scenario"],
@@ -134,7 +134,7 @@ def full480(tmp_path, monkeypatch, request):
     )
     put(raw / "evaluation/scenario.json", scenario)
     path = raw / "evaluation/joint-consumption.csv"
-    with path.open("w") as f:
+    with path.open("w", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(
             [
@@ -274,7 +274,7 @@ def test_public_main_case_rejects_wrong_old_authority_or_source(
         full480["assessment"] = put(p, v)
     if damage == "csv":
         with (full480["raw"] / "evaluation/joint-consumption.csv").open(
-            "a"
+            "a", encoding="utf-8"
         ) as f:
             f.write("\n")
     if damage == "scope_case":
@@ -302,7 +302,7 @@ def test_public_main_case_rejects_wrong_old_authority_or_source(
 def rejected(full480):
     raw = full480["raw"]
     path = raw / "evaluation/joint-consumption.csv"
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         reader = csv.DictReader(f)
         fields = reader.fieldnames
         rows = list(reader)
@@ -312,7 +312,7 @@ def rejected(full480):
     del rows[1 : gap // 25000 + 2]
     for i, row in enumerate(rows, 1):
         row["sequence"] = str(i)
-    with path.open("w") as f:
+    with path.open("w", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         writer.writerows(rows)

@@ -16,7 +16,7 @@ from learning.history19.pilot import json_file, plan_and_ledger, sha
 
 def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value) + "\n")
+    path.write_text(json.dumps(value) + "\n", encoding="utf-8")
     return dict(path=str(path), sha256=sha(path))
 
 
@@ -76,7 +76,7 @@ def evidence(tmp_path, monkeypatch):
         path = raw / "evaluation/joint-consumption.csv"
         gap = entry["expected_gap_us"]
         stamps = [0, gap, *range((gap // 10000 + 1) * 10000, 180000001, 10000)]
-        with path.open("w") as f:
+        with path.open("w", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["sequence", "source_us", "phase_us", "index"])
             for i, t in enumerate(stamps, 1):
@@ -229,10 +229,12 @@ def test_evidence_and_identity_cannot_be_weakened(evidence, tmp_path, damage):
             official_assessment="official_failed_assessment",
             integrity="raw_integrity",
         )[damage]
-        with Path(entry["refs"][key]["path"]).open("a") as stream:
+        with Path(entry["refs"][key]["path"]).open(
+            "a", encoding="utf-8"
+        ) as stream:
             stream.write("\n")
     if damage == "catalog":
-        qr.CATALOG.write_text("{}")
+        qr.CATALOG.write_text("{}", encoding="utf-8")
     if damage == "producer":
         producer["runtime_sha256"] = "0" * 64
     if damage == "policy":

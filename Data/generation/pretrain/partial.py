@@ -25,7 +25,7 @@ def inputs(source):
     verify(
         {
             str(source / "config.json"): (source / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -159,7 +159,9 @@ def create_partial(source, name):
     )
     config["source_sha256"].update({str(p): sha(p) for p in evidence})
     write(task / "config.json", config)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     return task
 
 

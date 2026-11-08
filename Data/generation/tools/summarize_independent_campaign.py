@@ -139,11 +139,11 @@ def main():
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
     result = account(
-        json.loads(args.lock.read_text()),
-        json.loads(args.attempts.read_text())["attempts"],
-        json.loads(args.comparison.read_text()),
+        json.loads(args.lock.read_text(encoding="utf-8")),
+        json.loads(args.attempts.read_text(encoding="utf-8"))["attempts"],
+        json.loads(args.comparison.read_text(encoding="utf-8")),
     )
-    with args.out.open("x") as stream:
+    with args.out.open("x", encoding="utf-8") as stream:
         json.dump(result, stream, indent=2, allow_nan=False)
         stream.write("\n")
 

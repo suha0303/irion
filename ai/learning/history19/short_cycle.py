@@ -72,7 +72,7 @@ def prepare_policy(
         p.is_symlink() for p in (output, *output.parents)
     ):
         raise ValueError("New regular short policy output required")
-    with output.open("x") as stream:
+    with output.open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(value, indent=2) + "\n")
     return value
 
@@ -139,7 +139,7 @@ def prepare_request(bundle_path, output):
         p.is_symlink() for p in (output, *output.parents)
     ):
         raise ValueError("New separate request output required")
-    with output.open("x") as stream:
+    with output.open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(request, indent=2) + "\n")
     return request
 
@@ -448,7 +448,7 @@ def main(request_path, output=None):
             or (ctx and output in ctx.paths.values())
         ):
             raise ValueError("New separate receipt output required")
-        with output.open("x") as stream:
+        with output.open("x", encoding="utf-8") as stream:
             stream.write(json.dumps(result, indent=2, allow_nan=False) + "\n")
     print(json.dumps(result, allow_nan=False))
     return code

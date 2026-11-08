@@ -93,7 +93,7 @@ def case(tmp_path, windows_per_segment=8):
     rng.shuffle(windows)
     for name, values in (("frames.jsonl", frames), ("windows.jsonl", windows)):
         (canonical / name).write_text(
-            "".join(json.dumps(v) + "\n" for v in values)
+            "".join(json.dumps(v) + "\n" for v in values), encoding="utf-8"
         )
     dump(
         canonical / "summary.json",

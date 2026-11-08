@@ -264,7 +264,7 @@ class Runner:
                 )
                 path = folder / (key + ".request.json")
                 write(path, request)
-                log = (folder / (key + ".log")).open("x")
+                log = (folder / (key + ".log")).open("x", encoding="utf-8")
                 try:
                     process = subprocess.Popen(
                         [str(PYTHON), "-B", "-m", "pretrain.worker", str(path)],
@@ -944,7 +944,7 @@ class Runner:
         verify(
             {
                 str(self.task / "config.json"): (self.task / "config.sha256")
-                .read_text()
+                .read_text(encoding="utf-8")
                 .strip()
             }
         )
@@ -961,7 +961,7 @@ class Runner:
         if self.config["mode"] in {"collect", "test"}:
             runs_root(ROOT).mkdir(parents=True, exist_ok=True)
         self.resources()
-        with (self.task / "operator/claimed").open("x") as f:
+        with (self.task / "operator/claimed").open("x", encoding="utf-8") as f:
             f.write(now())
         self.update()
         if self.config["mode"] == "test":
@@ -1159,7 +1159,7 @@ def worker(task):
     # Existing task claim is checked before state writes; duplicate commands preserve evidence.
     if (task / "operator/claimed").exists():
         raise RuntimeError("STOP: Attempt already claimed; no automatic retry")
-    lock = (HOME / "pretrain.lock").open("a")
+    lock = (HOME / "pretrain.lock").open("a", encoding="utf-8")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     from x500_storage import environment
 

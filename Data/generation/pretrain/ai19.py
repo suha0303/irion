@@ -762,7 +762,9 @@ def prepare(selection_path, output):
                 ("windows", engine.windows),
                 ("exclusions", engine.exclusions),
             ]:
-                with (folder / (name + ".jsonl")).open("x") as f:
+                with (folder / (name + ".jsonl")).open(
+                    "x", encoding="utf-8"
+                ) as f:
                     for item in rows:
                         f.write(json.dumps(item, allow_nan=False) + "\n")
             arrays, excluded = online_arrays(

@@ -147,7 +147,7 @@ def export(
             runs=[dict(row, path="run.npz", sha256=sha(root / "run.npz"))],
         ),
     )
-    with (root / "frames.jsonl").open("w") as f:
+    with (root / "frames.jsonl").open("w", encoding="utf-8") as f:
         for t, vector in [
             (times[0] - 100000, np.full(19, 1e9)),
             *zip(times, values),
@@ -294,17 +294,19 @@ def test_independent_audit_rejects_wrong_statistics_identity_or_inputs(
     if damage == "val_as_train":
         manifest = json_file(root / "history19-manifest.json")
         manifest["scaler_fit_run_ids"].append("fixture-v")
-        (root / "history19-manifest.json").write_text(json.dumps(manifest))
+        (root / "history19-manifest.json").write_text(
+            json.dumps(manifest), encoding="utf-8"
+        )
     if damage in {"canonical_gap", "canonical_future"}:
         path = records[0]["export"] / "frames.jsonl"
-        lines = path.read_text().splitlines()
+        lines = path.read_text(encoding="utf-8").splitlines()
         if damage == "canonical_gap":
             lines.pop(35)
         else:
             f = json.loads(lines[35])
             f["lineage"]["sample"]["available_time_us"] = f["time_us"] + 100000
             lines[35] = json.dumps(f)
-        path.write_text("\n".join(lines) + "\n")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     if damage == "target_zero":
         p = records[0]["export"] / "online.npz"
         with np.load(p, allow_pickle=False) as a:
@@ -313,7 +315,7 @@ def test_independent_audit_rejects_wrong_statistics_identity_or_inputs(
         np.savez(p, **fields)
         m = json_file(p.parent / "online.json")
         m["file"]["sha256"] = sha(p)
-        (p.parent / "online.json").write_text(json.dumps(m))
+        (p.parent / "online.json").write_text(json.dumps(m), encoding="utf-8")
     with pytest.raises(ValueError):
         ag._audit_compiled(
             records,
@@ -684,7 +686,7 @@ def test_preserved_native_pair_proof_is_auditable_after_original_raw_paths_are_r
         )
     assert ag._pairs(records, producer(), dict(paired_policy=str(policy))) == 1
     proof["wind"]["missing_samples"] = 1
-    p.write_text(json.dumps(proof))
+    p.write_text(json.dumps(proof), encoding="utf-8")
     bad = dict(path=str(p), sha256=sha(p))
     for record in records:
         record["record"]["pair_evidence"] = bad

@@ -192,7 +192,9 @@ def test_frozen_semantics_cannot_change(prior, key):
 )
 def test_corrupted_complete_normal_evidence_is_not_refitted(prior, filename):
     root, cfg, name = prior
-    (root / "compute/calibration" / name / filename).write_text("{}")
+    (root / "compute/calibration" / name / filename).write_text(
+        "{}", encoding="utf-8"
+    )
     with pytest.raises(ValueError, match="binding changed"):
         post.calibration_continuation(root, cfg)
 

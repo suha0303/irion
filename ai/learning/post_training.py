@@ -993,7 +993,7 @@ def start(root):
         )
     if (root / "controller.claim").exists():
         raise ValueError("Attempt already claimed; no automatic retry")
-    with (root / "start.claim").open("x") as stream:
+    with (root / "start.claim").open("x", encoding="utf-8") as stream:
         stream.write(
             "Single controller launch; never retry an unknown launch outcome.\n"
         )
@@ -1038,7 +1038,7 @@ def submit(root, phase, cfg):
     )
     if phase not in permitted:
         raise ValueError("Only calibration and evaluation are authorized")
-    with SUBMIT_LOCK.open("a") as lock:
+    with SUBMIT_LOCK.open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if operator.own_queue():
             raise ValueError(
@@ -1047,7 +1047,9 @@ def submit(root, phase, cfg):
         if phase == "evaluate":
             operator.require_success(read(root / "release.json"))
             seal_check(root, cfg)
-        with (root / (phase + "-submitted.claim")).open("x") as stream:
+        with (root / (phase + "-submitted.claim")).open(
+            "x", encoding="utf-8"
+        ) as stream:
             stream.write(
                 "One submission; unknown outcome must never be retried.\n"
             )
@@ -1072,7 +1074,8 @@ def submit(root, phase, cfg):
                     str(root),
                 ]
             )
-            + "\n"
+            + "\n",
+            encoding="utf-8",
         )
         hours = (
             cfg["wall_hours"]
@@ -1188,11 +1191,11 @@ def wait_files(root, phase, state, cfg):
             )
             write(root / "controller.json", state)
             return
-        except FileNotFoundError:
+        except FileNotFoundError as error:
             if time.monotonic() >= deadline:
                 raise RuntimeError(
                     "Released output not visible within120seconds; no retry"
-                )
+                ) from error
             state.update(
                 file_visibility="WAITING",
                 file_visibility_waited_s=time.monotonic() - started,
@@ -1211,7 +1214,7 @@ def control(root):
         != Path(python_for(root, required=True)).resolve()
     ):
         raise ValueError("Selected server Python required")
-    with (root / "controller.claim").open("x") as stream:
+    with (root / "controller.claim").open("x", encoding="utf-8") as stream:
         stream.write(
             "One approved post-training continuation, no automatic retry.\n"
         )
@@ -1393,7 +1396,9 @@ def calibrate_worker(root, *, diagnostic_only=False):
         raise ValueError("Worker phase differs from the frozen authorization")
     phase = "diagnose" if diagnostic_only else "calibrate"
     out, upstream = root / "compute", Path(cfg["upstream"])
-    with (out / (phase + "-started.claim")).open("x") as stream:
+    with (out / (phase + "-started.claim")).open(
+        "x", encoding="utf-8"
+    ) as stream:
         stream.write("No automatic calibration retry.\n")
     progress = Progress(out / "progress.json", hours=cfg["wall_hours"] - 0.1)
     telemetry = None

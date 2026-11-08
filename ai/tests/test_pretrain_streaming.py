@@ -19,7 +19,9 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
     common.package_imports()
     root, store = tmp_path / "root", tmp_path / "store"
     (root / "runs" / ("b" * 32)).mkdir(parents=True)
-    (root / "runs" / ("b" * 32) / "old.txt").write_text("protected")
+    (root / "runs" / ("b" * 32) / "old.txt").write_text(
+        "protected", encoding="utf-8"
+    )
     task = root / "task"
     task.mkdir()
     common.write(
@@ -68,7 +70,7 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
     for event in events:
         event["run_id"] = rid
     (raw / "observations/streams.jsonl").write_text(
-        "".join(json.dumps(e) + "\n" for e in events)
+        "".join(json.dumps(e) + "\n" for e in events), encoding="utf-8"
     )
     common.write(
         raw / "observations/watermarks.jsonl",
@@ -82,7 +84,7 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
         ),
     )
     marks = raw / "observations/watermarks.jsonl"
-    marks.write_text(json.dumps(common.read(marks)) + "\n")
+    marks.write_text(json.dumps(common.read(marks)) + "\n", encoding="utf-8")
     (raw / "observations/diagnostics.jsonl").touch()
     files = {
         str(p.relative_to(raw)): common.sha(p)
@@ -92,7 +94,7 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
     common.write(
         raw / "evaluation/scenario.json", dict(name="hover_normal", seed=17)
     )
-    (raw / "evaluation/events.jsonl").write_text("")
+    (raw / "evaluation/events.jsonl").write_text("", encoding="utf-8")
     archive = store / "archives" / label / (rid + ".tar.gz")
     archive.parent.mkdir(parents=True)
     members = {}
@@ -157,6 +159,7 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
         capture_output=True,
         text=True,
         timeout=20,
+        check=False,
     )
     assert processed.returncode == 0, processed.stderr
     status = task / "units" / (label + "-audit") / (rid + ".status.json")
@@ -181,6 +184,7 @@ def setup_run(tmp_path, monkeypatch, role="normal_train"):
         capture_output=True,
         text=True,
         timeout=20,
+        check=False,
     )
     assert run.returncode == 0, run.stderr
     return SimpleNamespace(
@@ -205,7 +209,7 @@ def test_verified_capsule_retires_only_new_success_and_restores_identical_data(
     original = (f.canonical / "frames.jsonl").read_bytes()
     failed = f.canonical.parent / ".failed" / f.row["run_id"] / "attempt-01"
     failed.mkdir(parents=True)
-    (failed / "evidence.txt").write_text("failed evidence")
+    (failed / "evidence.txt").write_text("failed evidence", encoding="utf-8")
     row = f.pipeline.capsule(f.row, f.chunk, f.label, f.folder)
     assert (
         not f.raw.exists()
@@ -213,9 +217,9 @@ def test_verified_capsule_retires_only_new_success_and_restores_identical_data(
         and not f.consumer.exists()
     )
     assert not f.canonical.exists() and failed.exists()
-    assert (
-        streaming.ROOT / "runs" / ("b" * 32) / "old.txt"
-    ).read_text() == "protected"
+    assert (streaming.ROOT / "runs" / ("b" * 32) / "old.txt").read_text(
+        encoding="utf-8"
+    ) == "protected"
     receipt = common.read(row["compact_source"]["receipt"])
     restore = tmp_path / "restored"
     restore.mkdir()
@@ -253,7 +257,9 @@ def test_px4_internal_links_are_not_followed_or_deleted_outside_owned_run(
     f = setup_run(tmp_path, monkeypatch)
     external = tmp_path / "vendor/test_data"
     external.mkdir(parents=True)
-    (external / "protected.txt").write_text("vendor untouched")
+    (external / "protected.txt").write_text(
+        "vendor untouched", encoding="utf-8"
+    )
     (f.raw / "px4").mkdir()
     (f.raw / "reference/px4_etc").mkdir()
     (f.raw / "px4/etc").symlink_to(
@@ -266,7 +272,9 @@ def test_px4_internal_links_are_not_followed_or_deleted_outside_owned_run(
     assert stamp[str(f.raw / "px4/test_data")][-1] == str(external)
     f.pipeline.capsule(f.row, f.chunk, f.label, f.folder)
     assert not f.raw.exists()
-    assert (external / "protected.txt").read_text() == "vendor untouched"
+    assert (external / "protected.txt").read_text(
+        encoding="utf-8"
+    ) == "vendor untouched"
 
 
 def test_changed_internal_link_blocks_retirement(tmp_path):
@@ -292,7 +300,7 @@ def test_changed_canonical_after_audit_never_deletes_originals(
     tmp_path, monkeypatch
 ):
     f = setup_run(tmp_path, monkeypatch)
-    with (f.canonical / "frames.jsonl").open("a") as s:
+    with (f.canonical / "frames.jsonl").open("a", encoding="utf-8") as s:
         s.write("{}\n")
     with pytest.raises(ValueError):
         f.pipeline.capsule(f.row, f.chunk, f.label, f.folder)
@@ -337,7 +345,7 @@ def test_final_package_replaces_working_dataset_and_remains_restorable(
     (audit / "cache.npz").write_bytes(b"cache")
     failure = prepared / "audit-work/.failed/old-evidence"
     failure.mkdir(parents=True)
-    (failure / "log.txt").write_text("preserve")
+    (failure / "log.txt").write_text("preserve", encoding="utf-8")
     monkeypatch.setattr(storage, "external", lambda p: Path(p))
     portable = prepared.parent / "prepared-portable"
     storage.pack(prepared, portable)
@@ -355,10 +363,10 @@ def test_final_package_replaces_working_dataset_and_remains_restorable(
 
 def test_replacement_and_symlink_cleanup_targets_are_preserved(tmp_path):
     p = tmp_path / "new"
-    p.write_text("data")
+    p.write_text("data", encoding="utf-8")
     allowed = {str(p): streaming.tree_stamp(p)}
     p.unlink()
-    p.write_text("replaced data")
+    p.write_text("replaced data", encoding="utf-8")
     with pytest.raises(ValueError):
         streaming.retire_owned(
             [p],

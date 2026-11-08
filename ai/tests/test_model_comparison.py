@@ -811,7 +811,9 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
             prepare_compare.reuse_failed_upstream(
                 root, bundle, receipt, root / "nested", root / "nested"
             )
-        (root / "upstream/evidence/quality.json").write_text("{}")
+        (root / "upstream/evidence/quality.json").write_text(
+            "{}", encoding="utf-8"
+        )
         with pytest.raises(ValueError, match="upstream evidence changed"):
             prepare_compare.reuse_failed_upstream(*source_args)
 

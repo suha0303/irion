@@ -162,7 +162,8 @@ def build(output, ui_packages):
             ),
             indent=2,
         )
-        + "\n"
+        + "\n",
+        encoding="utf-8",
     )
     copy_regular(base / "bin/python3.10", output / "runtime/bin/python3.10")
     copy_tree(base / "lib/python3.10", output / "runtime/lib/python3.10")
@@ -179,7 +180,7 @@ def build(output, ui_packages):
         name = d.metadata["Name"].lower().replace("_", "-")
         if name in overlay_names and Path(d._path).name != overlay_names[name]:
             shutil.rmtree(d._path)
-    (output / "drone-local").write_text(LAUNCHER)
+    (output / "drone-local").write_text(LAUNCHER, encoding="utf-8")
     (output / "drone-local").chmod(0o755)
     packages = sorted(
         {
@@ -187,7 +188,9 @@ def build(output, ui_packages):
             for d in importlib.metadata.distributions(path=[str(site)])
         }
     )
-    (output / "DEPENDENCIES.lock").write_text("\n".join(packages) + "\n")
+    (output / "DEPENDENCIES.lock").write_text(
+        "\n".join(packages) + "\n", encoding="utf-8"
+    )
     licenses = output / "licenses"
     licenses.mkdir()
     for label, path in [
@@ -202,7 +205,8 @@ def build(output, ui_packages):
         "No runtime downloads or GPU server. Data: ${XDG_DATA_HOME:-~/.local/share}/drone-local\n"
         "ARION_PORT and ARION_DATA_DIR may select a different local port/data folder.\n"
         "Keep the folder intact; rename/move it freely. Do not copy raw flight logs into it.\n"
-        "Empirical aircraft/model thresholds supported; real-aircraft detection performance unverified.\n"
+        "Empirical aircraft/model thresholds supported; real-aircraft detection performance unverified.\n",
+        encoding="utf-8",
     )
     hashes = {
         str(p.relative_to(output)): digest(p)
@@ -220,7 +224,7 @@ def build(output, ui_packages):
         source_model_manifest_sha256=digest(catalog.root / "MANIFEST.json"),
     )
     (output / "APP_MANIFEST.json").write_text(
-        json.dumps(manifest, indent=2) + "\n"
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
     return dict(
         path=str(output),
@@ -236,7 +240,9 @@ def doctor():
 
     from .runtime import Runtime
 
-    manifest = json.loads((ROOT / "APP_MANIFEST.json").read_text())
+    manifest = json.loads(
+        (ROOT / "APP_MANIFEST.json").read_text(encoding="utf-8")
+    )
     for relative, expected in manifest["files"].items():
         p = ROOT / relative
         if p.is_symlink() or not p.is_file() or digest(p) != expected:

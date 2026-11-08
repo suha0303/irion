@@ -23,12 +23,13 @@ def package(tmp_path):
             }
         }
     }
-    (tmp_path / "MANIFEST.json").write_text(json.dumps(value))
+    (tmp_path / "MANIFEST.json").write_text(json.dumps(value), encoding="utf-8")
     (tmp_path / "SHA256SUMS").write_text(
         "".join(
             runner.digest(tmp_path / name) + "  " + name + "\n"
             for name in ["data.bin", "MANIFEST.json"]
-        )
+        ),
+        encoding="utf-8",
     )
     return tmp_path
 
@@ -50,7 +51,9 @@ def test_missing_payload_rejected(tmp_path):
 
 def test_unlisted_source_rejected(tmp_path):
     root = package(tmp_path)
-    (root / "extra.py").write_text("raise RuntimeError('must not execute')")
+    (root / "extra.py").write_text(
+        "raise RuntimeError('must not execute')", encoding="utf-8"
+    )
     with pytest.raises(ValueError, match="unlisted"):
         runner.verify(root)
 
@@ -58,9 +61,9 @@ def test_unlisted_source_rejected(tmp_path):
 @pytest.mark.parametrize("name", ["../external", "/tmp/external"])
 def test_manifest_escape_rejected(tmp_path, name):
     root = package(tmp_path)
-    manifest = json.loads((root / "MANIFEST.json").read_text())
+    manifest = json.loads((root / "MANIFEST.json").read_text(encoding="utf-8"))
     manifest["files"][name] = {"sha256": "irrelevant", "bytes": 1}
-    (root / "MANIFEST.json").write_text(json.dumps(manifest))
+    (root / "MANIFEST.json").write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ValueError, match="invalid manifest path"):
         runner.verify(root)
 
@@ -68,7 +71,10 @@ def test_manifest_escape_rejected(tmp_path, name):
 def test_checksum_list_change_rejected(tmp_path):
     root = package(tmp_path)
     sums = root / "SHA256SUMS"
-    sums.write_text(sums.read_text().replace("data.bin", "wrong.bin"))
+    sums.write_text(
+        sums.read_text(encoding="utf-8").replace("data.bin", "wrong.bin"),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="membership"):
         runner.verify(root)
 

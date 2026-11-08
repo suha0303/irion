@@ -22,7 +22,7 @@ TERMINAL = {
 
 
 def load(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def estimate_eta(plan, ledger, resources, cases):

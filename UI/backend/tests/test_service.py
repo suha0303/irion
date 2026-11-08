@@ -19,7 +19,9 @@ def state(monkeypatch, tmp_path):
 
 def save_owner(state):
     state.parent.mkdir(parents=True)
-    state.write_text(json.dumps({"pid": 123456, "instance_id": "owner"}))
+    state.write_text(
+        json.dumps({"pid": 123456, "instance_id": "owner"}), encoding="utf-8"
+    )
 
 
 def test_stop_does_not_signal_reused_pid(state, monkeypatch):
@@ -85,7 +87,7 @@ def test_start_preserves_existing_arion(state, monkeypatch):
 def test_start_detaches_and_records_verified_instance(state, monkeypatch):
     index = service.ROOT / "frontend" / "dist" / "index.html"
     index.parent.mkdir(parents=True)
-    index.write_text("<html>시험 화면</html>")
+    index.write_text("<html>시험 화면</html>", encoding="utf-8")
     launched = {}
 
     class Process:
@@ -113,7 +115,7 @@ def test_start_detaches_and_records_verified_instance(state, monkeypatch):
     monkeypatch.setattr(service.subprocess, "Popen", spawn)
     monkeypatch.setattr(service, "health", health)
     assert service.start() == 0
-    owner = json.loads(state.read_text())
+    owner = json.loads(state.read_text(encoding="utf-8"))
     assert (
         owner["pid"] == 123456
         and owner["instance_id"] == launched["env"]["ARION_SERVER_INSTANCE"]
@@ -142,7 +144,7 @@ def test_index_requires_revalidation(monkeypatch, tmp_path):
 
     index = tmp_path / "frontend" / "dist" / "index.html"
     index.parent.mkdir(parents=True)
-    index.write_text("<html>시험 화면</html>")
+    index.write_text("<html>시험 화면</html>", encoding="utf-8")
     monkeypatch.setattr(main, "ROOT", tmp_path)
     with TestClient(create_app(tmp_path / "data")) as client:
         reply = client.get("/")

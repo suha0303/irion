@@ -17,7 +17,9 @@ def test_runtime_drift_blocks_service_before_submission(tmp_path, monkeypatch):
     common.write(
         task / "config.json", dict(source_sha256={}, python_runtime=runtime)
     )
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     monkeypatch.setattr(cli, "HOME", home)
     # Exercise the preserved legacy config path without authorizing collection.
     monkeypatch.setattr(cli, "producer_sources", lambda: {})
@@ -93,6 +95,7 @@ def test_four_real_preprocessors_match_verified_fixture(tmp_path, monkeypatch):
             capture_output=True,
             text=True,
             timeout=30,
+            check=False,
         )
         assert result.returncode == 0, result.stdout + result.stderr
         return common.read(common.read(path)["status"])

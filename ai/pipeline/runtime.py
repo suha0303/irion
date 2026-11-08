@@ -40,7 +40,9 @@ def check(root, out, stage, job_prefix="drone-ai-"):
     ).split()
     if set(own) != {job_id}:
         raise ValueError("own queue mismatch; no concurrent job allowed")
-    (Path(out) / "verified-job-id.txt").write_text(job_id + "\n")
+    (Path(out) / "verified-job-id.txt").write_text(
+        job_id + "\n", encoding="utf-8"
+    )
     profile = runtime_profile(Path(root).parent, required=True)
     selected_runtime = profile["runtime_profile"]
     if selected_runtime not in checks.RUNTIME_PROFILES:

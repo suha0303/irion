@@ -17,7 +17,9 @@ from .training import Predictor
 
 def records(path):
     return [
-        json.loads(s) for s in Path(path).read_text().splitlines() if s.strip()
+        json.loads(s)
+        for s in Path(path).read_text(encoding="utf-8").splitlines()
+        if s.strip()
     ]
 
 
@@ -138,8 +140,8 @@ def replay_prepared(
     latencies = []
     predictions = iter(predictions)
     with (
-        (out / "forecasts.jsonl").open("w") as fw,
-        (out / "decisions.jsonl").open("w") as dw,
+        (out / "forecasts.jsonl").open("w", encoding="utf-8") as fw,
+        (out / "decisions.jsonl").open("w", encoding="utf-8") as dw,
     ):
 
         def emit(completed):

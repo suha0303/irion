@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 def read(p):
-    return json.loads(Path(p).read_text())
+    return json.loads(Path(p).read_text(encoding="utf-8"))
 
 
 def sha(p):
@@ -26,7 +26,7 @@ def write(p, v):
     p = Path(p)
     p.parent.mkdir(parents=True, exist_ok=True)
     q = p.with_name(p.name + ".tmp")
-    q.write_text(json.dumps(v, indent=2) + "\n")
+    q.write_text(json.dumps(v, indent=2) + "\n", encoding="utf-8")
     q.replace(p)
 
 
@@ -73,7 +73,7 @@ def export(base):
         raise ValueError("Final data used for selection")
     delivery = base / "delivery"
     delivery.mkdir(exist_ok=True)
-    lock = (delivery / "export.lock").open("a")
+    lock = (delivery / "export.lock").open("a", encoding="utf-8")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:

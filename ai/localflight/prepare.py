@@ -634,7 +634,9 @@ def prepare(
 
     record["run_context"] = source_context(audit, start_us, end_us)
     (out / "manifest.json").write_text(
-        json.dumps(record, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
+        json.dumps(record, indent=2, ensure_ascii=False, allow_nan=False)
+        + "\n",
+        encoding="utf-8",
     )
     return dict(
         manifest=str(out / "manifest.json"),

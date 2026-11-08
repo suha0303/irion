@@ -83,7 +83,9 @@ def physical_projection(previous, value, original):
         and r.get("attempt") == 2
         for r in (
             json.loads(line)
-            for line in Path(snapshot["path"]).read_text().splitlines()
+            for line in Path(snapshot["path"])
+            .read_text(encoding="utf-8")
+            .splitlines()
         )
     ):
         raise pilot45.Blocked(
@@ -261,7 +263,9 @@ def context(previous, acceptance):
                     or value["files"].get(str(raw / "native_logs/px4.log"))
                     != sha(raw / "native_logs/px4.log")
                     or "joint_phase_failure: late native hover readiness"
-                    not in (raw / "native_logs/px4.log").read_text()
+                    not in (raw / "native_logs/px4.log").read_text(
+                        encoding="utf-8"
+                    )
                 ):
                     raise pilot45.Blocked(
                         "Only the exact reviewed native readiness failure is admissible"
@@ -472,7 +476,7 @@ def prepare(name, previous, acceptance, handoff):
         )
 
     def audit_ast(path):
-        tree = ast.parse(Path(path).read_text())
+        tree = ast.parse(Path(path).read_text(encoding="utf-8"))
         return ast.dump(
             next(
                 n
@@ -573,7 +577,9 @@ def prepare(name, previous, acceptance, handoff):
     )
     write(task / "config.json", cfg)
     write(task / "manifest.json", manifest)
-    (task / "manifest.sha256").write_text(sha(task / "manifest.json") + "\n")
+    (task / "manifest.sha256").write_text(
+        sha(task / "manifest.json") + "\n", encoding="utf-8"
+    )
     write(task / "ledger.json", ledger)
     write(task / "budget.json", read(previous / "budget.json"))
     protected = pilot45.protection()

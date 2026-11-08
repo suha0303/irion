@@ -20,7 +20,9 @@ spec = importlib.util.spec_from_file_location(
 fixture = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(fixture)
 CONFIG = json.loads(
-    (ROOT / "ai/learning/history19/preprocessing.json").read_text()
+    (ROOT / "ai/learning/history19/preprocessing.json").read_text(
+        encoding="utf-8"
+    )
 )
 
 
@@ -54,7 +56,9 @@ def raw_fixture(path, rid="synthetic-raw", seconds=26):
     for e in events:
         e["run_id"] = rid
     stream = path / "observations/streams.jsonl"
-    stream.write_text("".join(json.dumps(e) + "\n" for e in events))
+    stream.write_text(
+        "".join(json.dumps(e) + "\n" for e in events), encoding="utf-8"
+    )
     (path / "observations/watermarks.jsonl").write_text(
         json.dumps(
             dict(
@@ -66,7 +70,8 @@ def raw_fixture(path, rid="synthetic-raw", seconds=26):
                 closed=True,
             )
         )
-        + "\n"
+        + "\n",
+        encoding="utf-8",
     )
     (path / "observations/diagnostics.jsonl").touch()
     common.write(
@@ -230,14 +235,14 @@ def test_actual_operational_boundaries_are_unambiguous(tmp_path, damage):
         events[0]["sim_time"] = float("nan")
     path = raw / "evaluation/execution.json"
     path.parent.mkdir()
-    path.write_text(json.dumps(events))
+    path.write_text(json.dumps(events), encoding="utf-8")
     with pytest.raises(ValueError):
         ai19.mission_interval(raw)
     events = [
         dict(state="mission", sim_time=2.05),
         dict(state="landing", sim_time=22.37),
     ]
-    path.write_text(json.dumps(events))
+    path.write_text(json.dumps(events), encoding="utf-8")
     interval = ai19.mission_interval(raw)
     assert (
         interval["start_us"] == 2_050_000
@@ -405,10 +410,13 @@ def test_one_run_shell_submits_one_scoped_task_and_rejects_unsafe_names(
         (ROOT / "Data/generation/tools/ai19_one_run.sh").read_bytes()
     )
     stub = tool.parent.parent / "drone-pretrain"
-    stub.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> calls.txt\n')
+    stub.write_text(
+        '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> calls.txt\n',
+        encoding="utf-8",
+    )
     stub.chmod(0o700)
     subprocess.run(["bash", str(tool), "one"], check=True, cwd=tmp_path)
-    calls = (tmp_path / "calls.txt").read_text().splitlines()
+    calls = (tmp_path / "calls.txt").read_text(encoding="utf-8").splitlines()
     assert calls == [
         "integration19 init --name one",
         "integration19 start "
@@ -416,11 +424,16 @@ def test_one_run_shell_submits_one_scoped_task_and_rejects_unsafe_names(
     ]
     assert (
         subprocess.run(
-            ["bash", str(tool), "../escape"], cwd=tmp_path, capture_output=True
+            ["bash", str(tool), "../escape"],
+            cwd=tmp_path,
+            capture_output=True,
+            check=False,
         ).returncode
         == 2
     )
-    assert (tmp_path / "calls.txt").read_text().splitlines() == calls
+    assert (tmp_path / "calls.txt").read_text(
+        encoding="utf-8"
+    ).splitlines() == calls
 
 
 def test_data_subprocess_imports_no_training_dependencies():
@@ -573,7 +586,9 @@ def test_current_producer_battery_and_quality_admission(
         common.write(raw / "evaluation/battery-selection.json", d)
         integrity()
     if damage == "tamper":
-        (raw / "observations/streams.jsonl").write_text("tampered")
+        (raw / "observations/streams.jsonl").write_text(
+            "tampered", encoding="utf-8"
+        )
     if damage == "failed_quality":
         monkeypatch.setattr(
             assessment, "assess", lambda *a: dict(contract_passed=False)

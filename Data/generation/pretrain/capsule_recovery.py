@@ -165,7 +165,7 @@ def inputs(source):
     verify(
         {
             str(source / "config.json"): regular(source / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -426,7 +426,9 @@ def create_recovery(source, name):
         {str(planned): sha(planned), str(manifest): sha(manifest)}
     )
     write(task / "config.json", config)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     return task
 
 

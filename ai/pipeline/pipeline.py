@@ -78,11 +78,15 @@ def prepare(frozen, out, preprocess, budget, *, process_run=None):
                 )
             frames = [
                 json.loads(s)
-                for s in (canonical / "frames.jsonl").read_text().splitlines()
+                for s in (canonical / "frames.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
             ]
             windows = [
                 json.loads(s)
-                for s in (canonical / "windows.jsonl").read_text().splitlines()
+                for s in (canonical / "windows.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
             ]
             lookup = {
                 (f["clock_id"], f["segment_id"], f["time_us"]): f
@@ -316,7 +320,9 @@ def seal_development(
     """Zero airborne exposure is an unavailable case, never a dropped case or healthy zero."""
     frames = [
         json.loads(s)
-        for s in (canonical / "frames.jsonl").read_text().splitlines()
+        for s in (canonical / "frames.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     if any(f["operating_state"] == "airborne" for f in frames):
         # Existing replay handles zero windows with positive airborne exposure.
@@ -339,7 +345,7 @@ def seal_development(
     summary = read(canonical / "summary.json")
     target.mkdir(parents=True, exist_ok=False)
     for name in ("forecasts.jsonl", "decisions.jsonl"):
-        (target / name).write_text("")
+        (target / name).write_text("", encoding="utf-8")
     result = {
         "status": "insufficient_data",
         "reason": "no_observed_airborne_exposure",

@@ -164,12 +164,12 @@ def test_same_case_registry_append_uses_real_guard_without_a_child(
         "main", storage_root=store, name="fresh-append", fresh=True
     )
     registry = tmp_path / "registry.jsonl"
-    registry.write_text(json.dumps(old) + "\n")
+    registry.write_text(json.dumps(old) + "\n", encoding="utf-8")
     monkeypatch.setattr(pilot45, "REGISTRY", registry)
     c = main.Campaign(fresh)
     job = c.begin_flight(case, 0)
     assert common.read(job["request"])["parent_attempt_id"] is None
-    assert len(registry.read_text().splitlines()) == 2
+    assert len(registry.read_text(encoding="utf-8").splitlines()) == 2
     assert len(c.ledger["cases"][case["case_id"]]["attempts"]) == 1
     assert not list(fresh.glob("pilot/execution/*/*.process.json"))
 
@@ -185,12 +185,14 @@ def test_second_user_start_creates_another_empty_task_without_claim_reset(
     )
     first = main.user_start("main", storage_root=store, name="fresh-a")
     common.write(first / "operator/service.json", dict(unit="fixture-stopped"))
-    (first / "operator/claimed").write_text("previous attempt preserved")
+    (first / "operator/claimed").write_text(
+        "previous attempt preserved", encoding="utf-8"
+    )
     second = main.user_start("main", storage_root=store, name="fresh-b")
     assert submitted == [first, second] and first != second
-    assert (
-        first / "operator/claimed"
-    ).read_text() == "previous attempt preserved"
+    assert (first / "operator/claimed").read_text(
+        encoding="utf-8"
+    ) == "previous attempt preserved"
     assert common.read(second / "ledger.json")["physical_attempts"] == 0
 
 

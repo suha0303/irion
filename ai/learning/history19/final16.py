@@ -217,7 +217,7 @@ def _write(output, value):
         p.is_symlink() for p in (output, *output.parents)
     ):
         raise ValueError("New regular FINAL16 output required")
-    with output.open("x") as stream:
+    with output.open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(value, indent=2) + "\n")
 
 

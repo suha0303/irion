@@ -118,7 +118,7 @@ def _progress(
     root = Path(root)
     if root.is_dir():
         temp = root / "progress.json.tmp"
-        temp.write_text(json.dumps(value) + "\n")
+        temp.write_text(json.dumps(value) + "\n", encoding="utf-8")
         os.replace(temp, root / "progress.json")
 
 
@@ -234,7 +234,7 @@ def _records(index_path, scope, producer, protection, policy_bundle):
     expected_ids = set(plans["cases"]) if scope == "main" else plans["lr_ids"]
     selected, seen, raw_ids, rows = [], set(), set(), []
     totals = Counter()
-    with regular(index_path).open() as stream:
+    with regular(index_path).open(encoding="utf-8") as stream:
         for line in stream:
             if len(line) > 65536:
                 raise ValueError(
@@ -721,7 +721,7 @@ def _compile(
         ),
     )
     write_new(root / "protection.json", registry)
-    with (root / "online-index.jsonl").open("x") as stream:
+    with (root / "online-index.jsonl").open("x", encoding="utf-8") as stream:
         for record in records:
             stream.write(
                 json.dumps(

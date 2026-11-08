@@ -16,7 +16,12 @@ SOCKET_ROOT = Path("/tmp")
 def process(pid):
     try:
         folder = Path(f"/proc/{pid}")
-        fields = (folder / "stat").read_text().rsplit(")", 1)[1].split()
+        fields = (
+            (folder / "stat")
+            .read_text(encoding="utf-8")
+            .rsplit(")", 1)[1]
+            .split()
+        )
         return dict(
             pid=pid, start=fields[19], state=fields[0], uid=folder.stat().st_uid
         )
@@ -39,7 +44,9 @@ def socket_identity(path):
 def bound_inodes(path):
     return {
         fields[6]
-        for line in Path("/proc/net/unix").read_text().splitlines()[1:]
+        for line in Path("/proc/net/unix")
+        .read_text(encoding="utf-8")
+        .splitlines()[1:]
         if len(fields := line.split()) >= 8 and fields[7] == str(path)
     }
 
@@ -62,8 +69,8 @@ def claim(run, instance, destination):
         owner = process(pid)
         if not owner or owner["uid"] != os.getuid() or owner["state"] == "Z":
             return
-        group = Path(f"/proc/{pid}/cgroup").read_text()
-        if group != Path("/proc/self/cgroup").read_text():
+        group = Path(f"/proc/{pid}/cgroup").read_text(encoding="utf-8")
+        if group != Path("/proc/self/cgroup").read_text(encoding="utf-8"):
             return
         if Path(f"/proc/{pid}/cwd").resolve() != run / "px4":
             return
@@ -97,7 +104,9 @@ def claim(run, instance, destination):
             identity=identity,
             owner=owner,
             cgroup=group,
-            boot_id=Path("/proc/sys/kernel/random/boot_id").read_text().strip(),
+            boot_id=Path("/proc/sys/kernel/random/boot_id")
+            .read_text(encoding="utf-8")
+            .strip(),
             recorded_utc=now(),
         ),
     )
@@ -115,7 +124,9 @@ def release(receipt, unit):
         raise ValueError("Socket belongs to a different service")
     if (
         receipt["boot_id"]
-        != Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+        != Path("/proc/sys/kernel/random/boot_id")
+        .read_text(encoding="utf-8")
+        .strip()
     ):
         raise ValueError("Boot identity changed")
     if not os.path.lexists(path):
@@ -159,7 +170,7 @@ def cleanup(task):
                 HOME / "pretrain.lock",
                 ROOT / "Data/operations/collection.lock",
             ):
-                handle = stack.enter_context(path.open("a"))
+                handle = stack.enter_context(path.open("a", encoding="utf-8"))
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             locked = True
             # A lane can be reused within one campaign. Clean its latest claim
@@ -179,7 +190,7 @@ def cleanup(task):
                         raise ValueError("Invalid instance")
                     with (
                         ROOT / f"simulation/.cache/instances/{instance}.lock"
-                    ).open("a") as lease:
+                    ).open("a", encoding="utf-8") as lease:
                         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
                         result = release(receipt, unit)
                     report["actions"].append(

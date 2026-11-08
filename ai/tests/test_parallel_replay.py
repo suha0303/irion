@@ -46,7 +46,9 @@ def inputs(tmp_path):
     ground = records(path)
     for f in ground:
         f["operating_state"] = "ground"
-    path.write_text("".join(json.dumps(f) + "\n" for f in ground))
+    path.write_text(
+        "".join(json.dumps(f) + "\n" for f in ground), encoding="utf-8"
+    )
     (dataset / "canonical/run-2/windows.jsonl").unlink()
     return dataset, bundle, rows
 
@@ -117,7 +119,9 @@ def test_cpu_worker_failure_propagates_without_success_seal_or_retry(tmp_path):
     path = dataset / "canonical/run-0/frames.jsonl"
     frames = records(path)
     frames[0].pop("quality")
-    path.write_text("".join(json.dumps(f) + "\n" for f in frames))
+    path.write_text(
+        "".join(json.dumps(f) + "\n" for f in frames), encoding="utf-8"
+    )
     target = tmp_path / "output"
     progress = Progress()
     predictor = FixturePredictor(bundle)

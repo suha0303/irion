@@ -15,7 +15,7 @@ from learning.history19.pilot_publish import publish
 
 def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value) + "\n")
+    path.write_text(json.dumps(value) + "\n", encoding="utf-8")
     return path
 
 

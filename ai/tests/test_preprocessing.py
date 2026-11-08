@@ -208,7 +208,7 @@ def test_partial_lines_visibility_and_restart(tmp_path):
         "recorded_events": len(rows),
         "closed": True,
     }
-    water.write_text(json.dumps(mark) + "\n")
+    water.write_text(json.dumps(mark) + "\n", encoding="utf-8")
     p = Preprocessor(META, CONFIG)
     tail = DirectoryTail(tmp_path, p, 999999)
     tail.poll()
@@ -245,9 +245,9 @@ def test_quality_null_clipped_and_quaternion():
 
 def test_file_replacement(tmp_path):
     path = tmp_path / "x"
-    path.write_text("{}\n")
+    path.write_text("{}\n", encoding="utf-8")
     reader = Lines(path)
     assert reader.poll(100) == [{}]
-    path.write_text("")
+    path.write_text("", encoding="utf-8")
     with pytest.raises(ValueError, match="truncated"):
         reader.poll(100)

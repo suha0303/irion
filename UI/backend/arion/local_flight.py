@@ -55,7 +55,7 @@ class LocalFlight:
         self.task = None
         self.root.mkdir(parents=True, exist_ok=True)
         for p in (self.root / "jobs").glob("*.json"):
-            row = json.loads(p.read_text())
+            row = json.loads(p.read_text(encoding="utf-8"))
             if row["status"] in {"queued", "running"}:
                 row.update(
                     status="interrupted",
@@ -162,7 +162,7 @@ class LocalFlight:
                 # Cancellation before the coroutine's first instruction bypasses its finally.
                 if job_id:
                     path = self.job_path(job_id)
-                    row = json.loads(path.read_text())
+                    row = json.loads(path.read_text(encoding="utf-8"))
                     row.update(status="cancelled", finished_at=time.time())
                     write(path, row)
                     self.active = None
@@ -244,7 +244,9 @@ def attach(app, root=None):
 
     def completed(job_id, action):
         try:
-            row = json.loads(service.job_path(job_id).read_text())
+            row = json.loads(
+                service.job_path(job_id).read_text(encoding="utf-8")
+            )
         except (OSError, ValueError) as error:
             raise HTTPException(422, "작업 기록을 찾을 수 없습니다.") from error
         if row["action"] != action or row["status"] != "complete":
@@ -273,7 +275,7 @@ def attach(app, root=None):
             profile = json.loads(
                 (
                     service.root / "aircraft" / profile_id / (version + ".json")
-                ).read_text()
+                ).read_text(encoding="utf-8")
             )
             encoded = json.dumps(
                 profile, sort_keys=True, ensure_ascii=False, allow_nan=False
@@ -405,7 +407,9 @@ def attach(app, root=None):
     async def admit_live(request: dict):
         try:
             folder = app.state.local_live.folder(request["run_id"])
-            result = json.loads((folder / "result.json").read_text())
+            result = json.loads(
+                (folder / "result.json").read_text(encoding="utf-8")
+            )
             if result["status"] != "complete":
                 raise ValueError("보존 구간이 있는 종료된 비행이 필요합니다.")
             index = request["index"]
@@ -519,7 +523,9 @@ def attach(app, root=None):
     @app.post("/api/local-ai/jobs/{job_id}/resume")
     async def resume(job_id: str):
         try:
-            previous = json.loads(service.job_path(job_id).read_text())
+            previous = json.loads(
+                service.job_path(job_id).read_text(encoding="utf-8")
+            )
             if previous["action"] != "adapt" or previous["status"] not in {
                 "cancelled",
                 "interrupted",
@@ -657,14 +663,14 @@ def attach(app, root=None):
     @app.get("/api/local-ai/jobs")
     async def jobs():
         rows = [
-            json.loads(p.read_text())
+            json.loads(p.read_text(encoding="utf-8"))
             for p in (service.root / "jobs").glob("*.json")
         ]
         for row in rows:
             if row["status"] == "running" and row["action"] == "adapt":
                 p = Path(row["request"]["output"]) / "progress.json"
                 if p.is_file():
-                    row["progress"] = json.loads(p.read_text())
+                    row["progress"] = json.loads(p.read_text(encoding="utf-8"))
         return dict(
             jobs=sorted(rows, key=lambda r: r["created_at"], reverse=True)
         )
@@ -674,6 +680,6 @@ def attach(app, root=None):
         if job_id != service.active:
             raise HTTPException(409, "실행 중인 작업이 아닙니다.")
         await service.close()
-        return json.loads(service.job_path(job_id).read_text())
+        return json.loads(service.job_path(job_id).read_text(encoding="utf-8"))
 
     return service

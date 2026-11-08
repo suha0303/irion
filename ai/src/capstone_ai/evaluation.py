@@ -174,7 +174,10 @@ def evaluate(folder, dataset, out):
     decision_path = out / "decisions.jsonl"
     records = []
     latencies = []
-    with prediction_path.open("w") as fw, decision_path.open("w") as dw:
+    with (
+        prediction_path.open("w", encoding="utf-8") as fw,
+        decision_path.open("w", encoding="utf-8") as dw,
+    ):
         for run_id in dict.fromkeys(test["run_id"].tolist()):
             indices = np.flatnonzero(test["run_id"] == run_id)
             store = PendingForecasts(cal["error_scale"], cal["high"])
@@ -221,16 +224,16 @@ def evaluate(folder, dataset, out):
                 for s in (
                     Path(rows[run_id]["path"]) / "evaluation/events.jsonl"
                 )
-                .read_text()
+                .read_text(encoding="utf-8")
                 .splitlines()
                 if s.strip()
             ]
             canonical = read_json(
                 dataset / "canonical" / run_id / "summary.json"
             )
-            with (
-                dataset / "canonical" / run_id / "frames.jsonl"
-            ).open() as frame_file:
+            with (dataset / "canonical" / run_id / "frames.jsonl").open(
+                encoding="utf-8"
+            ) as frame_file:
                 observation_start = json.loads(next(frame_file))["time_us"]
             event_results = [
                 match_event(event, decisions, observation_start)

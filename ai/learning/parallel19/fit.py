@@ -43,14 +43,16 @@ from learning.run_health19.models import (
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def write(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + ".tmp")
-    temp.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+    temp.write_text(
+        json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
     temp.replace(path)
 
 

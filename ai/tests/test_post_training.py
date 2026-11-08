@@ -114,7 +114,7 @@ def test_submit_is_pinned_and_never_retried(tmp_path, monkeypatch):
         "--no-requeue",
     ):
         assert flag in submitted[0]
-    script = (tmp_path / "calibrate-job.sh").read_text()
+    script = (tmp_path / "calibrate-job.sh").read_text(encoding="utf-8")
     assert "learning.post_training calibrate" in script
     assert "CUDA_VISIBLE_DEVICES" not in script
     with pytest.raises(FileExistsError):
@@ -193,7 +193,9 @@ def test_no_final_completion_until_both_jobs_release(tmp_path, monkeypatch):
     monkeypatch.setattr(
         operator,
         "report",
-        lambda root, cfg: (root / "report.txt").write_text("report"),
+        lambda root, cfg: (root / "report.txt").write_text(
+            "report", encoding="utf-8"
+        ),
     )
     post.control(tmp_path)
     completed = read(tmp_path / "completion.json")
@@ -436,7 +438,9 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
             final_test_used=False,
         ),
     )
-    (source / "training-report.txt").write_text("sealed training report")
+    (source / "training-report.txt").write_text(
+        "sealed training report", encoding="utf-8"
+    )
     release = dict(
         job_id="123",
         released=True,
@@ -697,7 +701,7 @@ def test_prepare_rejects_invalid_policy_before_creating_output(
     elif invalid_path == "fifo":
         os.mkfifo(path)
     elif invalid_path == "invalid_json":
-        path.write_text("{broken-json")
+        path.write_text("{broken-json", encoding="utf-8")
     elif invalid_path == "invalid_schema":
         write(path, {"schema": "unrecognized"})
     root = tmp_path / "evaluation"

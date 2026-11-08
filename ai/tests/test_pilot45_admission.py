@@ -28,7 +28,7 @@ def make_request(folder, *, phase="case", paired=False):
 
     def put(name, value):
         path = folder / (name + ".json")
-        path.write_text(json.dumps(value) + "\n")
+        path.write_text(json.dumps(value) + "\n", encoding="utf-8")
         return dict(path=path.name, sha256=pilot.sha(path))
 
     source = put("source", dict(files={"unit.py": "a" * 64}))
@@ -400,7 +400,7 @@ def make_request(folder, *, phase="case", paired=False):
     values = np.tile(np.arange(19) * 0.01, (len(times), 1))
     values[:, 17:] = [16.0, 24.0]
     canonical = folder / "frames.jsonl"
-    with canonical.open("w") as f:
+    with canonical.open("w", encoding="utf-8") as f:
         for t, x in zip(times, values):
             frame = dict(
                 run_id=rid,
@@ -487,19 +487,19 @@ def make_request(folder, *, phase="case", paired=False):
         ),
     )
     path = folder / "request.json"
-    path.write_text(json.dumps(request))
+    path.write_text(json.dumps(request), encoding="utf-8")
     return path
 
 
 def edit(path, name, change):
-    request = json.loads(path.read_text())
+    request = json.loads(path.read_text(encoding="utf-8"))
     ref = request["refs"][name]
     p = path.parent / ref["path"]
-    obj = json.loads(p.read_text())
+    obj = json.loads(p.read_text(encoding="utf-8"))
     change(obj)
-    p.write_text(json.dumps(obj))
+    p.write_text(json.dumps(obj), encoding="utf-8")
     ref["sha256"] = pilot.sha(p)
-    path.write_text(json.dumps(request))
+    path.write_text(json.dumps(request), encoding="utf-8")
     return obj
 
 
@@ -558,13 +558,13 @@ def test_missing_or_null_native_evidence_stays_pending(
 ):
     path = make_request(tmp_path / "data")
     if damage in {"missing_policy", "missing_development"}:
-        r = json.loads(path.read_text())
+        r = json.loads(path.read_text(encoding="utf-8"))
         r["refs"][
             "paired_policy"
             if damage == "missing_policy"
             else "development_receipt"
         ] = None
-        path.write_text(json.dumps(r))
+        path.write_text(json.dumps(r), encoding="utf-8")
     elif damage == "null_criterion":
         edit(
             path,
@@ -572,14 +572,14 @@ def test_missing_or_null_native_evidence_stays_pending(
             lambda d: d["limits"].update(wind_rms_mps=None),
         )
     else:
-        r = json.loads(path.read_text())
+        r = json.loads(path.read_text(encoding="utf-8"))
         ref = r["case_origin"]["origin"]
         p = path.parent / ref["path"]
-        d = json.loads(p.read_text())
+        d = json.loads(p.read_text(encoding="utf-8"))
         d["actual_source_ack_us"] = None
-        p.write_text(json.dumps(d))
+        p.write_text(json.dumps(d), encoding="utf-8")
         ref["sha256"] = pilot.sha(p)
-        path.write_text(json.dumps(r))
+        path.write_text(json.dumps(r), encoding="utf-8")
     code, r = result(path, capsys)
     assert code == 2 and r["status"] == "BLOCKED_PENDING_INPUT"
 
@@ -630,9 +630,11 @@ def test_capsule_denominators_lineage_and_global_exclusion_cannot_be_bypassed(
 
 def test_prior_failure_remains_in_full_denominator(tmp_path, capsys):
     path = make_request(tmp_path / "data")
-    request = json.loads(path.read_text())
+    request = json.loads(path.read_text(encoding="utf-8"))
     manifest = json.loads(
-        (path.parent / request["refs"]["pilot_manifest"]["path"]).read_text()
+        (path.parent / request["refs"]["pilot_manifest"]["path"]).read_text(
+            encoding="utf-8"
+        )
     )
     case = manifest["cases"][1]
 
@@ -678,10 +680,10 @@ def test_no_double_transform_zero_fill_shift_or_future_input(
     tmp_path, capsys, damage
 ):
     path = make_request(tmp_path / "data")
-    request = json.loads(path.read_text())
+    request = json.loads(path.read_text(encoding="utf-8"))
     if damage == "double_voltage":
         mpath = path.parent / request["refs"]["run_manifest"]["path"]
-        m = json.loads(mpath.read_text())
+        m = json.loads(mpath.read_text(encoding="utf-8"))
         npz = path.parent / m["runs"][0]["path"]
         with np.load(npz) as a:
             values = a["values"].copy()
@@ -689,28 +691,32 @@ def test_no_double_transform_zero_fill_shift_or_future_input(
         values[:, 17] /= 4
         np.savez(npz, values=values, time_us=times)
         m["runs"][0]["sha256"] = pilot.sha(npz)
-        mpath.write_text(json.dumps(m))
+        mpath.write_text(json.dumps(m), encoding="utf-8")
         request["refs"]["run_manifest"]["sha256"] = pilot.sha(mpath)
     elif damage in {"gap", "future_available"}:
         ref = request["refs"]["canonical_frames"]
         p = path.parent / ref["path"]
-        rows = [json.loads(x) for x in p.read_text().splitlines()]
+        rows = [
+            json.loads(x) for x in p.read_text(encoding="utf-8").splitlines()
+        ]
         if damage == "gap":
             rows.pop(110)
         else:
             rows[110]["lineage"]["sample"]["available_time_us"] = (
                 rows[110]["time_us"] + 1
             )
-        p.write_text("".join(json.dumps(r) + "\n" for r in rows))
+        p.write_text(
+            "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8"
+        )
         ref["sha256"] = pilot.sha(p)
     else:
         ref = request["case_origin"]["origin"]
         p = path.parent / ref["path"]
-        d = json.loads(p.read_text())
+        d = json.loads(p.read_text(encoding="utf-8"))
         d["actual_mission_start_us"] += 100000
-        p.write_text(json.dumps(d))
+        p.write_text(json.dumps(d), encoding="utf-8")
         ref["sha256"] = pilot.sha(p)
-    path.write_text(json.dumps(request))
+    path.write_text(json.dumps(request), encoding="utf-8")
     code, r = result(path, capsys)
     assert code == (3 if damage == "gap" else 1)
 
@@ -725,14 +731,16 @@ def test_pair_receipt_binds_both_real_members_and_native_comparison(
     tmp_path, capsys, damage
 ):
     path = make_request(tmp_path / "data", paired=True)
-    request = json.loads(path.read_text())
+    request = json.loads(path.read_text(encoding="utf-8"))
 
     def read(ref):
-        return json.loads((path.parent / ref["path"]).read_text())
+        return json.loads(
+            (path.parent / ref["path"]).read_text(encoding="utf-8")
+        )
 
     def put(name, obj):
         p = path.parent / (name + ".json")
-        p.write_text(json.dumps(obj))
+        p.write_text(json.dumps(obj), encoding="utf-8")
         return dict(path=p.name, sha256=pilot.sha(p))
 
     producer = read(request["refs"]["expected_producer"])
@@ -767,7 +775,7 @@ def test_pair_receipt_binds_both_real_members_and_native_comparison(
             )
         ),
     )
-    request = json.loads(path.read_text())
+    request = json.loads(path.read_text(encoding="utf-8"))
     metrics = dict(origin_delta_us=0, wind_rms_mps=0.0, wind_peak_mps=0.0)
     native = dict(
         **metrics,
@@ -797,7 +805,7 @@ def test_pair_receipt_binds_both_real_members_and_native_comparison(
             **metrics,
         ),
     )
-    path.write_text(json.dumps(request))
+    path.write_text(json.dumps(request), encoding="utf-8")
     code, receipt = result(path, capsys)
     assert code == (1 if damage else 0)
     assert receipt["expected_case_denominator"] == 45
@@ -805,18 +813,18 @@ def test_pair_receipt_binds_both_real_members_and_native_comparison(
 
 def test_eligible_online_window_cannot_be_silently_omitted(tmp_path, capsys):
     path = make_request(tmp_path / "data")
-    request = json.loads(path.read_text())
+    request = json.loads(path.read_text(encoding="utf-8"))
     ref = request["refs"]["online_manifest"]
     manifest_path = path.parent / ref["path"]
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     arrays_path = path.parent / manifest["file"]["path"]
     with np.load(arrays_path, allow_pickle=False) as archive:
         arrays = {key: archive[key][:-1] for key in archive.files}
     np.savez(arrays_path, **arrays)
     manifest["file"]["sha256"] = pilot.sha(arrays_path)
-    manifest_path.write_text(json.dumps(manifest))
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     ref["sha256"] = pilot.sha(manifest_path)
-    path.write_text(json.dumps(request))
+    path.write_text(json.dumps(request), encoding="utf-8")
     code, receipt = result(path, capsys)
     assert code == 1 and "selective omission" in receipt["reason"]
 
@@ -842,14 +850,14 @@ def test_path_connector_uses_actual_completion_and_never_repairs_false_receipts(
     tmp_path, capsys, passed
 ):
     source = make_request(tmp_path / "data")
-    request = json.loads(source.read_text())
+    request = json.loads(source.read_text(encoding="utf-8"))
     if not passed:
         edit(
             source,
             "native_completion",
             lambda d: d.update(passed=False, allow_pilot45=False),
         )
-        request = json.loads(source.read_text())
+        request = json.loads(source.read_text(encoding="utf-8"))
     bundle = dict(
         schema="drone-ai.pilot45.connector/1",
         task_id=pilot.TASK,
@@ -860,7 +868,7 @@ def test_path_connector_uses_actual_completion_and_never_repairs_false_receipts(
         case_origin={k: v["path"] for k, v in request["case_origin"].items()},
     )
     bundle_path = source.parent / "bundle.json"
-    bundle_path.write_text(json.dumps(bundle))
+    bundle_path.write_text(json.dumps(bundle), encoding="utf-8")
     output = source.parent / "prepared.json"
     if not passed:
         with pytest.raises(pilot.Pending, match="does not authorize"):
@@ -896,22 +904,22 @@ def test_native_pair_coverage_failure_is_not_hidden_by_zero_metrics(
     tmp_path, capsys
 ):
     path = make_request(tmp_path / "data")
-    request = json.loads(path.read_text())
+    request = json.loads(path.read_text(encoding="utf-8"))
     development_path = (
         path.parent / request["refs"]["development_receipt"]["path"]
     )
-    development = json.loads(development_path.read_text())
+    development = json.loads(development_path.read_text(encoding="utf-8"))
     ref = development["comparisons"][0]["native_evidence"]
     native_path = path.parent / ref["path"]
-    native = json.loads(native_path.read_text())
+    native = json.loads(native_path.read_text(encoding="utf-8"))
     native.update(passed=False, reason="synthetic missing full480s coverage")
-    native_path.write_text(json.dumps(native))
+    native_path.write_text(json.dumps(native), encoding="utf-8")
     ref["sha256"] = pilot.sha(native_path)
-    development_path.write_text(json.dumps(development))
+    development_path.write_text(json.dumps(development), encoding="utf-8")
     request["refs"]["development_receipt"]["sha256"] = pilot.sha(
         development_path
     )
-    path.write_text(json.dumps(request))
+    path.write_text(json.dumps(request), encoding="utf-8")
     code, receipt = result(path, capsys)
     assert code == 2 and "coverage gates" in receipt["reason"]
 
@@ -923,7 +931,7 @@ def test_native_interval_preserves_actual_landing_tail_without_request_fallback(
     tmp_path, damage
 ):
     path = make_request(tmp_path / "data")
-    request = json.loads(path.read_text())
+    request = json.loads(path.read_text(encoding="utf-8"))
     policy_path = path.parent / request["refs"]["paired_policy"]["path"]
     native_policy_path = path.parent / request["refs"]["native_policy"]["path"]
     native_policy_path.write_text(
@@ -935,19 +943,22 @@ def test_native_interval_preserves_actual_landing_tail_without_request_fallback(
                 minimum_start_us=60000000,
                 maximum_landing_activation_delay_us=100000,
             )
-        )
+        ),
+        encoding="utf-8",
     )
-    policy = json.loads(policy_path.read_text())
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
     policy.update(
         alignment_mode="versioned_joint_phase",
         mission_source="evaluation/unit-native-receipt.json",
         native_policy_sha256=pilot.sha(native_policy_path),
     )
-    policy_path.write_text(json.dumps(policy))
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
     native_path = path.parent / policy["mission_source"]
     native_path.parent.mkdir()
     origin = json.loads(
-        (path.parent / request["case_origin"]["origin"]["path"]).read_text()
+        (path.parent / request["case_origin"]["origin"]["path"]).read_text(
+            encoding="utf-8"
+        )
     )
     origin.update(
         actual_mission_start_us=60000000, actual_landing_start_us=540065000
@@ -960,8 +971,11 @@ def test_native_interval_preserves_actual_landing_tail_without_request_fallback(
     elif damage == "late":
         origin["actual_landing_start_us"] = 540100001
     elif damage == "policy_hash":
-        native_policy_path.write_text(native_policy_path.read_text() + " ")
-    native_path.write_text(json.dumps(origin))
+        native_policy_path.write_text(
+            native_policy_path.read_text(encoding="utf-8") + " ",
+            encoding="utf-8",
+        )
+    native_path.write_text(json.dumps(origin), encoding="utf-8")
     arguments = dict(
         policy_path=policy_path,
         native_policy_path=native_policy_path,

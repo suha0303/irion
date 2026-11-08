@@ -213,7 +213,7 @@ def create():
     if path.exists():
         raise FileExistsError("Plan already exists; preserve previous plan")
     write(path, config)
-    (HOME / "plan.sha256").write_text(sha(path) + "\n")
+    (HOME / "plan.sha256").write_text(sha(path) + "\n", encoding="utf-8")
     return path
 
 

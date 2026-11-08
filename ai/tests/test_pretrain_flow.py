@@ -107,7 +107,7 @@ def test_cpu_failure_preserves_first_error_and_stops_new_groups(
     r = FixtureRunner(tmp_path)
     groups = [[dict(case_id=str(i))] for i in range(4)]
     preserved = tmp_path / "pending-original.txt"
-    preserved.write_text("keep")
+    preserved.write_text("keep", encoding="utf-8")
     monkeypatch.setattr(
         streaming, "fragment_freeze", lambda *a: (tmp_path, [dict(run_id="a")])
     )
@@ -123,7 +123,7 @@ def test_cpu_failure_preserves_first_error_and_stops_new_groups(
     assert signal["reason"] == "ValueError: original capsule failure"
     assert (
         len(r.flights) == 2
-        and preserved.read_text() == "keep"
+        and preserved.read_text(encoding="utf-8") == "keep"
         and pipeline.r is r
     )
 

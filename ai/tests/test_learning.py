@@ -106,13 +106,16 @@ def test_three_fresh_process_resume(tmp_path, name):
     data = tmp_path / "data.npz"
     np.savez(data, **arrays(4))
     runner = tmp_path / "run.py"
-    runner.write_text("""import sys,numpy as np
+    runner.write_text(
+        """import sys,numpy as np
 from learning.models import ModelSpec
 from learning.training import run_fit
 phase,name,path,out,resume=sys.argv[1:]
 a=dict(np.load(path))
 run_fit(ModelSpec(name,8),a,a,out,binding={'data':'fixture','scaler':'fixture','sources':'fixture'},batch_size=2,epochs=4,patience=5,resume=None if resume=='-' else resume,stop_after_epoch=2 if phase=='partial' else None)
-""")
+""",
+        encoding="utf-8",
+    )
     for phase in ["full", "partial", "resume"]:
         subprocess.run(
             [
@@ -210,7 +213,7 @@ def test_finite_benchmark_cpu_and_unauthorized_cuda(tmp_path):
         x["windows_per_s"] > 0 and x["discarded_weights"] for x in r
     )
     assert (
-        json.loads((tmp_path / "cpu/result.json").read_text())[
+        json.loads((tmp_path / "cpu/result.json").read_text(encoding="utf-8"))[
             "next_training_authorized"
         ]
         is False
@@ -240,7 +243,7 @@ def test_cuda_fit_requires_explicit_approval(tmp_path):
             device="cuda",
         )
     assert (
-        json.loads((tmp_path / "fit/failure.json").read_text())[
+        json.loads((tmp_path / "fit/failure.json").read_text(encoding="utf-8"))[
             "automatic_retry"
         ]
         is False

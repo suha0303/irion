@@ -19,7 +19,7 @@ def test_fresh_preflight_reports_estimate_shortfall_without_disabling_actual_gua
     )
     common.write(tmp_path / "config.json", cfg)
     (tmp_path / "config.sha256").write_text(
-        common.sha(tmp_path / "config.json")
+        common.sha(tmp_path / "config.json"), encoding="utf-8"
     )
     common.write(
         tmp_path / "budget.json",

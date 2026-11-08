@@ -642,7 +642,7 @@ def launchers(root, remote):
             )
             + "\n"
         )
-        (root / name).write_text(body)
+        (root / name).write_text(body, encoding="utf-8")
         (root / name).chmod(0o755)
 
 

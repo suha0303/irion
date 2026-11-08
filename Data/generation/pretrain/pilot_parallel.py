@@ -259,7 +259,7 @@ def released():
                 for i in range(16)
             ),
         ):
-            handle = stack.enter_context(p.open("a"))
+            handle = stack.enter_context(p.open("a", encoding="utf-8"))
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         for i in range(16):
             pilot45.collector().check_instance_socket(i)
@@ -350,10 +350,10 @@ def create(name):
     verify(
         {
             str(previous / "config.json"): (previous / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip(),
             str(previous / "manifest.json"): (previous / "manifest.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip(),
         }
     )
@@ -424,7 +424,9 @@ def create(name):
         ),
     )
     write(task / "manifest.json", manifest)
-    (task / "manifest.sha256").write_text(sha(task / "manifest.json") + "\n")
+    (task / "manifest.sha256").write_text(
+        sha(task / "manifest.json") + "\n", encoding="utf-8"
+    )
     ledger = copy.deepcopy(old_ledger)
     ledger["status"] = "NOT_STARTED_CONTINUATION"
     for case in manifest["cases"]:
@@ -522,7 +524,9 @@ def create(name):
         }
     )
     write(task / "config.json", cfg)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     write(
         task / "operator/state.json",
         dict(status="READY_NOT_STARTED", task=task.name, updated_utc=now()),
@@ -550,7 +554,9 @@ def create(name):
         }
     )
     write(flow / "config.json", fc)
-    (flow / "config.sha256").write_text(sha(flow / "config.json") + "\n")
+    (flow / "config.sha256").write_text(
+        sha(flow / "config.json") + "\n", encoding="utf-8"
+    )
     write(
         flow / "ledger.json",
         dict(
@@ -595,7 +601,7 @@ class Coordinator:
             owner_uid=os.getuid(),
             started=time.time(),
             service_unit=service_unit(task),
-            cgroup=Path("/proc/self/cgroup").read_text(),
+            cgroup=Path("/proc/self/cgroup").read_text(encoding="utf-8"),
             requested_flight_workers=16,
             requested_real_time_factor=2,
             cpu_workers_total_max=4,
@@ -1216,7 +1222,7 @@ def worker(task):
     verify(
         {
             str(task / "config.json"): (task / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -1227,7 +1233,7 @@ def worker(task):
             HOME / "pretrain.lock",
             ROOT / "Data/operations/collection.lock",
         ):
-            h = stack.enter_context(p.open("a"))
+            h = stack.enter_context(p.open("a", encoding="utf-8"))
             fcntl.flock(h, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if (task / "operator/claimed").exists():
             if cfg.get("final16"):
@@ -1257,7 +1263,7 @@ def worker(task):
                     )
                 )
         else:
-            with (task / "operator/claimed").open("x") as f:
+            with (task / "operator/claimed").open("x", encoding="utf-8") as f:
                 f.write(now())
         try:
             coordinator.run()
@@ -1355,9 +1361,9 @@ def flow_worker(flow):
         updated_utc=now(),
         next_stage_authorized=False,
     )
-    with (HOME / "pilot45-flow.lock").open("a") as lock:
+    with (HOME / "pilot45-flow.lock").open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        with (flow / "operator/claimed").open("x") as f:
+        with (flow / "operator/claimed").open("x", encoding="utf-8") as f:
             f.write(now())
         write(flow / "operator/state.json", state)
         try:
@@ -1406,7 +1412,8 @@ def flow_worker(flow):
                         else "# 예비45 유한 수집 완료\n\n"
                     )
                     + "같은45 case의 수집·두19·독립품질·9pair·AI45검사와 실제서비스종료/16인스턴스반환을 확인했습니다. 학습·모델성능평가 결과가 아닙니다.\n\n세부 수치와 실패/시도 계보는 completion.json과 하위 task/quality.json을 따릅니다.\n"
-                )
+                ),
+                encoding="utf-8",
             )
             state["status"] = result["status"]
         except BaseException as exc:
@@ -1528,7 +1535,9 @@ def prepare_short(task, handoff):
         ),
     )
     write(task / "config.json", cfg)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     write(
         task / "operator/state.json",
         dict(
@@ -1551,7 +1560,9 @@ def prepare_short(task, handoff):
     )
     fc["source_sha256"][str(task / "config.json")] = sha(task / "config.json")
     write(flow / "config.json", fc)
-    (flow / "config.sha256").write_text(sha(flow / "config.json") + "\n")
+    (flow / "config.sha256").write_text(
+        sha(flow / "config.json") + "\n", encoding="utf-8"
+    )
     write(flow / "budget.json", dict(per_case_conservative_increment_bytes=0))
     write(
         flow / "ledger.json",

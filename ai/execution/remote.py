@@ -57,7 +57,7 @@ def submit(root):
         raise ValueError(
             "Approved interpreter required; no environment installation"
         )
-    with REMOTE_LOCK.open("a") as lock:
+    with REMOTE_LOCK.open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         queue = command(
             ["squeue", "-h", "-u", str(os.getuid()), "-o", "%A %j %T"]
@@ -66,7 +66,7 @@ def submit(root):
             raise ValueError(
                 "Existing own pending/running job; not submitted: " + queue
             )
-        with (job / "submitted.claim").open("x") as f:
+        with (job / "submitted.claim").open("x", encoding="utf-8") as f:
             f.write("One submission only; unknown outcome is never retried\n")
         out = job / "output"
         out.mkdir()
@@ -93,7 +93,8 @@ def submit(root):
                     inventory_sha,
                 ]
             )
-            + "\n"
+            + "\n",
+            encoding="utf-8",
         )
         argv = [
             "sbatch",
@@ -252,7 +253,7 @@ def worker(root, inventory_sha):
         verify(root, read(root / "inventory.json"))
         cfg = read(root / "config.json")
         config_check(cfg)
-        with REMOTE_LOCK.open("a") as lock:
+        with REMOTE_LOCK.open("a", encoding="utf-8") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             from pipeline.runtime import check
 

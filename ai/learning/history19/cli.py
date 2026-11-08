@@ -75,12 +75,14 @@ def main(argv=None):
         from .data import inspect_run
 
         expected = (
-            json.loads(args.producer_binding.read_text())
+            json.loads(args.producer_binding.read_text(encoding="utf-8"))
             if args.producer_binding
             else None
         )
         protection = (
-            json.loads(args.protection.read_text()) if args.protection else None
+            json.loads(args.protection.read_text(encoding="utf-8"))
+            if args.protection
+            else None
         )
         print(
             json.dumps(
@@ -99,7 +101,7 @@ def main(argv=None):
 
         with tempfile.TemporaryDirectory(prefix="history19-validate-") as temp:
             expected = (
-                json.loads(args.producer_binding.read_text())
+                json.loads(args.producer_binding.read_text(encoding="utf-8"))
                 if args.producer_binding
                 else None
             )
@@ -107,7 +109,9 @@ def main(argv=None):
                 args.manifest,
                 cache=Path(temp) / "normalized",
                 expected_producer=expected,
-                protection=json.loads(args.protection.read_text())
+                protection=json.loads(
+                    args.protection.read_text(encoding="utf-8")
+                )
                 if args.protection
                 else None,
             )
@@ -129,7 +133,9 @@ def main(argv=None):
         print(
             json.dumps(
                 process(
-                    args.run, args.output, json.loads(args.config.read_text())
+                    args.run,
+                    args.output,
+                    json.loads(args.config.read_text(encoding="utf-8")),
                 )
             )
         )

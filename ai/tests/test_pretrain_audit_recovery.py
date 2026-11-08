@@ -76,7 +76,7 @@ def test_quality_reuses_audit_and_dataset_without_recomputing(
     dataset = old / "dataset"
     canonical = dataset / "canonical/good"
     canonical.mkdir(parents=True)
-    (canonical / "frames.jsonl").write_text("{}\n")
+    (canonical / "frames.jsonl").write_text("{}\n", encoding="utf-8")
     common.write(
         canonical / "summary.json",
         dict(output_hashes={"frames": common.sha(canonical / "frames.jsonl")}),

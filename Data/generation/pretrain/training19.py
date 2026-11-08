@@ -158,13 +158,13 @@ def prepare_plan(path=DEFAULT_PLAN, seed=None):
         verify(
             {
                 str(path / "manifest.json"): (path / "manifest.sha256")
-                .read_text()
+                .read_text(encoding="utf-8")
                 .strip()
             }
         )
         return path
     PLANS.mkdir(parents=True, exist_ok=True)
-    with (PLANS / "planning.lock").open("a") as lock:
+    with (PLANS / "planning.lock").open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         prior = prior_seeds()
         for _ in range(128):
@@ -207,7 +207,7 @@ def prepare_plan(path=DEFAULT_PLAN, seed=None):
         validate(manifest)
         write(path / "manifest.json", manifest)
         (path / "manifest.sha256").write_text(
-            sha(path / "manifest.json") + "\n"
+            sha(path / "manifest.json") + "\n", encoding="utf-8"
         )
         write(
             path / "authorization.json",

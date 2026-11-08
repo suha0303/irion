@@ -129,7 +129,7 @@ def submit(root, phase, cfg):
     receipt = read(root / "prepared.json")
     if sha(root / "server-profile.json") != receipt["server_profile_sha256"]:
         raise ValueError("Selected server profile changed")
-    with LOCK.open("a") as lock:
+    with LOCK.open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if own_queue():
             raise ValueError(
@@ -145,7 +145,9 @@ def submit(root, phase, cfg):
                 raise ValueError(
                     "Complete sealed compute required before evaluation"
                 )
-        with (root / (phase + "-submitted.claim")).open("x") as stream:
+        with (root / (phase + "-submitted.claim")).open(
+            "x", encoding="utf-8"
+        ) as stream:
             stream.write(
                 "One submission; unknown response must not be retried.\n"
             )
@@ -172,7 +174,8 @@ def submit(root, phase, cfg):
                     str(root),
                 ]
             )
-            + "\n"
+            + "\n",
+            encoding="utf-8",
         )
         argv = [
             "sbatch",
@@ -373,7 +376,7 @@ def report(root, cfg):
         "Neural best.pt and last.pt are separate from exported best weights. No cross-round accumulation.",
         "REPORT_READY_STOPPED: both own allocations released; no next round authorized.",
     ]
-    (root / "report.txt").write_text("\n".join(lines) + "\n")
+    (root / "report.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def training_report(root, cfg):
@@ -393,7 +396,9 @@ def training_report(root, cfg):
             "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL: own allocation released; no next work scheduled.",
         ]
     )
-    (root / "training-report.txt").write_text("\n".join(lines) + "\n")
+    (root / "training-report.txt").write_text(
+        "\n".join(lines) + "\n", encoding="utf-8"
+    )
 
 
 def control(root):
@@ -415,7 +420,7 @@ def control(root):
                 "Comparison controller must run inside server tmux"
             )
         verify(root / "input", read(root / "input/inventory.json"))
-    with (root / "controller.claim").open("x") as stream:
+    with (root / "controller.claim").open("x", encoding="utf-8") as stream:
         stream.write("One finite approved lifecycle; no automatic retry.\n")
     state = dict(
         status="RUNNING",

@@ -11,7 +11,7 @@ def test_current_producer_path_is_stable_even_with_retired_revision_files(
     archive = tmp_path / "artifacts/round001-r3"
     archive.mkdir(parents=True)
     (archive / "producer-lock-layout-v7.json").write_text(
-        '{"forged":"old selector"}'
+        '{"forged":"old selector"}', encoding="utf-8"
     )
     assert (
         collection_config.producer_lock_path()

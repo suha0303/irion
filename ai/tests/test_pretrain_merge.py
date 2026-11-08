@@ -69,7 +69,7 @@ def test_restore_reports_verified_members_without_mutating_bundle(
     bundle = tmp_path / "bundle"
     bundle.mkdir()
     original = bundle / "source.txt"
-    original.write_text("preserve")
+    original.write_text("preserve", encoding="utf-8")
     ref = storage.pack_files(
         {"first": original, "second": original},
         bundle / "truth.tar.xz",
@@ -88,7 +88,7 @@ def test_restore_reports_verified_members_without_mutating_bundle(
         progress=lambda **p: counts.append(p),
     )
     assert counts == [dict(done=1, total=2), dict(done=2, total=2)]
-    assert original.read_text() == "preserve"
+    assert original.read_text(encoding="utf-8") == "preserve"
     assert common.sha(bundle / "truth.tar.xz") == ref["sha256"]
 
 

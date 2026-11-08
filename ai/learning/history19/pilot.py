@@ -119,7 +119,7 @@ def json_file(path):
         raise ValueError(
             "Admission JSON exceeds16MiB; use bounded metadata, not raw events"
         )
-    return json.loads(path.read_text())
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 class Evidence:
@@ -939,7 +939,7 @@ def main(request_path, output=None):
             raise ValueError(
                 "Receipt output must be a new regular path, separate from input"
             )
-        with output.open("x") as stream:
+        with output.open("x", encoding="utf-8") as stream:
             stream.write(json.dumps(result, indent=2, allow_nan=False) + "\n")
     print(json.dumps(result, allow_nan=False))
     return code

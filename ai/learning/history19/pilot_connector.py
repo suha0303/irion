@@ -272,7 +272,7 @@ def prepare_request(bundle_path, output):
         p.is_symlink() for p in (output, *output.parents)
     ):
         raise ValueError("New regular request output required")
-    with output.open("x") as stream:
+    with output.open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(request, indent=2, allow_nan=False) + "\n")
     return dict(
         status="REQUEST_WRITTEN_NOT_CHECKED",

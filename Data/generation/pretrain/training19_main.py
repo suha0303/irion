@@ -301,7 +301,7 @@ def prepare(path=DEFAULT_PLAN, lr_path=training19.DEFAULT_PLAN):
         verify(
             {
                 str(path / "manifest.json"): (path / "manifest.sha256")
-                .read_text()
+                .read_text(encoding="utf-8")
                 .strip()
             }
         )
@@ -338,5 +338,7 @@ def prepare(path=DEFAULT_PLAN, lr_path=training19.DEFAULT_PLAN):
         final_evaluation_locked=True,
     )
     write(path / "manifest.json", manifest)
-    (path / "manifest.sha256").write_text(sha(path / "manifest.json") + "\n")
+    (path / "manifest.sha256").write_text(
+        sha(path / "manifest.json") + "\n", encoding="utf-8"
+    )
     return path

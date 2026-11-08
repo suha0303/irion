@@ -219,7 +219,14 @@ def test_global_registry_does_not_allow_cross_task_lineage_reuse(
     common.write(tmp_path / "two/config.json", {})
     with pytest.raises(pilot45.Blocked, match="reuse"):
         pilot45.register(tmp_path / "two", event)
-    assert len((tmp_path / "registry.jsonl").read_text().splitlines()) == 2
+    assert (
+        len(
+            (tmp_path / "registry.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
+        )
+        == 2
+    )
 
 
 def test_completed_raw_is_retained_after_wrapper_failure(monkeypatch, tmp_path):

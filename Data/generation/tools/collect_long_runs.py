@@ -406,13 +406,13 @@ def sha(path):
 
 
 def read(path):
-    return json.loads(Path(path).read_text())
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def atomic(path, value):
     path = Path(path)
     temp = path.with_name("." + path.name + "." + uuid.uuid4().hex)
-    with temp.open("x") as f:
+    with temp.open("x", encoding="utf-8") as f:
         json.dump(value, f, indent=2, allow_nan=False)
         f.write("\n")
         f.flush()
@@ -695,7 +695,7 @@ def archive_run(run, destination, stage_dir, budgets, check):
 
 def memory_snapshot():
     info = {}
-    for line in Path("/proc/meminfo").read_text().splitlines():
+    for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
         key, value = line.split(":", 1)
         info[key] = int(value.split()[0]) * 1024
     # Current CLI plus descendants, never other users' unrelated processes.
@@ -704,7 +704,12 @@ def memory_snapshot():
         if not p.name.isdigit():
             continue
         try:
-            fields = (p / "stat").read_text().rsplit(")", 1)[1].split()
+            fields = (
+                (p / "stat")
+                .read_text(encoding="utf-8")
+                .rsplit(")", 1)[1]
+                .split()
+            )
             processes[int(p.name)] = (
                 int(fields[1]),
                 int(fields[21]) * os.sysconf("SC_PAGE_SIZE"),
@@ -731,20 +736,24 @@ def memory_snapshot():
     try:
         group = next(
             line[3:]
-            for line in Path("/proc/self/cgroup").read_text().splitlines()
+            for line in Path("/proc/self/cgroup")
+            .read_text(encoding="utf-8")
+            .splitlines()
             if line.startswith("0::")
         )
         base = Path("/sys/fs/cgroup") / group.lstrip("/")
         pids = set()
         for file in base.rglob("cgroup.procs"):
-            pids.update(int(pid) for pid in file.read_text().split())
+            pids.update(
+                int(pid) for pid in file.read_text(encoding="utf-8").split()
+            )
         result.update(
             cgroup_path=group,
             cgroup_total_rss_bytes=sum(
                 processes.get(pid, (0, 0))[1] for pid in pids
             ),
             cgroup_memory_current_bytes=int(
-                (base / "memory.current").read_text()
+                (base / "memory.current").read_text(encoding="utf-8")
             ),
         )
     except (OSError, ValueError, StopIteration):
@@ -1287,7 +1296,7 @@ def execute(plan, cases, process_helper):
         / "Data/operations/collection.lock"
     )
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a") as lock:
+    with lock_path.open("a", encoding="utf-8") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:
@@ -1317,7 +1326,7 @@ def candidate_baseline(config):
     if (
         Path(speed["baseline_config"]["path"]) != source / "config.json"
         or sha(source / "config.json")
-        != (source / "config.sha256").read_text().strip()
+        != (source / "config.sha256").read_text(encoding="utf-8").strip()
         or read(source / "operator/state.json")["status"]
         not in {"FAILED_STOPPED", "TEST_COMPLETE_STOPPED"}
         or old_config.get("mode") != "test"
@@ -1361,7 +1370,9 @@ def candidate_baseline(config):
             Path(previous["results"]["path"])
             != SPEED_TEST_ROOT / prior_task.name / "results.json"
             or sha(prior_task / "config.json")
-            != (prior_task / "config.sha256").read_text().strip()
+            != (prior_task / "config.sha256")
+            .read_text(encoding="utf-8")
+            .strip()
             or read(prior_task / "operator/state.json")["status"]
             not in {"FAILED_STOPPED", "TEST_COMPLETE_STOPPED"}
             or prior_config.get("mode") != "test"
@@ -1462,7 +1473,9 @@ def _execute_locked(plan, cases, process_helper):
     claim_root = Path(plan.get("project_root", root)) / "Data/operations/claims"
     claim_root.mkdir(parents=True, exist_ok=True)
     # Persistent claims prevent whole-task resubmission; only bounded in-task attempts repeat.
-    with (claim_root / (plan["campaign_id"] + ".claim")).open("x") as f:
+    with (claim_root / (plan["campaign_id"] + ".claim")).open(
+        "x", encoding="utf-8"
+    ) as f:
         json.dump(plan, f)
     existing = set()
     comparison_previous = speed_comparison_scope(plan, cases)
@@ -1671,7 +1684,9 @@ def _execute_locked(plan, cases, process_helper):
                             else [case["scenario"], case["seed"]]
                         ).encode()
                     ).hexdigest()
-                    with (claim_root / (claim + ".claim")).open("x") as f:
+                    with (claim_root / (claim + ".claim")).open(
+                        "x", encoding="utf-8"
+                    ) as f:
                         json.dump(case, f)
                 except BaseException as exc:
                     stop_new(str(exc))

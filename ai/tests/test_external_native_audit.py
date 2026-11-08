@@ -17,7 +17,7 @@ from learning.history19.pilot import json_file, sha
 
 def write(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value) + "\n")
+    path.write_text(json.dumps(value) + "\n", encoding="utf-8")
     return dict(path=str(path.absolute()), sha256=sha(path))
 
 
@@ -44,7 +44,7 @@ def external_fixture(folder):
                 p.write_bytes(args["native_policy"].read_bytes())
             else:
                 p.parent.mkdir(parents=True, exist_ok=True)
-                p.write_text("{}\n")
+                p.write_text("{}\n", encoding="utf-8")
     integrity = {
         n: dict(sha256=sha(raw / n), size=(raw / n).stat().st_size)
         for n in RAW_MEMBERS
@@ -52,7 +52,9 @@ def external_fixture(folder):
     write(raw / "integrity.json", integrity)
     package = folder / "auditor"
     package.mkdir()
-    (package / "api.py").write_text("# synthetic auditor identity\n")
+    (package / "api.py").write_text(
+        "# synthetic auditor identity\n", encoding="utf-8"
+    )
     gen = dict(
         source_sha256=producer["source_manifest_sha256"],
         runtime_sha256=producer["runtime_sha256"],
@@ -180,11 +182,13 @@ def test_full_gate_and_original_hashes_are_mandatory(tmp_path, damage):
     elif damage == "generation":
         args["generation"]["runtime_sha256"] = "0" * 64
     elif damage == "audit_code":
-        (tmp_path / "unit/auditor/api.py").write_text("# changed auditor\n")
+        (tmp_path / "unit/auditor/api.py").write_text(
+            "# changed auditor\n", encoding="utf-8"
+        )
     elif damage == "raw_csv":
         (
             args["run_path"].parent / "evaluation/joint-consumption.csv"
-        ).write_text("changed\n")
+        ).write_text("changed\n", encoding="utf-8")
     else:
         args["duration_us"] = 180000000
     with pytest.raises((ValueError, KeyError)):
@@ -215,7 +219,9 @@ def test_hash_identical_historical_auditor_location_is_explicitly_verified(
     write(rp, receipt)
     ref["sha256"] = sha(rp)
     if changed:
-        (archive / "api.py").write_text("# changed copied auditor\n")
+        (archive / "api.py").write_text(
+            "# changed copied auditor\n", encoding="utf-8"
+        )
         with pytest.raises(ValueError, match="package differs"):
             verified_check(**args)
     else:

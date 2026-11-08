@@ -24,7 +24,9 @@ from .speed_metrics import metrics as matched_metrics
 def metrics(canonical, record):
     frames = [
         json.loads(line)
-        for line in (canonical / "frames.jsonl").read_text().splitlines()
+        for line in (canonical / "frames.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     summary = read(canonical / "summary.json")
     names = summary["feature_order"]
@@ -309,7 +311,7 @@ def review(task, output):
         raise ValueError("Stopped finite speed-test source required")
     if (
         sha(task / "config.json")
-        != (task / "config.sha256").read_text().strip()
+        != (task / "config.sha256").read_text(encoding="utf-8").strip()
     ):
         raise ValueError("Original configuration changed")
     from x500_storage import task_root

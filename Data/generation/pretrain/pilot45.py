@@ -656,7 +656,7 @@ def recovery_context(previous, receipt):
         entry.get("run")
         or entry["attempts"][0].get("run_id")
         or "ModuleNotFoundError: No module named 'pymavlink'"
-        not in log.read_text()
+        not in log.read_text(encoding="utf-8")
     ):
         raise Blocked(
             "Prior completed/unknown raw cannot be replaced by a new flight"
@@ -818,7 +818,7 @@ def short_repair_context(previous, receipt):
             or meta.get("primary_failure", {}).get("stage") != "waiting"
             or accepted["files"].get(str(log)) != sha(log)
             or f"integer {case['seed']} too big to convert to `int'"
-            not in log.read_text()
+            not in log.read_text(encoding="utf-8")
             or any(
                 identity(p) is not None
                 for p in meta.get("owned_process_groups", {}).values()
@@ -969,7 +969,9 @@ def init(
             mission_seconds=180 if short_cycle else 480,
         ),
     )
-    (task / "manifest.sha256").write_text(sha(task / "manifest.json") + "\n")
+    (task / "manifest.sha256").write_text(
+        sha(task / "manifest.json") + "\n", encoding="utf-8"
+    )
     write(task / "protection.json", protected)
     write(
         task / "global-protection.json",
@@ -1092,7 +1094,9 @@ def init(
             integration_scope="one standalone raw -> shared frames -> two19 readers -> audit -> STOP; no paired admission",
         )
     write(task / "config.json", config)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     write(
         task / "operator/state.json",
         dict(
@@ -1186,7 +1190,7 @@ def prepare_pilot(
     verify(
         {
             str(draft / "manifest.json"): (draft / "manifest.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -1282,7 +1286,9 @@ def prepare_pilot(
         ),
     )
     write(task / "config.json", cfg)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     write(
         task / "operator/state.json",
         dict(
@@ -1365,7 +1371,9 @@ def service_identity(task, *, require_running=False):
     if pid:
         if Path(f"/proc/{pid}").stat().st_uid != os.getuid() or not any(
             line.startswith("0::") and line.rstrip().endswith("/" + unit)
-            for line in Path(f"/proc/{pid}/cgroup").read_text().splitlines()
+            for line in Path(f"/proc/{pid}/cgroup")
+            .read_text(encoding="utf-8")
+            .splitlines()
         ):
             raise Blocked("Service PID/owner/cgroup mismatch")
     if require_running and (not pid or identity(pid) is None):
@@ -1718,7 +1726,7 @@ def resumed_registry_identity(task, config, old, record):
 
 def register(task, record):
     REGISTRY.parent.mkdir(parents=True, exist_ok=True)
-    with REGISTRY.open("a+") as stream:
+    with REGISTRY.open("a+", encoding="utf-8") as stream:
         fcntl.flock(stream, fcntl.LOCK_EX)
         stream.seek(0)
         for line in stream:
@@ -2007,14 +2015,14 @@ def child(task, request, log, *, on_progress=None, resource_snapshot=None):
         ]
     )
     with ExitStack() as streams:
-        stream = streams.enter_context(Path(log).open("x"))
+        stream = streams.enter_context(Path(log).open("x", encoding="utf-8"))
         stdout_path = (
             Path(request).with_suffix(".stdout.json")
             if job["action"] == "flight"
             else None
         )
         stdout = (
-            streams.enter_context(stdout_path.open("x"))
+            streams.enter_context(stdout_path.open("x", encoding="utf-8"))
             if stdout_path
             else stream
         )
@@ -2027,7 +2035,9 @@ def child(task, request, log, *, on_progress=None, resource_snapshot=None):
         )
         receipt = task / "operator/child.json"
         try:
-            group = Path(f"/proc/{process.pid}/cgroup").read_text()
+            group = Path(f"/proc/{process.pid}/cgroup").read_text(
+                encoding="utf-8"
+            )
         except FileNotFoundError:
             group = None
         process_record = dict(
@@ -2178,7 +2188,7 @@ def run_case(request):
     verify(
         {
             str(task / "config.json"): (task / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -2286,7 +2296,7 @@ def worker(task):
     verify(
         {
             str(task / "config.json"): (task / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -2303,7 +2313,7 @@ def worker(task):
         updated_utc=now(),
         started=previous_state.get("started", time.time()),
         service_unit=service_unit(task, cfg),
-        cgroup=Path("/proc/self/cgroup").read_text(),
+        cgroup=Path("/proc/self/cgroup").read_text(encoding="utf-8"),
         training_authorized=False,
         completed=[],
         active=[],
@@ -2314,7 +2324,7 @@ def worker(task):
             HOME / "pretrain.lock",
             ROOT / "Data/operations/collection.lock",
         ):
-            handle = stack.enter_context(path.open("a"))
+            handle = stack.enter_context(path.open("a", encoding="utf-8"))
             fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if (task / "operator/claimed").exists():
             request = task / "operator/resume-request.json"
@@ -2337,7 +2347,9 @@ def worker(task):
                     )
                 )
         else:
-            with (task / "operator/claimed").open("x") as stream:
+            with (task / "operator/claimed").open(
+                "x", encoding="utf-8"
+            ) as stream:
                 stream.write(now())
         write(task / "operator/state.json", state)
         manifest = read(task / "manifest.json")

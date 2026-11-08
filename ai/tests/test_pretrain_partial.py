@@ -77,7 +77,7 @@ def test_successful_canonical_copy_preserves_original_and_checks_hash(
     old.mkdir(parents=True)
     hashes = {}
     for n in ("frames", "windows", "exclusions"):
-        (old / (n + ".jsonl")).write_text("{}\n")
+        (old / (n + ".jsonl")).write_text("{}\n", encoding="utf-8")
         hashes[n] = common.sha(old / (n + ".jsonl"))
     summary = dict(
         config={"fixture": True},
@@ -86,7 +86,7 @@ def test_successful_canonical_copy_preserves_original_and_checks_hash(
         output_hashes=hashes,
     )
     common.write(old / "summary.json", summary)
-    (old / "checkpoint.json").write_text("unused checkpoint")
+    (old / "checkpoint.json").write_text("unused checkpoint", encoding="utf-8")
     before = {p: p.read_bytes() for p in old.iterdir()}
     root = tmp_path / "new"
     frozen = dict(

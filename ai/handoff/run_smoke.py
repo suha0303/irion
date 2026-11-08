@@ -21,12 +21,14 @@ def digest(path):
 
 
 def write_json(path, value):
-    path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n")
+    path.write_text(
+        json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
 
 
 def verify(root):
     root = root.resolve()
-    manifest = json.loads((root / "MANIFEST.json").read_text())
+    manifest = json.loads((root / "MANIFEST.json").read_text(encoding="utf-8"))
     for name, entry in manifest["files"].items():
         relative = Path(name)
         file = root / relative
@@ -55,7 +57,9 @@ def verify(root):
         raise ValueError("unlisted package files: " + repr(extras))
     sums = {
         line.split("  ", 1)[1]: line.split("  ", 1)[0]
-        for line in (root / "SHA256SUMS").read_text().splitlines()
+        for line in (root / "SHA256SUMS")
+        .read_text(encoding="utf-8")
+        .splitlines()
     }
     if set(sums) != set(manifest["files"]) | {"MANIFEST.json"}:
         raise ValueError("checksum list membership mismatch")
@@ -68,7 +72,9 @@ def verify(root):
 
 
 def environment(root, device):
-    policy = json.loads((root / "environment/policy.json").read_text())
+    policy = json.loads(
+        (root / "environment/policy.json").read_text(encoding="utf-8")
+    )
     versions = {
         name: importlib.metadata.version(name)
         for name in policy["runtime_versions"]
@@ -135,6 +141,7 @@ def environment(root, device):
                 ],
                 capture_output=True,
                 text=True,
+                check=False,
             )
             result["nvidia_smi"] = {
                 "exit_code": smi.returncode,
@@ -202,9 +209,14 @@ def main():
             "Verified package; starting four-epoch / two-plus-two lifecycle",
             flush=True,
         )
-        with (output / "lifecycle.log").open("w") as log:
+        with (output / "lifecycle.log").open("w", encoding="utf-8") as log:
             completed = subprocess.run(
-                command, cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT
+                command,
+                cwd=root,
+                env=env,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                check=False,
             )
         write_json(
             output / "command.json",
@@ -218,13 +230,15 @@ def main():
             raise ValueError(
                 "lifecycle failed; see lifecycle.log and lifecycle/report.json"
             )
-        report = json.loads((output / "lifecycle/report.json").read_text())
+        report = json.loads(
+            (output / "lifecycle/report.json").read_text(encoding="utf-8")
+        )
         if not report["passed"] or report["device"] != args.device:
             raise ValueError("lifecycle acceptance failed")
         reference_equal = None
         if args.device == "cpu":
             reference = json.loads(
-                (root / "reference/cpu-report.json").read_text()
+                (root / "reference/cpu-report.json").read_text(encoding="utf-8")
             )
             reference_equal = reference["history"] == report[
                 "history"

@@ -45,7 +45,9 @@ def test_pooled_scaler_uses_all_train_and_no_holdout_values(tmp_path):
         offset = offsets.get(row["run_id"], 100000)
         frames = [
             json.loads(line)
-            for line in (folder / "frames.jsonl").read_text().splitlines()
+            for line in (folder / "frames.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
         ]
         for frame in frames:
             frame["values"]["body_rate_p"] += offset
@@ -53,7 +55,9 @@ def test_pooled_scaler_uses_all_train_and_no_holdout_values(tmp_path):
                 frame["context"][0] += offset
         windows = [
             json.loads(line)
-            for line in (folder / "windows.jsonl").read_text().splitlines()
+            for line in (folder / "windows.jsonl")
+            .read_text(encoding="utf-8")
+            .splitlines()
         ]
         for window in windows:
             for sample in window["X"]:

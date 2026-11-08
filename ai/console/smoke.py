@@ -535,7 +535,9 @@ def restore_gate(root, cfg, progress, *, profile=None):
             ]
             if profile is not None:
                 argv += ["--profile", str(profile)]
-            with (root / f"{model}-{phase}.log").open("x") as log:
+            with (root / f"{model}-{phase}.log").open(
+                "x", encoding="utf-8"
+            ) as log:
                 subprocess.run(
                     argv,
                     check=True,

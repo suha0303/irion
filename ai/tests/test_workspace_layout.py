@@ -109,6 +109,7 @@ print('PHYSICAL_PATHS_PLAN_BOUND_NO_EXECUTION')
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "PHYSICAL_PATHS_PLAN_BOUND_NO_EXECUTION" in result.stdout

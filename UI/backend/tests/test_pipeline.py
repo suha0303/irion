@@ -43,7 +43,7 @@ def battery(ms, **fields):
 
 def write_run(tmp_path, records):
     path = tmp_path / "flight.jsonl"
-    path.write_text("\n".join(json.dumps(r) for r in records))
+    path.write_text("\n".join(json.dumps(r) for r in records), encoding="utf-8")
     return TelemetryRun(path)
 
 

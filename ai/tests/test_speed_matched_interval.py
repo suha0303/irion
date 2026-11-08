@@ -29,7 +29,7 @@ def fixture(
     )
     stream = raw / "observations/streams.jsonl"
     stream.parent.mkdir(parents=True)
-    with stream.open("w") as f:
+    with stream.open("w", encoding="utf-8") as f:
         for t in range(start_seconds * 1_000_000, 152_000_001, 100_000):
             if missing_raw and anchor + 30_000_000 <= t < anchor + 30_100_000:
                 continue
@@ -62,7 +62,7 @@ def fixture(
         for t in range(start_seconds * 1_000_000, 152_000_001, 100_000)
     ]
     (canonical / "frames.jsonl").write_text(
-        "".join(json.dumps(f) + "\n" for f in frames)
+        "".join(json.dumps(f) + "\n" for f in frames), encoding="utf-8"
     )
     windows = []
     for t in range((start_seconds + 60) * 1_000_000, 151_000_000, 1_000_000):
@@ -79,7 +79,7 @@ def fixture(
             )
         )
     (canonical / "windows.jsonl").write_text(
-        "".join(json.dumps(w) + "\n" for w in windows)
+        "".join(json.dumps(w) + "\n" for w in windows), encoding="utf-8"
     )
     members = {
         n: dict(sha256=common.sha(raw / n))

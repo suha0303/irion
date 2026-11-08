@@ -119,7 +119,9 @@ def test_resume_does_not_close_pending_at_replayed_segment_boundary(
     assert result["closed"]
     resumed = [
         json.loads(s)
-        for s in (out / "decisions.jsonl").read_text().splitlines()
+        for s in (out / "decisions.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     recovered = next(d for d in resumed if d["forecast_id"] == pending_id)
     assert recovered["coverage"] == 1 and recovered["scores"] is not None
@@ -128,7 +130,9 @@ def test_resume_does_not_close_pending_at_replayed_segment_boundary(
     live.live_forecast(source, bundle, full, 0)
     uninterrupted = [
         json.loads(s)
-        for s in (full / "decisions.jsonl").read_text().splitlines()
+        for s in (full / "decisions.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
     ]
     fields = [
         "forecast_id",

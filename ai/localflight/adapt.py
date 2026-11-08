@@ -16,7 +16,9 @@ from .runtime import Runtime
 
 def write(path, row):
     temporary = Path(str(path) + ".tmp")
-    temporary.write_text(json.dumps(row, indent=2, allow_nan=False) + "\n")
+    temporary.write_text(
+        json.dumps(row, indent=2, allow_nan=False) + "\n", encoding="utf-8"
+    )
     temporary.replace(path)
 
 
@@ -125,7 +127,9 @@ def fit(
     best_loss = float("inf")
     if resume:
         folder = Path(resume)
-        old = json.loads((folder / "checkpoint.json").read_text())
+        old = json.loads(
+            (folder / "checkpoint.json").read_text(encoding="utf-8")
+        )
         if (
             old["binding"] != binding
             or digest(folder / "last.safetensors") != old["last_sha256"]

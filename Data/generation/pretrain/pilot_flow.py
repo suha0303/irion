@@ -79,7 +79,9 @@ def init(
         fit_authorized=False,
     )
     write(task / "config.json", config)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     write(task / "budget.json", dict(per_case_conservative_increment_bytes=0))
     write(task / "ledger.json", dict(cases={}, attempts=[], phases={}))
     write(
@@ -305,7 +307,7 @@ def worker(task):
         active_task=None,
     )
     ledger = read(task / "ledger.json")
-    with (HOME / "pilot45-flow.lock").open("a") as lease:
+    with (HOME / "pilot45-flow.lock").open("a", encoding="utf-8") as lease:
         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if (task / "operator/claimed").exists():
             request = task / "operator/resume-request.json"
@@ -325,7 +327,7 @@ def worker(task):
                     / ("consumed-stop-" + str(time.time_ns()) + ".json")
                 )
         else:
-            with (task / "operator/claimed").open("x") as out:
+            with (task / "operator/claimed").open("x", encoding="utf-8") as out:
                 out.write(now())
         write(task / "operator/state.json", state)
         try:
@@ -371,7 +373,7 @@ def worker(task):
                     ),
                     "-q",
                 ]
-                with regression.open("x") as log:
+                with regression.open("x", encoding="utf-8") as log:
                     code = subprocess.run(
                         argv,
                         cwd=ROOT,
@@ -390,6 +392,7 @@ def worker(task):
                         stdout=log,
                         stderr=subprocess.STDOUT,
                         timeout=120,
+                        check=False,
                     ).returncode
                 write(
                     task / "final-admission-regression.json",
@@ -436,7 +439,9 @@ def worker(task):
                         "--output",
                         str(acceptance),
                     ]
-                    with (task / "accepted-integration.log").open("x") as log:
+                    with (task / "accepted-integration.log").open(
+                        "x", encoding="utf-8"
+                    ) as log:
                         subprocess.run(
                             argv,
                             cwd=ROOT,
@@ -497,7 +502,8 @@ def worker(task):
                 + state["status"]
                 + "\n\n"
                 + f"계획45, 완료원본{q['completed_raw']}, 처리/검산{q['prepared_and_audited']}, 물리시도{q['physical_attempts']}, 실패시도{q['failed_physical_attempts']}. 온라인가용{q['online_available']}, run가용{q['run_available']}. 유효target {q['valid_target_seconds']}초, 초기100이후 {q['run_post_initial100_seconds']}초.\n\n"
-                + "실패/불가용·run별유효길이·RSS·저장량·실제unit/PID종료·소켓·잠금반납 근거는 completion.json과각task quality.json/ledger.json에있다. 기존launcher실패도 integration 장부에보존했다. 학습·보정·모델forward·성능평가·GPU·다음회차는실행하지않고정지했다.\n"
+                + "실패/불가용·run별유효길이·RSS·저장량·실제unit/PID종료·소켓·잠금반납 근거는 completion.json과각task quality.json/ledger.json에있다. 기존launcher실패도 integration 장부에보존했다. 학습·보정·모델forward·성능평가·GPU·다음회차는실행하지않고정지했다.\n",
+                encoding="utf-8",
             )
         except BaseException as exc:
             state.update(

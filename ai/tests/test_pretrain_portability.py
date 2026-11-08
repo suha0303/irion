@@ -93,7 +93,8 @@ def test_relocated_preprocess_assemble_and_audit_without_torch(tmp_path):
         for event in events:
             event["run_id"] = rid
         (run / "observations/streams.jsonl").write_text(
-            "".join(json.dumps(event) + "\n" for event in events)
+            "".join(json.dumps(event) + "\n" for event in events),
+            encoding="utf-8",
         )
         (run / "observations/watermarks.jsonl").write_text(
             json.dumps(
@@ -106,7 +107,8 @@ def test_relocated_preprocess_assemble_and_audit_without_torch(tmp_path):
                     closed=True,
                 )
             )
-            + "\n"
+            + "\n",
+            encoding="utf-8",
         )
         (run / "observations/diagnostics.jsonl").touch()
         files = {
@@ -180,6 +182,7 @@ else:
                 capture_output=True,
                 text=True,
                 timeout=30,
+                check=False,
             )
             assert result.returncode == 0, result.stdout + result.stderr
     assert common.read(clone / "success.json")["passed"] is True

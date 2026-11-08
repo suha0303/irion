@@ -41,7 +41,7 @@ def reference(path):
 
 
 def write_new(path, value):
-    with path.open("x") as stream:
+    with path.open("x", encoding="utf-8") as stream:
         stream.write(json.dumps(value, indent=2, allow_nan=False) + "\n")
 
 
@@ -220,7 +220,7 @@ def publish(
         if not fixture_only:
             interface = (
                 ROOT / "simulation/sim/src/capstone_sim/cli.py"
-            ).read_text()
+            ).read_text(encoding="utf-8")
             if any(
                 token not in interface
                 for token in (

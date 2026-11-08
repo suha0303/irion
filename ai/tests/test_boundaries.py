@@ -72,7 +72,7 @@ def test_comparison_empty_is_not_pass(tmp_path):
         d.mkdir()
         dump(d / "summary.json", summary)
         for file in ["frames", "windows", "exclusions"]:
-            (d / (file + ".jsonl")).write_text("")
+            (d / (file + ".jsonl")).write_text("", encoding="utf-8")
     result = compare(tmp_path / "a", tmp_path / "b", CONFIG)
     assert not result["passed"]
     assert result["C9_live"] == "not_executed"

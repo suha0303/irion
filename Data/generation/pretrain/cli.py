@@ -20,7 +20,9 @@ from x500_storage import capture, environment, guard, selected_root
 # Support manually invoked workers as well as systemd launches. No execution occurs here.
 if __name__ == "__main__" and len(sys.argv) == 3 and sys.argv[1] == "_worker":
     faulthandler.enable()
-    worker_config = json.loads((Path(sys.argv[2]) / "config.json").read_text())
+    worker_config = json.loads(
+        (Path(sys.argv[2]) / "config.json").read_text(encoding="utf-8")
+    )
     os.environ.update(environment(worker_config))
 
 from .common import (
@@ -649,7 +651,9 @@ def create(args):
 
             configure(task, config, planned[0])
     write(task / "config.json", config)
-    (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+    (task / "config.sha256").write_text(
+        sha(task / "config.json") + "\n", encoding="utf-8"
+    )
     print("준비됨:", task)
     return task
 
@@ -678,7 +682,7 @@ def start(task, *, pilot_resume=False):
     verify(
         {
             str(task / "config.json"): (task / "config.sha256")
-            .read_text()
+            .read_text(encoding="utf-8")
             .strip()
         }
     )
@@ -819,7 +823,9 @@ def service_memory(config):
 def free_swap_bytes():
     values = dict(
         line.split(":", 1)
-        for line in Path("/proc/meminfo").read_text().splitlines()
+        for line in Path("/proc/meminfo")
+        .read_text(encoding="utf-8")
+        .splitlines()
     )
     return int(values["SwapFree"].split()[0]) * 1024
 
@@ -1176,7 +1182,9 @@ def main(argv=None):
                 for ref in previous.values():
                     config["source_sha256"][ref["path"]] = ref["sha256"]
         write(task / "config.json", config)
-        (task / "config.sha256").write_text(sha(task / "config.json") + "\n")
+        (task / "config.sha256").write_text(
+            sha(task / "config.json") + "\n", encoding="utf-8"
+        )
         start(task)
     elif args.action == "resume-preprocess":
         from .recovery import create_recovery

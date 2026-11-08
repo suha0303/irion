@@ -22,7 +22,7 @@ def durable(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + f".{os.getpid()}.tmp")
-    with temporary.open("w") as stream:
+    with temporary.open("w", encoding="utf-8") as stream:
         json.dump(value, stream, allow_nan=False, indent=2)
         stream.write("\n")
         stream.flush()

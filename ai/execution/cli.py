@@ -138,7 +138,7 @@ def prepared_input(cfg):
 
 def plan():
     path = HOME / "plan.json"
-    if sha(path) != (HOME / "plan.sha256").read_text().strip():
+    if sha(path) != (HOME / "plan.sha256").read_text(encoding="utf-8").strip():
         raise ValueError("Plan changed; prepare a reviewed revision")
     cfg = read(path)
     config_check(cfg)
@@ -151,7 +151,7 @@ def plan():
 def launch(action="run", existing=None):
     cfg = plan()
     HOME.mkdir(parents=True, exist_ok=True)
-    with (HOME / "controller.lock").open("a") as lock:
+    with (HOME / "controller.lock").open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     if action == "run":
         name = time.strftime("gpu104-%Y%m%d-%H%M%S")
@@ -414,7 +414,7 @@ def worker(task, action):
     task = Path(task).resolve()
     HOME.mkdir(parents=True, exist_ok=True)
     # A rejected duplicate must never overwrite the active controller's state.
-    with (HOME / "controller.lock").open("a") as lock:
+    with (HOME / "controller.lock").open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         _worker_locked(task, action)
 
@@ -432,7 +432,7 @@ def _worker_locked(task, action):
 
         guard(output)
         if action == "run":
-            with (task / "started.claim").open("x") as f:
+            with (task / "started.claim").open("x", encoding="utf-8") as f:
                 f.write("No automatic resubmission\n")
             progress.update(stage="login_preflight")
             queue = ssh('squeue -h -u "$(id -u)" -o "%A %P %j %T %N"')
@@ -463,7 +463,9 @@ def _worker_locked(task, action):
             else:
                 stage(cfg, output / "input", progress)
                 upload(meta["root"], output / "input", progress)
-            with (output / "execution.claim").open("x") as claim:
+            with (output / "execution.claim").open(
+                "x", encoding="utf-8"
+            ) as claim:
                 claim.write(str(task) + "\n")
             progress.update(stage="submit_once")
             submission = json.loads(remote(meta["root"], "submit"))

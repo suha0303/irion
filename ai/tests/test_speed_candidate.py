@@ -21,7 +21,9 @@ def test_candidate_seed_reuse_is_limited_to_exact_stopped_source(
         mode="test", seed_base=100, speed_test=dict(factors=[2, 2, 4, 8])
     )
     common.write(task / "config.json", old)
-    (task / "config.sha256").write_text(common.sha(task / "config.json"))
+    (task / "config.sha256").write_text(
+        common.sha(task / "config.json"), encoding="utf-8"
+    )
     common.write(task / "operator/state.json", dict(status="FAILED_STOPPED"))
     prior = [
         dict(requested_factor=f, measured=dict(raw_run=f"old-{i}"))
@@ -72,7 +74,7 @@ def test_candidate_seed_reuse_is_limited_to_exact_stopped_source(
     previous_config["speed_test"]["factors"] = [8]
     common.write(previous_task / "config.json", previous_config)
     (previous_task / "config.sha256").write_text(
-        common.sha(previous_task / "config.json")
+        common.sha(previous_task / "config.json"), encoding="utf-8"
     )
     common.write(
         previous_task / "operator/state.json", dict(status="FAILED_STOPPED")
@@ -215,7 +217,8 @@ def test_single_candidate_never_repeats_baseline_or_runs_more_flights(
             world = tmp_path / "runs/new-eight/reference/world.sdf"
             world.parent.mkdir(parents=True)
             world.write_text(
-                f"<sdf><world><physics><real_time_factor>{factor}</real_time_factor><max_step_size>0.001</max_step_size></physics></world></sdf>"
+                f"<sdf><world><physics><real_time_factor>{factor}</real_time_factor><max_step_size>0.001</max_step_size></physics></world></sdf>",
+                encoding="utf-8",
             )
             return folder
 

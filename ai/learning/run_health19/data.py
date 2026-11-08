@@ -201,7 +201,7 @@ def manifest_rows(
     path, expected_producer, protection=None, usage="input_check"
 ):
     path = regular_path(path)
-    value = json.loads(path.read_text())
+    value = json.loads(path.read_text(encoding="utf-8"))
     if value["schema"] != SCHEMA or value["feature_order"] != FEATURES:
         raise ValueError("New full-run schema/feature order required")
     if value.get("interval_policy") != INTERVAL_POLICY:

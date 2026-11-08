@@ -38,7 +38,7 @@ def run(config):
     c = read(config)
     work = Path(c["work"])
     work.mkdir(parents=True, exist_ok=True)
-    lock = (work / "fetch.lock").open("a")
+    lock = (work / "fetch.lock").open("a", encoding="utf-8")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     final = Path(c["destination"])
     stage = final.with_name("." + final.name + ".incoming")
@@ -77,6 +77,7 @@ def run(config):
             text=True,
             capture_output=True,
             timeout=600,
+            check=False,
         )
 
     record("WAITING_FOR_FINAL_COMPLETION")
@@ -175,7 +176,9 @@ def run(config):
                         str(target) + "/",
                     ]
                 )
-                return subprocess.run(cmd, capture_output=True, text=True)
+                return subprocess.run(
+                    cmd, capture_output=True, text=True, check=False
+                )
 
             record("DOWNLOADING", models=len(manifest["models"]))
             result = copy("")

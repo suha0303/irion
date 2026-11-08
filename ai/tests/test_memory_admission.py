@@ -14,18 +14,20 @@ GIB = 1024**3
 def fixture(tmp_path, version=2, host=128, mount_root="/"):
     proc = tmp_path / "proc"
     (proc / "self").mkdir(parents=True)
-    (proc / "meminfo").write_text(f"MemAvailable: {host * 1024**2} kB\n")
+    (proc / "meminfo").write_text(
+        f"MemAvailable: {host * 1024**2} kB\n", encoding="utf-8"
+    )
     mount = tmp_path / "memory mount"
     mount.mkdir()
     group = mount / "job/step"
     group.mkdir(parents=True)
     member = str(Path(mount_root) / "job/step")
     membership = f"0::{member}\n" if version == 2 else f"7:memory:{member}\n"
-    (proc / "self/cgroup").write_text(membership)
+    (proc / "self/cgroup").write_text(membership, encoding="utf-8")
     encoded = str(mount).replace(" ", "\\040")
     suffix = "cgroup2 cgroup2 rw" if version == 2 else "cgroup cgroup rw,memory"
     (proc / "self/mountinfo").write_text(
-        f"1 0 0:1 {mount_root} {encoded} rw - {suffix}\n"
+        f"1 0 0:1 {mount_root} {encoded} rw - {suffix}\n", encoding="utf-8"
     )
     return proc, mount, group
 
@@ -47,8 +49,10 @@ def counters(
         if version == 2
         else ("memory.limit_in_bytes", "memory.usage_in_bytes")
     )
-    (group / maximum).write_text("max" if limit is None else str(limit * GIB))
-    (group / current).write_text(str(used * GIB))
+    (group / maximum).write_text(
+        "max" if limit is None else str(limit * GIB), encoding="utf-8"
+    )
+    (group / current).write_text(str(used * GIB), encoding="utf-8")
     if version == 2:
         values = dict(
             inactive_file=inactive,
@@ -66,9 +70,9 @@ def counters(
             shmem=shmem,
         )
         values.update({"total_" + k: v for k, v in list(values.items())})
-        (group / "memory.use_hierarchy").write_text(hierarchy)
+        (group / "memory.use_hierarchy").write_text(hierarchy, encoding="utf-8")
     (group / "memory.stat").write_text(
-        "".join(f"{k} {v * GIB}\n" for k, v in values.items())
+        "".join(f"{k} {v * GIB}\n" for k, v in values.items()), encoding="utf-8"
     )
 
 
@@ -137,13 +141,23 @@ def test_missing_or_invalid_statistics_never_assume_reclaimable_cache(
     if change == "absent":
         path.unlink()
     elif change == "missing_counter":
-        path.write_text("inactive_file 60000000000\nfile 60000000000\n")
+        path.write_text(
+            "inactive_file 60000000000\nfile 60000000000\n", encoding="utf-8"
+        )
     elif change == "malformed":
-        path.write_text(path.read_text() + "bad not_an_int\n")
+        path.write_text(
+            path.read_text(encoding="utf-8") + "bad not_an_int\n",
+            encoding="utf-8",
+        )
     elif change == "negative":
-        path.write_text(path.read_text().replace("shmem 0", "shmem -1"))
+        path.write_text(
+            path.read_text(encoding="utf-8").replace("shmem 0", "shmem -1"),
+            encoding="utf-8",
+        )
     else:
-        path.write_text(path.read_text() + "shmem 0\n")
+        path.write_text(
+            path.read_text(encoding="utf-8") + "shmem 0\n", encoding="utf-8"
+        )
     result = common.memory_snapshot(proc)
     assert result["available_bytes"] == GIB
     assert result["cgroups"][0]["credited_cache_bytes"] == 0
@@ -155,9 +169,10 @@ def test_v1_hierarchical_usage_uses_total_statistics(tmp_path):
     counters(group, version=1, inactive=59, file=60)
     path = group / "memory.stat"
     path.write_text(
-        path.read_text().replace(
+        path.read_text(encoding="utf-8").replace(
             "inactive_file " + str(59 * GIB) + "\n", "inactive_file 0\n", 1
-        )
+        ),
+        encoding="utf-8",
     )
     result = common.memory_snapshot(proc)
     assert result["available_bytes"] == 60 * GIB
@@ -169,9 +184,10 @@ def test_v1_nonhierarchical_usage_never_credits_child_cache(tmp_path):
     counters(group, version=1, hierarchy="0")
     path = group / "memory.stat"
     path.write_text(
-        path.read_text()
+        path.read_text(encoding="utf-8")
         .replace("total_inactive_file 0", f"total_inactive_file {60 * GIB}")
-        .replace("total_cache 0", f"total_cache {60 * GIB}")
+        .replace("total_cache 0", f"total_cache {60 * GIB}"),
+        encoding="utf-8",
     )
     result = common.memory_snapshot(proc)
     assert result["available_bytes"] == GIB
@@ -256,7 +272,9 @@ def test_lifecycle_rejection_records_snapshot_before_failing(
     with pytest.raises(MemoryError, match="available"):
         lifecycle.fit_worker(tmp_path)
     proof = json.loads(
-        (tmp_path / "compute/host-memory-admission.json").read_text()
+        (tmp_path / "compute/host-memory-admission.json").read_text(
+            encoding="utf-8"
+        )
     )
     assert proof["snapshot"] == snapshot and proof["required_bytes"] == 49 * GIB
     assert proof["passed"] is False and len(calls) == 1

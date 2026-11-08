@@ -9,13 +9,13 @@ def test_distribution_does_not_overwrite_or_follow_symlinks(tmp_path):
     with pytest.raises(ValueError, match="never overwritten"):
         build(tmp_path, tmp_path)
     original = tmp_path / "file"
-    original.write_text("preserve")
+    original.write_text("preserve", encoding="utf-8")
     link = tmp_path / "link"
     link.symlink_to(original)
     with pytest.raises(ValueError, match="regular"):
         copy_regular(link, tmp_path / "copied")
     assert (
-        original.read_text() == "preserve"
+        original.read_text(encoding="utf-8") == "preserve"
         and not (tmp_path / "copied").exists()
     )
 

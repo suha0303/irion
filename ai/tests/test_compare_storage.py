@@ -142,6 +142,7 @@ print('ISOLATED_SNAPSHOT_IMPORTS_PASSED_NO_CUDA')
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "ISOLATED_SNAPSHOT_IMPORTS_PASSED_NO_CUDA" in result.stdout

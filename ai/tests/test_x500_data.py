@@ -26,11 +26,14 @@ class DisplayTest(unittest.TestCase):
                     "execution_dir": str(self.root),
                     "attempts_max": 3,
                 }
-            )
+            ),
+            encoding="utf-8",
         )
 
     def ledger(self, state):
-        (self.root / "ledger.json").write_text(json.dumps(state))
+        (self.root / "ledger.json").write_text(
+            json.dumps(state), encoding="utf-8"
+        )
 
     def test_missing_is_not_running(self):
         state = display.snapshot(self.plan)
@@ -93,7 +96,8 @@ def test_resource_and_effective_rtf_display(tmp_path):
                 attempts_max=1,
                 phase="benchmark",
             )
-        )
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "ledger.json").write_text(
         json.dumps(
@@ -110,7 +114,8 @@ def test_resource_and_effective_rtf_display(tmp_path):
                     )
                 },
             )
-        )
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "resource-progress.json").write_text(
         json.dumps(
@@ -121,7 +126,8 @@ def test_resource_and_effective_rtf_display(tmp_path):
                 local_free_bytes=50e9,
                 external_free_bytes=100e9,
             )
-        )
+        ),
+        encoding="utf-8",
     )
     text = display.render(display.snapshot(plan))
     assert "MemAvailable: 5.00 GB" in text
@@ -141,7 +147,8 @@ def test_progress_does_not_invent_simulation_time_or_eta(tmp_path):
                 concurrency=4,
                 mission_seconds=900,
             )
-        )
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "ledger.json").write_text(
         json.dumps(
@@ -155,7 +162,8 @@ def test_progress_does_not_invent_simulation_time_or_eta(tmp_path):
                     )
                 },
             )
-        )
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "c1").mkdir()
     (tmp_path / "c1/flight-progress.json").write_text(
@@ -165,7 +173,8 @@ def test_progress_does_not_invent_simulation_time_or_eta(tmp_path):
                 observed_simulation_elapsed_s=None,
                 live_rtf=None,
             )
-        )
+        ),
+        encoding="utf-8",
     )
     state = display.snapshot(plan)
     text = display.render(state)
@@ -208,7 +217,8 @@ def test_live_simulation_clock_display_and_stale_suppression(
                 attempts_max=1,
                 mission_seconds=900,
             )
-        )
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "ledger.json").write_text(
         json.dumps(
@@ -222,7 +232,8 @@ def test_live_simulation_clock_display_and_stale_suppression(
                     )
                 },
             )
-        )
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "c1").mkdir()
     (tmp_path / "c1/flight-progress.json").write_text(
@@ -234,7 +245,8 @@ def test_live_simulation_clock_display_and_stale_suppression(
                 producer_run_id="a" * 32,
                 producer_progress_updated_utc=now.isoformat(),
             )
-        )
+        ),
+        encoding="utf-8",
     )
     monkeypatch.setattr(display.time, "time", lambda: now.timestamp() + 1)
     text = display.render(display.snapshot(plan))
@@ -256,7 +268,8 @@ def test_retry_uses_current_attempt_progress_only(tmp_path):
             dict(
                 campaign_id="retry", execution_dir=str(tmp_path), attempts_max=1
             )
-        )
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "ledger.json").write_text(
         json.dumps(
@@ -264,14 +277,15 @@ def test_retry_uses_current_attempt_progress_only(tmp_path):
                 status="RUNNING",
                 cases={"c1": dict(status="FLYING", attempt=2, attempts_max=3)},
             )
-        )
+        ),
+        encoding="utf-8",
     )
     (tmp_path / "c1/attempt-02").mkdir(parents=True)
     (tmp_path / "c1/flight-progress.json").write_text(
-        json.dumps(dict(marker="old"))
+        json.dumps(dict(marker="old")), encoding="utf-8"
     )
     (tmp_path / "c1/attempt-02/flight-progress.json").write_text(
-        json.dumps(dict(marker="current"))
+        json.dumps(dict(marker="current")), encoding="utf-8"
     )
     state = display.snapshot(plan)
     assert state["workers"][0]["flight"]["marker"] == "current"

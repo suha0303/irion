@@ -97,7 +97,9 @@ class Telemetry:
         self.thread.start()
 
     def loop(self):
-        with (self.output / "gpu-samples.jsonl").open("x") as log:
+        with (self.output / "gpu-samples.jsonl").open(
+            "x", encoding="utf-8"
+        ) as log:
             while not self.stop_event.is_set():
                 try:
                     sample = parse_gpu(
