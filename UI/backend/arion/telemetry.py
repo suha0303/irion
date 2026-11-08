@@ -78,6 +78,10 @@ class Sample:
 
 
 class TelemetryRun:
+    """Index a JSONL telemetry log for seeking, freshness and epoch-aware
+    views.
+    """
+
     def __init__(self, path: Path, name: str | None = None):
         self.path = path
         self.sha256 = hashlib.sha256(path.read_bytes()).hexdigest()

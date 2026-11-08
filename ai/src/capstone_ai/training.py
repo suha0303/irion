@@ -296,6 +296,10 @@ def train_models(config_path):
 
 
 class Predictor:
+    """Load a verified forecast bundle and preserve its target scaling
+    contract.
+    """
+
     def __init__(self, folder, device="cpu"):
         self.folder = Path(folder)
         self.device = device_for(device)

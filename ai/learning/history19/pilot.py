@@ -123,6 +123,10 @@ def json_file(path):
 
 
 class Evidence:
+    """Resolve pilot request references while recording verified paths and
+    hashes.
+    """
+
     def __init__(self, request_path):
         self.path = regular(request_path)
         self.request = json_file(self.path)

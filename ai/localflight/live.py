@@ -91,7 +91,9 @@ def number(value):
 
 
 def decode(name, f, p, request):
-    """common.xml SI/FRD/NED semantics, explicit channels/instances and masks."""
+    """common.xml SI/FRD/NED semantics, explicit channels/instances and
+    masks.
+    """
     if name == "ATTITUDE":
         return dict(
             zip(
@@ -179,7 +181,9 @@ def decode(name, f, p, request):
 
 
 class DisarmGuard:
-    """Require an observed arming and three fresh disarmed heartbeats over 2 s."""
+    """Require an observed arming and three fresh disarmed heartbeats over 2
+    s.
+    """
 
     def __init__(self):
         self.seen_armed = False
@@ -206,6 +210,10 @@ class DisarmGuard:
 
 
 class Mapper:
+    """Convert received MAVLink observations into ordered profile-bound
+    events.
+    """
+
     def __init__(self, request):
         self.request = request
         self.profile = request["profile"]
@@ -279,7 +287,9 @@ class Mapper:
 
 
 def completed(events, journal, output, request, origin, *, end_us=None):
-    """Archive retained segments in bounded packages; analyze each without gap bridging."""
+    """Archive retained segments in bounded packages; analyze each without
+    gap bridging.
+    """
     from .run_summary import aggregate
 
     end_us = (
@@ -410,7 +420,9 @@ def completed(events, journal, output, request, origin, *, end_us=None):
 def arrived_decision(
     pending, values, times, segment_start, reset, cells, scaler, calibration
 ):
-    """Score only an arrived exact target within the same uninterrupted segment."""
+    """Score only an arrived exact target within the same uninterrupted
+    segment.
+    """
     from .calibration import decide, forecast_scores
 
     future = [p for p in pending if p["due"] > int(times[-1])]

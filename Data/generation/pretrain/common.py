@@ -1,3 +1,7 @@
+"""Shared collection paths, evidence I/O, identity checks and resource
+budgets.
+"""
+
 import hashlib
 import importlib.util
 import json
@@ -47,7 +51,9 @@ def read(path):
 
 
 def service_unit(task, config=None):
-    """Resolve the actual unit without rewriting historical task/ownership records."""
+    """Resolve the actual unit without rewriting historical task/ownership
+    records.
+    """
     task = Path(task)
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", task.name):
         raise ValueError("Invalid task name for service identity")
@@ -146,7 +152,9 @@ def producer_manifest():
 
 
 def producer_sources():
-    """Freeze both reviewed sources and machine-specific binaries for one task."""
+    """Freeze both reviewed sources and machine-specific binaries for one
+    task.
+    """
     record = producer_manifest()
     files = dict(record["files"])
     files["config/producer-sources.json"] = record["source_manifest_sha256"]
@@ -168,7 +176,9 @@ def producer_sources():
 
 
 def package_imports():
-    """Select the hash-locked preprocessing_core/preprocessing_tools package paths."""
+    """Select the hash-locked preprocessing_core/preprocessing_tools package
+    paths.
+    """
     import sys
 
     sys.dont_write_bytecode = (
@@ -219,7 +229,9 @@ def overlap(records):
 
 
 class Budget:
-    """Cheap worker checks; parent checks disk/RAM once per second for the whole batch."""
+    """Cheap worker checks; parent checks disk/RAM once per second for the
+    whole batch.
+    """
 
     def __init__(self, seconds=TASK_WALL_SECONDS):
         self.started = time.monotonic()
@@ -242,7 +254,9 @@ def admission(workers, peak_per_worker, available):
 
 
 def runs_root(root=None):
-    """The frozen simulator owns temporary raw runs; final datasets use STORE."""
+    """The frozen simulator owns temporary raw runs; final datasets use
+    STORE.
+    """
     root = Path(root) if root is not None else ROOT
     return (
         root / "simulation/runs"

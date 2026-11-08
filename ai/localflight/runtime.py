@@ -1,4 +1,6 @@
-"""Bounded FP32 CPU inference. No remote, CUDA, fitting or calibration side effects."""
+"""Bounded FP32 CPU inference. No remote, CUDA, fitting or calibration side
+effects.
+"""
 
 import numpy as np
 import torch
@@ -13,7 +15,19 @@ from .catalog import Catalog
 
 
 class Runtime:
-    def __init__(self, model_id, *, catalog=None, threads=2):
+    """Own one verified FP32 CPU model and copies of its frozen scaler arrays.
+
+    Construction sets PyTorch's process-wide CPU thread count. This object
+    performs inference only; callers normalize observations and choose scores.
+    """
+
+    def __init__(
+        self,
+        model_id: str,
+        *,
+        catalog: Catalog | None = None,
+        threads: int = 2,
+    ) -> None:
         if type(threads) is not int or not 1 <= threads <= 8:
             raise ValueError("CPU threads must be 1..8")
         torch.set_num_threads(threads)
@@ -53,7 +67,26 @@ class Runtime:
             ):
                 raise ValueError("Invalid frozen scaler")
 
-    def predict_scaled(self, values, lengths=None):
+    def predict_scaled(
+        self, values: np.ndarray, lengths: np.ndarray | None = None
+    ) -> np.ndarray:
+        """Predict normalized targets from finite, already normalized inputs.
+
+        Args:
+            values: FP32 array shaped [batch, time, 19]. Forecast accepts
+                1..32 windows of 100 frames; run health accepts one completed
+                contiguous segment of 101..10000 frames.
+            lengths: None for forecast. Run health requires int64 [time],
+                an array of shape (1,) giving the exact unpadded length.
+
+        Returns:
+            Forecast targets shaped [batch, 10, 4], or a run-health cell
+            voltage reference shaped [1, time], both in scaler units.
+
+        Raises:
+            ValueError: Input shape, dtype, finiteness or length is invalid,
+                or the model produces a nonfinite prediction.
+        """
         a = np.asarray(values)
         if (
             a.dtype != np.float32

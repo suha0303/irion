@@ -34,6 +34,8 @@ ROLES = NORMAL | {"anomaly_test"}
 
 @dataclass(frozen=True)
 class Run:
+    """Keep one run trajectory with its split, origin and lineage metadata."""
+
     run_id: str
     role: str
     lineage: (
@@ -106,6 +108,10 @@ def physical_features(values):
 
 @dataclass(frozen=True)
 class Scaler:
+    """Normalize run features using only the admitted training-run
+    statistics.
+    """
+
     mean: np.ndarray
     scale: np.ndarray
     fit_run_ids: tuple
@@ -330,7 +336,9 @@ def iter_manifests(
 def load_manifest(
     path, *, expected_producer=None, protection=None, usage="input_check"
 ):
-    """Small development convenience; CLI uses the campaign-wide iterator instead."""
+    """Small development convenience; CLI uses the campaign-wide iterator
+    instead.
+    """
     rows = list(manifest_rows(path, expected_producer, protection, usage))
     if len(rows) > 16:
         raise ValueError(

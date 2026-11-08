@@ -15,6 +15,8 @@ NORM_EPS = 1e-5
 
 @dataclass(frozen=True)
 class StudySpec:
+    """Describe the normalized context-based study model and its revision."""
+
     name: str
     hidden: int = 64
     layers: int = 2
@@ -43,6 +45,8 @@ class StudySpec:
 
 
 class InterLayerNormStack(nn.Module):
+    """Stack initialized LSTM layers with normalization between layers."""
+
     def __init__(self, inputs, spec):
         super().__init__()
         self.layers = nn.ModuleList(
@@ -84,6 +88,8 @@ class InterLayerNormStack(nn.Module):
 
 
 class LSTMForecast(nn.Module):
+    """Decode context and recurrent history into normalized future targets."""
+
     def __init__(self, spec):
         super().__init__()
         self.spec = spec.validate()
@@ -111,6 +117,8 @@ class LSTMForecast(nn.Module):
 
 
 class PostEncoderLayer(nn.Module):
+    """Encode a sequence with attention and post-residual normalization."""
+
     def __init__(self, hidden, heads):
         super().__init__()
         self.attention = nn.MultiheadAttention(hidden, heads, batch_first=True)
@@ -129,6 +137,10 @@ class PostEncoderLayer(nn.Module):
 
 
 class PostDecoderLayer(nn.Module):
+    """Decode queries with self-attention, memory attention and
+    normalization.
+    """
+
     def __init__(self, hidden, heads):
         super().__init__()
         self.self_attention = nn.MultiheadAttention(
@@ -157,6 +169,8 @@ class PostDecoderLayer(nn.Module):
 
 
 class TransformerForecast(nn.Module):
+    """Decode learned horizon queries from context and encoded history."""
+
     def __init__(self, spec):
         super().__init__()
         self.spec = spec.validate()

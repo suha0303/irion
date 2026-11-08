@@ -1,4 +1,6 @@
-"""NPZ chunks from durable journal byte ranges. Compression never blocks ingest."""
+"""NPZ chunks from durable journal byte ranges. Compression never blocks
+ingest.
+"""
 
 import json
 import os
@@ -133,6 +135,10 @@ def atomic_npz(path, arrays, metadata):
 
 
 class NpzArchive:
+    """Seal journal ranges into recoverable NPZ chunks with progress
+    evidence.
+    """
+
     def __init__(self, path, journal, profile, run_id):
         self.path = Path(path)
         self.path.mkdir(parents=True, exist_ok=True)
@@ -450,7 +456,9 @@ def load_npz(path):
 
 
 def export_npz(archive, target):
-    """Disk-backed arrays and streamed .npy ZIP members; no full-flight RAM copy."""
+    """Disk-backed arrays and streamed .npy ZIP members; no full-flight RAM
+    copy.
+    """
     chunks = deepcopy(archive.data["chunks"])
     count = sum(c["rows"] for c in chunks)
     if not count:

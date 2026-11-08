@@ -1,8 +1,11 @@
-"""Load the delivered 16 models with their frozen preprocessing and calibration."""
+"""Load the delivered 16 models with their frozen preprocessing and
+calibration.
+"""
 
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BUNDLE = ROOT / "ai/artifacts/training19-final-20261108"
@@ -15,7 +18,8 @@ MODEL_IDS = tuple(
 )
 
 
-def digest(path):
+def digest(path: str | Path) -> str:
+    """Return the file's SHA-256 without loading the full file into memory."""
     h = hashlib.sha256()
     with Path(path).open("rb") as stream:
         for chunk in iter(lambda: stream.read(1 << 20), b""):
@@ -23,12 +27,19 @@ def digest(path):
     return h.hexdigest()
 
 
-def read_json(path):
+def read_json(path: str | Path) -> Any:
+    """Read UTF-8 JSON; schema validation belongs to the calling contract."""
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 class Catalog:
-    def __init__(self, bundle=DEFAULT_BUNDLE):
+    """Resolve the frozen 8 forecast and 8 run-health models by manifest hash.
+
+    Construction checks the model set. Access through ``entry`` or ``checked``
+    verifies the referenced files; it does not validate real-aircraft accuracy.
+    """
+
+    def __init__(self, bundle: str | Path = DEFAULT_BUNDLE) -> None:
         self.root = Path(bundle).absolute()
         self.manifest = read_json(self.root / "MANIFEST.json")
         if self.manifest.get("schema") != "drone-ai.final-delivery/1":
@@ -38,7 +49,19 @@ class Catalog:
                 "Expected the frozen forecast 8 and run-health 8 model set"
             )
 
-    def checked(self, relative):
+    def checked(self, relative: str) -> Path:
+        """Return a manifest member after rejecting traversal, links and tampering.
+
+        Args:
+            relative: File name relative to the model delivery directory.
+
+        Returns:
+            The verified file path.
+
+        Raises:
+            ValueError: The path or its SHA-256 does not match the manifest.
+            OSError: A referenced file cannot be read.
+        """
         path = self.root / relative
         if relative not in self.manifest["files"] or not path.is_relative_to(
             self.root
@@ -52,7 +75,13 @@ class Catalog:
             raise ValueError(f"Model bundle integrity mismatch: {relative}")
         return path
 
-    def entry(self, model_id):
+    def entry(self, model_id: str) -> dict[str, Any]:
+        """Return verified model metadata, file paths, and frozen calibration.
+
+        Raises:
+            ValueError: The ID, specification, calibration or file hash differs
+                from the frozen delivery contract.
+        """
         if model_id not in MODEL_IDS:
             raise ValueError("Unknown model ID")
         prefix = f"models/{model_id}/"
@@ -88,7 +117,8 @@ class Catalog:
             real_aircraft_validated=False,
         )
 
-    def list(self):
+    def list(self) -> list[dict[str, Any]]:
+        """Return UI metadata in fixed task/architecture/size/depth order."""
         return [
             {
                 k: v
@@ -98,7 +128,10 @@ class Catalog:
             for mid in MODEL_IDS
         ]
 
-    def check_model_sources(self):
+    def check_model_sources(self) -> None:
+        """Reject local model implementations that differ from delivered
+        code.
+        """
         for name in ("history19", "run_health19"):
             relative = f"code/ai/learning/{name}/models.py"
             frozen = self.checked(relative)

@@ -1,4 +1,6 @@
-"""Revisioned scoring for offline validation; frozen live bundles remain unchanged."""
+"""Revisioned scoring for offline validation; frozen live bundles remain
+unchanged.
+"""
 
 from collections import deque
 
@@ -36,6 +38,8 @@ def residual_evidence(prediction, actual, scale):
 
 
 class DomainAlarms:
+    """Keep independent temporal alarms for the two calibrated score domains."""
+
     def __init__(self, high):
         high = np.asarray(high, dtype=float)
         if (

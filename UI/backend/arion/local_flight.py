@@ -23,6 +23,10 @@ def write(path, value):
 
 
 class LocalFlight:
+    """Run local CPU analysis jobs in the isolated AI environment, one at a
+    time.
+    """
+
     def __init__(self, root=None):
         candidates = (
             [Path(os.environ["ARION_AI_ROOT"])]

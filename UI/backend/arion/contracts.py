@@ -1,4 +1,6 @@
-"""Versioned input and provider contracts. Normalized data is never resampled here."""
+"""Versioned input and provider contracts. Normalized data is never resampled
+here.
+"""
 
 from ipaddress import IPv4Address
 from typing import Literal
@@ -28,6 +30,8 @@ class SignalDefinition(Contract):
 
 
 class InputProfile(Contract):
+    """Declare signal units, freshness and preprocessing for an input source."""
+
     schema_version: Literal["arion-profile-v2"] = "arion-profile-v2"
     profile_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,80}$")
     input_format: Literal["mavlink", "normalized"]
@@ -83,6 +87,8 @@ class InputProfile(Contract):
 
 
 class ProcessedSignal(Contract):
+    """Carry one value with units, validity, age and missing-data status."""
+
     value: FiniteFloat | None
     unit: str = Field(max_length=30)
     mask: bool
@@ -103,6 +109,8 @@ class ProcessedSignal(Contract):
 
 
 class ProcessedFrame(Contract):
+    """Bind normalized signals to a session sequence, epoch and timestamp."""
+
     schema_version: Literal["arion-processed-v1"] = "arion-processed-v1"
     session_id: str
     profile_id: str
@@ -119,6 +127,8 @@ class ProcessedFrame(Contract):
 
 
 class SourceConfig(Contract):
+    """Configure one UDP, serial or normalized live input connection."""
+
     name: str = Field(default="실시간 비행", min_length=1, max_length=120)
     kind: Literal["udp", "serial", "normalized"] = "udp"
     profile_id: str = "mavlink_common_v1"
@@ -200,6 +210,8 @@ class EvidenceV2(Contract):
 
 
 class AnalysisResult(Contract):
+    """Bind provider output and evidence to a specific input interval."""
+
     schema_version: Literal["arion-analysis-v2"] = "arion-analysis-v2"
     event_id: str = Field(min_length=1, max_length=120)
     provider_id: str

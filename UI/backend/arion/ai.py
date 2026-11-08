@@ -1,3 +1,5 @@
+"""Connect replay runs to compatible external AI providers and track results."""
+
 import asyncio
 import time
 from urllib.parse import urlparse
@@ -82,6 +84,8 @@ def fixture_events(run):
 
 
 class AIAdapter:
+    """Own external AI polling tasks and per-run connection/result state."""
+
     def __init__(self, store):
         self.store = store
         self.states = {}

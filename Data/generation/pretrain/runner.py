@@ -1,4 +1,6 @@
-"""Finite local task runner. All waiting and progress accounting happen here, without an LLM."""
+"""Finite local task runner. All waiting and progress accounting happen here,
+without an LLM.
+"""
 
 import copy
 import fcntl
@@ -46,6 +48,10 @@ class ResourceBlocked(RuntimeError):
 
 
 class Runner:
+    """Own one admitted collection task, its stage evidence and resource
+    budget.
+    """
+
     def __init__(self, task):
         self.task = Path(task)
         self.config = read(self.task / "config.json")

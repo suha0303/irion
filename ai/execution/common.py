@@ -1,3 +1,5 @@
+"""Shared execution evidence, source binding, runtime admission and progress."""
+
 import hashlib
 import json
 import os
@@ -29,7 +31,9 @@ SUBMIT_LOCK = Path.home() / ".drone-ai-submit.lock"
 
 
 def runtime_profile(root=None, *, required=False):
-    """Load a selected profile without guessing a server or changing its environment."""
+    """Load a selected profile without guessing a server or changing its
+    environment.
+    """
     selected = os.environ.get("DRONE_AI_PROFILE")
     candidates = []
     if root is not None:
@@ -327,6 +331,8 @@ def memory_available():
 
 
 class Progress:
+    """Persist execution status and enforce a monotonic wall-time deadline."""
+
     def __init__(self, path, hours=12):
         self.path = Path(path)
         self.started = time.time()

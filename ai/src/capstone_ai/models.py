@@ -7,6 +7,10 @@ from torch import nn
 
 
 class LSTMForecast(nn.Module):
+    """Encode history and context into the original recurrent forecast
+    targets.
+    """
+
     def __init__(self, features=19, context=6, horizon=10, hidden=32):
         super().__init__()
         self.encoder = nn.LSTM(
@@ -39,6 +43,8 @@ class LSTMForecast(nn.Module):
 
 
 class TransformerForecast(nn.Module):
+    """Decode learned horizon queries from original history/context inputs."""
+
     def __init__(self, features=19, context=6, horizon=10, hidden=32):
         super().__init__()
         self.project = nn.Linear(features, hidden)

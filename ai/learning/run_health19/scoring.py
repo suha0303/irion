@@ -1,4 +1,6 @@
-"""Run residual components and normal-only threshold calibration, separate from forward."""
+"""Run residual components and normal-only threshold calibration, separate
+from forward.
+"""
 
 import math
 from dataclasses import dataclass
@@ -51,6 +53,10 @@ def values(record):
 
 @dataclass(frozen=True)
 class Calibration:
+    """Hold residual scales and a threshold fitted on independent normal
+    runs.
+    """
+
     scales: tuple
     threshold: float
     alpha: float

@@ -1,4 +1,6 @@
-"""Drone data console (default X500): optional gates -> collection -> preparation -> quality -> stop."""
+"""Drone data console (default X500): optional gates -> collection ->
+preparation -> quality -> stop.
+"""
 
 import argparse
 import faulthandler
@@ -659,7 +661,9 @@ def create(args):
 
 
 def systemd_command(arguments):
-    """Quote one ExecStart-style argument vector, including percent specifiers."""
+    """Quote one ExecStart-style argument vector, including percent
+    specifiers.
+    """
     return " ".join(
         '"'
         + argument.replace("\\", "\\\\")
@@ -929,6 +933,8 @@ def input_seed():
 
 
 class Levels(argparse.Action):
+    """Parse a bounded list of supported worker counts for argparse."""
+
     def __call__(self, parser, namespace, values, option_string=None):
         if len(values) == 1 and values[0].lower() == "all":
             levels = list(CHOICES)

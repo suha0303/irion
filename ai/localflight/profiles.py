@@ -1,10 +1,13 @@
-"""Versioned real-aircraft identity, without inventing missing nameplate values."""
+"""Versioned real-aircraft identity, without inventing missing nameplate
+values.
+"""
 
 import hashlib
 import json
 import math
 import re
 from pathlib import Path
+from typing import Any
 
 from .catalog import read_json
 
@@ -21,7 +24,22 @@ ANALYSIS_FIELDS = (
 RECORD_FIELDS = ("name", "firmware", "battery_id", "mapping_evidence", "notes")
 
 
-def validate(profile):
+def validate(profile: dict[str, Any]) -> dict[str, Any]:
+    """Validate a profile without filling unknown aircraft specifications.
+
+    Optional analysis fields may be absent or None. Validity alone does not
+    mean the profile supplies the inputs needed for analysis; use eligibility.
+
+    Args:
+        profile: ``drone.real-aircraft/1`` record. Capacity is in Ah and motor
+            channels are one-based. Output bounds use the log's native units.
+
+    Returns:
+        The original dictionary, unchanged.
+
+    Raises:
+        ValueError: Schema, fields, ranges or JSON values violate the contract.
+    """
     allowed = {
         "schema",
         "id",
@@ -97,7 +115,22 @@ def validate(profile):
     return profile
 
 
-def eligibility(profile):
+def eligibility(profile: dict[str, Any]) -> dict[str, Any]:
+    """Report missing analysis inputs and fixed four-motor model compatibility.
+
+    Timeline readiness does not require battery scale values. Full inference
+    also needs cell count and capacity; neither flag certifies aircraft health.
+
+    Args:
+        profile: A profile to validate and assess without modifying it.
+
+    Returns:
+        Missing-field lists, timeline readiness, model compatibility and the
+        distinction between analysis fields and descriptive record fields.
+
+    Raises:
+        ValueError: The profile fails structural validation.
+    """
     validate(profile)
     missing = [
         k
@@ -137,7 +170,22 @@ def eligibility(profile):
     )
 
 
-def save_profile(root, profile):
+def save_profile(root: str | Path, profile: dict[str, Any]) -> dict[str, Any]:
+    """Save a content-addressed version, generating only bookkeeping identity.
+
+    Args:
+        root: Local application data directory containing ``aircraft/``.
+        profile: Aircraft record. Missing ID/name receive application labels;
+            missing physical specifications remain unknown.
+
+    Returns:
+        The saved profile, version hash and eligibility report. The caller's
+        dictionary is not modified, and older versions remain available.
+
+    Raises:
+        ValueError: Validation fails or existing version contents conflict.
+        OSError: The destination cannot be created or written.
+    """
     # Identity is application bookkeeping, not a required manufacturer specification.
     if not profile.get("id"):
         import uuid
@@ -164,8 +212,12 @@ def save_profile(root, profile):
     )
 
 
-def list_profiles(root):
-    """Return each stored version with eligibility from the same JSON read."""
+def list_profiles(root: str | Path) -> list[dict[str, Any]]:
+    """Return every stored version and eligibility, ordered by path.
+
+    Each JSON file is read once. An absent aircraft directory yields an empty
+    list; invalid stored records raise their validation or decoding error.
+    """
     records = []
     for path in sorted((Path(root) / "aircraft").glob("*/*.json")):
         profile = read_json(path)

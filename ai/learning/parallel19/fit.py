@@ -1,4 +1,6 @@
-"""Reuse the approved model/loss/SGD/schedule implementations for finite GPU fits."""
+"""Reuse the approved model/loss/SGD/schedule implementations for finite GPU
+fits.
+"""
 
 import argparse
 import hashlib
@@ -83,6 +85,8 @@ def state_hash(m):
 
 
 class Data:
+    """Expose memory-mapped training/validation batches for one model task."""
+
     def __init__(self, root, entry, *, probe=False):
         self.task = entry["task"]
         self.batch = entry["batch"]

@@ -53,6 +53,10 @@ def safe(value):
 
 
 class SessionRun:
+    """Journal live input and reconstruct replay state across producer
+    epochs.
+    """
+
     def __init__(self, path, config=None, profile=None, session_id=None):
         self.path = Path(path)
         self.live = config is not None
@@ -720,6 +724,8 @@ class SessionRun:
 
 
 class LiveSources:
+    """Own live transport tasks, handles and telemetry-rate negotiations."""
+
     def __init__(self, store):
         from .message_rates import MessageRates
 

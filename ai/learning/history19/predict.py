@@ -1,4 +1,6 @@
-"""Read a new history19 export; historical context models are never loaded here."""
+"""Read a new history19 export; historical context models are never loaded
+here.
+"""
 
 from pathlib import Path
 
@@ -12,6 +14,8 @@ from .models import ModelSpec, make_model
 
 
 class Predictor:
+    """Load an integrity-checked history19 forecast bundle for inference."""
+
     def __init__(self, folder):
         self.folder = Path(folder)
         integrity = read(self.folder / "integrity.json")

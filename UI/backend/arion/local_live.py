@@ -13,6 +13,10 @@ from .streaming import SessionRun
 
 
 class LocalLive:
+    """Own live AI workers, recovery state and serialized end-of-flight
+    actions.
+    """
+
     def __init__(self, service, store):
         self.service, self.store = service, store
         self.workers = {}

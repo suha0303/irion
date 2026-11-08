@@ -47,6 +47,10 @@ class LowPass:
 
 
 class Preprocessor:
+    """Build causal history19 frames and windows without crossing clock
+    segments.
+    """
+
     def __init__(self, metadata, config):
         validate_metadata(metadata, config)
         self.metadata, self.config = metadata, config
@@ -316,7 +320,9 @@ class Preprocessor:
 
 
 def replay(run, out, config):
-    """One finite, read-only raw replay using the shared watermark directory reader."""
+    """One finite, read-only raw replay using the shared watermark directory
+    reader.
+    """
     import json
     import time
     from pathlib import Path

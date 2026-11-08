@@ -1,4 +1,6 @@
-"""TIMESYNC queries only: never respond with time correction or flight commands."""
+"""TIMESYNC queries only: never respond with time correction or flight
+commands.
+"""
 
 import socket
 import time
@@ -7,6 +9,8 @@ from pymavlink.dialects.v20 import common as mavlink
 
 
 class ClockProbe:
+    """Query one local PX4 clock over UDP and record deadline observations."""
+
     def __init__(self, instance, run_id, logfile, timeout=0.25):
         self.run_id, self.system, self.timeout = run_id, 1 + instance, timeout
         self.peer = ("127.0.0.1", 14280 + instance)

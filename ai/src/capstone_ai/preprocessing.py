@@ -36,6 +36,8 @@ class LowPass:
 
 
 class Preprocessor:
+    """Build causal sensor frames and windows with explicit gap exclusions."""
+
     def __init__(self, metadata, config):
         validate_metadata(metadata, config)
         self.metadata, self.config = metadata, config

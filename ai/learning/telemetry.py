@@ -1,4 +1,6 @@
-"""Read-only telemetry for the already verified allocation. Never selects a CUDA device."""
+"""Read-only telemetry for the already verified allocation. Never selects a
+CUDA device.
+"""
 
 import csv
 import io
@@ -63,6 +65,10 @@ def parse_gpu(rows, uuid):
 
 
 class Telemetry:
+    """Sample assigned GPU use in a background thread until explicitly
+    stopped.
+    """
+
     def __init__(self, output):
         self.output = output
         self.stop_event = threading.Event()

@@ -1,4 +1,6 @@
-"""Bounded canonical and NPZ IO; no raw collection, models or dataset concatenation."""
+"""Bounded canonical and NPZ IO; no raw collection, models or dataset
+concatenation.
+"""
 
 import json
 import zipfile
@@ -148,7 +150,9 @@ def array_blocks(path, key, *, chunk=64):
 
 
 def write_npz(path, specs):
-    """Write normal reader-compatible NPZ with bounded chunks and ZIP64, no scratch copy."""
+    """Write normal reader-compatible NPZ with bounded chunks and ZIP64, no
+    scratch copy.
+    """
     path = Path(path)
     if path.exists() or path.is_symlink():
         raise ValueError("Preserve existing dataset members")
@@ -185,6 +189,8 @@ def write_npz(path, specs):
 
 
 class Moments:
+    """Accumulate per-feature mean and variance without retaining all frames."""
+
     def __init__(self):
         self.count, self.mean, self.m2 = 0, np.zeros(19), np.zeros(19)
 

@@ -1,3 +1,5 @@
+"""Launch the local UI service with explicit host, port and storage settings."""
+
 import argparse
 import json
 import unicodedata

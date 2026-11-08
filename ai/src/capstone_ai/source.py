@@ -32,7 +32,9 @@ def dump(path, value):
 
 
 def shared_strings(record):
-    """Share repeated JSON labels without changing any value or duplicate comparison."""
+    """Share repeated JSON labels without changing any value or duplicate
+    comparison.
+    """
     return {
         sys.intern(key): sys.intern(value) if isinstance(value, str) else value
         for key, value in record.items()
@@ -40,6 +42,8 @@ def shared_strings(record):
 
 
 class Lines:
+    """Read complete JSONL records incrementally while detecting replacement."""
+
     def __init__(self, path):
         self.path = Path(path)
         self.offset, self.buffer, self.identity, self.rows = 0, b"", None, 0
@@ -85,6 +89,10 @@ class Lines:
 
 
 class DirectoryTail:
+    """Feed observed events and watermarks with resumable source identity
+    checks.
+    """
+
     def __init__(self, run, engine, chunk_bytes=1024 * 1024):
         self.run, self.engine = Path(run).resolve(), engine
         self.stream = Lines(self.run / "observations/streams.jsonl")

@@ -24,6 +24,10 @@ IMUS = {
 
 
 class MessageRates:
+    """Negotiate telemetry intervals and track acknowledgments per live
+    session.
+    """
+
     def __init__(self, sources):
         self.sources = sources
         self.heartbeats = {}

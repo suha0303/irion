@@ -1,4 +1,6 @@
-"""Fail-closed R1 admission. No remote calls or experiment execution on import."""
+"""Fail-closed R1 admission. No remote calls or experiment execution on
+import.
+"""
 
 import hashlib
 import json
@@ -101,7 +103,9 @@ def lineage(row):
 
 
 def validate_roles(rows, cases, protected):
-    """Only manifest identities are read; protected observations/truth are never opened."""
+    """Only manifest identities are read; protected observations/truth are
+    never opened.
+    """
     if Counter(r["role"] for r in rows) != Counter(COUNTS):
         raise ValueError("R1 role counts mismatch; final/test roles forbidden")
     expected = {c["case_id"]: c for c in cases}
@@ -148,7 +152,9 @@ def validate_roles(rows, cases, protected):
 
 
 def claim(output, ledger, stage):
-    """Durable attempt marker survives failure. No implicit retry or overwrite."""
+    """Durable attempt marker survives failure. No implicit retry or
+    overwrite.
+    """
     if stage not in {"gate", "main"}:
         raise ValueError("unknown execution stage")
     output, ledger = Path(output).resolve(), Path(ledger).resolve()
@@ -174,6 +180,8 @@ def check_claim(output, stage):
 
 
 class Budget:
+    """Enforce wall-time and output-size limits for a pipeline operation."""
+
     def __init__(self, output, seconds, bytes_limit):
         if seconds <= 0 or bytes_limit <= 0:
             raise ValueError("positive finite budget required")

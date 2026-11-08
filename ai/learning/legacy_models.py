@@ -1,4 +1,6 @@
-"""Versioned forecast models with explicit, checkpointed PyTorch dropout randomness."""
+"""Versioned forecast models with explicit, checkpointed PyTorch dropout
+randomness.
+"""
 
 import math
 from dataclasses import asdict, dataclass
@@ -9,6 +11,10 @@ from torch import nn
 
 @dataclass(frozen=True)
 class ModelSpec:
+    """Describe the retained context-based architecture used by older
+    checkpoints.
+    """
+
     name: str
     hidden: int = 64
     layers: int = 2
@@ -37,6 +43,10 @@ class ModelSpec:
 
 
 class ExplicitDropoutStack(nn.Module):
+    """Apply independent LSTM layers with dropout only between stacked
+    layers.
+    """
+
     def __init__(self, inputs, spec):
         super().__init__()
         self.layers = nn.ModuleList(
@@ -62,6 +72,8 @@ class ExplicitDropoutStack(nn.Module):
 
 
 class LSTMForecast(nn.Module):
+    """Decode context and history into the legacy ten-step forecast."""
+
     def __init__(self, spec):
         super().__init__()
         self.spec = spec.validate()
@@ -85,6 +97,8 @@ class LSTMForecast(nn.Module):
 
 
 class TransformerForecast(nn.Module):
+    """Attend to context and history for the legacy ten-step forecast."""
+
     def __init__(self, spec):
         super().__init__()
         self.spec = spec.validate()

@@ -1,3 +1,7 @@
+"""Validate external provider bindings and manage asynchronous result
+polling.
+"""
+
 import asyncio
 import time
 from urllib.parse import urlparse
@@ -118,6 +122,10 @@ def validate_result(run, provider, event):
 
 
 class ProviderRegistry:
+    """Track provider capabilities, polling tasks and per-run result
+    bindings.
+    """
+
     def __init__(self, store):
         self.store = store
         self.tasks = {}

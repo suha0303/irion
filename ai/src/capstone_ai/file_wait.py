@@ -1,4 +1,6 @@
-"""Wake the existing tail on file writes, with the configured polling fallback."""
+"""Wake the existing tail on file writes, with the configured polling
+fallback.
+"""
 
 import ctypes
 import os
@@ -7,6 +9,8 @@ from pathlib import Path
 
 
 class FileWaiter:
+    """Wait for observation-file changes using an owned Linux inotify handle."""
+
     def __init__(self, run):
         libc = ctypes.CDLL(None, use_errno=True)
         self.fd = libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC)

@@ -1,7 +1,11 @@
-"""CPU prediction and independent before/after comparison on admitted flights."""
+"""CPU prediction and independent before/after comparison on admitted
+flights.
+"""
 
+from collections.abc import Sequence
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 import numpy as np
 from safetensors.torch import load_file
@@ -12,14 +16,35 @@ from .registry import fingerprint
 from .runtime import Runtime
 
 
-def predict(runtime, x):
+def predict(runtime: Runtime, x: np.ndarray) -> np.ndarray:
+    """Predict a nonempty forecast window array in CPU batches of at most 16."""
     return np.concatenate(
         [runtime.predict_scaled(x[i : i + 16]) for i in range(0, len(x), 16)]
     )
 
 
-def load_runtime(model_id, metadata, *, bundle, adapted=None):
-    """Bind the same immutable weights/scaler to offline and live inputs."""
+def load_runtime(
+    model_id: str,
+    metadata: dict[str, Any],
+    *,
+    bundle: str | Path,
+    adapted: str | Path | None = None,
+) -> tuple[Runtime, dict[str, Any] | None]:
+    """Bind a verified base or aircraft-adapted CPU model to flight metadata.
+
+    Args:
+        model_id: Identifier in the frozen 16-model delivery.
+        metadata: Prepared flight metadata, including profile and origin.
+        bundle: Immutable base model delivery directory.
+        adapted: Optional completed adaptation directory. Its profile, origin,
+            base weights, adapted weights and unchanged scaler must match.
+
+    Returns:
+        The runtime and adaptation record, or None for an unadapted model.
+
+    Raises:
+        ValueError: A model, scaler, integrity or adaptation binding is invalid.
+    """
     runtime = Runtime(model_id, catalog=Catalog(bundle))
     adaptation = None
     if adapted:
@@ -133,7 +158,9 @@ def _forecast_results(runtime, metadata, values, times, ranges):
 
 
 def _health_results(runtime, metadata, values, times, ranges):
-    """Return completed-segment health scores without inventing a run verdict."""
+    """Return completed-segment health scores without inventing a run
+    verdict.
+    """
     from .calibration import health_score
 
     s = runtime.scaler
@@ -192,7 +219,14 @@ def _health_results(runtime, metadata, values, times, ranges):
     return result, scoring, segment_results
 
 
-def analyze(model_id, manifest, *, bundle, adapted=None, data_root=None):
+def analyze(
+    model_id: str,
+    manifest: str | Path,
+    *,
+    bundle: str | Path,
+    adapted: str | Path | None = None,
+    data_root: str | Path | None = None,
+) -> dict[str, Any]:
     """Validate one flight package and analyze it with one CPU model.
 
     Args:
@@ -217,7 +251,9 @@ def analyze(model_id, manifest, *, bundle, adapted=None, data_root=None):
 
 
 def _analyze_loaded(runtime, adaptation, loaded, data_root, started):
-    """Analyze data already validated for this job; never reload mutable files."""
+    """Analyze data already validated for this job; never reload mutable
+    files.
+    """
     from .calibration import annotate, binding
     from .run_summary import evidence
 
@@ -265,13 +301,36 @@ def _analyze_loaded(runtime, adaptation, loaded, data_root, started):
     return output
 
 
-def analyze_run(models, manifests, *, bundle, data_root=None, use_active=False):
+def analyze_run(
+    models: Sequence[str],
+    manifests: Sequence[str | Path],
+    *,
+    bundle: str | Path,
+    data_root: str | Path | None = None,
+    use_active: bool = False,
+) -> dict[str, Any]:
     """Analyze a source run with bounded memory and one validation per package.
 
     Results retain chronological package order and the requested model order.
     Only one model is retained between segments; adapted weights are rebound
     when the aircraft profile or origin changes. This avoids hashing and
     decoding the same log for every selected model.
+
+    Args:
+        models: Nonempty, distinct model IDs from the frozen delivery.
+        manifests: 1..64 prepared packages from one source flight and aircraft.
+            Intervals must not overlap and must use the same clock corrections.
+            At most 72000 frames (two hours at 10 Hz) are admitted in total.
+        bundle: Immutable base model delivery directory.
+        data_root: Local registry for aircraft calibration and active models.
+        use_active: Resolve active aircraft adaptations from data_root.
+
+    Returns:
+        Per-package analyses and an aggregate run summary, including retained
+        intervals and unused-data coverage. Timestamps are in microseconds.
+
+    Raises:
+        ValueError: Selection, flight identity, timing or model bindings fail.
     """
     from .registry import active_folder
     from .run_summary import aggregate
@@ -343,7 +402,24 @@ def analyze_run(models, manifests, *, bundle, data_root=None, use_active=False):
     return dict(analyses=analyses, run_summary=aggregate(analyses))
 
 
-def compare(adapted, manifest, *, bundle):
+def compare(
+    adapted: str | Path, manifest: str | Path, *, bundle: str | Path
+) -> dict[str, Any]:
+    """Compare base and adapted prediction on an independent evaluation flight.
+
+    Args:
+        adapted: Completed adaptation directory with its source bindings.
+        manifest: Prepared flight whose role is evaluation and whose source
+            was not used for adaptation or model selection.
+        bundle: Immutable delivery containing the base model.
+
+    Returns:
+        Original and adapted analyses with independence evidence. Prediction
+        comparison alone does not establish anomaly detection performance.
+
+    Raises:
+        ValueError: Evaluation independence, origin or model binding fails.
+    """
     adapted = Path(adapted)
     result = read_json(adapted / "result.json")
     metadata, _, _ = load(manifest)

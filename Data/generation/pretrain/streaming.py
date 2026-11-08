@@ -1,4 +1,6 @@
-"""Bounded collection groups, per-run verified capsules, and owned-only retirement."""
+"""Bounded collection groups, per-run verified capsules, and owned-only
+retirement.
+"""
 
 import os
 import re
@@ -53,7 +55,9 @@ def tree_stamp(path):
 
 
 def retire_owned(paths, allowed, journal, *, proof, budget):
-    """All ownership/stability checks precede any deletion. No wildcard deletion."""
+    """All ownership/stability checks precede any deletion. No wildcard
+    deletion.
+    """
     user_approved_write = (
         proof.get("status") == "RUN_CAPSULE_WRITTEN"
         and proof.get("storage_policy")
@@ -101,7 +105,9 @@ def retire_owned(paths, allowed, journal, *, proof, budget):
 
 
 def fragment_freeze(runner, folder, approved):
-    """Reuse source/identity/physical guards, defer full split admission until all groups finish."""
+    """Reuse source/identity/physical guards, defer full split admission
+    until all groups finish.
+    """
     from .collection import source_revision
 
     package_imports()
@@ -216,6 +222,8 @@ def restore_capsules(runner, rows, prepared, budget):
 
 
 class Pipeline:
+    """Collect and preprocess owned chunks under an explicit streaming task."""
+
     def __init__(self, runner):
         self.r = runner
         self.task = runner.task

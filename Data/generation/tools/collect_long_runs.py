@@ -1,4 +1,6 @@
-"""Finite operator-run collection; archive-only storage; bounded per-case retries, no campaign restart."""
+"""Finite operator-run collection; archive-only storage; bounded per-case
+retries, no campaign restart.
+"""
 
 from __future__ import annotations
 
@@ -204,7 +206,9 @@ def budget_memory_used(plan, snapshot):
 
 
 class MissionProgress:
-    """Read tiny producer metadata only; bind a unique new UUID to this case/lane."""
+    """Read tiny producer metadata only; bind a unique new UUID to this
+    case/lane.
+    """
 
     def __init__(
         self, root, baseline_dirs, case, lane, duration, *, runs_root=None
@@ -343,7 +347,9 @@ class MissionProgress:
         return result
 
     def terminal_evidence(self):
-        """Recover failure context even when the command exited before result parsing."""
+        """Recover failure context even when the command exited before result
+        parsing.
+        """
         try:
             self.sample()  # A stopped run's live clock can be stale; identity is still useful.
             if len(self.matches) != 1:
@@ -459,7 +465,9 @@ def bytes_under(root):
 
 
 class Progress:
-    """Only increasing byte counters reset the stall clock. State writes do not."""
+    """Only increasing byte counters reset the stall clock. State writes do
+    not.
+    """
 
     def __init__(
         self,
@@ -520,6 +528,10 @@ class Progress:
 
 
 class HashIO:
+    """Hash transferred bytes and report progress while forwarding stream
+    I/O.
+    """
+
     def __init__(self, stream, progress):
         self.stream, self.progress, self.digest, self.count = (
             stream,
@@ -551,7 +563,9 @@ class HashIO:
 
 
 def archive_run(run, destination, stage_dir, budgets, check):
-    """One streaming gzip tar, then streaming stored-byte and member verification."""
+    """One streaming gzip tar, then streaming stored-byte and member
+    verification.
+    """
     run, destination = Path(run), Path(destination)
     partial = destination.with_suffix(destination.suffix + ".partial")
     if destination.exists() or partial.exists():
@@ -762,7 +776,9 @@ def memory_snapshot():
 
 
 def collection_prerequisites(plan, dry_run=False):
-    """Bind the selected collection identity to its producer, gate and resource checks."""
+    """Bind the selected collection identity to its producer, gate and
+    resource checks.
+    """
     phase = plan.get("phase")
     legacy = plan.get("protocol") == LEGACY_COLLECTION_PROTOCOL
     expected_pool = "ROUND_001/R3_LONG15" if legacy else "collection/x500"
@@ -1141,7 +1157,9 @@ def verify_run_source_snapshot(plan, source):
 def prepare_external_parent(
     external, process_helper, mount=Path("/media/sa/X31")
 ):
-    """Create output parents only on the mounted device; never recreate the mount."""
+    """Create output parents only on the mounted device; never recreate the
+    mount.
+    """
     external = no_links(external)
     if not external.is_relative_to(mount / "Data") or not mount.is_mount():
         raise Stop(
@@ -1236,7 +1254,9 @@ def preflight(plan, process_helper):
 def assess_run(
     plan, case, lane, run, folder, process_helper, check, flight_wall
 ):
-    """Consume Simulation's assessment; never infer safety from completed status."""
+    """Consume Simulation's assessment; never infer safety from completed
+    status.
+    """
     values = {
         "run": str(run),
         "instance": str(lane["instance"]),
@@ -1290,7 +1310,9 @@ def assess_run(
 
 
 def execute(plan, cases, process_helper):
-    """One project collection lock shared by optional gates and production collection."""
+    """One project collection lock shared by optional gates and production
+    collection.
+    """
     lock_path = (
         Path(plan.get("project_root", plan["root"]))
         / "Data/operations/collection.lock"
@@ -1310,7 +1332,9 @@ def execute(plan, cases, process_helper):
 
 
 def candidate_baseline(config):
-    """Only an explicitly approved single3x/8x probe may reuse this stopped test seed."""
+    """Only an explicitly approved single3x/8x probe may reuse this stopped
+    test seed.
+    """
     speed = config.get("speed_test", {})
     if (
         config.get("mode") != "test"

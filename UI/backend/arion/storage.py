@@ -1,4 +1,6 @@
-"""File-backed flight and event catalog. Original source files are never rewritten."""
+"""File-backed flight and event catalog. Original source files are never
+rewritten.
+"""
 
 import hashlib
 import json
@@ -15,6 +17,10 @@ from .telemetry import TelemetryRun
 
 
 class Store:
+    """Own imported logs, persisted catalog entries and per-instance replay
+    caches.
+    """
+
     def __init__(self, root: Path):
         self.root = Path(root)
         (self.root / "logs").mkdir(parents=True, exist_ok=True)

@@ -34,6 +34,10 @@ from .telemetry import LABELS
 
 
 class StoreV2(Store):
+    """Extend file storage with live sessions, input profiles and NPZ
+    archives.
+    """
+
     def __init__(self, root):
         self.active = {}
         self.export_executor = None

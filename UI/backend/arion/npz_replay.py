@@ -1,4 +1,6 @@
-"""Causal replay with a two-chunk cache, also used for imported physical-unit NPZ."""
+"""Causal replay with a two-chunk cache, also used for imported physical-unit
+NPZ.
+"""
 
 import json
 from bisect import bisect_right
@@ -15,6 +17,8 @@ from .telemetry import TelemetryRun
 
 
 class NpzReplay(SessionRun):
+    """Replay archived frames with a bounded cache owned by this instance."""
+
     def __init__(self, journal, archive, summary=None):
         self.path = Path(journal)
         self.archive = archive

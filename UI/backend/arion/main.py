@@ -1,3 +1,5 @@
+"""Serve replay, local analysis and live-session APIs with managed shutdown."""
+
 import asyncio
 import io
 import math

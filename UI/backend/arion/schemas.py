@@ -1,3 +1,5 @@
+"""Validate version-one AI provider responses and connection requests."""
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -14,6 +16,8 @@ class Evidence(BaseModel):
 
 
 class DetectionResult(BaseModel):
+    """Validate a legacy detection event bound to one input hash and epoch."""
+
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     event_id: str = Field(min_length=1, max_length=120)
     run_id: str

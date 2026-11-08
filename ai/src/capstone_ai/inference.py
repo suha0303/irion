@@ -1,4 +1,6 @@
-"""No evaluation imports. Forecasts are immutable and targets are matched by time."""
+"""No evaluation imports. Forecasts are immutable and targets are matched by
+time.
+"""
 
 import copy
 import hashlib
@@ -8,6 +10,10 @@ import numpy as np
 
 
 class Alarm:
+    """Apply EWMA scores with separate alarm-entry and alarm-exit
+    persistence.
+    """
+
     def __init__(self, high):
         self.high = np.array(high)
         self.ewma = None
@@ -49,6 +55,10 @@ class Alarm:
 
 
 class PendingForecasts:
+    """Match immutable forecasts to available targets in the same clock
+    segment.
+    """
+
     def __init__(self, error_scale, threshold):
         self.error_scale = np.maximum(error_scale, 1e-8)
         self.alarm = Alarm(threshold)
