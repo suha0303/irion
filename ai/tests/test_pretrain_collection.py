@@ -5,6 +5,7 @@ optional gates.
 import hashlib
 import io
 import json
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -194,8 +195,6 @@ def test_optional_gate_sixteen_collection_and_exports(
 
 
 def test_fresh_benchmark_freeze_reads_only_new_archives(tmp_path, monkeypatch):
-    import tarfile
-
     from pretrain import collection, common
 
     common.package_imports()

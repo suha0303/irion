@@ -235,7 +235,7 @@ def decide(record, scores, *, source_sha256=None):
             reason="학습·보정에 사용한 비행: 독립 판정에서 제외",
             calibration_id=record["id"],
         )
-    if a.ndim != 1 or not len(a) or not np.isfinite(a).all() or np.any(a < 0):
+    if a.ndim != 1 or len(a) == 0 or not np.isfinite(a).all() or np.any(a < 0):
         return dict(status="unavailable", reason="유효한 예측/실측 쌍 없음")
     alarms = a > record["threshold"]
     return dict(

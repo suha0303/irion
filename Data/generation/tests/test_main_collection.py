@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -118,8 +119,6 @@ def test_closed_raw_is_reused_without_intermediate_archive(tmp_path):
 def test_unit_exit_retries_but_parent_resource_stop_does_not(
     monkeypatch, tmp_path, message, expected_calls
 ):
-    from concurrent.futures import ThreadPoolExecutor
-
     task, rows, _ = runtime(monkeypatch, tmp_path, count=1)
     c = main.Campaign(task)
     entry = c.ledger["cases"][rows[0]["case_id"]]
@@ -414,7 +413,7 @@ def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(
     )
     actual = main_storage.pack_files
 
-    def crash(sources, path, budget, **kwargs):
+    def crash(sources, path, budget, **unused_kwargs):
         Path(path).write_bytes(b"interrupted partial")
         raise RuntimeError("power loss before publication")
 
@@ -556,7 +555,7 @@ m.case_entry(p)
     assert failure["failure_scope"] == "shared" and failure["errno"] == 28
     calls = []
 
-    def wrapped(*args, **kwargs):
+    def wrapped(*unused_args, **unused_kwargs):
         calls.append(1)
         raise RuntimeError(
             "Case child exit1; original errno is only in its receipt"
@@ -564,7 +563,6 @@ m.case_entry(p)
 
     monkeypatch.setattr(c, "begin_processing", lambda case: job)
     monkeypatch.setattr(c, "process", wrapped)
-    from concurrent.futures import ThreadPoolExecutor
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         with pytest.raises(pilot45.Blocked):

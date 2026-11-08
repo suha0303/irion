@@ -227,7 +227,7 @@ def test_exact_eight_gates_no_extra_model_or_seed(
             assert kw["validation"] is arrays
         return [dict(passed=True)]
 
-    def child(argv, **kw):
+    def child(argv, **unused_kw):
         name = argv[argv.index("--model") + 1]
         phase = argv[argv.index("--phase") + 1]
         children.append((name, phase))
@@ -405,7 +405,7 @@ def test_invalid_budget_stops_before_restore(tmp_path, monkeypatch):
         )
 
 
-def test_model_ids_do_not_reuse_existing_weights(tmp_path):
+def test_model_ids_do_not_reuse_existing_weights():
     cfg = config()
     ids = lifecycle.neural_ids(cfg)
     assert len(set(ids)) == 8

@@ -66,8 +66,8 @@ def check(bundle, dataset):
             expected = reference_values["prediction_scaled"]
             y = ((online["Y"] - s["y_mean"]) / s["y_scale"]).astype("f4")
 
-            def decisions(pred):
-                errors = (y - pred) ** 2 / np.array(
+            def decisions(pred, target, params):
+                errors = (target - pred) ** 2 / np.array(
                     params["reference_error_scale_scaled"]
                 )
                 scores = np.stack(
@@ -82,7 +82,8 @@ def check(bundle, dataset):
                     params["high"],
                 )
 
-            a, b = decisions(actual), decisions(expected)
+            a = decisions(actual, y, params)
+            b = decisions(expected, y, params)
             alarms_equal = all(
                 (i["alarm_active"], i["episode_start"])
                 == (j["alarm_active"], j["episode_start"])
@@ -100,12 +101,14 @@ def check(bundle, dataset):
             expected = reference_values["predicted_cell_v"]
             threshold = Calibration(**params)
 
-            def alarm(p):
+            def alarm(p, threshold, cell_voltage):
                 return threshold.decide(
-                    components(p, physical[:, 17], cell_voltage_scale=1)
+                    components(p, cell_voltage, cell_voltage_scale=1)
                 )["alarm"]
 
-            alarms_equal = alarm(actual) == alarm(expected)
+            alarms_equal = alarm(actual, threshold, physical[:, 17]) == alarm(
+                expected, threshold, physical[:, 17]
+            )
         rows.append(
             dict(
                 id=entry["id"],

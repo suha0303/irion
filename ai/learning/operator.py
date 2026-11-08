@@ -7,6 +7,7 @@ import fcntl
 import json
 import os
 import pwd
+import select
 import shlex
 import subprocess
 import sys
@@ -819,8 +820,6 @@ def render(root):
 
 
 def display(root, once=False):
-    import select
-
     root = Path(root)
     while True:
         if not once and sys.stdout.isatty():

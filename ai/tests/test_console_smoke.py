@@ -315,7 +315,7 @@ def test_worker_allocation_failure_preserved_before_data_or_model(
     )
     calls = []
 
-    def reject(*args):
+    def reject(*unused_args):
         calls.append("allocation")
         raise ValueError("allocation not verified")
 
@@ -487,7 +487,7 @@ def test_gpu_telemetry_closes_on_gate_failure_without_declaring_success(
         def stop(self):
             calls.append("telemetry stop")
 
-    def fail(*args, **kwargs):
+    def fail(*unused_args, **unused_kwargs):
         calls.append("gate")
         raise ValueError("mock restore mismatch")
 

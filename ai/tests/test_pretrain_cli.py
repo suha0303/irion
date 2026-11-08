@@ -187,7 +187,7 @@ def test_estimate_override_reaches_batch_without_claiming_capacity(
         },
     )
 
-    def extract(*args, **kwargs):
+    def extract(*args, **unused_kwargs):
         assert args[1] == "extract"
         raise ReachedExtraction
 
@@ -575,7 +575,7 @@ def test_expanded_floor_stops_only_owned_cpu_workers(tmp_path, monkeypatch):
         return r.state["resources"]
 
     class Child:
-        def __init__(self, command, **kw):
+        def __init__(self, command, **unused_kw):
             self.pid = 1000 + len(children)
             self.code = None
             children.append(self)
@@ -708,7 +708,7 @@ def test_scheduler_launch_bound_and_completion(tmp_path, monkeypatch, count):
     class Child:
         """Represent a child that completes under the scheduler limit."""
 
-        def __init__(self, argv, **kwargs):
+        def __init__(self, argv, **unused_kwargs):
             self.pid = 1000 + len(launched)
             req = common.read(argv[-1])
             launched.append(req)
@@ -743,7 +743,7 @@ def test_failure_drains_active_without_admitting_queue(tmp_path, monkeypatch):
     launched = []
 
     class Child:
-        def __init__(self, argv, **kwargs):
+        def __init__(self, argv, **unused_kwargs):
             self.pid = 1000 + len(launched)
             req = common.read(argv[-1])
             launched.append(req)
@@ -1040,7 +1040,7 @@ def test_cpu_failure_records_and_runs_remaining_units(tmp_path, monkeypatch):
     class Child:
         """Expose a controlled exit code without starting a subprocess."""
 
-        def __init__(self, argv, **kwargs):
+        def __init__(self, argv, **unused_kwargs):
             request = common.read(argv[-1])
             launched.append(request["row"]["run_id"])
             self.pid = 1000 + len(launched)
@@ -1121,7 +1121,7 @@ def test_unit_retry_bound_preserves_partials_and_moves_on(
     class Child:
         """Represent one bounded unit attempt for retry accounting."""
 
-        def __init__(self, argv, **kwargs):
+        def __init__(self, argv, **unused_kwargs):
             req = common.read(argv[-1])
             rid = req["row"]["run_id"]
             attempt = req["attempt"]
@@ -1197,7 +1197,7 @@ def test_shared_failure_does_not_retry_or_admit_next(
 
         pid = 1234
 
-        def __init__(self, argv, **kwargs):
+        def __init__(self, argv, **unused_kwargs):
             req = common.read(argv[-1])
             launched.append(req)
             common.write(

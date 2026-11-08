@@ -272,7 +272,7 @@ def test_final16_scope_cannot_weaken_old_or_new_limits(
         "old45_schema",
     }:
 
-        def change(m):
+        def change_manifest(m):
             if damage == "drop_case":
                 m["cases"].pop()
             if damage == "duplicate":
@@ -288,10 +288,10 @@ def test_final16_scope_cannot_weaken_old_or_new_limits(
             if damage == "old45_schema":
                 m["schema"] = "drone-ai.pilot45.manifest/1"
 
-        edit(final_request, "pilot_manifest", change)
+        edit(final_request, "pilot_manifest", change_manifest)
     if damage in {"retry", "parent", "bool_index", "quality_retry"}:
 
-        def change(ledger):
+        def change_ledger(ledger):
             a = ledger["cases"][0]["attempts"][0]
             if damage == "retry":
                 ledger["cases"][0]["attempts"].append(copy.deepcopy(a))
@@ -302,7 +302,7 @@ def test_final16_scope_cannot_weaken_old_or_new_limits(
             if damage == "quality_retry":
                 a["status"] = "quality_rejected"
 
-        edit(final_request, "ledger", change)
+        edit(final_request, "ledger", change_ledger)
     if damage == "missing_exclusion":
         edit(final_request, "registry", lambda v: v["entries"].pop())
     if damage == "old_data_usage":

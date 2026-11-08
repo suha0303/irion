@@ -1,5 +1,6 @@
 """Check refinement selection, process ownership and bounded dispatch."""
 
+import datetime
 import subprocess
 import sys
 
@@ -168,8 +169,6 @@ def test_final_predict_uses_only_numeric_features_and_saves_predictions(
 def test_scheduler_fills_five_idle_slots_before_other_four_baselines_finish(
     tmp_path, monkeypatch
 ):
-    import datetime
-
     from learning.parallel19 import refine as r
     from learning.parallel19.control import read, sha, write
 

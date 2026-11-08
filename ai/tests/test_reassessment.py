@@ -220,7 +220,7 @@ def test_explicit_matching_and_threshold_variants_do_not_refit_models(
     import capstone_ai.detection_protocol as protocol
     import capstone_ai.training as training
 
-    def forbidden(*args, **kwargs):
+    def forbidden(*unused_args, **unused_kwargs):
         pytest.fail("Reassessment must not execute models or fit thresholds")
 
     monkeypatch.setattr(protocol, "fit_calibration", forbidden)

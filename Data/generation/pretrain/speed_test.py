@@ -451,11 +451,11 @@ if __name__ == "__main__":
     parser.add_argument("task", type=Path)
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
-    report = review(args.task, args.output)
+    cli_report = review(args.task, args.output)
     print(
         json.dumps(
             dict(
-                status=report["status"],
+                status=cli_report["status"],
                 result=str(args.output / "results.json"),
             )
         )

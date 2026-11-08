@@ -50,7 +50,7 @@ def test_profile_rejects_duplicate_motors_and_nonfinite():
         eligibility(p)
 
 
-def test_catalog_exact_set_and_tamper_detection(tmp_path):
+def test_catalog_exact_set_and_tamper_detection():
     catalog = Catalog()
     assert {r["id"] for r in catalog.list()} == set(MODEL_IDS)
     with pytest.raises(ValueError, match="Unknown"):

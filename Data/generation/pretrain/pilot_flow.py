@@ -109,9 +109,10 @@ def preflight(task):
 
         validate_config(cfg)
     else:
-        pilot45.short_authorization() if cfg.get(
-            "short_cycle"
-        ) else pilot45.recovery_authorization()
+        if cfg.get("short_cycle"):
+            pilot45.short_authorization()
+        else:
+            pilot45.recovery_authorization()
     return pilot45.resources()
 
 

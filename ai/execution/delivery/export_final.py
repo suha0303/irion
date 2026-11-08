@@ -274,7 +274,7 @@ def export(base):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("base")
-    a = p.parse_args()
+    cli_parser = argparse.ArgumentParser()
+    cli_parser.add_argument("base")
+    a = cli_parser.parse_args()
     print(json.dumps(export(a.base)))

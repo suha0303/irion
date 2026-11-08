@@ -68,7 +68,7 @@ class Run:
         if (
             self.values.ndim != 2
             or self.values.shape[1] != 19
-            or not len(self.values)
+            or len(self.values) == 0
         ):
             raise ValueError("Nonempty full-run values[T,19] required")
         if (
@@ -316,7 +316,7 @@ def iter_manifests(
                 or type(end) is not int
                 or start < 0
                 or end <= start
-                or not len(arrays["time_us"])
+                or len(arrays["time_us"]) == 0
                 or arrays["time_us"][0] != ((start + 99999) // 100000) * 100000
                 or arrays["time_us"][-1] != ((end - 1) // 100000) * 100000
             ):

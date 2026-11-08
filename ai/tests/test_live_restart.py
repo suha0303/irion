@@ -69,7 +69,7 @@ def test_resume_does_not_close_pending_at_replayed_segment_boundary(
     class Probe:
         """Provide deterministic clock evidence for the resumed stream."""
 
-        def __init__(self, *args):
+        def __init__(self, *unused_args):
             self.count, self.errors = 0, 0
 
         def query(self):
@@ -85,7 +85,7 @@ def test_resume_does_not_close_pending_at_replayed_segment_boundary(
             pass
 
     class Predictor:
-        def __init__(self, *args):
+        def __init__(self, *unused_args):
             self.scaler = {"x_mean": 0, "x_scale": 1, "c_mean": 0, "c_scale": 1}
 
         def predict_scaled(self, x, c):

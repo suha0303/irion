@@ -82,17 +82,15 @@ def configure(args):
 
 
 def environment(settings, profile_file=None):
-    environment = os.environ.copy()
-    environment["PYTHONPATH"] = ":".join(
+    child_env = os.environ.copy()
+    child_env["PYTHONPATH"] = ":".join(
         str(profile.ROOT / p) for p in ("ai", "ai/src", "Data/generation")
     )
-    environment["PYTHONDONTWRITEBYTECODE"] = "1"
-    environment.pop("DRONE_AI_PROFILE", None)
+    child_env["PYTHONDONTWRITEBYTECODE"] = "1"
+    child_env.pop("DRONE_AI_PROFILE", None)
     if profile_file is not None:
-        environment["DRONE_AI_PROFILE"] = str(
-            profile.profile_path(profile_file)
-        )
-    return environment
+        child_env["DRONE_AI_PROFILE"] = str(profile.profile_path(profile_file))
+    return child_env
 
 
 def selected_python(settings, module, arguments, *, profile_file=None):

@@ -370,7 +370,7 @@ def causal_frames(
                 latest[name] = (value, sample)
             position += 1
 
-        def at(name):
+        def at(name, frame_time=t):
             if name not in latest:
                 return None
             v, sample = latest[name]
@@ -379,9 +379,9 @@ def causal_frames(
                 if name.startswith("pack_")
                 else fast_max_age_ms
             ) * 1000
-            if v is None or t - sample > limit:
+            if v is None or frame_time - sample > limit:
                 return None
-            return filters[name].at(t)[1] if name in filters else v
+            return filters[name].at(frame_time)[1] if name in filters else v
 
         row = []
         for name in FEATURES:

@@ -4,6 +4,7 @@ rewritten.
 
 import hashlib
 import json
+import sqlite3
 import zipfile
 from contextlib import closing
 from datetime import datetime, timezone
@@ -44,7 +45,6 @@ class Store:
         if marker.exists() or not database.exists():
             return
         # Only this migration imports sqlite3. The source is opened read-only.
-        import sqlite3
 
         backup = self.root / "backups" / "before-file-storage.sqlite3"
         backup.parent.mkdir(exist_ok=True)

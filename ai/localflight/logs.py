@@ -301,7 +301,7 @@ def inspect_log(path):
         key = (
             min(
                 keys,
-                key=lambda k: len(
+                key=lambda k, fields=fields: len(
                     set(fields) - set(result["fields"].get(k, []))
                 ),
             )

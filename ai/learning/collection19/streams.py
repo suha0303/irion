@@ -199,7 +199,7 @@ class Moments:
         if (
             values.ndim != 2
             or values.shape[1] != 19
-            or not len(values)
+            or len(values) == 0
             or not np.isfinite(values).all()
         ):
             raise ValueError("Finite unique train frame blocks required")

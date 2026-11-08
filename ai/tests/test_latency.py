@@ -1,6 +1,7 @@
 """Check causal timing, immutable forecasts and measured inference latency."""
 
 import copy
+import gc
 import io
 import json
 import pickle
@@ -156,8 +157,6 @@ def test_consumed_watermark_tracking_is_released_with_repeated_marks(tmp_path):
 
 
 def test_live_gc_deferral_restores_prior_policy_even_on_failure():
-    import gc
-
     from capstone_ai.live_inference import live_gc_scope
 
     was_enabled = gc.isenabled()

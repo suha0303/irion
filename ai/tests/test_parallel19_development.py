@@ -2,6 +2,7 @@
 evidence.
 """
 
+import argparse
 import contextlib
 
 from learning.parallel19.control import read, sha, write
@@ -78,8 +79,6 @@ def test_divergent_lr_is_not_sent_for_detection_evaluation(tmp_path):
 
 
 def test_development_worker_never_requires_final_inputs(tmp_path, monkeypatch):
-    import argparse
-
     import numpy as np
     import safetensors.torch
     import torch

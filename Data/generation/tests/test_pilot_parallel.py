@@ -406,7 +406,7 @@ def test_children_keep_separate_records_and_shared_state(monkeypatch, tmp_path):
     )
     lanes = []
 
-    def progress(*args, **kwargs):
+    def progress(*args, **unused_kwargs):
         lanes.append(args[3]["instance"])
         return SimpleNamespace(
             matches={}, sample=lambda: {}, terminal_evidence=lambda: {}

@@ -196,7 +196,7 @@ def test_single_candidate_never_repeats_baseline_or_runs_more_flights(
         def update(self, **fields):
             pass
 
-        def batch(self, *args, **kwargs):
+        def batch(self, *args, **unused_kwargs):
             calls.append(("cpu", args[1]))
 
         def flight(self, phase, count, rows, label):

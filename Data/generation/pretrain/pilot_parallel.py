@@ -1622,9 +1622,9 @@ def prepare_short(task, handoff):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("name")
-    args = p.parse_args()
-    flow, task = create(args.name)
-    print(str(flow))
-    print(str(task))
+    cli_parser = argparse.ArgumentParser(description=__doc__)
+    cli_parser.add_argument("name")
+    args = cli_parser.parse_args()
+    created_flow, created_task = create(args.name)
+    print(str(created_flow))
+    print(str(created_task))

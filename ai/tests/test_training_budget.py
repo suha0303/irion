@@ -34,7 +34,7 @@ def test_validation_is_a_separate_full_pass_without_optimizer_steps(
         return step(*args)
 
     monkeypatch.setattr(benchmark, "safe_step", recorded)
-    row = benchmark.measure(
+    benchmark_result = benchmark.measure(
         ModelSpec("lstm", 8),
         arrays(7),
         [3],
@@ -45,13 +45,22 @@ def test_validation_is_a_separate_full_pass_without_optimizer_steps(
         validation=arrays(5),
     )[0]
     assert len(calls) == 4
-    assert row["steps"] == 3 and row["actual_samples"] == 7
-    assert row["validation"]["windows"] == 5 and row["validation"]["steps"] == 2
-    assert row["validation"]["full_validation"] is True
-    assert row["validation"]["seconds"] > 0
-    assert row["validation"]["prepare_seconds"] >= 0
-    assert row["seed"] == 0 and row["precision"] == "float32"
-    assert "warms cache" in row["input_mode"]
+    assert (
+        benchmark_result["steps"] == 3
+        and benchmark_result["actual_samples"] == 7
+    )
+    assert (
+        benchmark_result["validation"]["windows"] == 5
+        and benchmark_result["validation"]["steps"] == 2
+    )
+    assert benchmark_result["validation"]["full_validation"] is True
+    assert benchmark_result["validation"]["seconds"] > 0
+    assert benchmark_result["validation"]["prepare_seconds"] >= 0
+    assert (
+        benchmark_result["seed"] == 0
+        and benchmark_result["precision"] == "float32"
+    )
+    assert "warms cache" in benchmark_result["input_mode"]
     assert not list((tmp_path / "probe").glob("*.pt"))
 
 

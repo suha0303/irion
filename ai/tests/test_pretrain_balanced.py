@@ -219,7 +219,9 @@ def test_new_defaults_and_swap_keeps_ram_reserve(monkeypatch):
 
 def test_seed_prompt_blank_or_explicit_and_zero(monkeypatch):
     for value, expected in (("", None), ("17", 17), ("0", 0)):
-        monkeypatch.setattr("builtins.input", lambda prompt: value)
+        monkeypatch.setattr(
+            "builtins.input", lambda unused_prompt, value=value: value
+        )
         assert cli.input_seed() == expected
     args = cli.parser().parse_args(
         ["init", "--name", "test", "--seed-base", "17"]

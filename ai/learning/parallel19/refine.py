@@ -1167,12 +1167,12 @@ def campaign(template):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--plan", required=True)
-    p.add_argument("--worker", action="store_true")
-    p.add_argument("--entry")
-    p.add_argument("--request")
-    a = p.parse_args()
+    cli_parser = argparse.ArgumentParser()
+    cli_parser.add_argument("--plan", required=True)
+    cli_parser.add_argument("--worker", action="store_true")
+    cli_parser.add_argument("--entry")
+    cli_parser.add_argument("--request")
+    a = cli_parser.parse_args()
     if a.worker:
         worker(a)
     else:

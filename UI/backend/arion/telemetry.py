@@ -52,9 +52,17 @@ LABELS = {
     "pitch_deg": ("Pitch", "°", "ATTITUDE"),
     "yaw_deg": ("Yaw", "°", "ATTITUDE"),
 }
-for i in range(1, 5):
-    LABELS[f"motor_{i}_rpm"] = (f"모터 {i} RPM", "rpm", "ESC_STATUS")
-    LABELS[f"motor_{i}_current_a"] = (f"모터 {i} 전류", "A", "ESC_STATUS")
+for motor_channel in range(1, 5):
+    LABELS[f"motor_{motor_channel}_rpm"] = (
+        f"모터 {motor_channel} RPM",
+        "rpm",
+        "ESC_STATUS",
+    )
+    LABELS[f"motor_{motor_channel}_current_a"] = (
+        f"모터 {motor_channel} 전류",
+        "A",
+        "ESC_STATUS",
+    )
 
 
 def finite(value):

@@ -1,6 +1,7 @@
 """Check whole-run coverage, per-segment evidence and model reuse."""
 
 import json
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -210,8 +211,6 @@ def test_partition_short_unselected_and_bounded_durations():
 
 
 def test_separate_packages_match_one_segmented_package(tmp_path, monkeypatch):
-    from unittest.mock import Mock
-
     from localflight import analysis
     from localflight.prepared import load, segment_ranges
 

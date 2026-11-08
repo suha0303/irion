@@ -145,7 +145,7 @@ def windows(metadata, values, times, scaler):
             for i in range(a + 99, b - 10, 10)
         ]
     )
-    if not len(indices):
+    if len(indices) == 0:
         raise ValueError("No complete causal history and arrived future target")
     x = np.stack([physical[i - 99 : i + 1] for i in indices])
     y = np.stack([physical[i + 1 : i + 11, [4, 5, 6, 17]] for i in indices])

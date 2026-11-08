@@ -884,7 +884,7 @@ def _compare_packed(path, key, expected):
     for values in expected:
         offset = 0
         while offset < len(values):
-            if remainder is None or not len(remainder):
+            if remainder is None or len(remainder) == 0:
                 try:
                     _, remainder = next(packed)
                 except StopIteration:
@@ -1017,7 +1017,7 @@ def _audit_compiled(
 
     for field in frame_fields:
 
-        def expected(field=field):
+        def expected_frames(field):
             for record in train:
                 row = record["row"]
                 if field == "values":
@@ -1051,7 +1051,7 @@ def _audit_compiled(
                             else row["mission_interval"]["clock_id"],
                         )
 
-        _compare_packed(frame_path, field, expected())
+        _compare_packed(frame_path, field, expected_frames(field))
     shared = load_shared_scaler(root)
     if (
         list(shared.fit_run_ids) != train_ids
@@ -1070,14 +1070,16 @@ def _audit_compiled(
         )
         for key in sorted(ARRAYS):
 
-            def expected(key=key):
+            def expected_online(key, selected):
                 for record in selected:
                     for _, values in array_blocks(
                         _input_path(record, "online_array"), key
                     ):
                         yield values
 
-            _compare_packed(root / (role + ".npz"), key, expected())
+            _compare_packed(
+                root / (role + ".npz"), key, expected_online(key, selected)
+            )
             _progress(
                 root,
                 "verify_online",

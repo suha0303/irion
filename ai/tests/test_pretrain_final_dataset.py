@@ -272,7 +272,7 @@ def test_final_run_only_uses_existing_extract_preprocess_audit(
     calls = []
     state = {}
 
-    def batch(name, action, items, workers, out, **kwargs):
+    def batch(name, action, items, workers, out, **unused_kwargs):
         calls.append(action)
         if action == "extract":
             assert (output / "consumer/final-test" / task.name).is_dir()

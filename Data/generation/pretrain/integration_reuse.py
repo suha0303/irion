@@ -211,9 +211,13 @@ if __name__ == "__main__":
     parser.add_argument("--task", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = accept(args.task, args.output)
+    cli_result = accept(args.task, args.output)
     print(
         json.dumps(
-            dict(status=result["status"], raw=result["raw"], new_flights=0)
+            dict(
+                status=cli_result["status"],
+                raw=cli_result["raw"],
+                new_flights=0,
+            )
         )
     )

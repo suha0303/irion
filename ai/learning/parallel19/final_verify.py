@@ -357,7 +357,7 @@ def run(args):
                 result = []
                 for row in rows:
                     with np.load(root / row["path"], allow_pickle=False) as a:
-                        run = Run(
+                        flight_run = Run(
                             row["run_id"],
                             row["role"],
                             tuple(row["lineage"]),
@@ -367,7 +367,7 @@ def run(args):
                             a["time_us"],
                             row["cohort"],
                         )
-                    result.append((run, records[row["run_id"]]))
+                    result.append((flight_run, records[row["run_id"]]))
                 return result
 
             threshold = Calibration.fit(
@@ -494,8 +494,8 @@ def run(args):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--plan", required=True)
-    p.add_argument("--entry", required=True)
-    p.add_argument("--request", required=True)
-    run(p.parse_args())
+    cli_parser = argparse.ArgumentParser()
+    cli_parser.add_argument("--plan", required=True)
+    cli_parser.add_argument("--entry", required=True)
+    cli_parser.add_argument("--request", required=True)
+    run(cli_parser.parse_args())

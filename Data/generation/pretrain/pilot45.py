@@ -1474,7 +1474,10 @@ def preflight(task):
         final16_authorization()
         validate_ledger(task, pristine=not (task / "operator/claimed").exists())
     else:
-        short_authorization() if cfg.get("short_cycle") else authorization()
+        if cfg.get("short_cycle"):
+            short_authorization()
+        else:
+            authorization()
     if cfg.get("recovery"):
         if not cfg.get("short_cycle"):
             recovery_authorization()

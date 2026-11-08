@@ -102,7 +102,7 @@ def _fit(
     """
     folder = Path(folder)
     device = device_for(config["device"])
-    if not len(train["X"]) or not len(validation["X"]):
+    if len(train["X"]) == 0 or len(validation["X"]) == 0:
         raise ValueError("empty train/validation")
     seed_all(config["seed"])
     model = make_model("lstm", config["hidden"]).to(device)

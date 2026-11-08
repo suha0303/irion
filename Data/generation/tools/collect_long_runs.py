@@ -689,7 +689,8 @@ def archive_run(run, destination, stage_dir, budgets, check):
                                     member
                                 )  # streaming, no disk extraction
                                 for chunk in iter(
-                                    lambda: stream.read(BLOCK), b""
+                                    lambda stream=stream: stream.read(BLOCK),
+                                    b"",
                                 ):
                                     h.update(chunk)
                                     count += len(chunk)
@@ -1814,6 +1815,8 @@ def _execute_locked(plan, cases, process_helper):
                     runs_root=runs,
                 )
 
+                # These synchronous checks finish before the retry advances.
+                # Read the current attempt's mutable state, not a snapshot.
                 def flight_progress(force=False):
                     now = time.monotonic()
                     if (

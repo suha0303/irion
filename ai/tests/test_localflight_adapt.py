@@ -122,14 +122,14 @@ def test_head_only_fit_restore_and_independent_comparison(tmp_path, model_id):
     )
     full = load_file(str(tmp_path / "full/model.safetensors"))
     resumed = load_file(str(tmp_path / "resume/model.safetensors"))
-    for key in full:
-        np.testing.assert_array_equal(full[key].numpy(), resumed[key].numpy())
+    for key, weights in full.items():
+        np.testing.assert_array_equal(weights.numpy(), resumed[key].numpy())
         if not key.startswith("head."):
-            np.testing.assert_array_equal(full[key].numpy(), base[key].numpy())
+            np.testing.assert_array_equal(weights.numpy(), base[key].numpy())
     assert any(
-        not np.array_equal(full[k].numpy(), base[k].numpy())
-        for k in full
-        if k.startswith("head.")
+        not np.array_equal(weights.numpy(), base[key].numpy())
+        for key, weights in full.items()
+        if key.startswith("head.")
     )
     r = compare(tmp_path / "full", evaluation, bundle=DEFAULT_BUNDLE)
     assert r["independent"] and not r["detection_performance_verified"]

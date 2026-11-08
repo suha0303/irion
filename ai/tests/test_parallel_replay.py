@@ -328,7 +328,7 @@ def test_benchmark_real_spawn_candidates_and_exact_outputs(
         "canonical/normal-validation/" + p.name: sha(p)
         for p in destination.iterdir()
     }
-    plan, inputs = build_benchmark_plan(
+    plan, input_files = build_benchmark_plan(
         upstream, dict(dataset_files=hashes, models=["fixture"])
     )
     out = tmp_path / "compute"
@@ -343,7 +343,7 @@ def test_benchmark_real_spawn_candidates_and_exact_outputs(
         dict(
             parallel_replay_benchmark=plan,
             models=["fixture"],
-            evaluation_input_files=inputs,
+            evaluation_input_files=input_files,
         ),
         Progress(),
     )

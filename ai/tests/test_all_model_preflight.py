@@ -67,7 +67,7 @@ def prepared(tmp_path, monkeypatch):
             origin_us=np.array([1, 2]),
         )
 
-    def fit(*args):
+    def fit(*unused_args):
         events.append(("fit",))
         return {"status": "fixture"}
 
@@ -144,7 +144,7 @@ def test_numerical_failure_collects_other_models_and_prevents_all_full_work(
 ):
     p = prepared
 
-    def check(predictor, normal, output, **kwargs):
+    def check(predictor, normal, output, **unused_kwargs):
         p.events.append(("gate", predictor.name))
         if predictor.name in p.names[:2]:
             save_report(output, "FAILED_STOPPED")
@@ -228,7 +228,7 @@ def test_rich_diagnostic_uses_one_policy_and_no_calibration(
     assert not (p.out / "calibration").exists()
 
 
-def test_changed_scaler_stops_before_any_model_forward(prepared, monkeypatch):
+def test_changed_scaler_stops_before_any_model_forward(prepared):
     p = prepared
     np.savez(p.out / "models/second/scaler.npz", y_scale=np.ones(4) * 2)
     with pytest.raises(ValueError, match="same frozen train scaler: second"):
@@ -316,7 +316,7 @@ def test_rich_preflight_rejects_different_normal_targets_or_identity(
 ):
     p = prepared
 
-    def diagnose(predictor, normal, output, **kwargs):
+    def diagnose(predictor, normal, output, **unused_kwargs):
         report = save_report(output, "DIAGNOSTIC_COMPLETE")
         if predictor.name == "second":
             report["sample_sha256"] = "different-run-membership"
@@ -402,7 +402,7 @@ def test_policy_failure_for_first_model_still_checks_remaining_models(
     )
     checked = []
 
-    def diagnose(predictor, normal, output, **kwargs):
+    def diagnose(predictor, normal, output, **unused_kwargs):
         return save_report(output, "DIAGNOSTIC_COMPLETE")
 
     def assess(report_path, policy, output):

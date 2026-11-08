@@ -122,11 +122,11 @@ def show(base, details=False):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("root")
-    p.add_argument("--watch", action="store_true")
-    p.add_argument("--details", action="store_true")
-    args = p.parse_args()
+    cli_parser = argparse.ArgumentParser()
+    cli_parser.add_argument("root")
+    cli_parser.add_argument("--watch", action="store_true")
+    cli_parser.add_argument("--details", action="store_true")
+    args = cli_parser.parse_args()
     try:
         while True:
             if args.watch:

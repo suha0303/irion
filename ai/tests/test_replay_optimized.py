@@ -232,9 +232,7 @@ def test_batched_inputs_keep_forecasts_and_discrete_decisions(
         )
 
 
-def test_pending_queue_preserves_duplicate_snapshot_and_does_not_scan_finished(
-    tmp_path,
-):
+def test_pending_queue_keeps_snapshot_without_scanning_finished():
     ledger = DetectionLedger(np.ones((10, 4)), [1, 1])
     key = ledger.issue("run", "clock", 0, 0, 0, np.zeros((10, 4)))
     ledger.issue("run", "clock", 0, 0, 0, np.zeros((10, 4)))

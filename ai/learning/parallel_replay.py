@@ -7,6 +7,7 @@ import json
 import multiprocessing
 import os
 import shutil
+import statistics
 import time
 from collections import deque
 from concurrent.futures import (
@@ -384,7 +385,6 @@ def benchmark_workers(upstream, out, cfg, progress):
     proxy, not independent flights, cold-I/O measurements or detector
     evaluation.
     """
-    import statistics
 
     import numpy as np
 

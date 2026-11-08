@@ -258,7 +258,7 @@ def test_public_full480_native_case_keeps_all_frames_windows_and_land_tail(
     ["pilot_policy", "assessment", "csv", "scope_case", "origin_clock"],
 )
 def test_public_main_case_rejects_wrong_old_authority_or_source(
-    full480, tmp_path, damage
+    full480, damage
 ):
     if damage == "pilot_policy":
         p = Path(full480["bundle"]["paired_policy"])

@@ -2,6 +2,7 @@
 
 import copy
 import hashlib
+import importlib.util
 import json
 import sys
 
@@ -87,8 +88,6 @@ def cases(seed_base, profile="legacy50"):
                 )
                 record["cases"].append(row)
     if profile == "diverse104":
-        import sys
-
         sys.path.insert(0, str(SIMULATION / "sim/src"))
         from capstone_sim.normal_variation import sample
 
@@ -284,13 +283,13 @@ def run(folder):
     c = collector()
     raw = read(folder / "plan.json")
     gate = raw["phase"] != "collection"
-    plan, rows = c.bound(
+    collection_plan, rows = c.bound(
         folder / "plan.json",
         folder / "manifest.json",
         folder / "approval.json",
         dry_run=gate,
     )
-    result = c.execute(plan, rows, c.helper(ROOT))
+    result = c.execute(collection_plan, rows, c.helper(ROOT))
     if result["status"] == "COLLECTED_WITH_ERRORS_STOPPED":
         raise IncompleteCollection(
             "Individual run failures preserved: " + str(folder)
@@ -302,7 +301,7 @@ def run(folder):
         raise RuntimeError(
             "Collection/gate failed; evidence retained: " + str(folder)
         )
-    if gate and len(rows) >= plan["concurrency"]:
+    if gate and len(rows) >= collection_plan["concurrency"]:
         from .common import overlap
 
         observed = overlap(
@@ -314,7 +313,7 @@ def run(folder):
                 for r in result["cases"].values()
             ]
         )
-        if observed < plan["concurrency"]:
+        if observed < collection_plan["concurrency"]:
             raise RuntimeError(
                 "Requested flights did not overlap; not a parallel pass"
             )
@@ -335,19 +334,19 @@ def freeze_benchmark(folder):
     ).identity
 
     ledger = read(folder / "execution/ledger.json")
-    cases = read(folder / "manifest.json")["cases"]
+    case_specs = read(folder / "manifest.json")["cases"]
     if (
         ledger.get("phase") != "benchmark"
         or ledger.get("status") != "COLLECTED_PENDING_QUALITY_STOPPED"
         or ledger.get("not_started")
         or ledger.get("stop_reason")
-        or set(ledger["cases"]) != {c["case_id"] for c in cases}
-        or len(cases) < 3
+        or set(ledger["cases"]) != {c["case_id"] for c in case_specs}
+        or len(case_specs) < 3
     ):
         raise ValueError("Complete fresh benchmark ledger required")
     rows, seen = [], set()
     roles = ("normal_train", "normal_validation", "normal_calibration")
-    for index, case in enumerate(cases):
+    for index, case in enumerate(case_specs):
         record = ledger["cases"][case["case_id"]]
         if (
             case["role"] != "benchmark"
@@ -374,12 +373,15 @@ def freeze_benchmark(folder):
             members=export["members"],
         )
         values = identity(archive)
-        run, scenario = values["run.json"], values["evaluation/scenario.json"]
+        run_record, scenario = (
+            values["run.json"],
+            values["evaluation/scenario.json"],
+        )
         if (
-            run.get("run_id") != record["run_id"]
-            or run.get("status") != "completed"
-            or run.get("origin") != "px4_sitl"
-            or run["run_id"] in seen
+            run_record.get("run_id") != record["run_id"]
+            or run_record.get("status") != "completed"
+            or run_record.get("origin") != "px4_sitl"
+            or run_record["run_id"] in seen
             or scenario.get("name") != case["scenario"]
             or scenario.get("seed") != case["seed"]
             or scenario.get("health_eligibility") != "confirmed_healthy"
@@ -388,7 +390,7 @@ def freeze_benchmark(folder):
             or scenario.get("continuity") != "independent_reset"
         ):
             raise ValueError("Fresh benchmark archive identity mismatch")
-        seen.add(run["run_id"])
+        seen.add(run_record["run_id"])
         files = {name: archive["members"][name]["sha256"] for name in RAW_FILES}
         if any(
             archive["members"][name]["kind"] != "file" for name in RAW_FILES
@@ -396,10 +398,10 @@ def freeze_benchmark(folder):
             raise ValueError("Benchmark consumer members must be regular files")
         row = dict(
             case,
-            run_id=run["run_id"],
+            run_id=run_record["run_id"],
             archive=archive,
             files=files,
-            path=str(STORE / "consumer" / run["run_id"]),
+            path=str(STORE / "consumer" / run_record["run_id"]),
             collection_role="benchmark",
             training_eligible=False,
         )
@@ -474,7 +476,6 @@ def freeze_collection(task, folder, *, output=None, progress=None):
     package_imports()
     # Load only the updated make_freeze entry; relative control remains the
     # sealed package.
-    import importlib.util
 
     spec = importlib.util.spec_from_file_location(
         "pretrain_admission_freeze", ADMISSION / "freeze.py"
@@ -528,7 +529,7 @@ def combine_frozen(task, parts):
         merged.pop(
             key, None
         )  # Per-set references are retained in source_freezes below.
-    rows, cases, groups, references = [], [], [], []
+    rows, case_specs, groups, references = [], [], [], []
     for output, frozen in parts:
         if (
             frozen.get("status") != "DATA_FROZEN"
@@ -541,7 +542,7 @@ def combine_frozen(task, parts):
                     "Collection source/protection mismatch: " + key
                 )
         record = read(output / "cases.json")
-        cases.extend(record["cases"])
+        case_specs.extend(record["cases"])
         groups.append([c["case_id"] for c in record["cases"]])
         rows.extend(frozen["runs"])
         write(output / "frozen-manifest.json", frozen)
@@ -554,7 +555,7 @@ def combine_frozen(task, parts):
         )
     validate_roles(
         rows,
-        cases,
+        case_specs,
         read(RESOURCES / "protected-inventory.json")["runs"],
         profile,
         case_sets=groups,
@@ -565,12 +566,12 @@ def combine_frozen(task, parts):
             revision="COLLECTION",
             collection_profile=profile,
             collection_set_case_ids=groups,
-            cases=cases,
+            cases=case_specs,
         ),
     )
-    plan = read(RESOURCES / "collection-plan.json")
-    plan["cases_sha256"] = sha(task / "cases.json")
-    write(task / "collection-plan.json", plan)
+    collection_plan = read(RESOURCES / "collection-plan.json")
+    collection_plan["cases_sha256"] = sha(task / "cases.json")
+    write(task / "collection-plan.json", collection_plan)
     merged.update(
         runs=rows,
         cases_sha256=sha(task / "cases.json"),

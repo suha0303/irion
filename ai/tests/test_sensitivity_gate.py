@@ -14,18 +14,18 @@ from execution.common import read, sha, write
 from learning import sensitivity
 
 
-def arrays(run, count=3, *, block=0):
+def arrays(run_id, count=3, *, block=0):
     return dict(
         X=np.zeros((count, 100, 19)),
         C=np.zeros((count, 6)),
         Y=np.ones((count, 10, 4)),
-        run_id=np.array([run] * count),
+        run_id=np.array([run_id] * count),
         segment=np.zeros(count, dtype=np.int64),
         origin_us=np.arange(count, dtype=np.int64) * 1_000_000,
         source_indices=np.arange(count, dtype=np.int64),
         selection_index=np.full(count, block, dtype=np.int64),
         selection_evidence=[
-            dict(run_id=run, selected_start=0, selected_stop=count)
+            dict(run_id=run_id, selected_start=0, selected_stop=count)
         ],
     )
 
@@ -94,7 +94,7 @@ def gate(tmp_path, monkeypatch):
             for k, v in samples[key].items()
         }
 
-    def fit(*args):
+    def fit(*unused_args):
         events.append(("diagnostic_fit",))
         return dict(
             high=[1.0, 2.0],
@@ -386,7 +386,7 @@ def test_all_models_finish_gate_before_any_full_fit_or_development(
     monkeypatch.setattr(engine, "Predictor", gate.predictor)
     monkeypatch.setattr(engine, "normalized_role", gate.normalized)
 
-    def full_fit(*args):
+    def full_fit(*unused_args):
         gate.events.append(("full_fit",))
         return {"purpose": "fresh full calibration"}
 

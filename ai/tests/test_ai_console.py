@@ -447,7 +447,7 @@ def test_accounting_refuses_another_owner(monkeypatch):
 
 
 def test_missing_optional_parser_packages_do_not_block_npz_smoke(
-    tmp_path, machine, monkeypatch
+    machine, monkeypatch
 ):
     dataset = Path(machine["dataset_root"])
     (dataset / "dataset").mkdir(parents=True)
@@ -479,7 +479,7 @@ def test_missing_optional_parser_packages_do_not_block_npz_smoke(
 
 
 def test_current_flat_preprocessing_output_presence_supports_functionality_gate(
-    tmp_path, machine, monkeypatch
+    machine, monkeypatch
 ):
     dataset = Path(machine["dataset_root"])
     (dataset / "dataset").mkdir(parents=True)
@@ -510,7 +510,7 @@ def test_train_prepare_only_delegates_explicit_command_and_profile(
     path = profile.write(tmp_path / "machine.json", machine)
     calls = []
 
-    def fake(settings, module, arguments, **kwargs):
+    def fake(settings, module, arguments, **unused_kwargs):
         calls.append((module, arguments))
         return 0
 

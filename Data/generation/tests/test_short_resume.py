@@ -66,7 +66,7 @@ def test_reviewed_parent_enters_once_without_reclassification(tmp_path, kind):
     )
 
 
-def test_ordinary_accepted_completed_raw_has_no_retry_exception(tmp_path):
+def test_ordinary_accepted_completed_raw_has_no_retry_exception():
     cfg = dict(
         short_resume=dict(
             previous_task="previous", quality_rejections={}, native_retries={}

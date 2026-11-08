@@ -4,10 +4,12 @@ boundaries.
 
 import copy
 import hashlib
+import importlib.util
 import io
 import json
 import os
 import sys
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -68,7 +70,7 @@ def test_final_scoring_matches_development_math_without_fitting(
     import capstone_ai.detection_protocol as protocol
     import capstone_ai.training as training
 
-    def forbidden(*args, **kwargs):
+    def forbidden(*unused_args, **unused_kwargs):
         pytest.fail("Final evaluator cannot load weights or fit calibration")
 
     monkeypatch.setattr(protocol, "fit_calibration", forbidden)
@@ -317,9 +319,6 @@ def test_final_console_does_not_claim_training_or_recalibration(tmp_path):
 def test_python310_streaming_transfer_roundtrip_preserves_all_frozen_bytes(
     tmp_path, monkeypatch
 ):
-    import importlib.util
-    import tarfile
-
     script = (
         Path(__file__).resolve().parents[1]
         / "reports/final-evaluation-20261103/attempt-01/operator/deploy.py"

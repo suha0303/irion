@@ -39,10 +39,10 @@ def show(root):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("root")
-    p.add_argument("--watch", action="store_true")
-    a = p.parse_args()
+    cli_parser = argparse.ArgumentParser()
+    cli_parser.add_argument("root")
+    cli_parser.add_argument("--watch", action="store_true")
+    a = cli_parser.parse_args()
     try:
         while True:
             if a.watch:

@@ -49,7 +49,7 @@ def create_app(data_dir=None):
     result_metrics = deque(maxlen=1000)
 
     @asynccontextmanager
-    async def lifespan(app):
+    async def lifespan(unused_app):
         yield
         await local_live.close()
         await local_flight.close()
@@ -73,7 +73,7 @@ def create_app(data_dir=None):
     app.state.providers, app.state.sources = providers, sources
 
     @app.exception_handler(KeyError)
-    async def missing_run(request, error):
+    async def missing_run(unused_request, unused_error):
         return JSONResponse(
             status_code=404, content={"detail": "해당 비행을 찾을 수 없습니다."}
         )

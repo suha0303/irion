@@ -110,7 +110,7 @@ def test_progress_sampler_receives_requested_duration(monkeypatch, tmp_path):
     class Done(Exception):
         pass
 
-    def progress(root, baseline, selected, lane, duration, **kwargs):
+    def progress(root, baseline, selected, lane, duration, **unused_kwargs):
         observed.append((lane["instance"], duration))
         raise Done
 

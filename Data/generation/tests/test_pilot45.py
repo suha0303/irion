@@ -333,7 +333,7 @@ def test_foreign_service_is_never_stopped(monkeypatch, tmp_path):
     )
     commands = []
 
-    def show(command, **kwargs):
+    def show(command, **unused_kwargs):
         commands.append(command)
         return SimpleNamespace(
             stdout=(

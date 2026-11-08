@@ -271,6 +271,6 @@ def campaign(template):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("template")
-    campaign(p.parse_args().template)
+    cli_parser = argparse.ArgumentParser()
+    cli_parser.add_argument("template")
+    campaign(cli_parser.parse_args().template)

@@ -32,7 +32,7 @@ class ResidualSummary:
         self.signed = np.zeros(4, dtype=np.float64)
 
     def add(self, residuals):
-        if not len(residuals):
+        if len(residuals) == 0:
             return
         signed = np.asarray(residuals, dtype=np.float64)
         if (

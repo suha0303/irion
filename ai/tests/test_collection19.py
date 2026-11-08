@@ -377,7 +377,7 @@ def test_aggregate_audits_once_and_returns_both_receipts(
     )
     monkeypatch.setattr(ag, "_pairs", lambda *a: 0)
 
-    def audit(records, root, **kwargs):
+    def audit(records, root, **unused_kwargs):
         calls.append(str(root))
         result = dict(
             passed=True,

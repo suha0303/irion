@@ -1,5 +1,6 @@
 """Synthetic processes/files only; no SITL, external device or monitoring."""
 
+import errno
 import importlib.util
 import json
 import subprocess
@@ -1320,8 +1321,6 @@ def test_bounded_case_retries_preserve_raw_and_continue(setup, failures):
 
 
 def test_shared_storage_failure_never_retries(setup):
-    import errno
-
     plan, cases, helper, _ = setup
     plan.update(
         unit_attempts_max=3, continue_after_case_failure=True, concurrency=1
@@ -1329,7 +1328,7 @@ def test_shared_storage_failure_never_retries(setup):
     plan["lanes"] = plan["lanes"][:1]
     calls = []
 
-    def broken(*args):
+    def broken(*unused_args):
         calls.append(1)
         raise OSError(errno.ENOSPC, "storage full")
 
@@ -1348,7 +1347,7 @@ def test_unsafe_lane_is_not_retried(setup, monkeypatch):
     plan["lanes"] = plan["lanes"][:1]
     calls = []
 
-    def broken(*args):
+    def broken(*unused_args):
         calls.append(1)
         raise c.Stop("flight error")
 

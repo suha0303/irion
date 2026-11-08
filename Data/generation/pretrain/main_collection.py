@@ -81,12 +81,12 @@ def plans(scope):
     auth = read(AUTH)
     for ref in auth["frozen_plans"].values():
         verify({str(ai19.no_links(ref["path"])): ref["sha256"]})
-    main = read(auth["frozen_plans"]["main"]["path"])
+    main_plan = read(auth["frozen_plans"]["main"]["path"])
     lr = read(auth["frozen_plans"]["LR"]["path"])
     training19_main.approval()
     training19.validate(lr)
-    training19_main.validate(main["cases"], lr)
-    return auth, main if scope == "main" else lr
+    training19_main.validate(main_plan["cases"], lr)
+    return auth, main_plan if scope == "main" else lr
 
 
 def dependencies(path=HANDOFF):
@@ -2441,8 +2441,6 @@ def execute_case(request):
         directory.mkdir(parents=True, exist_ok=True)
         native = directory / "native.json"
         if not native.exists():
-            import subprocess
-
             argv = [
                 s.format(
                     normal_run=normal["run"],

@@ -62,7 +62,8 @@ def operating_conditions(motion, environment, seed, stratum):
     simulation_source = str(SIMULATION / "sim/src")
     if simulation_source not in sys.path:
         sys.path.insert(0, simulation_source)
-    from capstone_sim.normal_variation import sample, validate
+    from capstone_sim.normal_variation import sample
+    from capstone_sim.normal_variation import validate as validate_variation
     from capstone_sim.random_flight import build as random_path
 
     rng = random.Random(seed ^ 0xF324)
@@ -135,7 +136,7 @@ def operating_conditions(motion, environment, seed, stratum):
             "horizontal": rng.choice(("line", "ellipse")),
             "yaw": "yaw",
         }[motion]
-    return validate(spec)
+    return validate_variation(spec)
 
 
 def cases(seed_base):

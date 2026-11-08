@@ -628,22 +628,24 @@ def execute(args):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("--plan", required=True)
-    p.add_argument("--entry", required=True)
-    p.add_argument(
+    cli_parser = argparse.ArgumentParser()
+    cli_parser.add_argument("--plan", required=True)
+    cli_parser.add_argument("--entry", required=True)
+    cli_parser.add_argument(
         "--stage", choices=["gate", "restore-gate", "lr", "main"], required=True
     )
-    args = p.parse_args()
+    cli_args = cli_parser.parse_args()
     try:
-        execute(args)
+        execute(cli_args)
     except Exception as e:
         import traceback
 
         traceback.print_exc()
-        plan = read(args.plan)
+        cli_plan = read(cli_args.plan)
         write(
-            Path(plan["output"]) / args.entry / (args.stage + "-failure.json"),
+            Path(cli_plan["output"])
+            / cli_args.entry
+            / (cli_args.stage + "-failure.json"),
             dict(error=type(e).__name__, reason=str(e), at=time.time()),
         )
         raise

@@ -155,11 +155,11 @@ def prepare(task, output, cohort="final"):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument("task")
-    p.add_argument("output")
-    p.add_argument(
+    cli_parser = argparse.ArgumentParser()
+    cli_parser.add_argument("task")
+    cli_parser.add_argument("output")
+    cli_parser.add_argument(
         "--cohort", choices=["final", "development"], default="final"
     )
-    a = p.parse_args()
-    prepare(a.task, a.output, a.cohort)
+    cli_args = cli_parser.parse_args()
+    prepare(cli_args.task, cli_args.output, cli_args.cohort)

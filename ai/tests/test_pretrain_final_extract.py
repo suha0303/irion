@@ -74,7 +74,7 @@ def final_extraction(tmp_path, monkeypatch):
     actions = []
     status = task / "extract-status.json"
 
-    def batch(name, action, items, workers, out, **kwargs):
+    def batch(name, action, items, workers, out, **unused_kwargs):
         actions.append(action)
         if action == "extract":
             # Do not create the missing parent here: the workflow owns that

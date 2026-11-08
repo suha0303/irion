@@ -198,7 +198,7 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(
         lambda: dict(status="PASSED_NO_FLIGHT"),
     )
 
-    def init(*args, **kwargs):
+    def init(*unused_args, **unused_kwargs):
         assert not reuse, "Successful integration must never be regenerated"
         return tmp_path / "one"
 
@@ -317,7 +317,7 @@ def test_successful_exited_unit_is_stopped_before_stop_hook_audit(
             ExecMainCode="0",
         )
 
-    def command(argv, **kwargs):
+    def command(argv, **unused_kwargs):
         nonlocal stopped
         commands.append(argv)
         if "stop" in argv:

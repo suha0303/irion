@@ -1,5 +1,6 @@
 """Check NPZ export, journal recovery and replay cache ownership."""
 
+import gc
 import hashlib
 import io
 import json
@@ -578,8 +579,6 @@ def test_replay_recovers_legacy_sequence_fields_without_guessing_gaps(tmp_path):
 
 
 def test_closed_store_and_replay_are_not_retained_by_shared_caches(tmp_path):
-    import gc
-
     def make_closed():
         store = StoreV2(tmp_path)
         run = create_processed(store)

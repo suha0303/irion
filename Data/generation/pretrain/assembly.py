@@ -24,7 +24,7 @@ class Moments:
 
     def add(self, values):
         values = np.asarray(values, dtype=np.float64)
-        if not len(values):
+        if len(values) == 0:
             return
         if values.ndim != 2 or not np.isfinite(values).all():
             raise ValueError("Invalid train scaler observations")
