@@ -12,7 +12,9 @@ PX4 ULog·ArduPilot BIN 입력, 실기체 프로파일, CPU 적응 학습 및 �
   NPZ 파일/재생 자원 관리, UI 지연 로딩, 공개 clone 배포 경로를 개선했다.
   기능 시험과 실기체 검증의 구분은 유지한다. 기존 RC12 압축 파일은 그대로다.
   전체 범위·검사·보존 예외: `docs/development/CODE_REVIEW_RESULTS.md`.
-
+- 후속 M5·M6 완료: UTF-8 파일 계약, 외부 명령의 종료 코드 처리 의도,
+  공개 API 타입·단위·오류와 주요 클래스 책임을 명시했다. 계산과 기체 판정
+  기준은 동일하다. 현재 결과: `docs/development/CODE_REVIEW_FOLLOWUP.md`.
 
 - 구현·브라우저 검증 완료: 로그 분석·실시간 종료 후 공통 전체 런 요약, 분석/미분석 구간과 제외 이유, 구간별 상세 UI. RC12 최종 배포 검증 완료. 보고서: `ai/reports/run-summary-20261114/REPORT.md`.
 
