@@ -1,6 +1,8 @@
-"""Next-version training building blocks. CUDA requires a verified existing DIS01 allocation.
+"""Next-version training building blocks. CUDA requires a verified existing
+DIS01 allocation.
 
-No launcher, submission, automatic tuning, retries, or production input selection.
+No launcher, submission, automatic tuning, retries, or production input
+selection.
 """
 
 import fcntl
@@ -35,7 +37,8 @@ def backend(device):
             "allow_tf32",
         )
     }
-    # Explicit reproducibility policy; restore global flags even after a failed step.
+    # Explicit reproducibility policy; restore global flags even after a failed
+    # step.
     try:
         torch.backends.cuda.matmul.allow_tf32 = False
         with torch.backends.cudnn.flags(
@@ -56,7 +59,9 @@ def backend(device):
 
 
 class Batches:
-    """Float32 conversion once; bounded reusable pinned buffers, ordered transfer events."""
+    """Float32 conversion once; bounded reusable pinned buffers, ordered
+    transfer events.
+    """
 
     def __init__(self, arrays, batch_size, device):
         if set(arrays) != {"X", "Y"}:
@@ -113,7 +118,8 @@ class Batches:
         if self.events[slot] is not None:
             self.events[
                 slot
-            ].synchronize()  # Buffer lifetime, not a per-tensor device-wide sync.
+                # Buffer lifetime, not a per-tensor device-wide sync.
+            ].synchronize()
         for k, v in self.data.items():
             torch.index_select(v, 0, ids, out=self.buffers[slot][k][: len(ids)])
         result = [
@@ -130,8 +136,10 @@ def clip_gradients(model):
     parameters = [p for p in model.parameters() if p.grad is not None]
     if not parameters:
         raise ValueError("Missing gradients")
-    # The pre-clip L2 norm includes every gradient: NaN, Inf and overflow propagate.
-    # Reuse this existing reduction instead of launching isfinite/all per parameter.
+    # The pre-clip L2 norm includes every gradient: NaN, Inf and overflow
+    # propagate.
+    # Reuse this existing reduction instead of launching isfinite/all per
+    # parameter.
     norm = torch.nn.utils.clip_grad_norm_(parameters, 1.0, foreach=True)
     if not bool(torch.isfinite(norm)):
         raise ValueError("Nonfinite gradients/norm; optimizer not executed")
@@ -190,9 +198,11 @@ def _run_fit(
     model_id=None,
     optimization=None,
 ):
-    """Epoch-boundary resume only. Caller supplies sealed data/config/source binding.
+    """Epoch-boundary resume only. Caller supplies sealed data/config/source
+    binding.
 
-    CPU mode is for small synthetic tests. Main-round approval/packaging remains separate.
+    CPU mode is for small synthetic tests. Main-round approval/packaging
+    remains separate.
     """
     spec.validate()
     study = spec.revision == STUDY_REVISION
@@ -228,7 +238,10 @@ def _run_fit(
             or os.environ.get("CUBLAS_WORKSPACE_CONFIG") != ":4096:8"
         ):
             raise ValueError(
-                "CUDA requires an explicit budget and fixed CUBLAS workspace policy"
+                (
+                    "CUDA requires an explicit budget and fixed CUBLAS "
+                    "workspace policy"
+                )
             )
         if runtime_stage not in {"fit", "benchmark"}:
             raise ValueError("Unknown CUDA purpose")
@@ -238,7 +251,8 @@ def _run_fit(
             runtime_stage,
             job_prefix="drone-ai-",
         )
-        # Job IDs change between fresh-process resume tests; bind numerical environment instead.
+        # Job IDs change between fresh-process resume tests; bind numerical
+        # environment instead.
         environment.update(
             {
                 k: verified[k]
@@ -347,7 +361,10 @@ def _run_fit(
             )
             if start >= epochs or finished_patience:
                 raise ValueError(
-                    "Checkpoint already finished its approved epochs/early stopping"
+                    (
+                        "Checkpoint already finished its approved epochs/early "
+                        "stopping"
+                    )
                 )
             restore_rng(ck["rng"], device)
         for epoch in range(start, epochs):

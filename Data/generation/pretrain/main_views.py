@@ -1,4 +1,6 @@
-"""Production-role exports using the existing19 transformations; no pilot relabelling."""
+"""Production-role exports using the existing19 transformations; no pilot
+relabelling.
+"""
 
 import json
 import stat
@@ -12,7 +14,9 @@ from .common import ROOT, collector, read, sha, write
 
 
 def closed_source(raw):
-    """Reuse the producer's closing inventory without making an intermediate archive."""
+    """Reuse the producer's closing inventory without making an intermediate
+    archive.
+    """
     integrity = read(raw / "integrity.json")
     members = {}
     for path, mode in collector().files(raw):

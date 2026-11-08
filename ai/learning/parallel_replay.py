@@ -1,4 +1,6 @@
-"""Bounded GPU producer / CPU replay workers. No fitting, job control or retries."""
+"""Bounded GPU producer / CPU replay workers. No fitting, job control or
+retries.
+"""
 
 import multiprocessing
 import time
@@ -46,7 +48,9 @@ def finish_development(
     batch_seconds,
     batch_size,
 ):
-    """Executed only by CPU children; never construct a Predictor or touch CUDA."""
+    """Executed only by CPU children; never construct a Predictor or touch
+    CUDA.
+    """
     if not prepared["airborne"]:
         from pipeline.pipeline import seal_development
 
@@ -77,7 +81,8 @@ def finish_development(
 
 
 class ParallelDevelopment:
-    """Two CPU outputs at most plus one input prefetch; all GPU calls stay in parent.
+    """Two CPU outputs at most plus one input prefetch; all GPU calls stay in
+    parent.
 
     Batch boundaries, model order and causal ledger math are unchanged. A model
     cannot finish until all its runs are sealed. Progress is parent-owned only.
@@ -143,7 +148,9 @@ class ParallelDevelopment:
             self.progress.check()
             for _, future in pending:
                 if future.done():
-                    future.result()  # Propagate even an out-of-order failure before more GPU work.
+                    # Propagate even an out-of-order failure before more GPU
+                    # work.
+                    future.result()
 
         def drain_one():
             nonlocal completed
@@ -215,8 +222,10 @@ class ParallelDevelopment:
                     check,
                 )
             )
-            # CPU replay needs only issuance keys, observations, and physical forecasts.
-            # Drop the 100x19 input windows before IPC to avoid copying them to children.
+            # CPU replay needs only issuance keys, observations, and physical
+            # forecasts.
+            # Drop the 100x19 input windows before IPC to avoid copying them to
+            # children.
             compact = dict(
                 airborne=prepared["airborne"],
                 frames=prepared["frames"],
@@ -324,7 +333,9 @@ def build_benchmark_plan(upstream, source_cfg):
 
 
 def semantic_replay(path):
-    """Compare every forecast/decision/metric; only measured latency fields may differ."""
+    """Compare every forecast/decision/metric; only measured latency fields
+    may differ.
+    """
     import hashlib
     import json
 
@@ -360,11 +371,14 @@ def semantic_replay(path):
 
 
 def benchmark_workers(upstream, out, cfg, progress):
-    """One finite in-allocation benchmark, then one uniform choice for all models.
+    """One finite in-allocation benchmark, then one uniform choice for all
+    models.
 
     Uses a frozen real normal-validation run and actual CUDA Predictor, with the
-    same batch256/scaler/backend. Eight repeats of one cached run are a throughput
-    proxy, not independent flights, cold-I/O measurements or detector evaluation.
+    same batch256/scaler/backend. Eight repeats of one cached run are a
+    throughput
+    proxy, not independent flights, cold-I/O measurements or detector
+    evaluation.
     """
     import os
     import shutil
@@ -424,7 +438,11 @@ def benchmark_workers(upstream, out, cfg, progress):
         full_calibration_reused=False,
         gpu_device="cuda",
         batch_size=256,
-        limitation="Eight repeats of one warm-cached normal run; actual GPU Predictor and CPU writers. Not cold-I/O/full18model timing or detection performance.",
+        limitation=(
+            "Eight repeats of one warm-cached normal run; actual GPU Predictor "
+            "and CPU writers. Not cold-I/O/full18model timing or detection "
+            "performance."
+        ),
     )
     write(root / "summary.json", evidence)
     reference = work / "serial"
@@ -495,7 +513,10 @@ def benchmark_workers(upstream, out, cfg, progress):
                 ]
                 if current != signatures:
                     raise ValueError(
-                        "Parallel forecast/decision/metric mismatch; no full calibration"
+                        (
+                            "Parallel forecast/decision/metric mismatch; no "
+                            "full calibration"
+                        )
                     )
                 candidate["signatures"].append(current)
         candidate.update(

@@ -1,4 +1,6 @@
-"""Fixed mission-relative intervals for speed information comparison, protocol v2."""
+"""Fixed mission-relative intervals for speed information comparison,
+protocol v2.
+"""
 
 import hashlib
 import json

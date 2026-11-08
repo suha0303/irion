@@ -35,7 +35,12 @@ def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
         [
             str(project / "ai/.venv/bin/python"),
             "-c",
-            "import json; from test_localflight_live import request,samples; print(json.dumps(dict(request=request(),rows=list(samples()))))",
+            (
+                "import json; from test_localflight_live import "
+                "request,samples; "
+                "print(json.dumps(dict(request=request(),"
+                "rows=list(samples()))))"
+            ),
         ],
         env=env,
         capture_output=True,

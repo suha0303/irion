@@ -1,4 +1,6 @@
-"""Software fixtures only: bounded datasets, independent statistics, no real collection/fit."""
+"""Software fixtures only: bounded datasets, independent statistics, no real
+collection/fit.
+"""
 
 import hashlib
 import importlib
@@ -213,7 +215,8 @@ def test_bounded_dataset_matches_current_readers_and_exact_train_only_statistics
         "fixture-t0",
         "fixture-t1",
     ]
-    # Independent analytic expectation; validation offset1000 and outside-mission +/-1e9 are excluded.
+    # Independent analytic expectation; validation offset1000 and
+    # outside-mission +/-1e9 are excluded.
     expected = np.arange(19) * 0.01 + 1 + 0.065
     expected[17] = (16 + 1 + 65 * 0.2) / 4
     expected[18] = (24 + 1 + 65 * 0.01) / 12
@@ -279,7 +282,8 @@ def test_independent_audit_rejects_wrong_statistics_identity_or_inputs(
         if damage == "frames_segment":
             fields["segment_id"] += 1
         else:
-            # Same numeric moments, but false additional segment identities must fail.
+            # Same numeric moments, but false additional segment identities must
+            # fail.
             fields = {
                 k: np.tile(v, (2, 1) if k == "values" else 2)
                 for k, v in fields.items()

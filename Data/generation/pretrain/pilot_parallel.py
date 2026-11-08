@@ -1,4 +1,6 @@
-"""Finite continuation of the same45 cases:16 native lanes and one4-slot CPU pool."""
+"""Finite continuation of the same45 cases:16 native lanes and one4-slot CPU
+pool.
+"""
 
 import argparse
 import copy
@@ -99,7 +101,10 @@ def validate_config(cfg):
             or cfg.get("stop_on_first_physical_failure") is not True
         ):
             raise pilot45.Blocked(
-                "Reviewed continuation requires idle-only and stop-on-first-failure"
+                (
+                    "Reviewed continuation requires idle-only and "
+                    "stop-on-first-failure"
+                )
             )
         if (
             cfg.get("short_repair")
@@ -110,7 +115,10 @@ def validate_config(cfg):
             )
         if cfg.get("mission_seconds") != 180 or cfg.get("continuation"):
             raise pilot45.Blocked(
-                "Short-cycle must be180s in a new namespace without480s continuation"
+                (
+                    "Short-cycle must be180s in a new namespace without480s "
+                    "continuation"
+                )
             )
     elif (
         cfg.get("continuation", {}).get("previous_task")
@@ -144,7 +152,9 @@ def clean_short_inputs(quality, ledger):
 
 
 def current_execution_counts(task, ledger, *, planned_case_ids=None):
-    """Keep cumulative attempts intact; report only this execution in a second denominator."""
+    """Keep cumulative attempts intact; report only this execution in a
+    second denominator.
+    """
     from collections import Counter
 
     current = [
@@ -573,7 +583,9 @@ def create(name):
 
 
 class Coordinator:
-    """Only this thread owns ledger, registry, admission and shared state writes."""
+    """Only this thread owns ledger, registry, admission and shared state
+    writes.
+    """
 
     def __init__(self, task):
         self.task = task
@@ -803,7 +815,8 @@ class Coordinator:
                     retry_allowed=attempt["retry_allowed"],
                 ),
             )
-        # Never update attempts[-1]: concurrent lanes may have appended later cases.
+        # Never update attempts[-1]: concurrent lanes may have appended later
+        # cases.
         found = [
             a
             for a in self.ledger["attempts"]
@@ -1067,7 +1080,10 @@ class Coordinator:
                             free.add(job["instance"])
                         except Exception as exc:
                             self.errors.append(
-                                f"flight {job['case']['case_id']}: {type(exc).__name__}: {exc}"
+                                (
+                                    f"flight {job['case']['case_id']}: "
+                                    f"{type(exc).__name__}: {exc}"
+                                )
                             )
                             if self.ledger["cases"][job["case"]["case_id"]].get(
                                 "run"
@@ -1080,7 +1096,10 @@ class Coordinator:
                             self.finish_processing(job)
                         except Exception as exc:
                             self.errors.append(
-                                f"processing {job['case']['case_id']}: {type(exc).__name__}: {exc}"
+                                (
+                                    f"processing {job['case']['case_id']}: "
+                                    f"{type(exc).__name__}: {exc}"
+                                )
                             )
             self.tick(flights, cpu)
             if self.errors:
@@ -1399,19 +1418,34 @@ def flow_worker(flow):
                         "quality"
                     ].get("current_execution_inputs_passed_without_retry")
                     is True,
-                    clean_scope="clean_cycle retains all-history first-attempt criterion; current_execution fields retain a separate current-cycle denominator",
+                    clean_scope=(
+                        "clean_cycle retains all-history first-attempt "
+                        "criterion; current_execution fields retain a separate "
+                        "current-cycle denominator"
+                    ),
                 )
             write(flow / "completion.json", result)
             (flow / "FINAL_REPORT.md").write_text(
-                "신규16편·두19입력·독립품질·8pair·AI16검사와 실제서비스 종료/16인스턴스 반환을 확인했습니다. 학습·성능평가 결과가 아닙니다. 세부 근거는 completion.json을 따릅니다.\n"
+                (
+                    "신규16편·두19입력·독립품질·8pair·AI16검사와 실제서비스 종료/16인스턴스 반환을 "
+                    "확인했습니다. 학습·성능평가 결과가 아닙니다. 세부 근거는 completion.json을 따릅니다.\n"
+                )
                 if cfg.get("final16")
                 else (
                     (
-                        "# 180초 short-cycle 종료\n\n재시도 없는 clean 판정은 completion.json의 clean_cycle을 따릅니다.\n\n"
+                        (
+                            "# 180초 short-cycle 종료\n\n재시도 없는 clean 판정은 "
+                            "completion.json의 clean_cycle을 따릅니다.\n\n"
+                        )
                         if cfg.get("short_cycle")
                         else "# 예비45 유한 수집 완료\n\n"
                     )
-                    + "같은45 case의 수집·두19·독립품질·9pair·AI45검사와 실제서비스종료/16인스턴스반환을 확인했습니다. 학습·모델성능평가 결과가 아닙니다.\n\n세부 수치와 실패/시도 계보는 completion.json과 하위 task/quality.json을 따릅니다.\n"
+                    + (
+                        "같은45 case의 수집·두19·독립품질·9pair·AI45검사와 "
+                        "실제서비스종료/16인스턴스반환을 확인했습니다. 학습·모델성능평가 결과가 아닙니다.\n\n세부 "
+                        "수치와 실패/시도 계보는 completion.json과 하위 task/quality.json을 "
+                        "따릅니다.\n"
+                    )
                 ),
                 encoding="utf-8",
             )
@@ -1428,7 +1462,9 @@ def flow_worker(flow):
 
 
 def prepare_short(task, handoff):
-    """Seal a new short draft into the same finite runner; never reuse480s case data."""
+    """Seal a new short draft into the same finite runner; never reuse480s
+    case data.
+    """
     pilot45.short_authorization()
     task = pilot45.task_path(task)
     cfg = read(task / "config.json")
@@ -1460,13 +1496,19 @@ def prepare_short(task, handoff):
     spec = pilot_bridge.dependencies(handoff)
     if spec.get("task_id") != "SHORT_CYCLE_20261107":
         raise ValueError(
-            "Explicit new short contract required; historical native6 cannot replace it"
+            (
+                "Explicit new short contract required; historical native6 "
+                "cannot replace it"
+            )
         )
     if any(
         k in spec["paths"] for k in ("native_completion", "development_receipt")
     ):
         raise ValueError(
-            "New short contract must not consume historical development6/pilot READY"
+            (
+                "New short contract must not consume historical "
+                "development6/pilot READY"
+            )
         )
     binding = ai19.producer_binding()
     from learning.admission19 import check_producer

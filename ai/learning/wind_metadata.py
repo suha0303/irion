@@ -1,4 +1,6 @@
-"""Describe audited operating metadata. Wind metadata never becomes a neural input."""
+"""Describe audited operating metadata. Wind metadata never becomes a neural
+input.
+"""
 
 import math
 
@@ -24,7 +26,8 @@ def finite(value):
 
 
 def describe(scenario, *, wind_clock=None):
-    """Classify explicit profile/path metadata, without reconstructing physics/traces.
+    """Classify explicit profile/path metadata, without reconstructing
+    physics/traces.
 
     Source/hash/actual trace integrity and pair eligibility are separate gates.
     No fallback from bounded-profile legacy zero fields or common scenario name.
@@ -50,7 +53,10 @@ def describe(scenario, *, wind_clock=None):
             or environment not in ENVIRONMENT_BOUND
         ):
             raise ValueError(
-                "Explicit matching bounded wind profile/model/environment required"
+                (
+                    "Explicit matching bounded wind profile/model/environment "
+                    "required"
+                )
             )
         if (
             any(params.get(k) != 0 for k in ("wind_e", "wind_n", "gust_sigma"))
@@ -85,11 +91,17 @@ def describe(scenario, *, wind_clock=None):
             != ENVIRONMENT_BOUND[environment]
         ):
             raise ValueError(
-                "Declared speed bounds contradict instantaneous wind environment"
+                (
+                    "Declared speed bounds contradict instantaneous wind "
+                    "environment"
+                )
             )
         if kind == "random" and path.get("revision") != RANDOM_BOUNDED:
             raise ValueError(
-                "Bounded random requires v6; do not reinterpret old v3/v4/v5 paths"
+                (
+                    "Bounded random requires v6; do not reinterpret old "
+                    "v3/v4/v5 paths"
+                )
             )
         return dict(
             wind_mode="bounded_profile",
@@ -111,7 +123,10 @@ def describe(scenario, *, wind_clock=None):
         or model.get("sigma_per_axis_mps") != 0
     ):
         raise ValueError(
-            "No bounded profile: only explicitly marked fixed-wind regression accepted"
+            (
+                "No bounded profile: only explicitly marked fixed-wind "
+                "regression accepted"
+            )
         )
     if kind == "random" and path.get("revision") not in FIXED_RANDOM:
         raise ValueError(

@@ -1,8 +1,11 @@
 """Explicit real-log adapters and bounded causal common19 preparation.
 
-BIN units come from onboard FMTU/UNIT metadata, never from guessed firmware units.
-PX4 uses documented uORB SI/FRD/NED semantics. User-supplied mapping and airborne
-interval evidence are required; no ground/healthy/airframe inference is performed.
+BIN units come from onboard FMTU/UNIT metadata, never from guessed
+firmware units.
+PX4 uses documented uORB SI/FRD/NED semantics. User-supplied mapping and
+airborne
+interval evidence are required; no ground/healthy/airframe inference is
+performed.
 """
 
 import contextlib
@@ -120,8 +123,10 @@ def bin_events(path, profile, maps=None):
                 ):
                     m = reader.recv_msg()
             except (TypeError, ValueError, IndexError) as error:
-                # A corrupt BIN can make DFReader raise before emitting its warning.
-                # Retain only already decoded records, never resume beyond this byte.
+                # A corrupt BIN can make DFReader raise before emitting its
+                # warning.
+                # Retain only already decoded records, never resume beyond this
+                # byte.
                 boundary = dict(
                     reason="parser_exception",
                     byte_offset=offset if type(offset) is int else None,
@@ -160,7 +165,8 @@ def bin_events(path, profile, maps=None):
                         previous_us=int(previous[key]),
                         reset_us=int(stamp),
                     )
-                    break  # Retain file prefix; never sort the next boot into it.
+                    # Retain file prefix; never sort the next boot into it.
+                    break
                 previous[key] = stamp
             if stamp is None:
                 continue
@@ -201,7 +207,10 @@ def px4_events(path, profile, maps=None):
         stamps = fields.get("timestamp", [])
         if len(stamps) and np.any(stamps[1:] < stamps[:-1]):
             raise ValueError(
-                "ULog clock reset: topic arrays cannot identify shared boot boundaries; supply a separately extracted boot log"
+                (
+                    "ULog clock reset: topic arrays cannot identify shared "
+                    "boot boundaries; supply a separately extracted boot log"
+                )
             )
         for i, stamp in enumerate(stamps):
             sample = fields.get("timestamp_sample", stamps)[i]
@@ -257,7 +266,8 @@ def px4_events(path, profile, maps=None):
                     "More than 500000 source records; use a shorter log"
                 )
     events, report = split_streams(streams, maps or {})
-    # Dropout metadata is a hard boundary even if held samples look sufficiently fresh.
+    # Dropout metadata is a hard boundary even if held samples look sufficiently
+    # fresh.
     for dropout in ulog.dropouts:
         events.append(
             (
@@ -516,8 +526,10 @@ def prepare(
             + audit["parser_warnings"][:1000]
         )
     maps = clock_maps(clock_corrections)
-    # A logged topic inventory alone is not the mapping check. Field units, instances,
-    # validity, chronology and the declared actuator map are checked while decoding.
+    # A logged topic inventory alone is not the mapping check. Field units,
+    # instances,
+    # validity, chronology and the declared actuator map are checked while
+    # decoding.
     messages = io.StringIO()
     with (
         contextlib.redirect_stdout(messages),
@@ -591,7 +603,10 @@ def prepare(
     values, times = np.concatenate(arrays), np.concatenate(time_arrays)
     if len(times) > 10000:
         raise ValueError(
-            "Select at most 1000 seconds of retained segments per flight package"
+            (
+                "Select at most 1000 seconds of retained segments per flight "
+                "package"
+            )
         )
     timing.update(
         selected_segments=chosen,
@@ -622,7 +637,10 @@ def prepare(
         mapping_verified=True,
         mapping_evidence=profile.get("mapping_evidence")
         or "사용자가 저장한 채널/인스턴스 설정; 로그 단위와 인과 입력 검사 수행",
-        mapping_scope="Declared channel/instance map, onboard units and causal input checks; not real-aircraft model validation",
+        mapping_scope=(
+            "Declared channel/instance map, onboard units and causal input "
+            "checks; not real-aircraft model validation"
+        ),
         source_path=source_name,
         source_sha256=audit["sha256"],
         interval=dict(

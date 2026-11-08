@@ -141,7 +141,10 @@ def validate_cases(cases, profile):
                     "normal_variation"
                 ] != sample(case["scenario"], case["seed"]):
                     raise ValueError(
-                        "Normal variation differs from frozen seed and condition"
+                        (
+                            "Normal variation differs from frozen seed and "
+                            "condition"
+                        )
                     )
             elif "normal_variation" in case:
                 raise ValueError(

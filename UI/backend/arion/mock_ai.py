@@ -82,7 +82,8 @@ async def results_v2(
         if manifest.get("source_kind") == "live":
             if latest_sequence < 3:
                 return dict(base, state="warming_up")
-            # New fixture every 20 source records. This is a UI test, never an anomaly model.
+            # New fixture every 20 source records. This is a UI test, never an
+            # anomaly model.
             end = (latest_sequence // 20) * 20
             if end < 3:
                 return dict(base, state="warming_up")

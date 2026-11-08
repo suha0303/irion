@@ -1,6 +1,8 @@
-"""Read the reviewed joint-native-consumption-c2-v1 layout without changing raw files.
+"""Read the reviewed joint-native-consumption-c2-v1 layout without changing
+raw files.
 
-Layout reviewed from Sim's recovery-01 offline-source candidate. Publication still
+Layout reviewed from Sim's recovery-01 offline-source candidate.
+Publication still
 requires actual completed6/pair checks and the current stable source/runtime.
 """
 
@@ -73,7 +75,9 @@ def check_policy(native, *, duration_profile="standard480"):
 
 
 def origin(run_path, policy, *, fixture=False, external_audit=None):
-    """Project actual native start, AUTO_LAND and physics notice, never request/ACK."""
+    """Project actual native start, AUTO_LAND and physics notice, never
+    request/ACK.
+    """
     run_path = regular(run_path)
     folder, run = run_path.parent, json_file(run_path)
     if (
@@ -165,7 +169,10 @@ def origin(run_path, policy, *, fixture=False, external_audit=None):
         or selected.get("actual_landing") != end
     ):
         raise ValueError(
-            "Native consumed interval/scenario receipt mismatch; no LAND tail crop"
+            (
+                "Native consumed interval/scenario receipt mismatch; no LAND "
+                "tail crop"
+            )
         )
     physics = documents[PHYSICS]
     external_provenance = None
@@ -212,7 +219,10 @@ def origin(run_path, policy, *, fixture=False, external_audit=None):
         + checked.get("unique_source_time_samples", -1)
     ):
         raise ValueError(
-            "Native v2 explicit duration and identical-time consumption counters required"
+            (
+                "Native v2 explicit duration and identical-time consumption "
+                "counters required"
+            )
         )
     result = dict(
         run_id=run["run_id"],
@@ -324,7 +334,10 @@ def pair(
         or reference.get("missing_rows") != 0
     ):
         raise ValueError(
-            "Full native wind/reference coverage required; no intersection-only pass"
+            (
+                "Full native wind/reference coverage required; no "
+                "intersection-only pass"
+            )
         )
     for container, key, limit in (
         (wind, "max_vector_difference_mps", 2e-9),

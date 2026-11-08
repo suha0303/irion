@@ -1,4 +1,6 @@
-"""One finite DIS01 diagnostic: fresh-process resume gate, then real-data batch timing."""
+"""One finite DIS01 diagnostic: fresh-process resume gate, then real-data
+batch timing.
+"""
 
 import argparse
 import gc
@@ -218,7 +220,8 @@ def main_run(root):
                     gpu_authorized=True,
                     progress=progress,
                 )[0]
-                # Use measured full-step peak to reject risky larger candidates BEFORE executing them.
+                # Use measured full-step peak to reject risky larger candidates
+                # BEFORE executing them.
                 selected, rejected = candidate_batches(profile, pilot)
                 write(
                     root / "output" / f"{label}-admission.json",
@@ -273,10 +276,12 @@ def main_run(root):
                 write(root / "output/comparison.json", rows)
                 (root / "output/report.txt").write_text(
                     "\n".join(
-                        f"{r['profile']} {r['model']['name']}: batch{r['selected']['batch']}, "
+                        f"{r['profile']} {r['model']['name']}: "
+                        f"batch{r['selected']['batch']}, "
                         f"{r['selected']['windows_per_s']:.1f} windows/s, "
                         f"peak{r['selected']['peak_reserved_bytes'] / 1024**3:.2f}GiB, "
-                        f"20epoch TRAIN ONLY {r['estimated20epoch_train_minutes']:.1f}min"
+                        f"20epoch TRAIN ONLY "
+                        f"{r['estimated20epoch_train_minutes']:.1f}min"
                         for r in rows
                     )
                     + "\n",

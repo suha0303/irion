@@ -118,7 +118,10 @@ def check(bundle, dataset):
             )
         )
     return dict(
-        scope="one preserved normal-validation flight; CPU portability diagnostics only",
+        scope=(
+            "one preserved normal-validation flight; CPU portability "
+            "diagnostics only"
+        ),
         run_id=rid,
         atol=1e-6,
         rtol=1e-5,

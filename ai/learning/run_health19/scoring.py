@@ -63,7 +63,8 @@ class Calibration:
 
     @classmethod
     def fit(cls, validation, calibration, *, alpha=0.05):
-        # Records include a Run for role/lineage checks; its metadata never enters forward.
+        # Records include a Run for role/lineage checks; its metadata never
+        # enters forward.
         from .data import validate_splits
 
         validate_splits([r for r, _ in [*validation, *calibration]])
@@ -77,7 +78,8 @@ class Calibration:
             raise ValueError(
                 "Threshold/scales may not use train, anomaly or test runs"
             )
-        # One run per independent calibration lineage group: no duplicate pseudo-counts.
+        # One run per independent calibration lineage group: no duplicate
+        # pseudo-counts.
         groups = set()
         for run, _ in calibration:
             if groups.intersection(run.lineage):
@@ -95,7 +97,10 @@ class Calibration:
         rank = math.ceil((len(scores) + 1) * (1 - alpha))
         if rank > len(scores):
             raise ValueError(
-                "Insufficient independent normal calibration runs for finite threshold"
+                (
+                    "Insufficient independent normal calibration runs for "
+                    "finite threshold"
+                )
             )
         return cls(tuple(scales), scores[rank - 1], alpha)
 

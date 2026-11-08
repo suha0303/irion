@@ -440,5 +440,8 @@ def compare(
         adapted=updated,
         independent=True,
         detection_performance_verified=False,
-        scope="Prediction comparison on one held-out flight; not anomaly sensitivity or health certification",
+        scope=(
+            "Prediction comparison on one held-out flight; not anomaly "
+            "sensitivity or health certification"
+        ),
     )

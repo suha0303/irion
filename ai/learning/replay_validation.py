@@ -51,7 +51,9 @@ def _difference(reference, actual, physical_scale):
         "p99_absolute_difference": float(np.quantile(absolute, 0.99)),
         "max_relative_difference": float(relative.max()),
         "p99_relative_difference": float(np.quantile(relative, 0.99)),
-        "relative_denominator": "max(abs(reference_prediction), float64_epsilon)",
+        "relative_denominator": (
+            "max(abs(reference_prediction), float64_epsilon)"
+        ),
         "reference_exact_zero_count": int(np.count_nonzero(reference == 0)),
         "per_target_max_absolute": absolute.max(axis=(0, 1)).tolist(),
         "per_target_p99_absolute": np.quantile(
@@ -134,7 +136,8 @@ def diagnose_prediction_batch(
     ):
         raise ValueError("Expected four positive finite target scales")
     scale[-1] *= (
-        4  # The trained voltage target is per cell; evidence reports pack volts.
+        # The trained voltage target is per cell; evidence reports pack volts.
+        4
     )
     expected = (len(selected), *_EXPECTED_OUTPUT)
     if sample["Y"].shape != expected or not all(
@@ -215,12 +218,18 @@ def diagnose_prediction_batch(
         "single_window_seconds": single_s,
         "batched_seconds": first_s,
         "repeat_batched_seconds": repeat_s,
-        "timing_scope": "small resident sample; forward/transfer only, not training or replay throughput",
+        "timing_scope": (
+            "small resident sample; forward/transfer only, not training or "
+            "replay throughput"
+        ),
         "weights_changed": False,
         "calibration_changed": False,
         "event_truth_used": False,
         "acceptance_policy_applied": False,
-        "interpretation": "sample numerical diagnostic; not a guarantee of identical threshold decisions",
+        "interpretation": (
+            "sample numerical diagnostic; not a guarantee of identical "
+            "threshold decisions"
+        ),
     }
     if finite:
         report["batch1_vs_batch"] = _difference(reference, first, scale)
@@ -234,7 +243,10 @@ def diagnose_prediction_batch(
     write(output, report)
     if not finite:
         raise ValueError(
-            "Nonfinite or malformed prediction diagnostic; preserve evidence and stop"
+            (
+                "Nonfinite or malformed prediction diagnostic; preserve "
+                "evidence and stop"
+            )
         )
     return report
 
@@ -255,7 +267,10 @@ def _validate_policy(policy):
         or required - set(policy)
     ):
         raise ValueError(
-            "One explicit common numerical policy is required; unknown keys forbidden"
+            (
+                "One explicit common numerical policy is required; unknown "
+                "keys forbidden"
+            )
         )
     if policy["schema"] != _POLICY_SCHEMA:
         raise ValueError("Unsupported numerical policy schema")
@@ -290,7 +305,10 @@ def _validate_policy(policy):
             )
         ):
             raise ValueError(
-                "Physical tolerance must contain four common finite nonnegative limits"
+                (
+                    "Physical tolerance must contain four common finite "
+                    "nonnegative limits"
+                )
             )
 
 
@@ -379,12 +397,18 @@ def assess_diagnostic(report_path, policy, output=None):
         "arrays_sha256": seal["sha256"],
         "input_sha256": report["input_sha256"],
         "constraints": constraints,
-        "common_comparison_formula": "abs(reference-batched) <= atol + rtol*max(abs(reference),abs(batched))",
+        "common_comparison_formula": (
+            "abs(reference-batched) <= atol + "
+            "rtol*max(abs(reference),abs(batched))"
+        ),
         "batch1_vs_batch": differences,
         "weights_changed": False,
         "calibration_changed": False,
         "event_truth_used": False,
-        "interpretation": "frozen common sample acceptance; not proof of globally identical threshold decisions",
+        "interpretation": (
+            "frozen common sample acceptance; not proof of globally identical "
+            "threshold decisions"
+        ),
     }
     if output is not None:
         write(output, result)
@@ -461,11 +485,17 @@ def check_prediction_batch(
         else None,
         single_window_seconds=single_s,
         batched_seconds=batch_s,
-        timing_scope="small resident sample, includes forward/transfer; excludes file reading and replay",
+        timing_scope=(
+            "small resident sample, includes forward/transfer; excludes file "
+            "reading and replay"
+        ),
         weights_changed=False,
         calibration_changed=False,
         event_truth_used=False,
-        interpretation="numerical diagnostic, not a guarantee of identical threshold decisions",
+        interpretation=(
+            "numerical diagnostic, not a guarantee of identical threshold "
+            "decisions"
+        ),
     )
     write(output, result)
     if not passed:

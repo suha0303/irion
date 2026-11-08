@@ -1,4 +1,6 @@
-"""Whole-source coverage and model summaries without bridging missing intervals."""
+"""Whole-source coverage and model summaries without bridging missing
+intervals.
+"""
 
 import heapq
 
@@ -52,7 +54,8 @@ def evidence(metadata, times, ranges):
     if not timing.get("excluded_intervals") and timing.get(
         "missing_or_stale_frames", 0
     ):
-        # Old manifests know counts but not the location/reason of every missing frame.
+        # Old manifests know counts but not the location/reason of every missing
+        # frame.
         excluded.append(dict(start_us=start, end_us=end, reason="unclassified"))
     notes = list(context["notes"])
     boundary = timing.get("decoding", {}).get("retained_prefix_boundary")

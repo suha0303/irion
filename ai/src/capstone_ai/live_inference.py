@@ -1,4 +1,6 @@
-"""Real directory tail, immutable forecast payloads, bounded PX4 issue/decision times."""
+"""Real directory tail, immutable forecast payloads, bounded PX4
+issue/decision times.
+"""
 
 import copy
 import gc
@@ -30,7 +32,9 @@ def write_durable(file, record):
 
 @contextmanager
 def live_gc_scope(defer):
-    """Defer cyclic scans in the finite worker; reference counting remains active."""
+    """Defer cyclic scans in the finite worker; reference counting remains
+    active.
+    """
     enabled = gc.isenabled()
     if defer:
         gc.disable()
@@ -316,7 +320,8 @@ def live_forecast(
         last_clock_query_ns = time.monotonic_ns()
         while not tail.closed:
             progress = tail.poll()
-            # Drain telemetry and keep a current same-run clock response during warmup.
+            # Drain telemetry and keep a current same-run clock response during
+            # warmup.
             interval = runtime_config.get("clock_refresh_ms")
             if (
                 interval
@@ -332,8 +337,10 @@ def live_forecast(
                 (w["clock_id"], w["segment_id"], w["origin_us"]): w
                 for w in engine.windows
             }
-            # Rebuild filters from the source prefix, but never replay that prefix
-            # into the restored matcher/alarm or prematurely close pending forecasts.
+            # Rebuild filters from the source prefix, but never replay that
+            # prefix
+            # into the restored matcher/alarm or prematurely close pending
+            # forecasts.
             for frame in engine.frames[consumed_frames:]:
                 frame_start_ns = time.monotonic_ns()
                 if not rebuild_done:
@@ -372,7 +379,11 @@ def live_forecast(
                     ledger.alarm = previous_alarm
                     ledger.alarm.update(None, t)
                 window = windows.get((*segment, t))
-                key = f"{metadata['run_id']}:{frame['clock_id']}:{frame['segment_id']}:{t}"
+                key = (
+                    f"{metadata['run_id']}:"
+                    f"{frame['clock_id']}:"
+                    f"{frame['segment_id']}:{t}"
+                )
                 if window is None or key in ledger.forecasts:
                     continue
                 before = probe.query()
@@ -387,7 +398,8 @@ def live_forecast(
                 compute_start = time.monotonic_ns()
                 prediction = p.physical(p.predict_scaled(x, c))[0]
                 compute_done = time.monotonic_ns()
-                # Commit the prediction before querying the post-completion clock or reading future targets.
+                # Commit the prediction before querying the post-completion
+                # clock or reading future targets.
                 payload = {
                     "forecast_id": key,
                     "run_id": metadata["run_id"],
@@ -443,7 +455,9 @@ def live_forecast(
                     {
                         **ledger.forecasts[key],
                         "timing_certificate": bounds,
-                        "issued_time_semantic": "upper_bound_after_immutable_payload_commit",
+                        "issued_time_semantic": (
+                            "upper_bound_after_immutable_payload_commit"
+                        ),
                         "host_payload_committed_ns": persist_done,
                     },
                 )
@@ -536,7 +550,10 @@ def live_forecast(
         "clock_consistent_with_raw_watermarks": bool(clock_consistent),
         "all_forecasts_met_deadline": bool(forecasts)
         and counts["on_time"] == len(forecasts),
-        "restart_policy": "verify source identity/prefix and journal hashes; rebuild common preprocessor; retain immutable forecast/decision identities",
+        "restart_policy": (
+            "verify source identity/prefix and journal hashes; rebuild common "
+            "preprocessor; retain immutable forecast/decision identities"
+        ),
         "hashes": {n: sha(out / n) for n in journal_names},
         "timing_sha256": sha(out / "timing.jsonl"),
         "runtime_config": runtime_config,

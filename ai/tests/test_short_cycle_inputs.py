@@ -1,4 +1,6 @@
-"""Short180 schema/value fixtures only; never actual flights or model execution."""
+"""Short180 schema/value fixtures only; never actual flights or model
+execution.
+"""
 
 import json
 from pathlib import Path
@@ -468,8 +470,10 @@ def test_final45_and_nine_pairs_are_required_even_for_a_synthetic_campaign(
             evidence["pilot_pair_native_evidence"] = hashlib.sha256(
                 case["pair_id"].encode()
             ).hexdigest()
-        # Real-receipt-shaped metadata exercises final aggregation only. The outer
-        # request stays fixture_only=True and can never produce actual acceptance.
+        # Real-receipt-shaped metadata exercises final aggregation only. The
+        # outer
+        # request stays fixture_only=True and can never produce actual
+        # acceptance.
         record = dict(
             task_id=short_cycle.TASK,
             purpose=SHORT,

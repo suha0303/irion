@@ -1,7 +1,8 @@
 """Hold an existing allocation by pausing only its idle-able dispatcher.
 
 Workers continue normally. The original dispatcher is always resumed on exit,
-so its original salloc owner performs the normal resource release. No GPU, model,
+so its original salloc owner performs the normal resource release. No GPU,
+model,
 input or existing evidence is modified. A separate READY seals the successor.
 """
 

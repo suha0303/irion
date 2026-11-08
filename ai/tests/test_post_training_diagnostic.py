@@ -1,4 +1,6 @@
-"""Diagnostic-only authorization and release boundaries; no server or GPU work."""
+"""Diagnostic-only authorization and release boundaries; no server or GPU
+work.
+"""
 
 import os
 import sys
@@ -155,7 +157,9 @@ def test_diagnostic_worker_only_checks_normal_validation_and_seals(
             "dataset/scaler.npz": "scaler-hash",
             "dataset/manifest.json": "manifest-hash",
             "dataset/normal_calibration.npz": "calibration-hash",
-            "dataset/canonical/anomaly-development/samples.jsonl": "development-hash",
+            (
+                "dataset/canonical/anomaly-development/samples.jsonl"
+            ): "development-hash",
         },
     )
     write(tmp_path / "input/config.json", cfg)

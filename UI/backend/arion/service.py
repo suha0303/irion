@@ -1,4 +1,6 @@
-"""Explicit local server lifecycle; no login item, scheduler, or public binding."""
+"""Explicit local server lifecycle; no login item, scheduler, or public
+binding.
+"""
 
 import argparse
 import json

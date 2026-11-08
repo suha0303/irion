@@ -50,7 +50,8 @@ class Catalog:
             )
 
     def checked(self, relative: str) -> Path:
-        """Return a manifest member after rejecting traversal, links and tampering.
+        """Return a manifest member after rejecting traversal, links and
+        tampering.
 
         Args:
             relative: File name relative to the model delivery directory.
@@ -107,7 +108,10 @@ class Catalog:
         return dict(
             id=model_id,
             **spec,
-            label=f"{spec['name'].upper()} · {spec['hidden']} · {spec['layers']}층",
+            label=(
+                f"{spec['name'].upper()} · {spec['hidden']} · "
+                f"{spec['layers']}층"
+            ),
             version="training19-20261108",
             device="cpu",
             files=files,

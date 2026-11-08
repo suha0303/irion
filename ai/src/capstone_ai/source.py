@@ -130,7 +130,8 @@ class DirectoryTail:
             if count < self.ingested:
                 raise ValueError("recorded_events regressed")
             if self.stream.rows < count:
-                break  # Watermark may be visible before the stream on a filesystem.
+                # Watermark may be visible before the stream on a filesystem.
+                break
             self.marks.popleft()
             commit_start = time.monotonic_ns()
             frame_start = len(self.engine.frames)
@@ -190,7 +191,8 @@ class DirectoryTail:
         return progress
 
     def checkpoint(self):
-        # Recovery replays the verified prefix to reconstruct filters, context and sequence state.
+        # Recovery replays the verified prefix to reconstruct filters, context
+        # and sequence state.
         return {
             "run": str(self.run),
             "run_id": self.engine.metadata["run_id"],

@@ -75,7 +75,8 @@ class StoreV2(Store):
                         )
                     ]
                 )
-        # Interrupted export jobs are explicit failures and may be requested again.
+        # Interrupted export jobs are explicit failures and may be requested
+        # again.
         for path in (self.root / "exports").glob("*.json"):
             job = read_json(path)
             if job["state"] in ("queued", "running"):
@@ -84,7 +85,8 @@ class StoreV2(Store):
                     error="서버가 종료되어 내보내기가 중단됐습니다. 다시 요청하세요.",
                 )
                 atomic_json(path, job)
-        # Recover only incomplete processed archives. Original journals stay immutable.
+        # Recover only incomplete processed archives. Original journals stay
+        # immutable.
         for row in self.catalog["sessions"].values():
             if not row.get("sha"):
                 path = Path(row["path"])
@@ -412,7 +414,8 @@ class StoreV2(Store):
                         "status": status,
                         "age_ns": age if age >= 0 else None,
                     }
-                # Preserve exact source nanoseconds and physical values; this remains an independent flight.
+                # Preserve exact source nanoseconds and physical values; this
+                # remains an independent flight.
                 source = (
                     int(arrays["source_time_ns"][i])
                     if "source_time_ns" in arrays
@@ -470,7 +473,8 @@ class StoreV2(Store):
             return self.get(id)
         except Exception:
             run.finish()
-            # Unaccepted files remain inspectable, never listed as successful imports.
+            # Unaccepted files remain inspectable, never listed as successful
+            # imports.
             raise
         finally:
             shutil.rmtree(staging, ignore_errors=True)

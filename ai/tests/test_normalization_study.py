@@ -250,7 +250,8 @@ run_fit(StudySpec(name,8),arrays,arrays,root/phase,
         (tmp_path / "full/initialization.json").read_text(encoding="utf-8")
     )
     assert initial["state_sha256"] == full["initial_state_sha256"]
-    # The model was trained/exported in another process. Restore through the public reader.
+    # The model was trained/exported in another process. Restore through the
+    # public reader.
     from capstone_ai.mapping import FEATURES, TARGETS
     from capstone_ai.training import Predictor
     from execution.common import sha, write

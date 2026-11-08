@@ -1,4 +1,6 @@
-"""Versioned 1200-run comparison contract and bounded host-side normalization."""
+"""Versioned 1200-run comparison contract and bounded host-side
+normalization.
+"""
 
 import math
 import zipfile
@@ -44,7 +46,9 @@ def is_comparison(cfg):
 
 
 def execution_scope(cfg):
-    """Absent scope preserves sealed legacy comparisons; new scopes are explicit."""
+    """Absent scope preserves sealed legacy comparisons; new scopes are
+    explicit.
+    """
     scope = cfg.get("execution_scope", "full_comparison")
     if scope not in {"full_comparison", "training_only"}:
         raise ValueError("Unknown comparison execution scope")
@@ -58,7 +62,10 @@ def execution_scope(cfg):
             or cfg.get("evaluation_authorized") is not False
         ):
             raise ValueError(
-                "Training-only scope must explicitly prohibit calibration and evaluation"
+                (
+                    "Training-only scope must explicitly prohibit calibration "
+                    "and evaluation"
+                )
             )
     elif any(
         cfg.get(key) is False
@@ -127,7 +134,10 @@ def config_check(cfg, *, require_approval=True):
         else not 1 <= evaluation_hours <= 168
     ):
         raise ValueError(
-            "Evaluation budget must be zero for training-only, otherwise within1..168"
+            (
+                "Evaluation budget must be zero for training-only, otherwise "
+                "within1..168"
+            )
         )
     if (
         cfg.get("memory", {}).get("estimated_host_peak_bytes", 2**63) + 1024**3
@@ -219,8 +229,10 @@ def admission(upstream):
 def memory_plan(headers):
     raw = sum(v["bytes"] for role in headers.values() for v in role.values())
     # mmap training avoids float64 normalization/full float32 duplicate copies.
-    # Calibration still uses the historical float64 loader; bound all role arrays
-    # conservatively, plus replay/evaluator/BLAS/Python reserves. No N-by-N ridge.
+    # Calibration still uses the historical float64 loader; bound all role
+    # arrays
+    # conservatively, plus replay/evaluator/BLAS/Python reserves. No N-by-N
+    # ridge.
     d = 100 * 19 + 6 + 1
     estimate = max(12 * 1024**3, 4 * raw + 8 * d * d * 8 + 4 * 1024**3)
     return dict(
@@ -229,15 +241,22 @@ def memory_plan(headers):
         requested_host_bytes=64 * 1024**3,
         primal_matrix_bytes=d * d * 8,
         old_dual_matrix_bytes=headers["normal_train"]["X"]["shape"][0] ** 2 * 8,
-        kind="conservative estimate; runtime admission and Slurm enforce request",
-        loader="chunk-normalized float32 mmap; no training windows copied wholesale",
+        kind=(
+            "conservative estimate; runtime admission and Slurm enforce request"
+        ),
+        loader=(
+            "chunk-normalized float32 mmap; no training windows copied "
+            "wholesale"
+        ),
     )
 
 
 def normalized_mmap(dataset, role, scaler, cache, progress, chunk=512):
-    """Stream numeric NPY members from NPZ, normalize in float64 then store float32.
+    """Stream numeric NPY members from NPZ, normalize in float64 then store
+    float32.
 
-    This preserves legacy normalization rounding before the model's float32 cast.
+    This preserves legacy normalization rounding before the model's
+    float32 cast.
     A new owned cache is created once; partial caches never count as success.
     """
     if role not in {"normal_train", "normal_validation"}:
@@ -294,7 +313,8 @@ def normalized_mmap(dataset, role, scaler, cache, progress, chunk=512):
                 if stream.read(1):
                     raise ValueError("Trailing fit member bytes")
             out.flush()
-            # Keep array completion visible even if the last chunk was throttled.
+            # Keep array completion visible even if the last chunk was
+            # throttled.
             progress.update(done=shape[0], total=shape[0])
             result[key] = out
     write(

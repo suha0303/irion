@@ -67,7 +67,10 @@ def main():
     entries["MANIFEST.json"] = (
         json.dumps(
             {
-                "purpose": "single allocated-GPU arithmetic and frozen LSTM one-batch probe",
+                "purpose": (
+                    "single allocated-GPU arithmetic and frozen LSTM one-batch "
+                    "probe"
+                ),
                 "resource_limits": {
                     "partition": "p02",
                     "node": "DIS01",
@@ -76,8 +79,13 @@ def main():
                     "gpus": 1,
                     "concurrent_project_gpu_jobs": 1,
                 },
-                "node_change": "User explicitly replaced DIS05 with DIS01 in this task",
-                "runtime_change": "User explicitly approved adding mamba25 without changing frozen torch21 evidence",
+                "node_change": (
+                    "User explicitly replaced DIS05 with DIS01 in this task"
+                ),
+                "runtime_change": (
+                    "User explicitly approved adding mamba25 without changing "
+                    "frozen torch21 evidence"
+                ),
                 "shared_source_unchanged": sorted(unchanged),
                 "files": {
                     name: {

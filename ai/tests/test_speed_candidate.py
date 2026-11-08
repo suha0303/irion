@@ -1,4 +1,6 @@
-"""Only one approved3x/8x flight; stopped2x baseline evidence cannot be substituted."""
+"""Only one approved3x/8x flight; stopped2x baseline evidence cannot be
+substituted.
+"""
 
 import copy
 from pathlib import Path
@@ -217,7 +219,11 @@ def test_single_candidate_never_repeats_baseline_or_runs_more_flights(
             world = tmp_path / "runs/new-eight/reference/world.sdf"
             world.parent.mkdir(parents=True)
             world.write_text(
-                f"<sdf><world><physics><real_time_factor>{factor}</real_time_factor><max_step_size>0.001</max_step_size></physics></world></sdf>",
+                (
+                    f"<sdf><world><physics><real_time_factor>{factor}</real_"
+                    f"time_factor><max_step_size>0.001</max_step_size></"
+                    f"physics></world></sdf>"
+                ),
                 encoding="utf-8",
             )
             return folder

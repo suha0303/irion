@@ -1,4 +1,6 @@
-"""Explicit recovery of a completed collection, with no collection execution path."""
+"""Explicit recovery of a completed collection, with no collection execution
+path.
+"""
 
 from pathlib import Path
 
@@ -94,7 +96,11 @@ def create_recovery(source, name):
         training_authorized=False,
         resume_source_task=str(source),
         resume_collections=[str(p) for p in folders],
-        scope="Existing completed archives only: verify, preprocess, audit, stop. Per-run maximum3 attempts. No collection/training/task restart.",
+        scope=(
+            "Existing completed archives only: verify, preprocess, audit, "
+            "stop. Per-run maximum3 attempts. No collection/training/task "
+            "restart."
+        ),
     )
     evidence = [
         source / n

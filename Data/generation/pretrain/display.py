@@ -45,7 +45,8 @@ STATUS = {
 
 
 def flight_cards(workers, duration):
-    # Old failed cases can share a reused lane; show current lane first, summarize failures separately.
+    # Old failed cases can share a reused lane; show current lane first,
+    # summarize failures separately.
     lanes = {}
     for item in workers:
         lane = item.get("instance")
@@ -76,13 +77,18 @@ def flight_cards(workers, duration):
         target = duration(target_s)[3:] if target_s is not None else "--:--"
         status = STATUS.get(item["status"], item["status"][:8])
         cards.append(
-            f"{str(lane):>2} {name} {status} {elapsed}/{target} {item.get('attempt', 1)}/{item.get('attempts_max', 1)}"
+            (
+                f"{str(lane):>2} {name} {status} {elapsed}/{target} "
+                f"{item.get('attempt', 1)}/{item.get('attempts_max', 1)}"
+            )
         )
     return cards
 
 
 def screen(text, columns, rows):
-    """Drop secondary explanations before clipping; preserve header, workers, error and footer."""
+    """Drop secondary explanations before clipping; preserve header, workers,
+    error and footer.
+    """
     lines = text.splitlines()
     optional = (
         "흐름",
@@ -111,7 +117,8 @@ def screen(text, columns, rows):
         if index is None:
             break
         lines.pop(index)
-    # Most terminals >=24 rows fit all16 workers. Tiny windows retain an explicit resize notice.
+    # Most terminals >=24 rows fit all16 workers. Tiny windows retain an
+    # explicit resize notice.
     if len(lines) > rows:
         lines = lines[: max(0, rows - 2)] + [
             "화면이 작습니다. 터미널 높이를 늘리거나 status 명령을 사용하세요.",

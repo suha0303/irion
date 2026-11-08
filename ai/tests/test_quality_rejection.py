@@ -1,4 +1,6 @@
-"""Explicit three-run rejection fixtures, never flight or accepted-data evidence."""
+"""Explicit three-run rejection fixtures, never flight or accepted-data
+evidence.
+"""
 
 import copy
 import csv

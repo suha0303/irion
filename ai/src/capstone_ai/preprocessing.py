@@ -85,7 +85,8 @@ class Preprocessor:
         ):
             raise ValueError("event arrived behind committed watermark")
         self.seen[key] = e
-        # Both sample and availability must be in the past, even for malformed future samples.
+        # Both sample and availability must be in the past, even for malformed
+        # future samples.
         t = max(e["sample_time_us"], e["available_time_us"])
         heapq.heappush(
             self.pending,
@@ -350,7 +351,8 @@ class Preprocessor:
                 j += 1
             self._frame(self.next_t)
             self.next_t += self.config["step_us"]
-        # Keep uncommitted events until their grid, preserving identical batching behavior.
+        # Keep uncommitted events until their grid, preserving identical
+        # batching behavior.
         for item in active[j:]:
             heapq.heappush(self.pending, item)
         self.watermark = through

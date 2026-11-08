@@ -1,4 +1,6 @@
-"""Short-cycle parameters preserve480s defaults and never launch a native flight."""
+"""Short-cycle parameters preserve480s defaults and never launch a native
+flight.
+"""
 
 import copy
 import importlib.util
@@ -12,9 +14,9 @@ from pretrain import common, native_flight, pilot45, pilot_parallel
 
 @pytest.mark.local_evidence
 def test_default480_case_values_are_identical_to_reviewed_previous_source():
-    previous = (
-        common.ROOT
-        / "docs/data/reports/short-cycle-20261107/attempt-01/before/Data/generation/pretrain/pilot45.py"
+    previous = common.ROOT / (
+        "docs/data/reports/short-cycle-20261107/attempt-01/before/"
+        "Data/generation/pretrain/pilot45.py"
     )
     spec = importlib.util.spec_from_file_location(
         "pretrain._before_short", previous
@@ -257,7 +259,8 @@ def test_short_bridge_uses_public_ai_connector_for_each_phase(
         common.write(directory / "ledger.json", {})
 
     def static_gate(request, receipt):
-        # Only public request construction is under test, never actual flight admission.
+        # Only public request construction is under test, never actual flight
+        # admission.
         common.write(receipt, dict(actual_data_verified=True, phase=phase))
         return 0
 

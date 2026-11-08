@@ -1,4 +1,6 @@
-"""Persistent local artifact fetch; no LLM, GPU commands, or experiment retries."""
+"""Persistent local artifact fetch; no LLM, GPU commands, or experiment
+retries.
+"""
 
 import argparse
 import concurrent.futures
@@ -155,14 +157,19 @@ def run(config):
                 )
                 return
             stage.mkdir(parents=True, exist_ok=True)
-            # Compression and four independent model streams reduce transfer wall time.
+            # Compression and four independent model streams reduce transfer
+            # wall time.
             rsync = [
                 "rsync",
                 "-rltz",
                 "--partial",
                 "--timeout=120",
                 "-e",
-                "ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 -o ServerAliveCountMax=3",
+                (
+                    "ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o "
+                    "ConnectTimeout=15 -o ServerAliveInterval=30 -o "
+                    "ServerAliveCountMax=3"
+                ),
             ]
 
             def copy(relative):

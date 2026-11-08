@@ -1,4 +1,6 @@
-"""Read-only acceptance of a completed integration; never launch or rewrite it."""
+"""Read-only acceptance of a completed integration; never launch or rewrite
+it.
+"""
 
 import argparse
 import json
@@ -15,7 +17,9 @@ CONTROL_FILES = {
 
 
 def compatible_sources(task):
-    """Only the reviewed controller/termination fix may differ from the old task."""
+    """Only the reviewed controller/termination fix may differ from the old
+    task.
+    """
     sources = read(task / "config.json")["source_sha256"]
     changed = {}
     for name, old in sources.items():
@@ -92,7 +96,10 @@ def historical_termination(task):
             raise ValueError("Historical stage still running")
         processes.append(str(paths[0]))
     return dict(
-        basis="actual ExecStopPost SERVICE_RESULT plus closed child exits/owner/quality/cgroup",
+        basis=(
+            "actual ExecStopPost SERVICE_RESULT plus closed child "
+            "exits/owner/quality/cgroup"
+        ),
         unit=unit,
         service_result=cleanup["service_result"],
         process_receipts=processes,

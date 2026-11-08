@@ -1,4 +1,6 @@
-"""Offline bounds, reproducibility and immutable executed-configuration checks."""
+"""Offline bounds, reproducibility and immutable executed-configuration
+checks.
+"""
 
 import copy
 import sys

@@ -1,7 +1,10 @@
-"""One finite, separately authorized calibration/development-evaluation continuation.
+"""One finite, separately authorized calibration/development-evaluation
+continuation.
 
-The completed training attempt and its upstream are immutable inputs. This module
-has no fit entry point, does not resume training, and never retries a submitted job.
+The completed training attempt and its upstream are immutable inputs. This
+module
+has no fit entry point, does not resume training, and never retries a
+submitted job.
 """
 
 import argparse
@@ -68,9 +71,12 @@ def config_check(cfg):
             raise ValueError(
                 "Two explicitly bound preserved baselines required"
             )
-        # This is a read-only cross-node provenance path, not selected output storage.
-        # A source's login-node st_dev policy is not portable to the compute node.
-        # Preparation admits the original storage; checked() verifies frozen hashes.
+        # This is a read-only cross-node provenance path, not selected output
+        # storage.
+        # A source's login-node st_dev policy is not portable to the compute
+        # node.
+        # Preparation admits the original storage; checked() verifies frozen
+        # hashes.
         from console.profile import absolute_path
 
         absolute_path(baseline["source"])
@@ -120,7 +126,10 @@ def config_check(cfg):
             or cfg["numerical_policy"]["require_same_batch_exact"] is not True
         ):
             raise ValueError(
-                "Common numerical policy requires fresh calibration for every model"
+                (
+                    "Common numerical policy requires fresh calibration for "
+                    "every model"
+                )
             )
     if "sensitivity_policy" in cfg or "sensitivity_plan" in cfg:
         from .sensitivity_metrics import validate_policy
@@ -146,7 +155,10 @@ def config_check(cfg):
         or cfg.get("continuation")
     ):
         raise ValueError(
-            "Parallel replay requires2/4/8 CPU workers and uniform fresh sensitivity-gated inputs"
+            (
+                "Parallel replay requires2/4/8 CPU workers and uniform fresh "
+                "sensitivity-gated inputs"
+            )
         )
     if "parallel_replay_benchmark" in cfg:
         from .parallel_replay import validate_benchmark_plan
@@ -216,10 +228,13 @@ def profile_check(profile):
 
 
 def training_preparation_proof(source, cfg, authorization):
-    """Accept either sealed preparation or the separately signed training-only runner.
+    """Accept either sealed preparation or the separately signed
+    training-only runner.
 
-    The latter deliberately has no prepared.json. Its worker/controller/profile and
-    exact LR-bound sources are verified instead; never manufacture missing evidence.
+    The latter deliberately has no prepared.json. Its
+    worker/controller/profile and
+    exact LR-bound sources are verified instead; never manufacture missing
+    evidence.
     """
     if (source / "prepared.json").is_file():
         if authorization.get("execution_scope") != "training_only":
@@ -279,7 +294,9 @@ def training_preparation_proof(source, cfg, authorization):
 
 
 def source_proof(source):
-    """Verify immutable completion and exported training outputs, without loading models."""
+    """Verify immutable completion and exported training outputs, without
+    loading models.
+    """
     source = external_root(source)
     complete = read(source / "completion.json")
     release = read(source / "release.json")
@@ -341,7 +358,10 @@ def source_proof(source):
         )
     ):
         raise ValueError(
-            "Source training result seal differs from completed training-only scope"
+            (
+                "Source training result seal differs from completed "
+                "training-only scope"
+            )
         )
     verify(source / "compute", seal["files"])
     names = [
@@ -361,7 +381,9 @@ def source_proof(source):
 
 
 def baseline_source_proof(source_cfg, baseline):
-    """Admit only two existing baselines trained on the identical frozen dataset."""
+    """Admit only two existing baselines trained on the identical frozen
+    dataset.
+    """
     from . import study
 
     cfg, seal, files = source_proof(baseline)
@@ -395,7 +417,9 @@ def baseline_source_proof(source_cfg, baseline):
 
 
 def dataset_binding(upstream, cfg, receipt):
-    """Bind only the already admitted normal calibration and development inputs."""
+    """Bind only the already admitted normal calibration and development
+    inputs.
+    """
     seal = read(upstream / "evidence/dataset-seal.json")
     if (
         seal != cfg["dataset_files"]
@@ -446,12 +470,15 @@ def dataset_binding(upstream, cfg, receipt):
             len(parts) >= 3 and parts[0] == "canonical" and parts[1] in dev_ids
         ):
             chosen["dataset/" + name] = digest
-    # Full input hashes are checked once by the calibration worker before inference.
+    # Full input hashes are checked once by the calibration worker before
+    # inference.
     return chosen
 
 
 def calibration_continuation(previous, cfg):
-    """Read only stopped prior evidence; every development replay remains fresh."""
+    """Read only stopped prior evidence; every development replay remains
+    fresh.
+    """
     previous, old = checked(previous)
     forbidden = (
         "evaluate-submitted.claim",
@@ -464,7 +491,10 @@ def calibration_continuation(previous, cfg):
     )
     if any((previous / name).exists() for name in forbidden):
         raise ValueError(
-            "Prior evaluation/truth exposure forbids this calibration continuation"
+            (
+                "Prior evaluation/truth exposure forbids this calibration "
+                "continuation"
+            )
         )
     controller = read(previous / "controller.json")
     record = read(previous / "calibrate-submission.json")
@@ -513,7 +543,10 @@ def calibration_continuation(previous, cfg):
 
     if semantic(old["protocol"]) != semantic(cfg["protocol"]):
         raise ValueError(
-            "Continuation must retain the original detection/evaluation criteria"
+            (
+                "Continuation must retain the original detection/evaluation "
+                "criteria"
+            )
         )
     proof_names = (
         "input/config.json",
@@ -583,7 +616,9 @@ def calibration_continuation(previous, cfg):
 
 
 def copy_normal_calibration(previous, root, continuation):
-    """Copy only verified normal evidence, never previous development run directories."""
+    """Copy only verified normal evidence, never previous development run
+    directories.
+    """
     for name, digest in continuation["source_calibration_files"].items():
         source, target = (
             child(previous / "compute", name),
@@ -610,7 +645,9 @@ def read_policy_file(path, validate):
 
 
 def prepare(args):
-    """Server-side preparation only; explicit approval does not submit any job."""
+    """Server-side preparation only; explicit approval does not submit any
+    job.
+    """
     from console.profile import load
 
     if not args.approve_post_training:
@@ -623,7 +660,10 @@ def prepare(args):
         not fresh_calibration or diagnostic or policy_path is not None
     ):
         raise ValueError(
-            "--sensitivity-policy requires fresh calibration and excludes other numerical modes"
+            (
+                "--sensitivity-policy requires fresh calibration and excludes "
+                "other numerical modes"
+            )
         )
     if (diagnostic or policy_path is not None) and not fresh_calibration:
         raise ValueError(
@@ -637,7 +677,8 @@ def prepare(args):
         raise ValueError(
             "--fresh-calibration and --continue-from are mutually exclusive"
         )
-    # Validate file inputs before copying any model or creating an attempt directory.
+    # Validate file inputs before copying any model or creating an attempt
+    # directory.
     if policy_path is not None:
         from .replay_validation import _validate_policy
 
@@ -693,7 +734,10 @@ def prepare(args):
             or protected.is_relative_to(root)
         ):
             raise ValueError(
-                "Post-training output must be separate from all preserved inputs"
+                (
+                    "Post-training output must be separate from all preserved "
+                    "inputs"
+                )
             )
     if (
         Path(profile["dataset_root"]) != upstream
@@ -713,8 +757,10 @@ def prepare(args):
             upstream / "dataset" / (role + ".npz")
         ).values()
     )
-    # Historical normalization uses float64. Bound raw arrays, normalized copies,
-    # residuals/BLAS/replay, then retain the runtime1GiB reserve inside the request.
+    # Historical normalization uses float64. Bound raw arrays, normalized
+    # copies,
+    # residuals/BLAS/replay, then retain the runtime1GiB reserve inside the
+    # request.
     required_bytes = max(16 * 1024**3, 4 * raw_bytes + 8 * 1024**3)
     if required_bytes > 64 * 1024**3:
         raise MemoryError(
@@ -765,7 +811,8 @@ def prepare(args):
                 }
                 if not expected or "integrity.json" not in expected:
                     raise ValueError("Missing sealed exported bundle: " + name)
-                # Keep bundles intact; integrity.json may bind best/last checkpoints.
+                # Keep bundles intact; integrity.json may bind best/last
+                # checkpoints.
                 for filename, digest in expected.items():
                     target = child(root / "compute/models" / name, filename)
                     target.parent.mkdir(parents=True, exist_ok=True)
@@ -824,7 +871,10 @@ def prepare(args):
             truth_archive=truth_ref,
             protocol=default_protocol_manifest(),
             evaluation_plan_sha256=sha(inputs / "development-evaluation.json"),
-            failure_policy="Preserve evidence and stop; no retry, refit or automatic tuning",
+            failure_policy=(
+                "Preserve evidence and stop; no retry, refit or automatic "
+                "tuning"
+            ),
         )
         if baseline_reference is not None:
             cfg["baseline_reference"] = baseline_reference
@@ -1061,8 +1111,14 @@ def submit(root, phase, cfg):
             )
             + "\nexport DRONE_AI_PROFILE="
             + shlex.quote(str(root / "server-profile.json"))
-            + "\nexport PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
-            + "export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2\nexec "
+            + (
+                "\nexport PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 "
+                "CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
+            )
+            + (
+                "export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 "
+                "MKL_NUM_THREADS=2\nexec "
+            )
             + shlex.join(
                 [
                     python_for(root, required=True),
@@ -1369,7 +1425,9 @@ def control(root):
 
 
 def require_fresh_calibration_inputs(root, cfg):
-    """Fresh attempts may contain model exports, never prior calibration evidence."""
+    """Fresh attempts may contain model exports, never prior calibration
+    evidence.
+    """
     if cfg.get("all_model_calibration_fresh") is not True:
         return
     artifacts = (root / "input/continuation.json", root / "compute/calibration")
@@ -1379,7 +1437,10 @@ def require_fresh_calibration_inputs(root, cfg):
         or any(path.exists() or path.is_symlink() for path in artifacts)
     ):
         raise ValueError(
-            "Fresh calibration must start without calibration or reuse artifacts"
+            (
+                "Fresh calibration must start without calibration or reuse "
+                "artifacts"
+            )
         )
 
 
@@ -1435,7 +1496,10 @@ def calibrate_worker(root, *, diagnostic_only=False):
         )
         if not admitted:
             raise MemoryError(
-                "Calibration memory admission failed; see host-memory-admission.json"
+                (
+                    "Calibration memory admission failed; see "
+                    "host-memory-admission.json"
+                )
             )
         progress.update(stage="verify_calibration_development_inputs")
         verify(
@@ -1687,18 +1751,27 @@ def main():
     p.add_argument(
         "--baseline-source",
         type=Path,
-        help="Preserved training-only comparison supplying persistence/ridge; no refit",
+        help=(
+            "Preserved training-only comparison supplying persistence/ridge; "
+            "no refit"
+        ),
     )
     p.add_argument(
         "--parallel-replay-workers",
         type=int,
         choices=[2, 4, 8],
-        help="Bounded GPU producer plus2/4/8 CPU replay workers; batch256 unchanged",
+        help=(
+            "Bounded GPU producer plus2/4/8 CPU replay workers; batch256 "
+            "unchanged"
+        ),
     )
     p.add_argument(
         "--benchmark-parallel",
         action="store_true",
-        help="Use actual GPU/normal data to select one uniform2/4/8-worker setting",
+        help=(
+            "Use actual GPU/normal data to select one uniform2/4/8-worker "
+            "setting"
+        ),
     )
     p.add_argument("--bundle", type=Path, required=True)
     p.add_argument("--profile", required=True)
@@ -1709,27 +1782,42 @@ def main():
     p.add_argument(
         "--diagnostic-only",
         action="store_true",
-        help="All-model normal-only batch diagnostics, release and stop; no calibration",
+        help=(
+            "All-model normal-only batch diagnostics, release and stop; no "
+            "calibration"
+        ),
     )
     p.add_argument(
         "--numerical-policy",
         type=Path,
-        help="One frozen common numerical criterion for all models before calibration",
+        help=(
+            "One frozen common numerical criterion for all models before "
+            "calibration"
+        ),
     )
     p.add_argument(
         "--sensitivity-policy",
         type=Path,
-        help="Frozen all-model contiguous normal numerical/alarm gate before fresh calibration",
+        help=(
+            "Frozen all-model contiguous normal numerical/alarm gate before "
+            "fresh calibration"
+        ),
     )
     p.add_argument(
         "--fresh-calibration",
         action="store_true",
-        help="Recompute normal calibration and replay every selected model at batch256; no reuse",
+        help=(
+            "Recompute normal calibration and replay every selected model at "
+            "batch256; no reuse"
+        ),
     )
     p.add_argument(
         "--continue-from",
         type=Path,
-        help="Stopped prior evaluation; reuse normal calibration only, replay all models fresh",
+        help=(
+            "Stopped prior evaluation; reuse normal calibration only, replay "
+            "all models fresh"
+        ),
     )
     for action in ("start", "control", "calibrate", "evaluate", "diagnose"):
         sub.add_parser(action).add_argument("--root", type=Path, required=True)

@@ -1,4 +1,6 @@
-"""Versioned R5/R6: exact-config gates, fresh fit, normal calibration, sealed inference."""
+"""Versioned R5/R6: exact-config gates, fresh fit, normal calibration, sealed
+inference.
+"""
 
 import argparse
 import gc
@@ -280,7 +282,10 @@ def gates(root, cfg, out, train, val, progress):
         )
         if not budget["passed"]:
             raise TimeoutError(
-                "Measured maximum-epoch fit estimate exceeds finite wall budget; no production fit or retry"
+                (
+                    "Measured maximum-epoch fit estimate exceeds finite wall "
+                    "budget; no production fit or retry"
+                )
             )
     write(
         folder / "passed.json",
@@ -296,10 +301,15 @@ def gates(root, cfg, out, train, val, progress):
                 seed=cfg.get("seed", 17),
             ),
             scope=(
-                "50 warmup and500 full optimizer steps on actual training loader, full validation timing; "
-                "512 normal train/validation windows and four resume-gate epochs"
+                "50 warmup and500 full optimizer steps on actual training "
+                "loader, full validation timing; "
+                "512 normal train/validation windows and four resume-gate "
+                "epochs"
                 if training_only
-                else "512 actual normal train and validation windows; four gate epochs"
+                else (
+                    "512 actual normal train and validation windows; four gate "
+                    "epochs"
+                )
             ),
         ),
     )
@@ -355,14 +365,20 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
                 seconds=time.monotonic() - started,
                 device=device,
                 precision="float32",
-                initial_weights=f"fresh seed{cfg['seed']}; no gate or previous-round weights",
+                initial_weights=(
+                    f"fresh seed{cfg['seed']}; no gate or previous-round "
+                    f"weights"
+                ),
                 automatic_resume=False,
             )
             if selection is not None:
                 initial = read(folder / "initialization.json")["state_sha256"]
                 if initial != selection["initial_state_sha256"]:
                     raise ValueError(
-                        "Main fit did not start from the same frozen initial weights"
+                        (
+                            "Main fit did not start from the same frozen "
+                            "initial weights"
+                        )
                     )
                 result.update(**settings, initial_state_sha256=initial)
         else:
@@ -490,8 +506,10 @@ def fit_worker(root):
         )
         if not admitted:
             raise MemoryError(
-                f"Host memory admission failed: need{required} bytes including reserve; "
-                f"available{snapshot['available_bytes']} bytes; see host-memory-admission.json"
+                f"Host memory admission failed: need{required} bytes "
+                f"including reserve; "
+                f"available{snapshot['available_bytes']} bytes; see host-"
+                f"memory-admission.json"
             )
         telemetry = Telemetry(out)
         telemetry.start()
@@ -613,7 +631,10 @@ def evaluate_worker(root):
                 "config_sha256"
             ) != sha(root / "input/config.json"):
                 raise ValueError(
-                    "Comparison output config/seed binding mismatch before truth join"
+                    (
+                        "Comparison output config/seed binding mismatch before "
+                        "truth join"
+                    )
                 )
         inventory = read(root / "truth/index.json")
         if sha(root / "truth/index.json") != cfg["truth_index_sha256"]:

@@ -1,4 +1,6 @@
-"""Read-only onboard log inventory. Presence of a message is not AI admission."""
+"""Read-only onboard log inventory. Presence of a message is not AI
+admission.
+"""
 
 import contextlib
 import io
@@ -191,7 +193,8 @@ def scan_ulog(path):
     import numpy as np
     from pyulog import ULog
 
-    # Parse only the relevant topic set; a file-size limit also bounds this nonstreaming parser.
+    # Parse only the relevant topic set; a file-size limit also bounds this
+    # nonstreaming parser.
     ulog = ULog(str(path), message_name_filter_list=list(PX4_REQUIRED))
     counts, fields, clocks, ranges = {}, {}, {}, {}
     timing = ClockAudit()
@@ -234,7 +237,8 @@ def scan_ulog(path):
         ):
             value = value if _number(value) else None
             values = parameter_values.setdefault(name, [])
-            # An absent initial value cannot establish the configuration for the whole log.
+            # An absent initial value cannot establish the configuration for the
+            # whole log.
             if name not in parameters and not values:
                 values.append(None)
             if value not in values and len(values) < 32:
@@ -292,7 +296,8 @@ def inspect_log(path):
                 key for key in result["fields"] if key.startswith(topic + ":")
             ]
         )
-        # A nonzero instance can be valid; do not combine fields across instances.
+        # A nonzero instance can be valid; do not combine fields across
+        # instances.
         key = (
             min(
                 keys,
@@ -320,7 +325,10 @@ def inspect_log(path):
         model_forward_executed=False,
         training_eligible=False,
         ai_admission="pending_profile_and_semantic_mapping",
-        scope="Onboard message/field inventory; not semantic equivalence or health validation",
+        scope=(
+            "Onboard message/field inventory; not semantic equivalence or "
+            "health validation"
+        ),
     )
 
     from .profile_from_log import suggest

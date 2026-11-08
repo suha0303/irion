@@ -1,4 +1,6 @@
-"""One finite real-data diagnostic; disposable weights, never a main training run."""
+"""One finite real-data diagnostic; disposable weights, never a main training
+run.
+"""
 
 import argparse
 import gc
@@ -28,7 +30,9 @@ PHASE = "drone.phase."
 
 
 def profiled_step(model, optimizer, x, c, y):
-    """Mirror safe_step with ranges; equivalence is checked before each GPU profile."""
+    """Mirror safe_step with ranges; equivalence is checked before each GPU
+    profile.
+    """
     with record_function(PHASE + "zero_grad"):
         optimizer.zero_grad(set_to_none=True)
     with record_function(PHASE + "forward_loss"):
@@ -131,9 +135,15 @@ def profile_model(entry, arrays, output, progress, config):
             top_self_device=sorted(
                 rows, key=lambda r: r["self_device_us"], reverse=True
             )[:25],
-            interpretation="Profiler timings include instrumentation overhead; CPU and GPU totals overlap and must not be added",
+            interpretation=(
+                "Profiler timings include instrumentation overhead; CPU and "
+                "GPU totals overlap and must not be added"
+            ),
             equivalent_to_actual_safe_step=equivalent,
-            throughput_source="Separate unprofiled500-step actual loader/model/optimizer measurement",
+            throughput_source=(
+                "Separate unprofiled500-step actual loader/model/optimizer "
+                "measurement"
+            ),
         )
         trace = output / "trace.json"
         capture.export_chrome_trace(str(trace))
@@ -148,9 +158,13 @@ def profile_model(entry, arrays, output, progress, config):
         write(output / "profile.json", result)
         if not cuda_events:
             raise RuntimeError(
-                "CUDA profiler events unavailable; do not claim a GPU bottleneck assessment"
+                (
+                    "CUDA profiler events unavailable; do not claim a GPU "
+                    "bottleneck assessment"
+                )
             )
-        # Match the main trainer's checkpoint contents and temp-file/rename path.
+        # Match the main trainer's checkpoint contents and temp-file/rename
+        # path.
         torch.cuda.synchronize()
         started = time.perf_counter()
         best_state = {
@@ -187,13 +201,17 @@ def profile_model(entry, arrays, output, progress, config):
                 bytes=checkpoint_bytes,
                 restored_best_state_exact=passed,
                 device_path=str(output),
-                persistence="torch.save close/rename, no fsync; single warm-cache sample, not worst-case durable NFS latency",
+                persistence=(
+                    "torch.save close/rename, no fsync; single warm-cache "
+                    "sample, not worst-case durable NFS latency"
+                ),
                 weights_disposable=True,
             ),
         )
         if not passed:
             raise ValueError("Diagnostic checkpoint reload mismatch")
-        # Retain all failure evidence; delete only successful disposable checkpoint weights.
+        # Retain all failure evidence; delete only successful disposable
+        # checkpoint weights.
         for name in ("last.pt", "best.pt"):
             (output / name).unlink()
         del model, optimizer, checkpoint, restored, best_state, x, c, y
@@ -347,10 +365,22 @@ def worker(root):
             automatic_retry=False,
             llm_calls=0,
             limitations=[
-                "Integrity reads and finite-input scans warm filesystem caches; cold-cache disk latency not isolated",
-                "Diagnostic rates are fixed0.001 for timing, not selected main-training rates",
-                "Profiler measurements carry overhead; use separate unprofiled500-step timings",
-                "Checkpoint close/rename timing is not fsync durability latency",
+                (
+                    "Integrity reads and finite-input scans warm filesystem "
+                    "caches; cold-cache disk latency not isolated"
+                ),
+                (
+                    "Diagnostic rates are fixed0.001 for timing, not selected "
+                    "main-training rates"
+                ),
+                (
+                    "Profiler measurements carry overhead; use separate "
+                    "unprofiled500-step timings"
+                ),
+                (
+                    "Checkpoint close/rename timing is not fsync durability "
+                    "latency"
+                ),
                 "Other users' CPU/network/storage activity may affect this run",
             ],
         )

@@ -1,4 +1,6 @@
-"""Checked allocation and explicitly selected runtime, before model execution."""
+"""Checked allocation and explicitly selected runtime, before model
+execution.
+"""
 
 import importlib.metadata
 import importlib.util

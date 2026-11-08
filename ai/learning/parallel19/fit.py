@@ -106,7 +106,8 @@ class Data:
             ids = np.arange(n)
             if probe and self.task == "forecast":
                 runs = np.load(p / "run_id.npy", allow_pickle=False)
-                # Allocate equal per-run quotas, spreading each across mission time.
+                # Allocate equal per-run quotas, spreading each across mission
+                # time.
                 groups = [
                     np.flatnonzero(runs == r)
                     for r in sorted(set(runs.tolist()))

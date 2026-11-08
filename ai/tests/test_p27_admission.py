@@ -1,4 +1,6 @@
-"""Precollection software checks only: no flight, model fit or scaler/threshold fit."""
+"""Precollection software checks only: no flight, model fit or
+scaler/threshold fit.
+"""
 
 import copy
 import dataclasses
@@ -146,7 +148,8 @@ def expected_producer():
 
 
 def metadata_fixture():
-    # Contract fixture declaring source semantics; this is not an actual SITL run.
+    # Contract fixture declaring source semantics; this is not an actual SITL
+    # run.
     producer = expected_producer()
     row = dict(
         run_id="metadata-fixture",
@@ -341,7 +344,8 @@ def test_bad_run_is_rejected_without_quality_trimming(tmp_path, damage):
             time_us=np.arange(10001, dtype=np.int64) * 100000,
         )
     path, value = manifest(tmp_path, instance)
-    # Match declared end so internal gap/reset/NaN checks, not edge cropping, decide.
+    # Match declared end so internal gap/reset/NaN checks, not edge cropping,
+    # decide.
     value["runs"][0]["mission_interval"]["end_us_exclusive"] = (
         int(instance.time_us[-1]) + 100000
     )

@@ -90,9 +90,13 @@ def build(output, ui_packages):
     ui_packages = Path(ui_packages).absolute()
     if output.exists():
         raise ValueError(
-            "Choose a new output directory; existing packages are never overwritten"
+            (
+                "Choose a new output directory; existing packages are never "
+                "overwritten"
+            )
         )
-    # Existing binary runtimes are copied; no installation or shared-env modification.
+    # Existing binary runtimes are copied; no installation or shared-env
+    # modification.
     base = Path(sys.base_prefix)
     ai_site = Path(sysconfig.get_paths()["purelib"])
     required = (
@@ -116,7 +120,10 @@ def build(output, ui_packages):
         or not (ui_root / "frontend/dist/index.html").is_file()
     ):
         raise ValueError(
-            "Resolve UI dependencies into the isolated build folder and build the frontend first"
+            (
+                "Resolve UI dependencies into the isolated build folder and "
+                "build the frontend first"
+            )
         )
     catalog = Catalog()
     catalog.check_model_sources()
@@ -152,7 +159,8 @@ def build(output, ui_packages):
     )
     for name in sorted(required_model_files):
         copy_regular(catalog.checked(name), output / frozen / name)
-    # Keep the delivered manifest intact; explicitly declare which files this runtime needs.
+    # Keep the delivered manifest intact; explicitly declare which files this
+    # runtime needs.
     (output / "MODEL_CONTENTS.json").write_text(
         json.dumps(
             dict(
@@ -169,9 +177,11 @@ def build(output, ui_packages):
     copy_tree(base / "lib/python3.10", output / "runtime/lib/python3.10")
     site = output / "runtime/lib/python3.10/site-packages"
     copy_tree(ai_site, site)
-    # Overlay separately resolved UI packages. Exact installed versions are recorded below.
+    # Overlay separately resolved UI packages. Exact installed versions are
+    # recorded below.
     copy_tree(ui_packages, site)
-    # Remove stale duplicate distribution metadata when the overlay upgrades a shared package.
+    # Remove stale duplicate distribution metadata when the overlay upgrades a
+    # shared package.
     overlay_names = {
         d.metadata["Name"].lower().replace("_", "-"): Path(d._path).name
         for d in importlib.metadata.distributions(path=[str(ui_packages)])
@@ -201,11 +211,16 @@ def build(output, ui_packages):
             copy_regular(path, licenses / (label + ".txt"))
     (output / "README.txt").write_text(
         "Ubuntu 24.04 x86_64 CPU local flight analysis\n"
-        "./drone-local doctor\n./drone-local start\nOpen http://127.0.0.1:8765\n./drone-local stop\n"
-        "No runtime downloads or GPU server. Data: ${XDG_DATA_HOME:-~/.local/share}/drone-local\n"
-        "ARION_PORT and ARION_DATA_DIR may select a different local port/data folder.\n"
-        "Keep the folder intact; rename/move it freely. Do not copy raw flight logs into it.\n"
-        "Empirical aircraft/model thresholds supported; real-aircraft detection performance unverified.\n",
+        "./drone-local doctor\n./drone-local start\nOpen http://"
+        "127.0.0.1:8765\n./drone-local stop\n"
+        "No runtime downloads or GPU server. Data: ${XDG_DATA_HOME:-"
+        "~/.local/share}/drone-local\n"
+        "ARION_PORT and ARION_DATA_DIR may select a different local "
+        "port/data folder.\n"
+        "Keep the folder intact; rename/move it freely. Do not copy "
+        "raw flight logs into it.\n"
+        "Empirical aircraft/model thresholds supported; real-"
+        "aircraft detection performance unverified.\n",
         encoding="utf-8",
     )
     hashes = {

@@ -1,4 +1,6 @@
-"""Finite CPU output-head adaptation; no threshold reuse or automatic deployment."""
+"""Finite CPU output-head adaptation; no threshold reuse or automatic
+deployment.
+"""
 
 import json
 from pathlib import Path
@@ -152,7 +154,8 @@ def fit(
     if type(end) is not int or not start < end <= epochs:
         raise ValueError("No valid remaining epoch range")
     for epoch in range(start, end):
-        # The only trainable layers have no dropout; frozen encoders stay in inference behavior.
+        # The only trainable layers have no dropout; frozen encoders stay in
+        # inference behavior.
         model.eval()
         ids = np.random.default_rng(epoch).permutation(len(train_x))
         total = 0.0
@@ -167,7 +170,8 @@ def fit(
             batch = ids[offset : offset + batch_size]
             optimizer.zero_grad(set_to_none=True)
             if health_task:
-                # One optimizer step per flight, independent of segment count/duration.
+                # One optimizer step per flight, independent of segment
+                # count/duration.
                 segments = train_x[int(batch[0])]
                 flight_loss = 0.0
                 for x in segments:
@@ -249,7 +253,8 @@ def fit(
             ),
         )
         progress(row)
-    # Calibration belongs to the new model; the base model's threshold is not carried over.
+    # Calibration belongs to the new model; the base model's threshold is not
+    # carried over.
     save_file(best, str(out / "model.safetensors"))
     np.savez(out / "scaler.npz", **runtime.scaler)
     result = dict(

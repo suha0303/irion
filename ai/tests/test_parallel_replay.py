@@ -1,4 +1,6 @@
-"""Real spawn-worker replay equivalence, bounded queues, failure and input safety."""
+"""Real spawn-worker replay equivalence, bounded queues, failure and input
+safety.
+"""
 
 import json
 import shutil
@@ -41,7 +43,8 @@ def inputs(tmp_path):
         path = dataset / "canonical" / name
         shutil.copytree(canonical, path)
         rows.append({"run_id": name})
-    # The third case must stay explicitly unavailable, not be dropped or inferred.
+    # The third case must stay explicitly unavailable, not be dropped or
+    # inferred.
     path = dataset / "canonical/run-2/frames.jsonl"
     ground = records(path)
     for f in ground:

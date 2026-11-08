@@ -1,4 +1,6 @@
-"""Plan/menu checks only; no raw processing, collection, training or model imports."""
+"""Plan/menu checks only; no raw processing, collection, training or model
+imports.
+"""
 
 from collections import Counter
 from pathlib import Path

@@ -1,4 +1,6 @@
-"""Replace only a dispatcher; adopt its GPU workers and preserve its evidence."""
+"""Replace only a dispatcher; adopt its GPU workers and preserve its
+evidence.
+"""
 
 import argparse
 import os

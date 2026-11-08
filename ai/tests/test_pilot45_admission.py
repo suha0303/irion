@@ -1,4 +1,6 @@
-"""Synthetic consumer projections only; never native6, actual pilot, fit or forward."""
+"""Synthetic consumer projections only; never native6, actual pilot, fit or
+forward.
+"""
 
 import copy
 import json

@@ -19,7 +19,8 @@ from pathlib import Path
 
 from x500_storage import capture, environment, guard, selected_root
 
-# Support manually invoked workers as well as systemd launches. No execution occurs here.
+# Support manually invoked workers as well as systemd launches. No execution
+# occurs here.
 if __name__ == "__main__" and len(sys.argv) == 3 and sys.argv[1] == "_worker":
     faulthandler.enable()
     worker_config = json.loads(
@@ -191,23 +192,50 @@ def render(task, tick=0):
         settings += f"  ·  현재 단계 {state.get('workers', '-')}개 (일반 작업 설정과 별개)"
         if config.get("speed_test"):
             factors = config["speed_test"]["factors"]
-            settings = f"배속{'→'.join(map(str, factors))} ·120초·동일 seed·단일 기체 | 현재 {state.get('speed_trial', '-')}/{len(factors)} · {state.get('speed_factor', '-')}x"
+            settings = (
+                f"배속{'→'.join(map(str, factors))} ·120초·동일 seed·단일 기체 | 현재 "
+                f"{state.get('speed_trial', '-')}/{len(factors)} · "
+                f"{state.get('speed_factor', '-')}x"
+            )
     elif config["mode"] == "resume_preprocess":
-        settings = f"기존 {config['collection_run_count']}run 재개 / 추출 {config['io_workers']} / 전처리 {config['workers']} / 검산 {config['audit_workers']} · 재수집 없음"
+        settings = (
+            f"기존 {config['collection_run_count']}run 재개 / 추출 "
+            f"{config['io_workers']} / 전처리 {config['workers']} / 검산 "
+            f"{config['audit_workers']} · 재수집 없음"
+        )
     elif config["mode"] == "finish_preprocess":
-        settings = f"실패1개 전처리1병렬 / 성공 {config['reused_run_count']}개 재사용 / 검산 {config['audit_workers']} · 재수집·재추출 없음"
+        settings = (
+            f"실패1개 전처리1병렬 / 성공 {config['reused_run_count']}개 재사용 / 검산 "
+            f"{config['audit_workers']} · 재수집·재추출 없음"
+        )
     elif config["mode"] == "finish_audit":
-        settings = f"실패1개 검산1병렬 / 성공 검산 {config['reused_audit_count']}개 재사용 · 전처리·집계 반복 없음"
+        settings = (
+            f"실패1개 검산1병렬 / 성공 검산 {config['reused_audit_count']}개 재사용 · 전처리·집계 "
+            f"반복 없음"
+        )
     elif config["mode"] == "merge_prepared":
-        settings = f"기존 {config['collection_run_count']}run 통합 / 검산 {config['audit_workers']}병렬 · 공통 train scaler · 수집·학습 없음"
+        settings = (
+            f"기존 {config['collection_run_count']}run 통합 / 검산 "
+            f"{config['audit_workers']}병렬 · 공통 train scaler · 수집·학습 없음"
+        )
     elif config["mode"] == "recover_capsules":
-        settings = f"보존 캡슐 {config['collection_run_count']}run 복원·통합 · 공통 train scaler · 재수집·학습 없음"
+        settings = (
+            f"보존 캡슐 {config['collection_run_count']}run 복원·통합 · 공통 train "
+            f"scaler · 재수집·학습 없음"
+        )
     else:
-        settings = f"비행 {config['flight_workers']} / 검증·압축 {config['export_workers']} / 추출 {config['io_workers']} / 전처리 {config['workers']} / 검산 {config['audit_workers']}"
+        settings = (
+            f"비행 {config['flight_workers']} / 검증·압축 {config['export_workers']} "
+            f"/ 추출 {config['io_workers']} / 전처리 {config['workers']} / 검산 "
+            f"{config['audit_workers']}"
+        )
     lines = [
         "드론  /  학습 전 통합 콘솔 (기체 X500)  /  " + task.name,
         f"  {state['status']}  |  전체 {overall}",
-        f"  {time.strftime('%m/%d %H:%M:%S %Z')}  ·  화면 #{tick}  ·  경과 {duration(elapsed)}  ·  PID {state.get('pid', '-')}",
+        (
+            f"  {time.strftime('%m/%d %H:%M:%S %Z')}  ·  화면 #{tick}  ·  경과 "
+            f"{duration(elapsed)}  ·  PID {state.get('pid', '-')}"
+        ),
         "─" * 78,
         "흐름   보존 캡슐 인수·복원 → 통합 집계 → 독립 검산 → 압축 보관 → 정지"
         if config["mode"] == "recover_capsules"
@@ -221,7 +249,10 @@ def render(task, tick=0):
         if config["mode"] == "resume_preprocess"
         else "흐름   [선택 게이트] → 수집 → 추출 → 전처리 → 집계 → 독립 검산 → 정지",
         "설정   " + settings,
-        f"현재   {state.get('stage', '-')}  |  완료 단계 {len(state.get('completed', []))}/{planned}  (시간 진행률 아님)",
+        (
+            f"현재   {state.get('stage', '-')}  |  완료 단계 "
+            f"{len(state.get('completed', []))}/{planned}  (시간 진행률 아님)"
+        ),
     ]
     if config.get("collection_profile") == "final324":
         lines[4] = (
@@ -239,7 +270,10 @@ def render(task, tick=0):
         sets = config.get("collection_sets", 1)
         size = SIZES[config.get("collection_profile", "legacy50")]
         lines.append(
-            f"수집 계획   {size}개 × {sets}묶음 = {size * sets}개 · seed {config.get('seed_base', '-')} · 학습 없음"
+            (
+                f"수집 계획   {size}개 × {sets}묶음 = {size * sets}개 · seed "
+                f"{config.get('seed_base', '-')} · 학습 없음"
+            )
         )
     if config.get("storage_profile") in {"compact", "stream_compact"}:
         if config["mode"] != "merge_prepared":
@@ -266,7 +300,12 @@ def render(task, tick=0):
             )
             if config["mode"] != "recover_capsules":
                 lines.append(
-                    f"압축 완료   {state.get('stream_completed', 0)}/{config['collection_run_count']}run · 정리 경로 {state.get('stream_retired_paths', 0)}개"
+                    (
+                        f"압축 완료   "
+                        f"{state.get('stream_completed', 0)}/"
+                        f"{config['collection_run_count']}run · 정리 경로 "
+                        f"{state.get('stream_retired_paths', 0)}개"
+                    )
                 )
             if state.get("portable_dataset"):
                 lines.append("보관본   " + state["portable_dataset"])
@@ -284,7 +323,10 @@ def render(task, tick=0):
             )
         if config["mode"] == "collect":
             lines.append(
-                f"수집 완료   {len(state.get('collected_sets', []))}/{sets}묶음 (현재 묶음 진행률은 아래 표시)"
+                (
+                    f"수집 완료   {len(state.get('collected_sets', []))}/{sets}묶음 "
+                    f"(현재 묶음 진행률은 아래 표시)"
+                )
             )
     if config.get("use_available_ram"):
         lines.append("메모리 설정   예상·고정 RSS 상한 해제 · 최소 가용 RAM1GB")
@@ -292,16 +334,27 @@ def render(task, tick=0):
         if memory_file.exists():
             memory = read(memory_file)
             lines.append(
-                f"OS 메모리 상한   RAM {memory['max_bytes'] / 1e9:.2f} GB + 스왑 {memory.get('swap_max_bytes', 0) / 1e9:.2f} GB (가용 RAM1GB 보호)"
+                (
+                    f"OS 메모리 상한   RAM {memory['max_bytes'] / 1e9:.2f} GB + 스왑 "
+                    f"{memory.get('swap_max_bytes', 0) / 1e9:.2f} GB (가용 "
+                    f"RAM1GB 보호)"
+                )
             )
     elif config.get("ignore_memory_estimate"):
         lines.append(
-            f"시험 예외   예상 차단 해제 · 최소 가용 RAM {config.get('min_available_ram_gb', 4)}GB · RSS8GB / OS9GB 유지"
+            (
+                f"시험 예외   예상 차단 해제 · 최소 가용 RAM "
+                f"{config.get('min_available_ram_gb', 4)}GB · RSS8GB / OS9GB 유지"
+            )
         )
     processing = state.get("processing")
     if processing:
         lines.append(
-            f"병행 후처리   {processing.get('stage', '-')} · {processing.get('done', 0)}/{processing.get('total', 0)} · {processing.get('status', '-')} · 비행과 별도"
+            (
+                f"병행 후처리   {processing.get('stage', '-')} · "
+                f"{processing.get('done', 0)}/{processing.get('total', 0)} · "
+                f"{processing.get('status', '-')} · 비행과 별도"
+            )
         )
         if processing.get("status") == "FAILED_STOPPED":
             lines.append("후처리 오류   " + str(processing.get("reason")))
@@ -309,7 +362,10 @@ def render(task, tick=0):
         width = 24
         filled = min(width, int(width * done / total))
         lines.append(
-            f"개별 처리 [{'█' * filled}{'·' * (width - filled)}] {percent:5.1f}%  {done}/{total}건"
+            (
+                f"개별 처리 [{'█' * filled}{'·' * (width - filled)}] "
+                f"{percent:5.1f}%  {done}/{total}건"
+            )
         )
         if stopped:
             lines.append(
@@ -339,11 +395,21 @@ def render(task, tick=0):
             else "부족: 실행 안 함"
         )
         lines.append(
-            f"자원 계획   예상 {estimate['estimated_bytes'] / 1e9:.2f} GB  ·  시작 전 가용 {estimate['available_bytes'] / 1e9:.2f} GB  ·  {decision}"
+            (
+                f"자원 계획   예상 {estimate['estimated_bytes'] / 1e9:.2f} GB  ·  시작 "
+                f"전 가용 {estimate['available_bytes'] / 1e9:.2f} GB  ·  "
+                f"{decision}"
+            )
         )
     if resources:
         lines.append(
-            f"마지막 자원 기록   가용 RAM {resources.get('available_bytes', 0) / 1e9:.1f} GB  ·  사용 RSS {resources.get('owned_tree_rss_bytes', 0) / 1e9:.2f} GB  ·  저장 여유 {resources.get('external_free_bytes', 0) / 1e9:.1f} GB"
+            (
+                f"마지막 자원 기록   가용 RAM "
+                f"{resources.get('available_bytes', 0) / 1e9:.1f} GB  ·  사용 "
+                f"RSS {resources.get('owned_tree_rss_bytes', 0) / 1e9:.2f} GB  "
+                f"·  저장 여유 {resources.get('external_free_bytes', 0) / 1e9:.1f} "
+                f"GB"
+            )
         )
     violation = state.get("first_resource_violation")
     if violation:
@@ -356,7 +422,11 @@ def render(task, tick=0):
         )
     if collection:
         lines.append(
-            f"수집   보관 {collection['archived']} / 실패 {collection.get('failed', 0)} / 전체 {collection['total']} · 잔여 예상 {duration(collection.get('eta', {}).get('seconds'))}"
+            (
+                f"수집   보관 {collection['archived']} / 실패 "
+                f"{collection.get('failed', 0)} / 전체 {collection['total']} · "
+                f"잔여 예상 {duration(collection.get('eta', {}).get('seconds'))}"
+            )
         )
         failures = [
             w
@@ -377,7 +447,8 @@ def render(task, tick=0):
         for reason in collection.get("reason", []):
             lines.append("수집 중지: " + str(reason))
     cpu_cards = []
-    # During flights keep the 8+8 flight grid; once drained, show CPU worker detail.
+    # During flights keep the 8+8 flight grid; once drained, show CPU worker
+    # detail.
     active_cpu = state.get("active", [])
     if not collection and processing and processing.get("status") == "RUNNING":
         active_cpu = processing.get("active", [])
@@ -386,12 +457,20 @@ def render(task, tick=0):
         item = read(path) if path.exists() else {}
         amount, limit = item.get("bytes_done", 0), item.get("bytes_total", 0)
         progress = (
-            f"{100 * amount / limit:5.1f}% ({amount / 1e6:.0f}/{limit / 1e6:.0f} MB)"
+            (
+                f"{100 * amount / limit:5.1f}% "
+                f"({amount / 1e6:.0f}/{limit / 1e6:.0f} MB)"
+            )
             if limit
             else "건별 처리 중"
         )
         cpu_cards.append(
-            f"{index:>2} {active['run_id'][:6]} {item.get('phase', item.get('action', '시작'))[:10]} {progress.split('(')[0].strip()} {active.get('attempt', 1)}/{active.get('attempts_max', 1)}"
+            (
+                f"{index:>2} {active['run_id'][:6]} "
+                f"{item.get('phase', item.get('action', '시작'))[:10]} "
+                f"{progress.split('(')[0].strip()} "
+                f"{active.get('attempt', 1)}/{active.get('attempts_max', 1)}"
+            )
         )
         if "windows" in item:
             cpu_cards[-1] += f" 창{item['windows']:,}"
@@ -406,7 +485,10 @@ def render(task, tick=0):
             for a in cleanup["actions"]
         )
         lines.append(
-            f"소켓 정리   {cleanup['status']} · 제거 {removed}개 · 남은 소켓 {len(cleanup['remaining_unremoved_sockets'])}개 (미확인 소유는 보존)"
+            (
+                f"소켓 정리   {cleanup['status']} · 제거 {removed}개 · 남은 소켓 "
+                f"{len(cleanup['remaining_unremoved_sockets'])}개 (미확인 소유는 보존)"
+            )
         )
     if state.get("result"):
         lines.append("결과   " + state["result"])
@@ -414,13 +496,19 @@ def render(task, tick=0):
         lines.append("최근 완료")
         for stage in state["stages"][-5:]:
             lines.append(
-                f"  ✓ {stage['name']}  ·  병렬 {stage.get('workers', 1)}  ·  {duration(stage.get('elapsed_s'))}"
+                (
+                    f"  ✓ {stage['name']}  ·  병렬 {stage.get('workers', 1)}  ·  "
+                    f"{duration(stage.get('elapsed_s'))}"
+                )
             )
     lines += [
         "─" * 78,
         "로그   " + str(task / "operator/run.log"),
         "화면만 자동 갱신 · q / Ctrl+C: 화면 닫기 · 작업은 독립 실행",
-        f"run별 최대 {config.get('unit_attempts_max', 1)}회 시도 · 전체 작업 재시작·학습·LLM 호출 없음.",
+        (
+            f"run별 최대 {config.get('unit_attempts_max', 1)}회 시도 · 전체 작업 "
+            f"재시작·학습·LLM 호출 없음."
+        ),
     ]
     return "\n".join(lines)
 
@@ -529,10 +617,14 @@ def create(args):
         )
     storage_root = guard(getattr(args, "storage_root", selected_root()))
     storage_policy = capture(storage_root)
-    # Existing pipelines use the sealed ctx6 engine. They are historical-only now.
+    # Existing pipelines use the sealed ctx6 engine. They are historical-only
+    # now.
     if "profiles/battery-aging/cmu-vah01.json" in producer_sources():
         raise ValueError(
-            "새 수집은19신호 AI19 연결을 사용합니다: ./Data/generation/drone-data ai19 --help. 기존19+6 신규 작업은 생성하지 않습니다"
+            (
+                "새 수집은19신호 AI19 연결을 사용합니다: ./Data/generation/drone-data ai19 "
+                "--help. 기존19+6 신규 작업은 생성하지 않습니다"
+            )
         )
     sources = list((ROOT / "Data/generation/pretrain").glob("*.py")) + [
         ROOT / "Data/generation/drone-pretrain",
@@ -613,7 +705,10 @@ def create(args):
         training_authorized=False,
         continue_after_case_failure=True,
         unit_attempts_max=3,
-        scope="Finite collection; per-unit maximum3 attempts; no final test or training",
+        scope=(
+            "Finite collection; per-unit maximum3 attempts; no final test or "
+            "training"
+        ),
         external_storage=str(storage_root),
         storage_policy=storage_policy,
         wall_seconds=TASK_WALL_SECONDS,
@@ -624,7 +719,11 @@ def create(args):
             else 1
         ),
         cpu_worker_bytes=CPU_WORKER_BYTES,
-        test_scope="Fresh finite flights at requested concurrency, archive/extract/preprocess/independent audit; no historical raw data or training",
+        test_scope=(
+            "Fresh finite flights at requested concurrency, "
+            "archive/extract/preprocess/independent audit; no historical raw "
+            "data or training"
+        ),
     )
     if args.mode == "collect":
         from .collection import cases
@@ -681,7 +780,10 @@ def start(task, *, pilot_resume=False):
         raise ValueError("등록된 로컬 task 디렉터리가 필요합니다")
     if (task / "operator/claimed").exists() and not pilot_resume:
         raise ValueError(
-            "STOP: Attempt already claimed; no automatic retry. 새 task 이름을 사용하세요."
+            (
+                "STOP: Attempt already claimed; no automatic retry. 새 task 이름을 "
+                "사용하세요."
+            )
         )
     verify(
         {
@@ -774,7 +876,10 @@ def start(task, *, pilot_resume=False):
             restart="no",
             memory=memory,
             python_allocator=cfg.get("python_allocator", "default"),
-            session_lifetime="user systemd; survives terminal closure, host shutdown/logout may stop user manager",
+            session_lifetime=(
+                "user systemd; survives terminal closure, host shutdown/logout "
+                "may stop user manager"
+            ),
             **(
                 dict(
                     owner_uid=os.getuid(),
@@ -894,7 +999,10 @@ def existing_task():
 
 def menu():
     print(
-        "X500 · 데이터 수집\n1. LR용108런 새로 수집  2. 본학습용1674런 처음부터 새로 수집\n3. 기존 작업 화면  0. 종료"
+        (
+            "X500 · 데이터 수집\n1. LR용108런 새로 수집  2. 본학습용1674런 처음부터 새로 수집\n3. 기존 "
+            "작업 화면  0. 종료"
+        )
     )
     choice = choose("작업", (1, 2, 3, 0), 1)
     if choice in {"1", "2"}:
@@ -993,7 +1101,10 @@ def parser():
         "--storage-profile",
         choices=("stream_compact", "compact", "standard"),
         default="stream_compact",
-        help="stream_compact: 유한 묶음 처리 후 검증된 새 성공 원시 정리; compact: 원시 유지; standard: 압축 추가 안 함",
+        help=(
+            "stream_compact: 유한 묶음 처리 후 검증된 새 성공 원시 정리; compact: 원시 유지; "
+            "standard: 압축 추가 안 함"
+        ),
     )
     init.add_argument(
         "--collection-sets",
@@ -1076,7 +1187,10 @@ def parser():
         type=Path,
         action="append",
         default=[],
-        help="Stopped candidate task sharing the same seed; identity-checked evidence only",
+        help=(
+            "Stopped candidate task sharing the same seed; identity-checked "
+            "evidence only"
+        ),
     )
     for action in ("start", "status", "watch", "_worker"):
         command = sub.add_parser(action)

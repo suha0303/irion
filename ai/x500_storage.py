@@ -1,4 +1,6 @@
-"""Per-task storage selection; no implicit fallback when a selected device disappears."""
+"""Per-task storage selection; no implicit fallback when a selected device
+disappears.
+"""
 
 import json
 import os
@@ -29,7 +31,8 @@ def selected_root():
 
 def capture(root):
     root = absolute(root)
-    # Missing removable mount paths must not become directories on the system disk.
+    # Missing removable mount paths must not become directories on the system
+    # disk.
     if root.parts[1:2] == ("media",) and len(root.parts) >= 4:
         mount = Path(*root.parts[:4])
         if not mount.is_mount():

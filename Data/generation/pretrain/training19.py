@@ -1,4 +1,6 @@
-"""Approved LR/main dataset plans only. Collection and training are not dispatched here."""
+"""Approved LR/main dataset plans only. Collection and training are not
+dispatched here.
+"""
 
 import argparse
 import fcntl
@@ -190,9 +192,14 @@ def prepare_plan(path=DEFAULT_PLAN, seed=None):
             requested_real_time_factor=2,
             aggregate_nonflight_workers=4,
             mission_policy="mission_only_actual_execution/1",
-            mission_boundary_source="fresh raw actual native start/AUTO_LAND; independent LR-purpose admission pending",
+            mission_boundary_source=(
+                "fresh raw actual native start/AUTO_LAND; independent "
+                "LR-purpose admission pending"
+            ),
             native_phase_policy="joint-native-consumption-c2-v1",
-            clock_definition_source="simulation/profiles/collection/joint-phase-policy.json",
+            clock_definition_source=(
+                "simulation/profiles/collection/joint-phase-policy.json"
+            ),
             neural_features=19,
             legacy_context_features=0,
             existing_data_reused=False,
@@ -213,7 +220,10 @@ def prepare_plan(path=DEFAULT_PLAN, seed=None):
             path / "authorization.json",
             dict(
                 scope="LR108 preparation and user-start collection only",
-                direct_user_instruction="LR용108런이랑 본학습 준비해. 예비는 아예 연결하지 마. 본학습용은 생성 전 최종승인.",
+                direct_user_instruction=(
+                    "LR용108런이랑 본학습 준비해. 예비는 아예 연결하지 마. 본학습용은 "
+                    "생성 전 최종승인."
+                ),
                 main_approved=False,
                 training_authorized=False,
                 prepared_utc=now(),
@@ -257,7 +267,10 @@ def main(argv=None):
         else:
             path = training19_main.prepare()
             print(
-                "승인된 본학습세트1674런: train540/validation81/calibration81/개발243/최종729"
+                (
+                    "승인된 본학습세트1674런: "
+                    "train540/validation81/calibration81/개발243/최종729"
+                )
             )
             print(
                 "LR108 같은역할 포함 · 추가1566런 · 예비연결없음 · 수집/학습 시작 안 함"

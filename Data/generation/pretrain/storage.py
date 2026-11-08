@@ -1,4 +1,6 @@
-"""Lossless portable prepared datasets. Never deletes raw or existing outputs."""
+"""Lossless portable prepared datasets. Never deletes raw or existing
+outputs.
+"""
 
 import argparse
 import hashlib
@@ -129,7 +131,9 @@ def pack_files(
 
 
 def event_body(row, budget):
-    """Read only small development labels; permit verified retired-raw capsules."""
+    """Read only small development labels; permit verified retired-raw
+    capsules.
+    """
     if row["role"] not in {"normal_dev_eval", "anomaly_dev"}:
         raise ValueError("Development event source required")
     expected = row["archive"]["members"]["evaluation/events.jsonl"]
@@ -273,7 +277,10 @@ def pack(prepared, output, progress=lambda **kw: None, *, budget=None):
         raw_included=False,
         raw_deleted=any(row.get("raw_retained") is False for row in rows),
         final_test_included=False,
-        limitation="Restores frozen preprocessing only; raw parser/filter changes require original logs. Truth is evaluator-only.",
+        limitation=(
+            "Restores frozen preprocessing only; raw parser/filter changes "
+            "require original logs. Truth is evaluator-only."
+        ),
     )
     write(output / "receipt.json", receipt)
     write(
@@ -293,7 +300,10 @@ def pack(prepared, output, progress=lambda **kw: None, *, budget=None):
                 "new task extracted consumers",
                 "new task audit caches",
             ],
-            warning="No path is automatically deleted. Raw loss prevents changing preprocessing or repairing source parsing.",
+            warning=(
+                "No path is automatically deleted. Raw loss prevents changing "
+                "preprocessing or repairing source parsing."
+            ),
         ),
     )
     return receipt
@@ -323,7 +333,9 @@ def restore(bundle, destination, *, truth=False, budget=None, progress=None):
 
 
 def truth_provider(bundle):
-    """Explicit evaluator callback; does not expose truth to dataset/fit consumers."""
+    """Explicit evaluator callback; does not expose truth to dataset/fit
+    consumers.
+    """
     bundle = Path(bundle).resolve()
     ref = read(bundle / "receipt.json")["evaluator_truth"]
     archive = bundle / ref["path"]

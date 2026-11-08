@@ -1,4 +1,6 @@
-"""Local synthetic stream sender. Never connects to a vehicle or control link."""
+"""Local synthetic stream sender. Never connects to a vehicle or control
+link.
+"""
 
 import argparse
 import math

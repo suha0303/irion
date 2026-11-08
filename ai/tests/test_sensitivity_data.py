@@ -1,4 +1,6 @@
-"""Metadata-only fixed samples, disjoint groups and contiguous time integrity."""
+"""Metadata-only fixed samples, disjoint groups and contiguous time
+integrity.
+"""
 
 import copy
 

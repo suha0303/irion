@@ -1,4 +1,6 @@
-"""Continuation boundaries keep physical history separate from data rejection; no flights."""
+"""Continuation boundaries keep physical history separate from data
+rejection; no flights.
+"""
 
 import copy
 from pathlib import Path

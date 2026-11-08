@@ -1,4 +1,6 @@
-"""Final holdout admission, unchanged scoring and finite submission boundaries."""
+"""Final holdout admission, unchanged scoring and finite submission
+boundaries.
+"""
 
 import copy
 import os

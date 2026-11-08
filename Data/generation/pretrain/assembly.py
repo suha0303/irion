@@ -1,4 +1,6 @@
-"""Disk-backed assembly and comparison of verified run outputs, never a trainer."""
+"""Disk-backed assembly and comparison of verified run outputs, never a
+trainer.
+"""
 
 import json
 import shutil
@@ -149,7 +151,8 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
         if not parts:
             raise ValueError("Empty fit role: " + role)
         total = sum(count for _, count in parts)
-        # Widen identities once across all fragments; long IDs must never be truncated.
+        # Widen identities once across all fragments; long IDs must never be
+        # truncated.
         dtypes, shapes = {}, {}
         for path, count in parts:
             with np.load(path, allow_pickle=False) as part:
@@ -202,7 +205,10 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
         dict(
             runs=frozen["runs"],
             audit=reports,
-            scaler_fit="normal_train unique valid airborne frames; context once per train origin",
+            scaler_fit=(
+                "normal_train unique valid airborne frames; context once per "
+                "train origin"
+            ),
             unique_train_frames=frames_stats.n,
             hashes={p.name: sha(p) for p in out.glob("*.npz")},
         ),
@@ -213,7 +219,9 @@ def prepare(frozen, out, preprocess, budget, *, process_run):
 
 
 def mmap_archive(path, target, budget):
-    """Unzip numeric arrays to owned external scratch, then map without materializing X."""
+    """Unzip numeric arrays to owned external scratch, then map without
+    materializing X.
+    """
     target.mkdir()
     result = {}
     with zipfile.ZipFile(path) as archive:
@@ -237,7 +245,9 @@ def mmap_archive(path, target, budget):
 
 
 def inspect_dataset(dataset, frozen, budget, *, inspect_run_fn):
-    """Compare against independently computed per-run audits; independent fsum scaler."""
+    """Compare against independently computed per-run audits; independent
+    fsum scaler.
+    """
     package_imports()
     from capstone_ai.mapping import FEATURES, TARGETS
 
@@ -410,8 +420,16 @@ def inspect_dataset(dataset, frozen, budget, *, inspect_run_fn):
         scaler_observations=dict(
             frame_rows=frame_count,
             context_rows=context_count,
-            rule="all valid airborne train canonical rows, including warmup and outside accepted histories; equal-valued rows retained; duplicate IDs rejected; context only accepted train windows",
-            variance="population ddof0; floor1e-5; independent math.fsum two-pass",
-            targets="x scaler body p/q/r and pack voltage columns, not Y statistics",
+            rule=(
+                "all valid airborne train canonical rows, including warmup and "
+                "outside accepted histories; equal-valued rows retained; "
+                "duplicate IDs rejected; context only accepted train windows"
+            ),
+            variance=(
+                "population ddof0; floor1e-5; independent math.fsum two-pass"
+            ),
+            targets=(
+                "x scaler body p/q/r and pack voltage columns, not Y statistics"
+            ),
         ),
     )

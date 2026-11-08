@@ -1,4 +1,6 @@
-"""Finite fixture flights only: duration ordering, bounded overlap and failure drain."""
+"""Finite fixture flights only: duration ordering, bounded overlap and
+failure drain.
+"""
 
 import copy
 import threading
@@ -97,7 +99,8 @@ def test_next_flight_overlaps_cpu_but_third_group_waits_for_first_retirement(
         common.read(tmp_path / "operator/processing-state.json")["status"]
         == "PROCESSING_COMPLETE"
     )
-    # Main and CPU each write their own state file; no concurrent edits of common state.
+    # Main and CPU each write their own state file; no concurrent edits of
+    # common state.
     assert r.state.get("completed") == []
 
 

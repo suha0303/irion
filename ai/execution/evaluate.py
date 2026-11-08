@@ -1,4 +1,6 @@
-"""Coordinator-only truth join after configured models seal their development forecasts."""
+"""Coordinator-only truth join after configured models seal their development
+forecasts.
+"""
 
 import hashlib
 import json
@@ -19,7 +21,9 @@ from .common import MODELS, child, read, sha, verify, write
 
 
 class ResidualSummary:
-    """Accumulate error statistics without retaining the full evaluation pool."""
+    """Accumulate error statistics without retaining the full evaluation
+    pool.
+    """
 
     def __init__(self):
         self.count = 0
@@ -70,7 +74,9 @@ def forecast_errors(decisions):
 
 
 def default_protocol_manifest():
-    """Record the existing implementation; this does not change detector settings."""
+    """Record the existing implementation; this does not change detector
+    settings.
+    """
     import capstone_ai.detection as detection
     import capstone_ai.detection_protocol as protocol
     import capstone_ai.detection_replay as replay
@@ -79,7 +85,9 @@ def default_protocol_manifest():
     return {
         "schema": "drone.evaluation-protocol/1",
         "evaluation_mode": "development",
-        "normal_validation_scale": "q95 squared scaled residual per lead/target, floor1e-8",
+        "normal_validation_scale": (
+            "q95 squared scaled residual per lead/target, floor1e-8"
+        ),
         "normal_calibration_quantiles": protocol.QUANTILES,
         "normal_calibration_union_target_per_hour": 1.0,
         "detector": {
@@ -93,7 +101,10 @@ def default_protocol_manifest():
         "max_detection_delay_s": None,
         "threshold_multiplier": [1.0, 1.0],
         "threshold_domain_order": ["propulsion", "battery"],
-        "matching": "applied onset; pre-existing recognition; simultaneous events may share alarm",
+        "matching": (
+            "applied onset; pre-existing recognition; simultaneous events may "
+            "share alarm"
+        ),
         "point_adjustment": False,
         "normal_group_bootstrap": {"seed": 17, "draws": 1000},
         "implementation_sha256": {
@@ -163,7 +174,9 @@ def summarize_model(
             "p50_p95_s": np.quantile(values, [0.5, 0.95]).tolist()
             if values
             else None,
-            "interpretation": "detected events only; misses are reported separately",
+            "interpretation": (
+                "detected events only; misses are reported separately"
+            ),
         }
     result = dict(
         per_run=items,
@@ -260,14 +273,17 @@ def truth_member(row, target, progress):
 
 
 def final_protocol(source):
-    """Retain the completed development protocol; only identify the final scope."""
+    """Retain the completed development protocol; only identify the final
+    scope.
+    """
     current = default_protocol_manifest()
     old, new = dict(source), dict(current)
     old_impl, new_impl = (
         dict(old.pop("implementation_sha256")),
         dict(new.pop("implementation_sha256")),
     )
-    # This module adds role/scope admission. Detector and event matching are unchanged.
+    # This module adds role/scope admission. Detector and event matching are
+    # unchanged.
     old_impl.pop("execution.evaluate")
     new_impl.pop("execution.evaluate")
     if old != new or old_impl != new_impl:
@@ -277,7 +293,9 @@ def final_protocol(source):
     return {
         **current,
         "evaluation_mode": "final_test",
-        "calibration_policy": "reuse frozen normal-only calibration; never refit on final test",
+        "calibration_policy": (
+            "reuse frozen normal-only calibration; never refit on final test"
+        ),
         "source_development_protocol_sha256": protocol_hash(source),
     }
 

@@ -146,7 +146,10 @@ def plan(task, phase, count, case_list, label, export_workers=1):
         lanes=lanes(count),
         source_hashes=sources,
         project_source_hashes=project_sources,
-        basis="Reviewed private FC startup, unique UDP0..15, UUID Gazebo partitions, flock leases; actual capacity recorded separately",
+        basis=(
+            "Reviewed private FC startup, unique UDP0..15, UUID Gazebo "
+            "partitions, flock leases; actual capacity recorded separately"
+        ),
     )
     write(folder / "isolation.json", isolation)
     result.update(
@@ -271,7 +274,9 @@ def plan(task, phase, count, case_list, label, export_workers=1):
 
 
 class IncompleteCollection(RuntimeError):
-    """All safe case attempts ended; incomplete splits must not enter preprocessing."""
+    """All safe case attempts ended; incomplete splits must not enter
+    preprocessing.
+    """
 
 
 def run(folder):
@@ -316,7 +321,9 @@ def run(folder):
 
 
 def freeze_benchmark(folder):
-    """Admit fresh benchmark archives for processing tests, never training data."""
+    """Admit fresh benchmark archives for processing tests, never training
+    data.
+    """
     package_imports()
     from preprocessing_tools.control import RAW_FILES
 
@@ -433,8 +440,10 @@ def source_revision():
         source["runtime_binary_sha256"][
             str(library.relative_to(collection_config.ROOT))
         ] = sha(library)
-    # Path.rglob traversal differs across Python versions. Compare source content,
-    # while each run's original file hash remains in its archive/member inventory.
+    # Path.rglob traversal differs across Python versions. Compare source
+    # content,
+    # while each run's original file hash remains in its archive/member
+    # inventory.
     digest = hashlib.sha256(
         (
             json.dumps(source, indent=2, sort_keys=True, allow_nan=False) + "\n"
@@ -463,7 +472,8 @@ def source_revision():
 def freeze_collection(task, folder, *, output=None, progress=None):
     output = task if output is None else output
     package_imports()
-    # Load only the updated make_freeze entry; relative control remains the sealed package.
+    # Load only the updated make_freeze entry; relative control remains the
+    # sealed package.
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
@@ -481,7 +491,8 @@ def freeze_collection(task, folder, *, output=None, progress=None):
     model_plan["cases_sha256"] = sha(output / "cases.json")
     write(output / "collection-plan.json", model_plan)
     write(output / "required-revision.json", source_revision())
-    # Identity checks remain serial here; archive extraction/hash verification is parallel next.
+    # Identity checks remain serial here; archive extraction/hash verification
+    # is parallel next.
     from .composition import validate_cases, validate_roles
 
     frozen = module.make_freeze(
@@ -501,7 +512,9 @@ def freeze_collection(task, folder, *, output=None, progress=None):
 
 
 def combine_frozen(task, parts):
-    """Join independently admitted sets before fitting one global train scaler."""
+    """Join independently admitted sets before fitting one global train
+    scaler.
+    """
     from .composition import validate_roles
 
     config = read(task / "config.json")

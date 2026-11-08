@@ -1,4 +1,6 @@
-"""Local sealed-data admission, without collection, training or Slurm submission."""
+"""Local sealed-data admission, without collection, training or Slurm
+submission.
+"""
 
 import ast
 import math
@@ -45,7 +47,8 @@ def memory_plan(headers):
     raw = sum(v["bytes"] for role in headers.values() for v in role.values())
     n = headers["normal_train"]["X"]["shape"][0]
     d = math.prod(headers["normal_train"]["X"]["shape"][1:]) + 6 + 1
-    # Host arrays, decompression/normalization temporaries, ridge workspaces and replay Python objects.
+    # Host arrays, decompression/normalization temporaries, ridge workspaces and
+    # replay Python objects.
     estimate = max(8 * 1024**3, 4 * raw + 8 * d * d * 8 + 2 * 1024**3)
     return dict(
         array_bytes=raw,
@@ -55,7 +58,10 @@ def memory_plan(headers):
         primal_matrix_bytes=d * d * 8,
         ridge_dimensions=d,
         kind="conservative estimate, not measured peak",
-        gpu="Measured full batch for each architecture inside the single allocated job before fit",
+        gpu=(
+            "Measured full batch for each architecture inside the single "
+            "allocated job before fit"
+        ),
     )
 
 
@@ -192,7 +198,8 @@ def create():
     ]:
         source[str(path.relative_to(ROOT))] = sha(path)
     config["source_sha256"] = source
-    # Only normal fit arrays plus23 development canonical runs travel to the server.
+    # Only normal fit arrays plus23 development canonical runs travel to the
+    # server.
     selected = {k: v for k, v in seal.items() if "/" not in k}
     dev = {
         r["run_id"]

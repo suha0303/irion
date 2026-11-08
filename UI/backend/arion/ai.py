@@ -76,7 +76,10 @@ def fixture_events(run):
                 threshold=0.65,
                 title=title,
                 origin="fixture",
-                description="화면 연결을 검증하기 위한 인공 응답입니다. 이 비행에 실제 고장이나 AI 탐지가 있었다는 의미가 아닙니다.",
+                description=(
+                    "화면 연결을 검증하기 위한 인공 응답입니다. 이 비행에 실제 고장이나 AI 탐지가 있었다는 의미가 "
+                    "아닙니다."
+                ),
                 evidence=[],
             ).model_dump()
         )
@@ -90,7 +93,8 @@ class AIAdapter:
         self.store = store
         self.states = {}
         self.tasks = {}
-        self.received = {}  # Accepted result revision -> monotonic receipt time.
+        # Accepted result revision -> monotonic receipt time.
+        self.received = {}
         self.api_keys = {}
 
     def state(self, run_id):
@@ -191,7 +195,11 @@ class AIAdapter:
 
     @staticmethod
     def key(event):
-        return f"{event['run_id']}:{event['origin']}:{event['model_version']}:{event['event_id']}"
+        return (
+            f"{event['run_id']}:{event['origin']}:"
+            f"{event['model_version']}:"
+            f"{event['event_id']}"
+        )
 
     async def close(self):
         for run_id in list(self.tasks):

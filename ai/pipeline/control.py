@@ -143,7 +143,8 @@ def validate_roles(rows, cases, protected):
         keys = lineage(row) | {"group:" + row["group_id"]}
         if keys & forbidden:
             raise ValueError("protected old/final lineage")
-        # Normal controls and paired anomalies share only the development partition.
+        # Normal controls and paired anomalies share only the development
+        # partition.
         partition = row["role"] if row["role"] in FIT_ROLES else "development"
         for key in keys:
             if key in seen and seen[key] != partition:
@@ -200,5 +201,6 @@ class Budget:
 
 
 def best_update(value, best):
-    # Strict improvement ensures the earliest checkpoint survives equal validation loss.
+    # Strict improvement ensures the earliest checkpoint survives equal
+    # validation loss.
     return value < best

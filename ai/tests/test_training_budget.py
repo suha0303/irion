@@ -1,4 +1,6 @@
-"""Small CPU probe regressions and pure budget admission; no GPU or server work."""
+"""Small CPU probe regressions and pure budget admission; no GPU or server
+work.
+"""
 
 import copy
 

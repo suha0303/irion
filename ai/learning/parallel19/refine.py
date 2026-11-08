@@ -28,7 +28,8 @@ def candidates(item):
     width = item.get("candidate_width", 2)
     if width > 2:
         # A bounded parallel neighborhood, retaining the original two neighbors
-        # before extending and filling geometric midpoints. No final-score input.
+        # before extending and filling geometric midpoints. No final-score
+        # input.
         rates = []
         seen = set(item["tested"])
         seen.add(key(best))
@@ -152,7 +153,8 @@ def worker(args):
             {p.name: sha(p) for p in out.iterdir() if p.is_file()},
         )
     except Diverged as e:
-        # Numerical divergence is LR evidence; input/OOM/runtime errors propagate.
+        # Numerical divergence is LR evidence; input/OOM/runtime errors
+        # propagate.
         result = {
             "status": "LR_DIVERGED",
             "lr": request["lr"],
@@ -232,7 +234,10 @@ def batch(plan, root, requests, state, phase="search"):
                 )
             if time.time() > state["deadline"]:
                 raise TimeoutError(
-                    "Scheduler allocation end approaching; not evidence of optimum"
+                    (
+                        "Scheduler allocation end approaching; not evidence of "
+                        "optimum"
+                    )
                 )
             for node, capacity in [("DIS05", 5), ("DIS06", 4)]:
                 used = sum(e["node"] == node for _, e, _, _ in active.values())
@@ -369,7 +374,9 @@ def load_baseline(plan, entry):
 
 
 def baseline_occupancy(plan):
-    """Count only the original dispatcher-owned srun processes, not GPU indices."""
+    """Count only the original dispatcher-owned srun processes, not GPU
+    indices.
+    """
     old = read(Path(plan["baseline"]) / "state.json")
     busy = {"DIS05": 0, "DIS06": 0}
     for e in old.get("active", []):
@@ -436,7 +443,9 @@ def start_trial(plan, root, entry, request_path, node, phase="search"):
 
 
 def next_attempt(root, job):
-    """Keep interrupted evidence; only incomplete candidates get a fresh attempt."""
+    """Keep interrupted evidence; only incomplete candidates get a fresh
+    attempt.
+    """
     request = read(job["request"])
     old = Path(request["output"])
     if (old / "result.json").exists():
@@ -531,7 +540,9 @@ def enqueue_development(plan, root, models, pending, development):
 
 
 def enqueue_final(root, models, pending, development, state):
-    """Freeze each finished search before opening its final cohort; never feed back scores."""
+    """Freeze each finished search before opening its final cohort; never
+    feed back scores.
+    """
     frozen = state.setdefault("frozen_models", {})
     for name, item in models.items():
         if not item["status"].startswith("LOCAL_") or not development_done(
@@ -605,7 +616,9 @@ def accept_final(root, state, job, result):
 
 
 def widen_open_rounds(plan, root, models, pending):
-    """Add independent LR fits without resubmitting active/completed candidates."""
+    """Add independent LR fits without resubmitting active/completed
+    candidates.
+    """
     widths = plan.get("parallel_lr_candidate_widths", {})
     total = plan.get("parallel_lr_total_candidates")
     if total is not None:
@@ -772,7 +785,10 @@ def campaign(template):
             "MIGRATION_READY",
         }:
             raise ValueError(
-                "Only approved handover or scheduler-budget continuation authorized"
+                (
+                    "Only approved handover or scheduler-budget continuation "
+                    "authorized"
+                )
             )
         write(
             root
@@ -1022,11 +1038,15 @@ def campaign(template):
             if any(
                 x["status"] == "WAITING_BASELINE" for x in models.values()
             ) and not any(busy.values()):
-                # A failed original worker must not leave the successor waiting forever.
+                # A failed original worker must not leave the successor waiting
+                # forever.
                 since = state.setdefault("missing_baseline_since", time.time())
                 if time.time() - since > 60:
                     raise RuntimeError(
-                        "Original worker ended without complete baseline receipt"
+                        (
+                            "Original worker ended without complete baseline "
+                            "receipt"
+                        )
                     )
             else:
                 state.pop("missing_baseline_since", None)

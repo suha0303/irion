@@ -1,4 +1,6 @@
-"""Synthetic functional/latency check, explicitly not real-aircraft validation."""
+"""Synthetic functional/latency check, explicitly not real-aircraft
+validation.
+"""
 
 import gc
 import platform
@@ -53,7 +55,10 @@ def benchmark(bundle, *, repeats=5, threads=2):
         del runtime
         gc.collect()
     return dict(
-        scope="synthetic CPU functional benchmark; not real-aircraft accuracy or live certification",
+        scope=(
+            "synthetic CPU functional benchmark; not real-aircraft accuracy or "
+            "live certification"
+        ),
         torch=str(torch.__version__),
         platform=platform.platform(),
         processor=platform.processor(),

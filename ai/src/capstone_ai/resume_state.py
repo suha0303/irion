@@ -1,4 +1,6 @@
-"""Local, hash-bound runtime snapshots with a restricted non-executable class allowlist."""
+"""Local, hash-bound runtime snapshots with a restricted non-executable class
+allowlist.
+"""
 
 import gc
 import io
@@ -25,7 +27,9 @@ class StateReader(pickle.Unpickler):
 
 
 def adopt_shadow(tail, config, metadata, checkpoint):
-    """Accept only a same-source common engine already beyond the saved prefix."""
+    """Accept only a same-source common engine already beyond the saved
+    prefix.
+    """
     if tail.engine.config != config or tail.engine.metadata != metadata:
         raise ValueError("shadow config/metadata mismatch")
     tail.verify_checkpoint(checkpoint)
@@ -38,7 +42,9 @@ def adopt_shadow(tail, config, metadata, checkpoint):
 
 
 def save_handover_state(tail, path):
-    """Persist causal state; full seen/archive state remains bound to the raw prefix."""
+    """Persist causal state; full seen/archive state remains bound to the raw
+    prefix.
+    """
     state = {
         "version": 1,
         "recovery": "same_engine_live_shadow_with_verified_raw_prefix",

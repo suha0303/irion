@@ -1,4 +1,6 @@
-"""Portable AI console: configure, diagnose, smoke, and explicit comparison controls."""
+"""Portable AI console: configure, diagnose, smoke, and explicit comparison
+controls.
+"""
 
 import argparse
 import json
@@ -96,7 +98,10 @@ def environment(settings, profile_file=None):
 def selected_python(settings, module, arguments, *, profile_file=None):
     if profile.absolute_path(settings["project_root"]) != profile.ROOT:
         raise ValueError(
-            "Run this command on the configured server clone; use connect to log in"
+            (
+                "Run this command on the configured server clone; use connect "
+                "to log in"
+            )
         )
     executable = Path(settings["python"])
     if not executable.is_file() or not os.access(executable, os.X_OK):
@@ -260,8 +265,10 @@ def display(value):
         print("복원 검사: " + str(progress["gate_phase"]))
     if progress.get("epoch") is not None:
         print(
-            f"epoch {progress['epoch']}/{progress.get('epochs', '미확인')} (조기 종료 가능)"
-            f"  |  batch {progress.get('batch', 0)}/{progress.get('batches', '미확인')}"
+            f"epoch {progress['epoch']}/{progress.get('epochs', '미확인')} "
+            f"(조기 종료 가능)"
+            f"  |  batch {progress.get('batch', 0)}/"
+            f"{progress.get('batches', '미확인')}"
         )
     if progress:
         done, total = progress.get("done"), progress.get("total")
@@ -303,7 +310,8 @@ def display(value):
         )
         print(
             f"GPU: {gpu.get('utilization_pct', '미확인')}%  |  VRAM: "
-            f"{gpu.get('used_mib', '미확인')}/{gpu.get('total_mib', '미확인')} MiB  |  {freshness}"
+            f"{gpu.get('used_mib', '미확인')}/{gpu.get('total_mib', '미확인')} "
+            f"MiB  |  {freshness}"
         )
     reason = control.get("reason") or progress.get("reason")
     if reason:
@@ -504,7 +512,8 @@ def main(argv=None):
                 check=False,
             ).returncode
         if args.action == "train" and args.arguments[:1] == ["history19"]:
-            # This separate implementation never selects or converts historical inputs.
+            # This separate implementation never selects or converts historical
+            # inputs.
             if (
                 args.arguments[1:2] == ["fit"]
                 and "--help" not in args.arguments

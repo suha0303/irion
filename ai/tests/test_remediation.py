@@ -1,4 +1,6 @@
-"""Historical dataset and asset fixtures; never starts collection or training."""
+"""Historical dataset and asset fixtures; never starts collection or
+training.
+"""
 
 import copy
 
@@ -92,7 +94,10 @@ def test_asset_replacement_and_missing_conditions():
     from capstone_ai.trend import comparison_gate
 
     records = read_json(
-        "simulation/artifacts/remediation-20261014/asset-fixtures/asset-registry.json"
+        (
+            "simulation/artifacts/remediation-20261014/asset-fixtures/"
+            "asset-registry.json"
+        )
     )["records"]
     a = comparison_gate(records[0], records[1])
     b = comparison_gate(records[1], records[2])

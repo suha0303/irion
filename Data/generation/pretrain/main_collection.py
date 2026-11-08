@@ -1,4 +1,6 @@
-"""User-started LR108/main1674 collection; finite batches, checkpoints, no model work."""
+"""User-started LR108/main1674 collection; finite batches, checkpoints, no
+model work.
+"""
 
 import argparse
 import fcntl
@@ -55,9 +57,8 @@ AUTH = (
     / "ai/reports/collection-hardening-20261108/attempt-01/authorization.json"
 )
 AUTH_SHA = "3a1e5d7952af7eb38ec0bf1f5afb5cc97200b3413d79a31f4960d18db470933f"
-HANDOFF = (
-    ROOT
-    / "ai/reports/targeted-recovery-20261108/attempt-04/release/data-handoff.json"
+HANDOFF = ROOT / (
+    "ai/reports/targeted-recovery-20261108/attempt-04/release/data-handoff.json"
 )
 REPORT = (
     ROOT / "docs/data/reports/main-collection-connection-20261107/attempt-01"
@@ -96,7 +97,10 @@ def dependencies(path=HANDOFF):
         or value.get("code_frozen") is not True
     ):
         raise ValueError(
-            "Independent production AI19 native/aggregate READY handoff required"
+            (
+                "Independent production AI19 native/aggregate READY handoff "
+                "required"
+            )
         )
     frozen = value["source_freeze"]
     verify({str(ai19.no_links(frozen["path"])): frozen["sha256"]})
@@ -277,7 +281,10 @@ def preflight(task):
         if line.strip()
     ):
         raise pilot45.Blocked(
-            "Existing collection/service cleanup is active; no overlapping campaign"
+            (
+                "Existing collection/service cleanup is active; no overlapping "
+                "campaign"
+            )
         )
     verify(
         {
@@ -301,10 +308,17 @@ def preflight(task):
     ):
         if not cfg.get("fresh_start"):
             raise pilot45.Blocked(
-                "Planning upper/reserve exceeds selected storage free space; choose a larger storage root before starting"
+                (
+                    "Planning upper/reserve exceeds selected storage free "
+                    "space; choose a larger storage root before starting"
+                )
             )
         warnings.append(
-            f"초기 저장 상한 추정 {budget['required_initial_free_bytes'] / 1e9:.1f}GB > 여유 {snapshot['disk_free_bytes'] / 1e9:.1f}GB. "
+            (
+                f"초기 저장 상한 추정 "
+                f"{budget['required_initial_free_bytes'] / 1e9:.1f}GB > 여유 "
+                f"{snapshot['disk_free_bytes'] / 1e9:.1f}GB. "
+            )
             + "실제50GB 여유+현재 묶음 임시공간 보호를 유지하며, 부족하면 보존 후 중지합니다."
         )
     native_flight.environment_check()
@@ -324,7 +338,9 @@ def case_digest(case):
 
 
 def retryable(result, attempts, stopped=False, *, binding=None, attempts_max=3):
-    """Known independent failed UUIDs get two retries; shared failures always stop."""
+    """Known independent failed UUIDs get two retries; shared failures always
+    stop.
+    """
     if stopped:
         return False
     reason = str(result.get("reason", "")).lower()
@@ -405,7 +421,9 @@ def catalog_path(task, cfg):
 
 
 def interrupted_raw_identity(task, cfg, entry, attempt):
-    """Identify an interrupted owned flight without changing its original outcome."""
+    """Identify an interrupted owned flight without changing its original
+    outcome.
+    """
     if attempt.get("run_id") or attempt.get("state") != "RUNNING":
         return None
     folder = task / "pilot/execution" / entry["case"]["case_id"]
@@ -473,7 +491,9 @@ def interrupted_raw_identity(task, cfg, entry, attempt):
 
 
 def fresh_history(binding):
-    """Only previously approved identical cases may be collected into a separate campaign."""
+    """Only previously approved identical cases may be collected into a
+    separate campaign.
+    """
     verify({str(FRESH_AUTH): FRESH_AUTH_SHA})
     verify({str(AUTH): AUTH_SHA})
     compatible = read(AUTH).get("recollection_prior_producers", [])
@@ -578,7 +598,10 @@ def create(scope, *, storage_root=STORE, name=None, fresh=False):
         validate(old)
         if Path(read(old / "config.json")["external_storage"]) != storage_root:
             raise ValueError(
-                "Existing task uses another storage root; specify that task explicitly"
+                (
+                    "Existing task uses another storage root; specify that "
+                    "task explicitly"
+                )
             )
         return old
     name = name or (
@@ -622,11 +645,17 @@ def create(scope, *, storage_root=STORE, name=None, fresh=False):
         )
         if any(a["state"] == "RUNNING" for a in entry["attempts"]):
             raise ValueError(
-                "Unreconciled previous physical attempt; resume its recorded owner task"
+                (
+                    "Unreconciled previous physical attempt; resume its "
+                    "recorded owner task"
+                )
             )
         if entry.get("run") and entry.get("status") != "COMMITTED":
             raise ValueError(
-                "Resume the recorded owner task for uncommitted successful raw; do not migrate or refly it"
+                (
+                    "Resume the recorded owner task for uncommitted successful "
+                    "raw; do not migrate or refly it"
+                )
             )
         if entry.get("commit"):
             verify({entry["commit"]["path"]: entry["commit"]["sha256"]})
@@ -667,7 +696,8 @@ def create(scope, *, storage_root=STORE, name=None, fresh=False):
             budget["required_initial_free_bytes"] - budget["reserve_bytes"]
         )
         budget["assumptions"] += (
-            " Outstanding raw count is uncapped; actual disk reserve and next-flight scratch control admission."
+            " Outstanding raw count is uncapped; actual disk reserve and "
+            "next-flight scratch control admission."
         )
     cfg = dict(
         mode="main19",
@@ -700,7 +730,8 @@ def create(scope, *, storage_root=STORE, name=None, fresh=False):
         use_swap=True,
         wall_seconds=7 * 24 * 3600,
         parallel16=True,
-        capture_timing=False,  # Full per-poll timing traces are diagnostics, not training input.
+        # Full per-poll timing traces are diagnostics, not training input.
+        capture_timing=False,
         nonflight_when_flights_idle=not fresh,
         continuous_refill=fresh,
         max_outstanding_raw_runs=None if fresh else 16,
@@ -724,7 +755,8 @@ def create(scope, *, storage_root=STORE, name=None, fresh=False):
     write(task / "dependency-handoff.json", spec)
     write(task / "budget.json", budget)
     write(task / "protection.json", baseline)
-    # Global prior identities remain excluded from all production uses; current identities retain their approved split.
+    # Global prior identities remain excluded from all production uses; current
+    # identities retain their approved split.
     owned = {
         a.get("run_id")
         for e in entries.values()
@@ -920,7 +952,16 @@ def storage_budget(count):
         no_full_raw_accumulation=False,
         storage_policy="single_xz0_write_no_readback_user_20261108",
         storage_size_measured_for_current_policy=False,
-        assumptions="New XZ preset0 size is unmeasured; the following XZ3 historical estimate is provisional. Intermediate gzip/consumer copies are now omitted. Pending raw has no count cap, subject to actual disk admission. 180→480 linear scaling; max of4 full regular raw+export xz samples with15% allowance and max16 exports with5%; bounded batch scratch1.25 and combined arrays allowance2. These are planning assumptions, not measured1674 guarantees; rolling actual sizes/free space are recorded.",
+        assumptions=(
+            "New XZ preset0 size is unmeasured; the following XZ3 historical "
+            "estimate is provisional. Intermediate gzip/consumer copies are "
+            "now omitted. Pending raw has no count cap, subject to actual disk "
+            "admission. 180→480 linear scaling; max of4 full regular "
+            "raw+export xz samples with15% allowance and max16 exports with5%; "
+            "bounded batch scratch1.25 and combined arrays allowance2. These "
+            "are planning assumptions, not measured1674 guarantees; rolling "
+            "actual sizes/free space are recorded."
+        ),
     )
 
 
@@ -939,7 +980,9 @@ def groups(rows):
 
 
 def registry_identity(task, cfg, old, record):
-    """Only the same frozen production case or its exact counterpart may continue."""
+    """Only the same frozen production case or its exact counterpart may
+    continue.
+    """
     validate(task)
     previous = HOME / "tasks" / old["task"]
     if not (previous / "config.json").exists():
@@ -1013,7 +1056,9 @@ def registry_identity(task, cfg, old, record):
 
 
 class Campaign(pilot_parallel.Coordinator):
-    """Reuse native children, identity checks and per-run processing from the finite runner."""
+    """Reuse native children, identity checks and per-run processing from the
+    finite runner.
+    """
 
     def __init__(self, task):
         self.task = Path(task)
@@ -1065,7 +1110,10 @@ class Campaign(pilot_parallel.Coordinator):
                 a["state"] == "RUNNING" for a in newest["attempts"]
             ):
                 raise ValueError(
-                    "Another recorded owner has an unfinished case; resume that owner"
+                    (
+                        "Another recorded owner has an unfinished case; resume "
+                        "that owner"
+                    )
                 )
             elif len(newest["attempts"]) > len(entry["attempts"]):
                 entries[cid] = newest
@@ -1147,7 +1195,8 @@ class Campaign(pilot_parallel.Coordinator):
 
     def child_resources(self):
         # All lane supervisors are threads in this process. Share one fresh
-        # /proc scan per second instead of repeating it for every flight/CPU job.
+        # /proc scan per second instead of repeating it for every flight/CPU
+        # job.
         with self.resource_lock:
             if (
                 self.resource_snapshot is None
@@ -1286,7 +1335,9 @@ class Campaign(pilot_parallel.Coordinator):
         write(self.task / "operator/state.json", self.state)
 
     def prioritize_controller(self, event):
-        """Lower only this run's Gazebo group, leaving PX4/control at normal priority."""
+        """Lower only this run's Gazebo group, leaving PX4/control at normal
+        priority.
+        """
         target = self.cfg.get("gazebo_nice")
         rid = event.get("producer_run_id")
         if (
@@ -1331,7 +1382,10 @@ class Campaign(pilot_parallel.Coordinator):
                     .endswith("/" + self.cfg["service_unit"])
                 ):
                     raise ValueError(
-                        "Gazebo priority target is outside the owned service/group"
+                        (
+                            "Gazebo priority target is outside the owned "
+                            "service/group"
+                        )
                     )
                 todo.extend(
                     map(
@@ -1369,8 +1423,10 @@ class Campaign(pilot_parallel.Coordinator):
         return (self.task / "operator/stop-request.json").exists()
 
     def begin_flight(self, case, instance):
-        # Preflight verifies the frozen sources once before the owned service runs.
-        # Source edits require a stopped service and a new task, not per-run hashing.
+        # Preflight verifies the frozen sources once before the owned service
+        # runs.
+        # Source edits require a stopped service and a new task, not per-run
+        # hashing.
         if case not in self.manifest["cases"]:
             raise ValueError("Unplanned production case")
         job = super().begin_flight(case, instance)
@@ -1495,7 +1551,8 @@ class Campaign(pilot_parallel.Coordinator):
                         pending.append(c)
                 except Exception as exc:
                     e["failure_reason"] = f"{type(exc).__name__}: {exc}"
-                    # Only a known completed or failed UUID is an independent run outcome.
+                    # Only a known completed or failed UUID is an independent
+                    # run outcome.
                     a = e["attempts"][-1]
                     if a.get("result", {}).get("main_shared_failure"):
                         shared = pilot45.Blocked(
@@ -1636,7 +1693,10 @@ class Campaign(pilot_parallel.Coordinator):
                     if e.get("status") == "COMPLETE":
                         e.update(
                             status="UNAVAILABLE",
-                            failure_reason="Paired member not available; pair denominator retained",
+                            failure_reason=(
+                                "Paired member not available; pair denominator "
+                                "retained"
+                            ),
                         )
                 self.save()
                 continue
@@ -1828,7 +1888,9 @@ class Campaign(pilot_parallel.Coordinator):
         return index
 
     def continuous_collect(self):
-        """One coordinator owns all mutations; children only execute bounded jobs."""
+        """One coordinator owns all mutations; children only execute bounded
+        jobs.
+        """
         rows = [
             case for batch in groups(self.manifest["cases"]) for case in batch
         ]
@@ -1880,7 +1942,8 @@ class Campaign(pilot_parallel.Coordinator):
                     )
                 admitting = not self.stopped() and shared is None
                 if admitting:
-                    # Do not leave a successful control waiting forever for a terminal partner.
+                    # Do not leave a successful control waiting forever for a
+                    # terminal partner.
                     for members in grouped.values():
                         if len(members) != 2 or any(
                             c["case_id"] in busy for c in members
@@ -1898,10 +1961,14 @@ class Campaign(pilot_parallel.Coordinator):
                                 ):
                                     e.update(
                                         status="UNAVAILABLE",
-                                        failure_reason="Paired member unavailable; denominator retained",
+                                        failure_reason=(
+                                            "Paired member unavailable; "
+                                            "denominator retained"
+                                        ),
                                     )
                                     self.batch_ids.add(c["case_id"])
-                    # Commit first to release temporary disk, then pair-check, then prepare.
+                    # Commit first to release temporary disk, then pair-check,
+                    # then prepare.
                     candidates = []
                     for order, c in enumerate(rows):
                         cid, e = c["case_id"], entries[c["case_id"]]
@@ -2172,7 +2239,10 @@ class Campaign(pilot_parallel.Coordinator):
             aggregate_attempt = len(previous) + 1
             if aggregate_attempt > 3:
                 raise ValueError(
-                    "Maximum3 explicit aggregate attempts reached; preserve all datasets"
+                    (
+                        "Maximum3 explicit aggregate attempts reached; "
+                        "preserve all datasets"
+                    )
                 )
             request, log = self.request(
                 case,
@@ -2204,7 +2274,10 @@ def check_aggregate_result(result, scope, index):
         != (1674 if scope == "main" else 108)
     ):
         raise ValueError(
-            "Production dataset aggregate lost actual audit or frozen denominator"
+            (
+                "Production dataset aggregate lost actual audit or frozen "
+                "denominator"
+            )
         )
     for key in ("receipt", "independent_audit"):
         ref = result[key]
@@ -2220,7 +2293,9 @@ def check_aggregate_result(result, scope, index):
 
 
 def aggregate_scope(task, cfg, scope, job, aggregate):
-    """Reuse a sealed successful scope; only its failed sibling needs another attempt."""
+    """Reuse a sealed successful scope; only its failed sibling needs another
+    attempt.
+    """
     checkpoint = task / "operator" / ("aggregate-" + scope + "-complete.json")
     context = dict(
         config_sha256=sha(task / "config.json"), index_sha256=sha(job["index"])
@@ -2229,7 +2304,10 @@ def aggregate_scope(task, cfg, scope, job, aggregate):
         saved = read(ai19.no_links(checkpoint))
         if saved.get("context") != context or saved.get("scope") != scope:
             raise ValueError(
-                "Prior aggregate source/index identity changed; preserve evidence"
+                (
+                    "Prior aggregate source/index identity changed; preserve "
+                    "evidence"
+                )
             )
         verify(saved["dataset_files"])
         check_aggregate_result(saved["aggregate"], scope, job["index"])
@@ -2291,8 +2369,10 @@ def execute_case(request):
             .strip()
         }
     )
-    # Retain this child's task/config binding; full source verification belongs to
-    # service preflight, before any lane starts under the immutable-source policy.
+    # Retain this child's task/config binding; full source verification belongs
+    # to
+    # service preflight, before any lane starts under the immutable-source
+    # policy.
     if job["case"] not in manifest["cases"]:
         raise ValueError("Only approved production cases")
     handoff = cfg["dependency_handoff"]
@@ -2345,13 +2425,15 @@ def execute_case(request):
             run_available=prepared["run_health"]["status"] == "available",
         )
     elif action == "pair":
-        # The existing official native verifier runs while both raw members still exist.
+        # The existing official native verifier runs while both raw members
+        # still exist.
         paths = read(task / "ledger.json")["cases"]
         entries = {
             cid: read(paths[cid])
             for cid in (job["normal_id"], job["anomaly_id"])
         }
-        # pilot_bridge accepts the same runtime representation without changing production schemas.
+        # pilot_bridge accepts the same runtime representation without changing
+        # production schemas.
         normal, anomaly = entries[job["normal_id"]], entries[job["anomaly_id"]]
         directory = task / "pilot/pairs" / normal["case"]["group_id"]
         directory.mkdir(parents=True, exist_ok=True)
@@ -2423,7 +2505,9 @@ def execute_case(request):
 
 
 def run_local_assessment_failure(exc):
-    """A complete producer assessment can reject one run without a shared fault."""
+    """A complete producer assessment can reject one run without a shared
+    fault.
+    """
     prefix = "Producer assessment failed: "
     if not isinstance(exc, ValueError) or not str(exc).startswith(prefix):
         return False
@@ -2443,7 +2527,10 @@ def run_local_assessment_failure(exc):
     known = (
         "normal health eligibility",
         "normal mission model envelope",
-        "Joint native consumption: Incomplete actual reference consumption coverage",
+        (
+            "Joint native consumption: Incomplete actual reference consumption "
+            "coverage"
+        ),
     )
     flags = ("contract_passed", "physical_gate_passed", "missing_data_passed")
     return (
@@ -3046,7 +3133,10 @@ def render(task, tick=0):
         kind = kinds.get(x.get("kind"), str(x.get("kind", "비행"))[:4])
         if x.get("action") == "flight":
             cards.append(
-                f"{lane:>3} {kind} {clock} {rate} {x.get('attempt', '?')}/{x.get('attempt_limit', 3)}"
+                (
+                    f"{lane:>3} {kind} {clock} {rate} "
+                    f"{x.get('attempt', '?')}/{x.get('attempt_limit', 3)}"
+                )
             )
             if elapsed is not None and rtf is not None and rtf > 0:
                 remaining.append(max(0, (target or 480) - elapsed) / rtf)
@@ -3055,7 +3145,10 @@ def render(task, tick=0):
                 x.get("action"), str(x.get("action", "처리"))[:4]
             )
             cards.append(
-                f"CPU {operation} {str(x.get('case_id', '-'))[-20:]} {x.get('attempt', '?')}/3"
+                (
+                    f"CPU {operation} {str(x.get('case_id', '-'))[-20:]} "
+                    f"{x.get('attempt', '?')}/3"
+                )
             )
     projection = s.get("storage_projection", {})
     resource = s.get("resources", {})
@@ -3073,36 +3166,66 @@ def render(task, tick=0):
     lines = [
         f"X500  /  학습 전 통합 콘솔  /  {task.name}",
         f"  {status}  |  {summary}",
-        f"  {timestamp:%m/%d %H:%M:%S} KST · 화면 #{tick} · 경과 {duration(wall_elapsed)} · PID {s.get('pid', '-')}",
+        (
+            f"  {timestamp:%m/%d %H:%M:%S} KST · 화면 #{tick} · 경과 "
+            f"{duration(wall_elapsed)} · PID {s.get('pid', '-')}"
+        ),
         "─" * 78,
         "흐름   수집 → 원본 직접 정제 → 대조 확인·보관 → 통합·공통 scaler → 검산 → 정지",
         "설정   비행16 / 2배속 / 임무480초 · 후처리 전체4 동시 실행 · 최대3시도"
         if cfg.get("continuous_refill")
         else "설정   비행16 / 2배속 / 임무480초 · 비행 종료 후 비비행 전체4 · 최대3시도",
         f"수집·정제 [{bar}] {percent:5.1f}%  {done}/{total}건 인수·보관 완료",
-        f"물리비행 완료 {s.get('completed_physical_attempts', 0)}/{s.get('physical_attempts', 0)}시도 · 실패 {s.get('failed_physical_attempts', 0)} · 품질거절 {s.get('quality_rejected_attempts', 0)}",
-        f"불가용/실패 {s.get('failed', 0)}건 · 미시작 {s.get('not_started', total)}건 · 단계100% ≠ 전체완료",
-        f"현재   {phase} · {label} 비행{s.get('active_flights', 0)}/16 처리{s.get('active_nonflight', 0)}/4"
+        (
+            f"물리비행 완료 "
+            f"{s.get('completed_physical_attempts', 0)}/"
+            f"{s.get('physical_attempts', 0)}시도 · 실패 "
+            f"{s.get('failed_physical_attempts', 0)} · 품질거절 "
+            f"{s.get('quality_rejected_attempts', 0)}"
+        ),
+        (
+            f"불가용/실패 {s.get('failed', 0)}건 · 미시작 "
+            f"{s.get('not_started', total)}건 · 단계100% ≠ 전체완료"
+        ),
+        (
+            f"현재   {phase} · {label} 비행{s.get('active_flights', 0)}/16 "
+            f"처리{s.get('active_nonflight', 0)}/4"
+        )
         if cfg.get("continuous_refill")
-        else f"현재   {phase} · 배치 {s.get('batch', 0)}/{s.get('batches', '-')} · {label} 비행{s.get('active_flights', 0)}/16 처리{s.get('active_nonflight', 0)}/4",
+        else (
+            f"현재   {phase} · 배치 {s.get('batch', 0)}/{s.get('batches', '-')} · "
+            f"{label} 비행{s.get('active_flights', 0)}/16 "
+            f"처리{s.get('active_nonflight', 0)}/4"
+        ),
         *(
             [
                 f"후처리 대기 {s.get('raw_queue_waiting', 0)}건 · "
                 f"정제 {s.get('postprocess_waiting', {}).get('prepare', '?')} / "
                 f"대조쌍 {s.get('postprocess_waiting', {}).get('pair', '?')} / "
-                f"보관 {s.get('postprocess_waiting', {}).get('commit', '?')} · 실행 중 제외"
+                f"보관 {s.get('postprocess_waiting', {}).get('commit', '?')} "
+                f"· 실행 중 제외"
             ]
             if cfg.get("continuous_refill")
             else []
         ),
         f"현재 비행 잔여 예상 {eta}",
-        f"마지막 자원  가용 RAM {gb('available_bytes')} · RSS {gb('owned_tree_rss_bytes')} · 저장 여유 {gb('disk_free_bytes')}",
+        (
+            f"마지막 자원  가용 RAM {gb('available_bytes')} · RSS "
+            f"{gb('owned_tree_rss_bytes')} · 저장 여유 {gb('disk_free_bytes')}"
+        ),
         *grid(cards),
         *[
-            f"합산/검산 {p.get('dataset_scope', '-')} · {p.get('stage', '-')} · {p.get('done', 0)}/{p.get('total', '-')} · {p.get('role', '')} {p.get('status', '')}"
+            (
+                f"합산/검산 {p.get('dataset_scope', '-')} · {p.get('stage', '-')} "
+                f"· {p.get('done', 0)}/{p.get('total', '-')} · "
+                f"{p.get('role', '')} {p.get('status', '')}"
+            )
             for p in s.get("aggregate_progress", [])
         ],
-        f"보관   {projection.get('actual_permanent_bytes', 0) / 1e9:.1f}GB · 저장 {cfg.get('external_storage', STORE)}",
+        (
+            f"보관   {projection.get('actual_permanent_bytes', 0) / 1e9:.1f}GB · "
+            f"저장 {cfg.get('external_storage', STORE)}"
+        ),
     ]
     failure, failure_log = None, None
     if not running and s.get("reason"):

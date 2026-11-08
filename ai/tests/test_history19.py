@@ -1,4 +1,6 @@
-"""Fresh19-only SGD implementation: synthetic CPU data only, no GPU/data collection."""
+"""Fresh19-only SGD implementation: synthetic CPU data only, no GPU/data
+collection.
+"""
 
 import inspect
 import json
@@ -181,7 +183,10 @@ def test_old_conditions_preserved_sgd_only():
     old_preprocess = json.loads(
         (
             ROOT
-            / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
+            / (
+                "Data/generation/pretrain/resources/preprocessing/"
+                "preprocessing.json"
+            )
         ).read_text(encoding="utf-8")
     )
     new_preprocess = json.loads(

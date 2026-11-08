@@ -38,7 +38,11 @@ def owned(layout):
         [
             sys.executable,
             "-c",
-            "import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); print('ready',flush=True); sys.stdin.read()",
+            (
+                "import socket,sys; s=socket.socket(socket.AF_UNIX); "
+                "s.bind(sys.argv[1]); print('ready',flush=True); "
+                "sys.stdin.read()"
+            ),
             str(path),
         ],
         cwd=run / "px4",
@@ -60,7 +64,8 @@ def owned(layout):
         cleanup.claim(run, 0, receipt)
         assert receipt.exists()
         data = read(receipt)
-        # Give the isolated fixture the service binding normally provided by systemd.
+        # Give the isolated fixture the service binding normally provided by
+        # systemd.
         data["cgroup"] = "0::/test/x500-pretrain-fixture.service\n"
         write(receipt, data)
         yield child, path, receipt

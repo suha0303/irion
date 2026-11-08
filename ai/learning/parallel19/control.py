@@ -31,7 +31,9 @@ def sha(p):
 
 
 def completed_result(path, timeout=60):
-    """NFS directory negative caches can outlive a successfully exited worker."""
+    """NFS directory negative caches can outlive a successfully exited
+    worker.
+    """
     deadline = time.monotonic() + timeout
     while True:
         try:
@@ -205,7 +207,10 @@ def campaign(template):
                     del active[pid]
                     if code:
                         raise RuntimeError(
-                            f"{stage}:{entry['id']}:exit{code}; preserve and stop"
+                            (
+                                f"{stage}:{entry['id']}:exit{code}; preserve "
+                                f"and stop"
+                            )
                         )
                     result = completed_result(
                         root / entry["id"] / stage / "result.json"

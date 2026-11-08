@@ -1,4 +1,6 @@
-"""Post-training authorization, sequencing and evidence tests; no server/GPU work."""
+"""Post-training authorization, sequencing and evidence tests; no server/GPU
+work.
+"""
 
 import os
 import subprocess
@@ -328,7 +330,10 @@ def test_changed_model_files_block_start_without_mutation(
 
 
 @pytest.mark.parametrize(
-    "fresh_calibration,policy_kind,normalization_study,include_baselines,parallel_workers",
+    (
+        "fresh_calibration,policy_kind,normalization_study,include_"
+        "baselines,parallel_workers"
+    ),
     [
         (False, None, False, False, None),
         (True, None, False, False, None),
@@ -348,7 +353,9 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
     include_baselines,
     parallel_workers,
 ):
-    """Exercise actual preparation/copy/binding, with only bulky data admission mocked."""
+    """Exercise actual preparation/copy/binding, with only bulky data
+    admission mocked.
+    """
     source, upstream, bundle, root = [
         tmp_path / n for n in ("trained", "upstream", "bundle", "evaluation")
     ]
@@ -645,7 +652,10 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
             sys.executable,
             "-B",
             "-c",
-            "from learning.post_training import checked; from pathlib import Path; checked(Path(__import__('sys').argv[1]))",
+            (
+                "from learning.post_training import checked; from pathlib "
+                "import Path; checked(Path(__import__('sys').argv[1]))"
+            ),
             str(root),
         ],
         cwd=tmp_path,

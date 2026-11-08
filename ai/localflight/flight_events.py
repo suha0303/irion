@@ -1,10 +1,15 @@
-"""Version-bound flight boundaries and operational events, never health labels."""
+"""Version-bound flight boundaries and operational events, never health
+labels.
+"""
 
 import math
 import re
 from collections import Counter
 
-REFERENCE = "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.0/libraries/AP_Logger/AP_Logger.h"
+REFERENCE = (
+    "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.0/"
+    "libraries/AP_Logger/AP_Logger.h"
+)
 LABELS = {
     2: "조종기 수신",
     5: "조종기 페일세이프",
@@ -124,7 +129,10 @@ def summarize(audit):
                         end_us=end,
                         imu_instance=imu,
                         usable=end - chunk >= 11_000_000,
-                        evidence=f"EV.NOT_LANDED={a} → EV.LAND_COMPLETE={b}; XKF4.PI={core}; 구간별 IMU={imu}",
+                        evidence=(
+                            f"EV.NOT_LANDED={a} → EV.LAND_COMPLETE={b}; "
+                            f"XKF4.PI={core}; 구간별 IMU={imu}"
+                        ),
                     )
                 )
     result["notes"].append(

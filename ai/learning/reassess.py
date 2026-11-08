@@ -1,8 +1,10 @@
-"""Explicit development re-assessment of immutable forecasts, without model execution.
+"""Explicit development re-assessment of immutable forecasts, without model
+execution.
 
 Changes to matching windows, awareness/new-episode criteria, or fixed threshold
 multipliers are exploratory development results. They do not re-fit calibration
-or certify independent false-alarm performance. The original result stays intact.
+or certify independent false-alarm performance. The original result stays
+intact.
 """
 
 import argparse
@@ -38,7 +40,10 @@ DEFAULT_CRITERIA = {
 def checked_criteria(value):
     if not isinstance(value, dict) or set(value) - set(DEFAULT_CRITERIA):
         raise ValueError(
-            "Unknown evaluation criterion; only explicit supported fields are accepted"
+            (
+                "Unknown evaluation criterion; only explicit supported fields "
+                "are accepted"
+            )
         )
     result = {**DEFAULT_CRITERIA, **value}
     if result["event_success"] not in ("awareness", "new_episode"):
@@ -60,14 +65,19 @@ def checked_criteria(value):
         or np.any(factors <= 0)
     ):
         raise ValueError(
-            "threshold_multiplier requires positive propulsion,battery multipliers"
+            (
+                "threshold_multiplier requires positive propulsion,battery "
+                "multipliers"
+            )
         )
     result["threshold_multiplier"] = factors.tolist()
     return result
 
 
 def transformed_decisions(decisions, high, criteria):
-    """Reuse original raw scores/timestamps; never read labels to set thresholds."""
+    """Reuse original raw scores/timestamps; never read labels to set
+    thresholds.
+    """
     if criteria["threshold_multiplier"] == [1.0, 1.0]:
         return decisions
     threshold = np.asarray(high) * criteria["threshold_multiplier"]
@@ -213,8 +223,12 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
             "implementation_sha256"
         ],
         "reassessment_implementation_sha256": sha(__file__),
-        "threshold_fit": "unchanged normal-only calibration; fixed multiplier only",
-        "point_metrics": "original event truth intervals, no matching-window truncation",
+        "threshold_fit": (
+            "unchanged normal-only calibration; fixed multiplier only"
+        ),
+        "point_metrics": (
+            "original event truth intervals, no matching-window truncation"
+        ),
     }
     write(output / "protocol.json", revised_protocol)
     per_model = {name: [] for name in names}
@@ -330,7 +344,10 @@ def reassess(evaluation, output, criteria, *, inference_root=None):
         limitations=[
             "simulation development data, not an independent final test",
             "criteria selected after development exposure are exploratory",
-            "no model inference, training, or normal threshold fitting executed",
+            (
+                "no model inference, training, or normal threshold fitting "
+                "executed"
+            ),
         ],
     )
     write(output / "metrics.json", metrics)
@@ -372,7 +389,10 @@ def main(argv=None):
     parser.add_argument(
         "--inference-root",
         type=Path,
-        help="Optional relocated inference directory with the same sealed contents",
+        help=(
+            "Optional relocated inference directory with the same sealed "
+            "contents"
+        ),
     )
     args = parser.parse_args(argv)
     reassess(

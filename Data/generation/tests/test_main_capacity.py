@@ -1,4 +1,6 @@
-"""Capacity estimates are distinct from the unchanged actual reserve and scratch guard."""
+"""Capacity estimates are distinct from the unchanged actual reserve and
+scratch guard.
+"""
 
 from types import SimpleNamespace
 

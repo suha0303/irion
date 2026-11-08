@@ -1,4 +1,6 @@
-"""Logged profile extraction with explicitly labelled, editable cell-count estimates."""
+"""Logged profile extraction with explicitly labelled, editable cell-count
+estimates.
+"""
 
 import math
 import re
@@ -6,7 +8,10 @@ import re
 from .profiles import eligibility
 
 REVISION = "logged-profile-v2"
-ARDU_MATRIX = "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.0/libraries/AP_Motors/AP_MotorsMatrix.cpp"
+ARDU_MATRIX = (
+    "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.0/"
+    "libraries/AP_Motors/AP_MotorsMatrix.cpp"
+)
 ARDU_PARAMS = (
     "https://ardupilot.org/copter/docs/parameters-Copter-stable-V4.4.0.html"
 )
@@ -36,7 +41,8 @@ def suggest(audit):
     evidence, reasons, candidates = {}, {}, {}
     histories = audit.get("parameter_values", {})
 
-    # Legacy inventories lost changed-parameter information; never use them as proof.
+    # Legacy inventories lost changed-parameter information; never use them as
+    # proof.
     def parameter(name):
         values = histories.get(name, [])
         if (
@@ -94,7 +100,8 @@ def suggest(audit):
             and parameter("FRAME_CLASS") == 1
             and parameter("FRAME_TYPE") == 1
         ):
-            # Standard Quad X: motor 1 FR, 2 RL, 3 FL, 4 RR. Never channel-count inference.
+            # Standard Quad X: motor 1 FR, 2 RL, 3 FL, 4 RR. Never channel-count
+            # inference.
             positions = dict(
                 front_right=33, rear_left=34, front_left=35, rear_right=36
             )
@@ -114,7 +121,10 @@ def suggest(audit):
                 put(
                     "motor_channels",
                     {pos: v[0] for pos, v in mapped.items()},
-                    "FRAME_CLASS=1 / FRAME_TYPE=1 + SERVOx_FUNCTION; ArduCopter 4.4.0 표준 Quad X",
+                    (
+                        "FRAME_CLASS=1 / FRAME_TYPE=1 + SERVOx_FUNCTION; "
+                        "ArduCopter 4.4.0 표준 Quad X"
+                    ),
                     ARDU_MATRIX,
                 )
         unique_instance("imu_instance", "IMU")
@@ -137,18 +147,26 @@ def suggest(audit):
                 put(
                     "imu_instance",
                     core_imus[primary[0]],
-                    f"전체 로그 XKF4.PI={primary[0]} 고정 / EK3_IMU_MASK={int(mask)} / AHRS_EKF_TYPE=3",
-                    "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.0/libraries/AP_NavEKF3/AP_NavEKF3.cpp",
+                    (
+                        f"전체 로그 XKF4.PI={primary[0]} 고정 / "
+                        f"EK3_IMU_MASK={int(mask)} / AHRS_EKF_TYPE=3"
+                    ),
+                    (
+                        "https://github.com/ArduPilot/ardupilot/blob/Copter-"
+                        "4.4.0/libraries/AP_NavEKF3/AP_NavEKF3.cpp"
+                    ),
                 )
             elif len(primary) > 1:
                 profile.pop("imu_instance", None)
                 evidence.pop("imu_instance", None)
                 reasons["imu_instance"] = (
-                    f"사용한 추정기 코어가 {primary}로 바뀝니다. 보존 구간과 분석할 IMU를 확인하세요. 자동 혼합하지 않습니다."
+                    f"사용한 추정기 코어가 {primary}로 바뀝니다. 보존 구간과 분석할 IMU를 확인하세요. "
+                    f"자동 혼합하지 않습니다."
                 )
         unique_instance("battery_instance", "BAT")
         if audit.get("counts", {}).get("RCOU", 0):
-            # BIN RCOU is one channel array, not a selectable MAVLink output bank.
+            # BIN RCOU is one channel array, not a selectable MAVLink output
+            # bank.
             put(
                 "actuator_instance",
                 0,
@@ -177,9 +195,12 @@ def suggest(audit):
         reasons["series_cells"] = (
             "셀 수를 하나로 추정할 전압 근거가 부족하거나 설정이 충돌합니다."
         )
-        # This is an application heuristic under a 4.2 V-class lithium assumption,
-        # not an ArduPilot cell-count formula or a measured hardware specification.
-        # BAT ranges aggregate instances: use them only for a single, matched battery.
+        # This is an application heuristic under a 4.2 V-class lithium
+        # assumption,
+        # not an ArduPilot cell-count formula or a measured hardware
+        # specification.
+        # BAT ranges aggregate instances: use them only for a single, matched
+        # battery.
         voltage = audit.get("ranges", {}).get("BAT.Volt", [])
         bounds = {
             "MOT_BAT_VOLT_MAX": (4.0, 4.3),
@@ -218,7 +239,10 @@ def suggest(audit):
             if len(options) == 1:
                 n = options[0]
                 source = (
-                    f"전압 기반 {n}S 추정 · BAT.Volt {voltage[0]:.2f}–{voltage[1]:.2f} V; "
+                    (
+                        f"전압 기반 {n}S 추정 · BAT.Volt "
+                        f"{voltage[0]:.2f}–{voltage[1]:.2f} V; "
+                    )
                     + ", ".join(
                         f"{key}={value:g} V" for key, value in settings.items()
                     )
@@ -228,7 +252,9 @@ def suggest(audit):
                 evidence["series_cells"].update(
                     status="estimated",
                     method="voltage-consistency-v1",
-                    assumption="4.2 V-class lithium battery; chemistry not verified",
+                    assumption=(
+                        "4.2 V-class lithium battery; chemistry not verified"
+                    ),
                     voltage_range_v=voltage,
                     parameters=settings,
                     per_cell_bounds_v=bounds,
@@ -274,8 +300,10 @@ def suggest(audit):
                     prefix + "_CAPACITY (mAh → Ah)",
                     PX4_PARAMS,
                 )
-        # PX4 output routing/mixer semantics vary by board/version. Expose parameters
-        # for review; do not equate output instance zero with a physical MAIN connector.
+        # PX4 output routing/mixer semantics vary by board/version. Expose
+        # parameters
+        # for review; do not equate output instance zero with a physical MAIN
+        # connector.
         reasons["motor_channels"] = (
             "PX4 출력 포트·기능과 모터 위치의 연결을 확인하세요. 채널 번호만으로 위치를 추정하지 않습니다."
         )
@@ -309,5 +337,8 @@ def suggest(audit):
         health="unknown",
         input_fields_present=not audit.get("missing_candidate_fields"),
         parameter_conflicts={k: v for k, v in histories.items() if len(v) > 1},
-        note="기록된 설정과 전압 기반 추정값을 구분해 표시합니다. 셀 수는 바로 수정할 수 있습니다. 건강 상태·기체 동일성은 추정하지 않습니다.",
+        note=(
+            "기록된 설정과 전압 기반 추정값을 구분해 표시합니다. 셀 수는 바로 수정할 수 있습니다. 건강 상태·기체 동일성은 "
+            "추정하지 않습니다."
+        ),
     )

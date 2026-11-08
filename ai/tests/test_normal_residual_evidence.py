@@ -1,4 +1,6 @@
-"""Normal evidence can replay calibration without model inference or development truth."""
+"""Normal evidence can replay calibration without model inference or
+development truth.
+"""
 
 import shutil
 from contextlib import nullcontext
@@ -99,7 +101,8 @@ def test_calibration_evidence_is_exact_normal_only(
             np.testing.assert_array_equal(
                 saved["physical_target_scale"], [1.0, 2.0, 3.0, 16.0]
             )
-        # A new attempt may reuse the completed normal fit, but must replay every
+        # A new attempt may reuse the completed normal fit, but must replay
+        # every
         # development run again. The old outputs are never overwritten.
         reused_out = tmp_path / "fresh-compute"
         write(reused_out / "models/persistence/integrity.json", {})

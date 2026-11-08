@@ -1,4 +1,6 @@
-"""One finite all-model normal-only sensitivity gate before fresh full calibration."""
+"""One finite all-model normal-only sensitivity gate before fresh full
+calibration.
+"""
 
 import gc
 import hashlib
@@ -41,7 +43,9 @@ def array_signature(arrays):
 
 
 def predict_blocks(predictor, arrays, size, progress, failure_path=None):
-    """Match replay packing: restart batches at each independently selected block."""
+    """Match replay packing: restart batches at each independently selected
+    block.
+    """
     result, calls = [], []
     indices = arrays["selection_index"]
     for block in dict.fromkeys(indices.tolist()):
@@ -99,7 +103,9 @@ def run_sensitivity_gate(
     predict_device,
     backend_factory,
 ):
-    """No development data/truth, fitting weights, reuse, retry, or policy adjustment."""
+    """No development data/truth, fitting weights, reuse, retry, or policy
+    adjustment.
+    """
     validate_policy(policy)
     dataset = root / "dataset"
     validate_plan(plan, dataset / "manifest.json")
@@ -147,7 +153,10 @@ def run_sensitivity_gate(
         development_inference_started=False,
         diagnostic_calibration_reused_for_full=False,
         automatic_retry=False,
-        limitation="Normal sampled-block numerical sensitivity only; not final detector accuracy or live certification",
+        limitation=(
+            "Normal sampled-block numerical sensitivity only; not final "
+            "detector accuracy or live certification"
+        ),
     )
     summary_path = folder / "summary.json"
     write(summary_path, summary)
@@ -239,7 +248,9 @@ def run_sensitivity_gate(
                         groups,
                     )
                     fitted.update(
-                        purpose="diagnostic_only_never_reuse_for_full_calibration",
+                        purpose=(
+                            "diagnostic_only_never_reuse_for_full_calibration"
+                        ),
                         bundle_integrity_sha256=sha(
                             out / "models" / name / "integrity.json"
                         ),

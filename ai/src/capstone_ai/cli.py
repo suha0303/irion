@@ -77,7 +77,10 @@ def output(engine, tail, out, mode, evidence):
         },
         "contract_sha256": sha(
             ROOT
-            / "docs/specifications/CODEX_REBUILD_PACKAGE_V4_2/00_SHARED_DATA_CONTRACT.md"
+            / (
+                "docs/specifications/CODEX_REBUILD_PACKAGE_V4_2/00_SHARED_"
+                "DATA_CONTRACT.md"
+            )
         ),
         "python": sys.version,
         "partial_stream_bytes": len(tail.stream.buffer),
@@ -88,7 +91,8 @@ def output(engine, tail, out, mode, evidence):
 
 
 def live_evidence_verified(mode, initial_status, grew, closed):
-    # The producer enters mission after confirming airborne/OFFBOARD and command ACKs.
+    # The producer enters mission after confirming airborne/OFFBOARD and command
+    # ACKs.
     active = {
         "airborne",
         "mission",

@@ -1,4 +1,6 @@
-"""Local worker protocol. All operations execute on CPU without server access."""
+"""Local worker protocol. All operations execute on CPU without server
+access.
+"""
 
 import argparse
 import json

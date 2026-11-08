@@ -50,7 +50,9 @@ class PublicationPathError(ValueError):
 
 
 def pointer(path, value):
-    """Atomic owned pointer update; archive previous content instead of erasing it."""
+    """Atomic owned pointer update; archive previous content instead of
+    erasing it.
+    """
     path = Path(path).absolute()
     if ".." in path.parts or any(p.is_symlink() for p in (path, *path.parents)):
         raise ValueError("Regular AI-owned handoff path required")
@@ -104,7 +106,8 @@ def publish(
     handoff,
     fixture_only=False,
 ):
-    """Return (exit_code, receipt); status READY is reserved for actual verified native6.
+    """Return (exit_code, receipt); status READY is reserved for actual
+    verified native6.
 
     Pair report paths are explicit owner inputs. There is no directory scan or
     guessed filename. Every output snapshot is new; old attempts are preserved.
@@ -153,7 +156,10 @@ def publish(
             .startswith(("FAILED", "STOPPED"))
         ):
             raise ValueError(
-                "Native development stopped/failed; preserve evidence and stop the finite flow"
+                (
+                    "Native development stopped/failed; preserve evidence and "
+                    "stop the finite flow"
+                )
             )
         check_native_completion(complete, fixture=fixture_only)
         native = json_file(native_policy)
@@ -170,7 +176,10 @@ def publish(
                 != ROOT / "simulation/artifacts/runtime-manifest.json"
             ):
                 raise ValueError(
-                    "Publish against current producer files, not a historical copy"
+                    (
+                        "Publish against current producer files, not a "
+                        "historical copy"
+                    )
                 )
             installed = (
                 ROOT / "simulation/profiles/collection/joint-phase-policy.json"
@@ -196,7 +205,10 @@ def publish(
             or complete.get("policy_sha256") != policy_hash
         ):
             raise ValueError(
-                "Final native completion/current producer/source/runtime/policy mismatch"
+                (
+                    "Final native completion/current "
+                    "producer/source/runtime/policy mismatch"
+                )
             )
         source = json_file(source_manifest)
         for member in (
@@ -206,7 +218,10 @@ def publish(
         ):
             if member not in source.get("files", {}):
                 raise ValueError(
-                    "Native interface source is absent from final producer manifest"
+                    (
+                        "Native interface source is absent from final producer "
+                        "manifest"
+                    )
                 )
             if (
                 not fixture_only
@@ -232,11 +247,17 @@ def publish(
                 )
             ):
                 raise ValueError(
-                    "Reviewed official phase/pair CLI is absent from installed source"
+                    (
+                        "Reviewed official phase/pair CLI is absent from "
+                        "installed source"
+                    )
                 )
         if pair_checks is None:
             raise Pending(
-                "Owner-provided three actual native pair report paths are missing"
+                (
+                    "Owner-provided three actual native pair report paths are "
+                    "missing"
+                )
             )
         if len(pair_checks) != 3:
             raise ValueError(
@@ -264,7 +285,10 @@ def publish(
                 receipt_min_offset_us=0,
                 receipt_max_offset_us=native["maximum_origin_notice_delay_us"],
             ),
-            origin_delta_meaning="Actual weather origin minus actual path-consumption origin within each run; not equality of absolute starts across runs",
+            origin_delta_meaning=(
+                "Actual weather origin minus actual path-consumption origin "
+                "within each run; not equality of absolute starts across runs"
+            ),
         )
         members, comparisons, ids = [], [], set()
         for report_path in pair_checks:
@@ -277,7 +301,10 @@ def publish(
                 )["run_id"]
                 if identity in ids:
                     raise ValueError(
-                        "Development pair control/raw reused; six distinct runs required"
+                        (
+                            "Development pair control/raw reused; six distinct "
+                            "runs required"
+                        )
                     )
                 ids.add(identity)
                 members.append(
@@ -292,7 +319,10 @@ def publish(
             )
         if ids != set(complete["actual_run_ids"]):
             raise ValueError(
-                "Native completion membership differs from the three actual pairs"
+                (
+                    "Native completion membership differs from the three "
+                    "actual pairs"
+                )
             )
         if (
             sha(source_manifest) != source_hash

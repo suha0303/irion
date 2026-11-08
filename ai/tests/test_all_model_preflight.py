@@ -1,4 +1,6 @@
-"""No model may calibrate or replay before every model passes common preflight."""
+"""No model may calibrate or replay before every model passes common
+preflight.
+"""
 
 import shutil
 from contextlib import nullcontext

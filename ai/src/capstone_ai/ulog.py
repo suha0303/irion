@@ -98,7 +98,8 @@ def parity(run, out):
     unmatched: Counter[str] = Counter()
     max_error = 0.0
     errors = []
-    # Raw JSON uses nine significant digits. Tolerance fixed before parity execution.
+    # Raw JSON uses nine significant digits. Tolerance fixed before parity
+    # execution.
     atol, rtol = 1e-6, 1e-6
     for line in (
         (run / "observations/streams.jsonl")
@@ -150,8 +151,14 @@ def parity(run, out):
         "atol": atol,
         "rtol": rtol,
         "errors": errors[:20],
-        "availability_policy": "ULog decode uses source_replay sample time; never claims original capture arrival",
-        "scope": "same-timestamp ULog/raw mapped values only; ULog and captured stream have different sampling cadence",
+        "availability_policy": (
+            "ULog decode uses source_replay sample time; never claims original "
+            "capture arrival"
+        ),
+        "scope": (
+            "same-timestamp ULog/raw mapped values only; ULog and captured "
+            "stream have different sampling cadence"
+        ),
     }
     dump(out, result)
     return result

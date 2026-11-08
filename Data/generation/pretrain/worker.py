@@ -137,7 +137,10 @@ def execute(request):
                 )
                 if result["output_hashes"] != expected["output_hashes"]:
                     raise ValueError(
-                        "Parallel canonical result differs from prior serial result"
+                        (
+                            "Parallel canonical result differs from prior "
+                            "serial result"
+                        )
                     )
             result = dict(
                 frames=result["frames"],

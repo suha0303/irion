@@ -38,7 +38,10 @@ def init(
     task = pilot45.task_path(HOME / "tasks" / name)
     if task.exists():
         raise ValueError(
-            "Existing flow preserved; inspect/resume it instead of duplicate submission"
+            (
+                "Existing flow preserved; inspect/resume it instead of "
+                "duplicate submission"
+            )
         )
     previous, draft = pilot45.task_path(previous), pilot45.task_path(draft)
     task.mkdir(parents=True)
@@ -352,7 +355,10 @@ def worker(task):
                     write(task / "operator/state.json", state)
                 if time.monotonic() >= deadline:
                     raise RuntimeError(
-                        "Finite dependency wait6h exhausted; no automatic LLM resumption"
+                        (
+                            "Finite dependency wait6h exhausted; no automatic "
+                            "LLM resumption"
+                        )
                     )
                 time.sleep(30)
             environment = task / "native-environment.json"
@@ -400,7 +406,10 @@ def worker(task):
                 )
                 if code:
                     raise RuntimeError(
-                        "Final stable-producer admission regression failed; no flight"
+                        (
+                            "Final stable-producer admission regression "
+                            "failed; no flight"
+                        )
                     )
             elif read(task / "final-admission-regression.json")["exit_code"]:
                 raise RuntimeError(
@@ -501,8 +510,21 @@ def worker(task):
                 "# 예비45 종료 보고\n\n상태: "
                 + state["status"]
                 + "\n\n"
-                + f"계획45, 완료원본{q['completed_raw']}, 처리/검산{q['prepared_and_audited']}, 물리시도{q['physical_attempts']}, 실패시도{q['failed_physical_attempts']}. 온라인가용{q['online_available']}, run가용{q['run_available']}. 유효target {q['valid_target_seconds']}초, 초기100이후 {q['run_post_initial100_seconds']}초.\n\n"
-                + "실패/불가용·run별유효길이·RSS·저장량·실제unit/PID종료·소켓·잠금반납 근거는 completion.json과각task quality.json/ledger.json에있다. 기존launcher실패도 integration 장부에보존했다. 학습·보정·모델forward·성능평가·GPU·다음회차는실행하지않고정지했다.\n",
+                + (
+                    f"계획45, 완료원본{q['completed_raw']}, "
+                    f"처리/검산{q['prepared_and_audited']}, "
+                    f"물리시도{q['physical_attempts']}, "
+                    f"실패시도{q['failed_physical_attempts']}. "
+                    f"온라인가용{q['online_available']}, run가용{q['run_available']}. "
+                    f"유효target {q['valid_target_seconds']}초, 초기100이후 "
+                    f"{q['run_post_initial100_seconds']}초.\n\n"
+                )
+                + (
+                    "실패/불가용·run별유효길이·RSS·저장량·실제unit/PID종료·소켓·잠금반납 근거는 "
+                    "completion.json과각task quality.json/ledger.json에있다. "
+                    "기존launcher실패도 integration 장부에보존했다. "
+                    "학습·보정·모델forward·성능평가·GPU·다음회차는실행하지않고정지했다.\n"
+                ),
                 encoding="utf-8",
             )
         except BaseException as exc:

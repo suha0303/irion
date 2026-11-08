@@ -1,4 +1,6 @@
-"""Operator CLI: one finite local controller, independent Slurm job, read-only display."""
+"""Operator CLI: one finite local controller, independent Slurm job,
+read-only display.
+"""
 
 import argparse
 import fcntl
@@ -174,7 +176,8 @@ def launch(action="run", existing=None):
             or not (task / "remote.json").exists()
         ):
             raise ValueError("Existing managed task required")
-        # Only a result recovery controller is started; it never submits a Slurm job.
+        # Only a result recovery controller is started; it never submits a Slurm
+        # job.
         name = task.name + "-recover-" + time.strftime("%H%M%S")
     state = task / "controller.json"
     if action == "run":
@@ -300,7 +303,8 @@ def upload(root, workspace, progress):
     ).split()[0]
     if check != digest:
         raise ValueError("Remote archive hash mismatch")
-    # This archive was generated solely from validated regular relative paths above.
+    # This archive was generated solely from validated regular relative paths
+    # above.
     ssh(
         "mkdir "
         + shlex.quote(str(root))
@@ -337,13 +341,19 @@ def wait_and_fetch(task, cfg, meta, progress):
             accounting_gaps += 1
             if accounting_gaps >= 5:
                 raise RuntimeError(
-                    "Job not in queue but accounting remains unknown; no submission retry. Use recover later."
+                    (
+                        "Job not in queue but accounting remains unknown; no "
+                        "submission retry. Use recover later."
+                    )
                 )
         else:
             accounting_gaps = 0
         if time.monotonic() > deadline:
             raise TimeoutError(
-                "Controller wait budget exhausted; remote job is not cancelled. Use recover."
+                (
+                    "Controller wait budget exhausted; remote job is not "
+                    "cancelled. Use recover."
+                )
             )
         time.sleep(30)  # Program only; no GPT/API/LLM calls.
     progress.update(stage="download", remote_progress=None)
@@ -398,7 +408,10 @@ def wait_and_fetch(task, cfg, meta, progress):
         raise ValueError("Job not successfully released")
     if (output / "evaluation").exists():
         raise ValueError(
-            "Evaluation output exists; preserve it and do not repeat evaluation automatically"
+            (
+                "Evaluation output exists; preserve it and do not repeat "
+                "evaluation automatically"
+            )
         )
     if snap.get("remaining_own_job_ids"):
         raise ValueError(
@@ -474,13 +487,16 @@ def _worker_locked(task, action):
             raise ValueError("Unknown action")
         wait_and_fetch(task, cfg, meta, progress)
     except BaseException as exc:
-        # Never cancel an independently running Slurm job on a local transport failure.
+        # Never cancel an independently running Slurm job on a local transport
+        # failure.
         progress.update(
             status="FAILED_OR_UNKNOWN_STOPPED",
             reason=f"{type(exc).__name__}: {exc}",
             remote_job_cancelled=False,
             automatic_retry=False,
-            recovery="recover polls/fetches the same remote job only; never submits",
+            recovery=(
+                "recover polls/fetches the same remote job only; never submits"
+            ),
         )
         raise
 
@@ -509,7 +525,10 @@ def render(task):
     lines = [
         "X500 / GPU104 / LSTM + Transformer + Persistence + Ridge / seed17",
         f"상태 {state.get('status')} {'(기록 오래됨: 현재 실행 상태 미확인)' if stale else ''}",
-        f"job {state.get('job_id', '-')} · p02 / DIS01 / GPU1 · 경과 {duration(state.get('elapsed_s'))}",
+        (
+            f"job {state.get('job_id', '-')} · p02 / DIS01 / GPU1 · 경과 "
+            f"{duration(state.get('elapsed_s'))}"
+        ),
         f"단계 {current.get('stage', '-')} · 모델 {current.get('model') or '-'}",
     ]
     if current.get("stage") == "upload":
@@ -531,7 +550,10 @@ def render(task):
         "checkpoint",
     }:
         lines.append(
-            f"epoch {current['epoch']}/{current['epochs']} · batch {current.get('batch', '-')}/{current.get('batches', '-')}"
+            (
+                f"epoch {current['epoch']}/{current['epochs']} · batch "
+                f"{current.get('batch', '-')}/{current.get('batches', '-')}"
+            )
         )
     lines.append(
         "현재 단계 잔여 "
@@ -544,13 +566,20 @@ def render(task):
         "checkpoint",
     }:
         lines.append(
-            f"train loss {current['train_loss']:.6g} · validation {current.get('validation_loss', '미측정')} · best epoch {current.get('best_epoch', '-')}"
+            (
+                f"train loss {current['train_loss']:.6g} · validation "
+                f"{current.get('validation_loss', '미측정')} · best epoch "
+                f"{current.get('best_epoch', '-')}"
+            )
         )
     if current.get("steps_per_s") is not None:
         lines.append(f"학습 처리율 {current['steps_per_s']:.2f} step/s")
     if current.get("gpu_reserved_bytes") is not None:
         lines.append(
-            f"PyTorch GPU 예약 메모리 {current['gpu_reserved_bytes'] / 1024**3:.2f} GiB"
+            (
+                f"PyTorch GPU 예약 메모리 "
+                f"{current['gpu_reserved_bytes'] / 1024**3:.2f} GiB"
+            )
         )
     if state.get("queue"):
         lines.append("Slurm " + state["queue"])
@@ -603,7 +632,10 @@ def main():
     a = p.parse_args()
     if a.command == "menu":
         print(
-            "1 학습 시작 / 2 진행 화면 / 3 기존 job 결과 인수 재개 / 4 해당 job 취소 / 5 SSH 연결 / 0 종료"
+            (
+                "1 학습 시작 / 2 진행 화면 / 3 기존 job 결과 인수 재개 / 4 해당 job 취소 / 5 SSH "
+                "연결 / 0 종료"
+            )
         )
         choice = input("선택: ").strip()
         a.command = {

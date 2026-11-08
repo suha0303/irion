@@ -1,4 +1,5 @@
-"""Aircraft/model-specific empirical residual thresholds; no detection guarantees.
+"""Aircraft/model-specific empirical residual thresholds; no detection
+guarantees.
 
 Normal calibration flights are disjoint from fitting/development/evaluation. A
 window count is never presented as a count of independent flights.
@@ -163,13 +164,19 @@ def fit(root, model_id, manifests, *, bundle, adapted=None, quantile=0.99):
     bindings = [r["calibration_binding"] for r in results]
     if any(b != bindings[0] for b in bindings):
         raise ValueError(
-            "Calibration flights require identical clock and preprocessing policy"
+            (
+                "Calibration flights require identical clock and preprocessing "
+                "policy"
+            )
         )
     arrays = [r["scoring"]["scores"] for r in results]
     minimum = 20 if model_id.startswith("forecast_") else 1
     if any(len(a) < minimum for a in arrays):
         raise ValueError(
-            f"Each calibration flight needs at least {minimum} valid scoring observations"
+            (
+                f"Each calibration flight needs at least {minimum} valid "
+                f"scoring observations"
+            )
         )
     per_flight = [
         float(np.quantile(a, quantile, method="higher")) for a in arrays
@@ -181,7 +188,10 @@ def fit(root, model_id, manifests, *, bundle, adapted=None, quantile=0.99):
         model_id=model_id,
         profile_id=flights[0]["profile"]["id"],
         created_at=time.time(),
-        method="per-flight empirical quantile, then across-flight empirical quantile",
+        method=(
+            "per-flight empirical quantile, then across-flight empirical "
+            "quantile"
+        ),
         quantile=quantile,
         threshold=threshold,
         source_sha256=[m["source_sha256"] for m in flights],
@@ -285,7 +295,9 @@ def annotate(result, metadata, root):
 
 
 def admit_completed(manifest, output, *, role, health, evidence):
-    """New declared role/version; original recorded flight and hash stay immutable."""
+    """New declared role/version; original recorded flight and hash stay
+    immutable.
+    """
     import shutil
 
     metadata, values, _ = load(manifest)

@@ -1,4 +1,6 @@
-"""Current-battery raw admission and two19-signal exports; no flight or model fit."""
+"""Current-battery raw admission and two19-signal exports; no flight or model
+fit.
+"""
 
 import argparse
 import copy
@@ -41,7 +43,8 @@ CONSUMER = {
     "observations/diagnostics.jsonl",
     "reference/source_lock.json",
 }
-# Historical synthetic fixture only. Actual admission binds the producer revision.
+# Historical synthetic fixture only. Actual admission binds the producer
+# revision.
 PROFILE_REVISION = "vtc6-4s4p-cmu-vah01-v1"
 
 
@@ -67,7 +70,10 @@ def ai_modules():
             .is_relative_to((ROOT / "ai").resolve())
         ):
             raise ValueError(
-                "Active AI19 sources required; sealed ctx6 package already imported"
+                (
+                    "Active AI19 sources required; sealed ctx6 package already "
+                    "imported"
+                )
             )
     return mapping, source, data, preprocessing
 
@@ -120,7 +126,10 @@ def lineage(row):
         not isinstance(p, str) or not p for p in previous
     ):
         raise ValueError(
-            "Explicit previous attempt identifiers must be a list of nonempty strings"
+            (
+                "Explicit previous attempt identifiers must be a list of "
+                "nonempty strings"
+            )
         )
     if parent is not None and (not isinstance(parent, str) or not parent):
         raise ValueError("Invalid parent attempt identity")
@@ -140,7 +149,9 @@ def lineage(row):
 
 
 def validate_lineage(rows):
-    """Connected families cannot cross partitions; both test roles share one partition."""
+    """Connected families cannot cross partitions; both test roles share one
+    partition.
+    """
     owners, seen = {}, set()
     for row in rows:
         keys = lineage(row)
@@ -335,10 +346,15 @@ def admit(selection, binding, *, policy_bundle=None, assessment_path=None):
 
 
 def mission_interval(run, *, policy_bundle=None, external_audit=None):
-    """Use actual operational timestamps, never feature quality or fault truth."""
+    """Use actual operational timestamps, never feature quality or fault
+    truth.
+    """
     if external_audit is not None and policy_bundle is None:
         raise ValueError(
-            "External native evidence requires its explicit generation/policy bundle"
+            (
+                "External native evidence requires its explicit "
+                "generation/policy bundle"
+            )
         )
     if policy_bundle is not None:
         ai_modules()
@@ -438,7 +454,10 @@ def replay(consumer, config, *, expected_profile_revision=None):
         original="vtc6_4s4p",
         validation_only="vtc6_4s4p_r3_long15",
         metadata_sha256=sha(consumer / "observations/metadata.json"),
-        reason="AI shared mapper validates unchanged4S4P12Ah nameplate; current producer/catalog separately bound",
+        reason=(
+            "AI shared mapper validates unchanged4S4P12Ah nameplate; current "
+            "producer/catalog separately bound"
+        ),
     )
     return engine, alias
 
@@ -456,7 +475,9 @@ def online_arrays(engine, mission=None):
 
 
 def run_array(engine, mission=None):
-    """Retain every mission frame; canonical takeoff/landing evidence stays separate."""
+    """Retain every mission frame; canonical takeoff/landing evidence stays
+    separate.
+    """
     mapping, _, _, _ = ai_modules()
     frames = engine.frames
     if mission is None or mission.get("policy") != MISSION_POLICY:
@@ -525,7 +546,10 @@ def run_array(engine, mission=None):
             f["operating_state"] == "airborne" and f["time_us"] >= end
             for f in frames
         ),
-        takeoff_landing_evidence="All original frames, quality and times remain in canonical evidence",
+        takeoff_landing_evidence=(
+            "All original frames, quality and times remain in canonical "
+            "evidence"
+        ),
     )
     if reasons:
         return None, report
@@ -544,7 +568,9 @@ def reference(path, base):
 
 
 def write_fit(output, records, engines):
-    """Only unique valid airborne normal_train frames determine online statistics."""
+    """Only unique valid airborne normal_train frames determine online
+    statistics.
+    """
     from capstone_ai.dataset import feature_transform
 
     mapping, _, data, _ = ai_modules()
@@ -556,7 +582,10 @@ def write_fit(output, records, engines):
     ):
         return dict(
             status="NOT_FIT_READY",
-            reason="independent normal_train and normal_validation with arrived targets required",
+            reason=(
+                "independent normal_train and normal_validation with arrived "
+                "targets required"
+            ),
         )
     files = {}
     for role in ("normal_train", "normal_validation"):
@@ -708,10 +737,12 @@ def prepare(selection_path, output):
     archive_root.mkdir(parents=True, exist_ok=False)
     consumer_root.mkdir(parents=True, exist_ok=False)
     c = collector()
-    # The reused extractor imports the preserved contract registry, not its engine.
+    # The reused extractor imports the preserved contract registry, not its
+    # engine.
     from .common import package_imports
 
-    # RAW_FILES registry imports are CPU-only. Keep the active AI engine in sys.modules.
+    # RAW_FILES registry imports are CPU-only. Keep the active AI engine in
+    # sys.modules.
     package_imports()
     from . import archive as archive_module
 
@@ -847,7 +878,10 @@ def prepare(selection_path, output):
                 for r in records
                 if r["run_health"]["status"] == "unavailable"
             ],
-            run_manifest_policy="One manifest per role; sharedtestpairedlineage retained in index; never relabel or merge differing roles to bypass loader",
+            run_manifest_policy=(
+                "One manifest per role; sharedtestpairedlineage retained in "
+                "index; never relabel or merge differing roles to bypass loader"
+            ),
             no_training_or_scoring=True,
             legacy_ctx6_converted=False,
         )
@@ -943,7 +977,10 @@ def check_export(output):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Currentbattery raw -> history19 online + fullrun19 inputs; no flight/training"
+        description=(
+            "Currentbattery raw -> history19 online + fullrun19 inputs; no "
+            "flight/training"
+        )
     )
     sub = parser.add_subparsers(dest="action", required=True)
     p = sub.add_parser("prepare")
@@ -961,7 +998,10 @@ def main(argv=None):
             json.dumps(
                 dict(
                     status="CURRENT_AI19_BINDING_AND_IMPORTS_CHECKED",
-                    scope="producer hashes and AI19 imports only; actual two-view intake is separate",
+                    scope=(
+                        "producer hashes and AI19 imports only; actual "
+                        "two-view intake is separate"
+                    ),
                     actual_two_view_admission_done=False,
                     producer=producer_binding(),
                     flight_started=False,

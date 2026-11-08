@@ -92,7 +92,8 @@ def test_file_write_wakes_wait_without_timeout(tmp_path):
     try:
         assert not waiter.wait(0)
         (obs / "streams.jsonl").write_bytes(b"partial row")
-        # Event is already pending: no timing-sensitive thread scheduling assertion.
+        # Event is already pending: no timing-sensitive thread scheduling
+        # assertion.
         start = time.monotonic()
         assert waiter.wait(1)
         assert time.monotonic() - start < 0.5
@@ -212,7 +213,8 @@ def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(
         adopt_shadow(shadow, CONFIG, META, checkpoint)
     shadow.poll()
     past = copy.deepcopy(primary.engine.windows)
-    # Shadow may advance farther; issued windows at earlier origins must be unchanged.
+    # Shadow may advance farther; issued windows at earlier origins must be
+    # unchanged.
     append(es[cut:], 64000000, len(es))
     shadow.poll()
     engine, _ = adopt_shadow(shadow, CONFIG, META, checkpoint)

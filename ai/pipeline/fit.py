@@ -1,4 +1,6 @@
-"""R1 training transport; the existing model, loss, optimizer math and scaler are reused."""
+"""R1 training transport; the existing model, loss, optimizer math and scaler
+are reused.
+"""
 
 import copy
 import hashlib
@@ -27,7 +29,9 @@ from .control import best_update, sha, write
 
 
 def batch(data, indices, device):
-    """Slice host arrays first. Never convert a whole split to a device tensor."""
+    """Slice host arrays first. Never convert a whole split to a device
+    tensor.
+    """
     return [
         torch.as_tensor(data[k][indices], dtype=torch.float32, device=device)
         for k in ("X", "C", "Y")
@@ -68,7 +72,8 @@ def neural_fit(
     stop_after=None,
     diagnostic_prefix=None,
 ):
-    # Covers construction/.to, train, validation, export, and restored-model inference.
+    # Covers construction/.to, train, validation, export, and restored-model
+    # inference.
     with backend_scope(config):
         return _fit(
             config,
@@ -92,7 +97,9 @@ def _fit(
     stop_after,
     diagnostic_prefix,
 ):
-    """Only LSTM; research caller fixes config, lifecycle caller fixes its separate fixture."""
+    """Only LSTM; research caller fixes config, lifecycle caller fixes its
+    separate fixture.
+    """
     folder = Path(folder)
     device = device_for(config["device"])
     if not len(train["X"]) or not len(validation["X"]):
@@ -136,7 +143,8 @@ def _fit(
             )
         ]
         if diagnostic_prefix:
-            # Re-read actual restored objects and generators, not a copy of the input checkpoint.
+            # Re-read actual restored objects and generators, not a copy of the
+            # input checkpoint.
             restored_boundary = {
                 **checkpoint,
                 **training_state(model, optimizer, device),

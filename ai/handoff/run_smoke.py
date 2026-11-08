@@ -97,7 +97,8 @@ def environment(root, device):
         != policy["torch_release"]
     ):
         raise ValueError("torch " + policy["torch_release"] + " required")
-    # Use the extracted sources even if the interpreter has another editable install.
+    # Use the extracted sources even if the interpreter has another editable
+    # install.
     sys.path.insert(0, str(root / "ai/src"))
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     import torch
@@ -262,7 +263,9 @@ def main():
                     for p in output.rglob("*")
                     if p.is_file()
                 },
-                "next_gate": "inspect GPU success before preliminary/main training",
+                "next_gate": (
+                    "inspect GPU success before preliminary/main training"
+                ),
             },
         )
         print("PASS; " + str(output / "result.json"), flush=True)

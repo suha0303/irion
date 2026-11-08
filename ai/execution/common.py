@@ -217,7 +217,8 @@ def _cache_credit(folder, version, current):
             0, min(current, inactive, file_bytes) - dirty - writeback - shmem
         )
         result["basis"] = (
-            "max(0, min(current,inactive_file,file_cache)-dirty-writeback-shmem)"
+            "max(0, "
+            "min(current,inactive_file,file_cache)-dirty-writeback-shmem)"
         )
     except (OSError, ValueError, KeyError) as exc:
         result["stats_error"] = str(exc)
@@ -228,7 +229,8 @@ def memory_snapshot(proc_root=Path("/proc")):
     """One read-only, conservative host/cgroup admission observation.
 
     File cache charged by integrity reads is potentially reclaimable, not RSS.
-    This is an estimate, never a reservation; host/ancestor caps and the caller's
+    This is an estimate, never a reservation; host/ancestor caps and the
+    caller's
     reserve still apply. The kernel's limits and reclaim policy are unchanged.
     """
     result = dict(
@@ -275,7 +277,8 @@ def memory_snapshot(proc_root=Path("/proc")):
                     if limit_path.exists() or current_path.exists():
                         row = dict(path=str(folder), version=version)
                         result["cgroups"].append(row)
-                        # v2 root has current/stat but no limit; its bound is node MemAvailable.
+                        # v2 root has current/stat but no limit; its bound is
+                        # node MemAvailable.
                         if (
                             not limit_path.exists()
                             and folder == mount
@@ -321,7 +324,8 @@ def memory_snapshot(proc_root=Path("/proc")):
         result["available_bytes"] = available
     except (OSError, ValueError, KeyError, IndexError) as exc:
         result["errors"].append(f"{type(exc).__name__}: {exc}")
-        # Unknown limit/accounting is never permission to use unrestricted host RAM.
+        # Unknown limit/accounting is never permission to use unrestricted host
+        # RAM.
         result["available_bytes"] = 0
     return result
 

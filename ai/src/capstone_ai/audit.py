@@ -131,8 +131,15 @@ def audit(run, out):
         },
         "producer_lock_sha256": sha(run / "reference/source_lock.json"),
         "notes": [
-            "ULog availability cannot recover capture receiver timestamps; native audit is separate from C9.",
-            "Nominal energy denominator uses explicit configured 3.7 V/cell engineering reference; producer does not declare nominal cell voltage.",
+            (
+                "ULog availability cannot recover capture receiver timestamps; "
+                "native audit is separate from C9."
+            ),
+            (
+                "Nominal energy denominator uses explicit configured 3.7 "
+                "V/cell engineering reference; producer does not declare "
+                "nominal cell voltage."
+            ),
         ],
     }
     dump(out, result)

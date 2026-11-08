@@ -1,4 +1,6 @@
-"""Synthetic CPU data and mocked Slurm/SSH only; never submits or trains production data."""
+"""Synthetic CPU data and mocked Slurm/SSH only; never submits or trains
+production data.
+"""
 
 import json
 import os
@@ -549,7 +551,8 @@ def test_four_model_end_to_end_synthetic_cpu_and_fixed_development_evaluator(
         report["status"] == "REPORT_READY_STOPPED"
         and report["next_round_authorized"] is False
     )
-    # No evaluation rerun on an existing result, and failed release never admits truth.
+    # No evaluation rerun on an existing result, and failed release never admits
+    # truth.
     common.write(
         tmp_path / "release.json", dict(released=False, slurm_state="RUNNING")
     )

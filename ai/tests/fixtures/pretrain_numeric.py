@@ -1,4 +1,6 @@
-"""Analytical canonical fixtures only. No source observations, training or evaluator."""
+"""Analytical canonical fixtures only. No source observations, training or
+evaluator.
+"""
 
 import copy
 import json

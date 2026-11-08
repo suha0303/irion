@@ -141,16 +141,27 @@ class Runner:
         )
         if initial - snapshot["external_free_bytes"] > storage_cap:
             blocked(
-                f"Task external additional-space cap{storage_cap / 1e9:g}GB reached"
+                (
+                    f"Task external additional-space "
+                    f"cap{storage_cap / 1e9:g}GB reached"
+                )
             )
-        # Working-set RSS drives CPU admission; cgroup cache remains visible separately.
+        # Working-set RSS drives CPU admission; cgroup cache remains visible
+        # separately.
         floor_gb = self.config.get("min_available_ram_gb", 4)
         expanded = self.config.get("use_available_ram", False)
         if snapshot["available_bytes"] < floor_gb * 1_000_000_000 or (
             not expanded and snapshot["owned_tree_rss_bytes"] > 8_000_000_000
         ):
             blocked(
-                f"RAM limit: available={snapshot['available_bytes'] / 1e9:.3f}GB (min{floor_gb}), own RSS={snapshot['owned_tree_rss_bytes'] / 1e9:.3f}GB ({'fixed cap disabled' if expanded else 'max8'}); no new units admitted"
+                (
+                    f"RAM limit: "
+                    f"available={snapshot['available_bytes'] / 1e9:.3f}GB "
+                    f"(min{floor_gb}), own "
+                    f"RSS={snapshot['owned_tree_rss_bytes'] / 1e9:.3f}GB "
+                    f"({'fixed cap disabled' if expanded else 'max8'}); no new "
+                    f"units admitted"
+                )
             )
         if snapshot["external_free_bytes"] < 50_000_000_000:
             blocked("External free-space floor50GB")
@@ -193,7 +204,10 @@ class Runner:
         )
         if not estimate["allowed"]:
             raise ResourceBlocked(
-                f"{name}: requested{workers} workers exceeds memory admission; no silent downgrade"
+                (
+                    f"{name}: requested{workers} workers exceeds memory "
+                    f"admission; no silent downgrade"
+                )
             )
         folder = self.task / "units" / name
         folder.mkdir(parents=True)
@@ -235,7 +249,10 @@ class Runner:
                     self.update(
                         reason=failure,
                         status="DRAINING",
-                        memory_stop_policy="terminate owned CPU workers below1GB; kill after5s; no retry",
+                        memory_stop_policy=(
+                            "terminate owned CPU workers below1GB; kill "
+                            "after5s; no retry"
+                        ),
                     )
                     for key, (process, _, _) in active.items():
                         if key not in stopping and process.poll() is None:
@@ -254,7 +271,10 @@ class Runner:
                 key = row["run_id"]
                 attempts[key] = attempts.get(key, 0) + 1
                 if action == "extract" and Path(row["path"]).exists():
-                    failure = f"Refuse to overwrite existing extraction destination: {row['path']}"
+                    failure = (
+                        f"Refuse to overwrite existing extraction destination: "
+                        f"{row['path']}"
+                    )
                     break
                 if attempts[key] > 1:
                     verify(self.config["source_sha256"])
@@ -291,7 +311,9 @@ class Runner:
                     break
                 active[key] = (process, log, request)
             if failure:
-                exhausted = True  # Drain already launched units; never retry or submit queued units.
+                # Drain already launched units; never retry or submit queued
+                # units.
+                exhausted = True
             for key, (process, log, request) in list(active.items()):
                 code = process.poll()
                 if code is None:
@@ -305,7 +327,10 @@ class Runner:
                 except (json.JSONDecodeError, UnicodeDecodeError) as exc:
                     result = dict(reason=f"Invalid worker status: {exc}")
                 if code != 0 or result.get("status") != "COMPLETE":
-                    error = f"{key}: exit{code}: {result.get('reason', 'missing completion proof')}"
+                    error = (
+                        f"{key}: exit{code}: "
+                        f"{result.get('reason', 'missing completion proof')}"
+                    )
                     evidence = (
                         folder
                         / "attempts"
@@ -338,7 +363,8 @@ class Runner:
                     if shared:
                         failure = failure or error
                     if not failure and attempts[key] < limit:
-                        # Preserve only this failed worker's owned partial destinations.
+                        # Preserve only this failed worker's owned partial
+                        # destinations.
                         paths = [Path(request["out"])]
                         if action == "extract":
                             paths.append(Path(request["row"]["path"]))
@@ -415,7 +441,9 @@ class Runner:
             if active:
                 time.sleep(
                     1
-                )  # Program polling only. The assistant does not wait on this loop.
+                    # Program polling only. The assistant does not wait on this
+                    # loop.
+                )
         failure = failure or (
             unit_failures[0]["error"] if unit_failures else None
         )
@@ -497,7 +525,11 @@ class Runner:
             )
             if not estimate["allowed"]:
                 raise ResourceBlocked(
-                    f"{action}: requested{count}, estimate={estimate['estimated_bytes'] / 1e9:.2f}GB; stopped before extraction, no silent downgrade"
+                    (
+                        f"{action}: requested{count}, "
+                        f"estimate={estimate['estimated_bytes'] / 1e9:.2f}GB; "
+                        f"stopped before extraction, no silent downgrade"
+                    )
                 )
         frozen = self.rows(frozen, label)
         root = external(STORE / "processed/pretrain" / self.task.name / label)
@@ -565,7 +597,8 @@ class Runner:
                 raise ValueError("Completed canonical binding mismatch")
             target.parent.mkdir(parents=True, exist_ok=True)
             if Path(raw).name in canonical_sources:
-                # Preserve the successful prior results; no preprocessing is repeated.
+                # Preserve the successful prior results; no preprocessing is
+                # repeated.
                 shutil.copytree(
                     source,
                     target,
@@ -792,7 +825,8 @@ class Runner:
         from .collection import plan, run
 
         self.begin(label, workers=count, total=len(rows))
-        # Long-run16 admission uses actual attempt07 8-lane peak, not a short120s projection.
+        # Long-run16 admission uses actual attempt07 8-lane peak, not a
+        # short120s projection.
         measurements = read(RESOURCES / "memory-reference.json")
         per_lane = measurements[
             "benchmark_per_lane_bytes"
@@ -808,7 +842,10 @@ class Runner:
         self.update(admission=estimate)
         if not estimate["passed"] and not estimate["estimate_only_override"]:
             raise ResourceBlocked(
-                f"{label}: projected RAM does not fit; requested{count}, not executed"
+                (
+                    f"{label}: projected RAM does not fit; requested{count}, "
+                    f"not executed"
+                )
             )
         exporters = (
             count
@@ -854,7 +891,8 @@ class Runner:
         outcomes = []
         for count in self.config["levels"]:
             try:
-                # At least three independent runs exercise all scaler partitions.
+                # At least three independent runs exercise all scaler
+                # partitions.
                 rows = [
                     dict(
                         case_id=f"probe-{count}-{i}",
@@ -893,7 +931,8 @@ class Runner:
                         for c in cases(self.config["seed_base"] + count * 1000)
                         if c.get("path_mode")
                     ]
-                    # Keep the exact program/seed binding;120s tests exercise only its initial part.
+                    # Keep the exact program/seed binding;120s tests exercise
+                    # only its initial part.
                     for row, template in zip(rows, templates):
                         for key in (
                             "scenario",
@@ -917,7 +956,10 @@ class Runner:
                     r["max_overlap"] < count for r in batches
                 ):
                     raise RuntimeError(
-                        "Requested worker overlap not observed; no parallel pass"
+                        (
+                            "Requested worker overlap not observed; no "
+                            "parallel pass"
+                        )
                     )
                 outcomes.append(
                     dict(
@@ -928,7 +970,10 @@ class Runner:
                         fresh_runs=len(rows),
                         mission_seconds=120,
                         training_eligible=False,
-                        cache="fresh files may remain in filesystem cache; cold-device speed not established",
+                        cache=(
+                            "fresh files may remain in filesystem cache; "
+                            "cold-device speed not established"
+                        ),
                     )
                 )
                 write(self.task / "parallel-results.json", outcomes)
@@ -961,7 +1006,10 @@ class Runner:
             allocator != "debug" or os.environ.get("PYTHONMALLOC") != allocator
         ):
             raise ValueError(
-                "Task Python allocator mismatch; start through drone-pretrain start"
+                (
+                    "Task Python allocator mismatch; start through "
+                    "drone-pretrain start"
+                )
             )
         external(STORE).mkdir(parents=True, exist_ok=True)
         if self.config["mode"] in {"collect", "test"}:
@@ -1118,7 +1166,10 @@ class Runner:
                 ),
             )
             raise RuntimeError(
-                "Finite collection finished with run errors; no incomplete dataset admitted: "
+                (
+                    "Finite collection finished with run errors; no incomplete "
+                    "dataset admitted: "
+                )
                 + "; ".join(incomplete)
             )
         self.prepare_collections(folders)
@@ -1162,7 +1213,8 @@ class Runner:
 
 def worker(task):
     task = Path(task)
-    # Existing task claim is checked before state writes; duplicate commands preserve evidence.
+    # Existing task claim is checked before state writes; duplicate commands
+    # preserve evidence.
     if (task / "operator/claimed").exists():
         raise RuntimeError("STOP: Attempt already claimed; no automatic retry")
     lock = (HOME / "pretrain.lock").open("a", encoding="utf-8")

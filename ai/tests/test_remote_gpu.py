@@ -177,7 +177,8 @@ def test_real_frozen_model_batch_on_cpu():
         "spec=importlib.util.spec_from_file_location('probe',"
         + repr(str(ROOT / "ai/remote/gpu_probe.py"))
         + "); "
-        "probe=importlib.util.module_from_spec(spec); spec.loader.exec_module(probe); "
+        "probe=importlib.util.module_from_spec(spec); "
+        "spec.loader.exec_module(probe); "
         "print(json.dumps(probe.batch_backward(Path("
         + repr(str(package))
         + "),'cpu')))"

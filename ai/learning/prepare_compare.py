@@ -1,4 +1,6 @@
-"""Human-operated preparation/transfer/start CLI. No automatic GPU submission."""
+"""Human-operated preparation/transfer/start CLI. No automatic GPU
+submission.
+"""
 
 import argparse
 import os
@@ -62,7 +64,9 @@ def external_root(path):
 
 
 class PreparationProgress(Progress):
-    """Check the selected filesystem while restoring/writing preparation files."""
+    """Check the selected filesystem while restoring/writing preparation
+    files.
+    """
 
     def __init__(self, path, *, storage_root, hours):
         from x500_storage import capture
@@ -106,11 +110,16 @@ def restore_ref(bundle, ref, destination, progress):
 
 
 def reuse_failed_upstream(source, bundle, receipt, root, remote):
-    """Admit a stopped attempt's immutable data without copying or altering it."""
+    """Admit a stopped attempt's immutable data without copying or altering
+    it.
+    """
     source = external_root(source)
     if root != remote:
         raise ValueError(
-            "Reused upstream requires preparation on the same server: root == remote-root"
+            (
+                "Reused upstream requires preparation on the same server: root "
+                "== remote-root"
+            )
         )
     if (
         root == source
@@ -152,7 +161,10 @@ def reuse_failed_upstream(source, bundle, receipt, root, remote):
         or submission.get("phase") != "fit"
     ):
         raise ValueError(
-            "Reuse requires a failed, released own fit job with matching identity"
+            (
+                "Reuse requires a failed, released own fit job with matching "
+                "identity"
+            )
         )
     input_inventory = child(source, "input/inventory.json")
     if sha(input_inventory) != prepared.get("input_inventory_sha256"):
@@ -192,7 +204,8 @@ def reuse_failed_upstream(source, bundle, receipt, root, remote):
                 raise ValueError(
                     "Preserved source upstream evidence changed: " + name
                 )
-    # The package receipt binds the small provenance files; admission below hashes
+    # The package receipt binds the small provenance files; admission below
+    # hashes
     # actual fit arrays. The worker still verifies the complete upstream seal.
     for name, expected in receipt["dataset"]["members"].items():
         if name.startswith("evidence/"):
@@ -254,7 +267,10 @@ def prepare(args):
         else not 1 <= evaluation_hours <= 168
     ):
         raise ValueError(
-            "Training-only requires zero evaluation hours; full comparison requires1..168"
+            (
+                "Training-only requires zero evaluation hours; full comparison "
+                "requires1..168"
+            )
         )
     root, bundle = external_root(args.root), args.bundle.resolve()
     if root.is_relative_to(bundle) or bundle.is_relative_to(root):
@@ -279,7 +295,10 @@ def prepare(args):
         raise OSError(
             "Insufficient selected storage:24GiB new-attempt reserve required"
             if reuse_from is not None
-            else "Insufficient selected storage: restored data plus24GiB reserve required"
+            else (
+                "Insufficient selected storage: restored data plus24GiB "
+                "reserve required"
+            )
         )
     root.mkdir(exist_ok=False)
     from x500_storage import capture
@@ -311,9 +330,9 @@ def prepare(args):
                     "Server profile must name the existing reused upstream"
                 )
         rows, seal, headers = comparison.admission(upstream)
-        preprocess = (
-            ROOT
-            / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
+        preprocess = ROOT / (
+            "Data/generation/pretrain/resources/preprocessing/"
+            "preprocessing.json"
         )
         frozen = read(upstream / "evidence/frozen-manifest.json")
         if sha(preprocess) != frozen["revision_lock"]["preprocessing_sha256"]:
@@ -447,7 +466,9 @@ def prepare(args):
                 sources=sources,
             ),
             source_dataset_sha256=receipt["dataset"]["sha256"],
-            failure_policy="Preserve evidence and stop, no retry or automatic tuning",
+            failure_policy=(
+                "Preserve evidence and stop, no retry or automatic tuning"
+            ),
         )
         if normalization_study:
             from .study import configure
@@ -490,7 +511,10 @@ def prepare(args):
 def authorize(root, confirmed):
     if not confirmed:
         raise ValueError(
-            "Explicit --approve-one-comparison is required; no GPU work is started"
+            (
+                "Explicit --approve-one-comparison is required; no GPU work is "
+                "started"
+            )
         )
     root = external_root(root)
     if (root / "controller.claim").exists() or (

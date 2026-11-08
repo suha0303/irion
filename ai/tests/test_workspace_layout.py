@@ -1,4 +1,6 @@
-"""Category layout and compatibility preserve runtime guards; synthetic collection only."""
+"""Category layout and compatibility preserve runtime guards; synthetic
+collection only.
+"""
 
 from pathlib import Path
 

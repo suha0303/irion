@@ -283,7 +283,9 @@ def evaluate(folder, dataset, out):
             / sum(r["valid_exposure_hours"] for r in sample)
         )
     result = {
-        "purpose": "independent_run_local_small_training_evaluation_not_final_research",
+        "purpose": (
+            "independent_run_local_small_training_evaluation_not_final_research"
+        ),
         "model": p.name,
         "independent_test_groups": len({r["paired_case_id"] for r in records}),
         "independent_abnormal_groups": len(
@@ -307,14 +309,19 @@ def evaluate(folder, dataset, out):
         else None,
         "run_results": records,
         "compute_seconds_p50_p95": np.quantile(latencies, [0.5, 0.95]).tolist(),
-        "live_forecast_timing": "not_executed; timestamps are offline logical replay clock",
+        "live_forecast_timing": (
+            "not_executed; timestamps are offline logical replay clock"
+        ),
         "forecast_sha256": sha(prediction_path),
         "decisions_sha256": sha(decision_path),
         "limitations": [
             "Short normal exposure; thresholds provisional.",
             "No SOH/RUL or healthy certification.",
             "Constant degraded trajectories can have small persistence error.",
-            "Missing targets excluded from dataset; coverage and exclusions retained.",
+            (
+                "Missing targets excluded from dataset; coverage and "
+                "exclusions retained."
+            ),
         ],
     }
     dump(out / "evaluation.json", result)

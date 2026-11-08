@@ -110,7 +110,10 @@ def validate_case_conditions(plan, case):
     if not final:
         if variation is not None or onset is not None:
             raise Stop(
-                "Operating variation and mission-relative faults require final324"
+                (
+                    "Operating variation and mission-relative faults require "
+                    "final324"
+                )
             )
         return
     if (
@@ -120,7 +123,10 @@ def validate_case_conditions(plan, case):
         or case["role"] not in {"normal_test", "anomaly_test"}
     ):
         raise Stop(
-            "Final operating conditions require the locked collection test partition"
+            (
+                "Final operating conditions require the locked collection test "
+                "partition"
+            )
         )
     fields = {
         "soc",
@@ -133,7 +139,10 @@ def validate_case_conditions(plan, case):
     }
     if not isinstance(variation, dict) or set(variation) != fields:
         raise Stop(
-            "Exact operation variation fields required; health/fault overrides forbidden"
+            (
+                "Exact operation variation fields required; health/fault "
+                "overrides forbidden"
+            )
         )
     if any(
         type(variation[key]) not in (int, float)
@@ -234,7 +243,9 @@ class MissionProgress:
         result = dict(
             observed_simulation_elapsed_s=None,
             live_rtf=None,
-            simulation_clock_basis="Producer progress unavailable or identity ambiguous",
+            simulation_clock_basis=(
+                "Producer progress unavailable or identity ambiguous"
+            ),
             producer_run_id=None,
             producer_progress_updated_utc=None,
             producer_px4_boot_s=None,
@@ -245,7 +256,8 @@ class MissionProgress:
             time.monotonic() if monotonic_now is None else monotonic_now
         )
         try:
-            # Names only. Once classified, unrelated metadata is never rescanned.
+            # Names only. Once classified, unrelated metadata is never
+            # rescanned.
             for path in self.runs.iterdir():
                 if (
                     path.name in self.baseline
@@ -259,7 +271,9 @@ class MissionProgress:
                         path / "evaluation/scenario.json"
                     )
                     if "instance" not in state or "configuration" not in state:
-                        continue  # Producer creates initial run.json before adding collection fields.
+                        # Producer creates initial run.json before adding
+                        # collection fields.
+                        continue
                     if state.get(
                         "configuration"
                     ) in COLLECTION_CONFIGURATIONS and (
@@ -327,7 +341,10 @@ class MissionProgress:
                 if delta_wall > 0:
                     if abs(delta_wall - (monotonic_now - old_monotonic)) > 2:
                         raise ValueError(
-                            "Producer wall clock disagrees with local monotonic interval"
+                            (
+                                "Producer wall clock disagrees with local "
+                                "monotonic interval"
+                            )
                         )
                     rtf = (elapsed - old_elapsed) / delta_wall
                     self.previous = current
@@ -336,7 +353,10 @@ class MissionProgress:
             result.update(
                 observed_simulation_elapsed_s=elapsed,
                 live_rtf=rtf,
-                simulation_clock_basis="run.json PX4 mission elapsed; interval RTF = delta sim / delta producer UTC; first/repeated sample RTF unknown",
+                simulation_clock_basis=(
+                    "run.json PX4 mission elapsed; interval RTF = delta sim / "
+                    "delta producer UTC; first/repeated sample RTF unknown"
+                ),
                 producer_run_id=run_id,
                 producer_progress_updated_utc=progress["last_update_utc"],
                 producer_px4_boot_s=boot,
@@ -351,7 +371,8 @@ class MissionProgress:
         parsing.
         """
         try:
-            self.sample()  # A stopped run's live clock can be stale; identity is still useful.
+            # A stopped run's live clock can be stale; identity is still useful.
+            self.sample()
             if len(self.matches) != 1:
                 return {}
             run_id = next(iter(self.matches))
@@ -395,7 +416,8 @@ class MissionProgress:
                 producer_evidence=str(path),
             )
         except (OSError, ValueError, KeyError, TypeError, AttributeError, Stop):
-            # Diagnostic reads must never replace the original execution failure.
+            # Diagnostic reads must never replace the original execution
+            # failure.
             return {}
 
 
@@ -460,7 +482,9 @@ def bytes_under(root):
                 try:
                     total += path.lstat().st_size
                 except FileNotFoundError:
-                    pass  # Atomic progress-file replacement during approximate accounting.
+                    # Atomic progress-file replacement during approximate
+                    # accounting.
+                    pass
     return total
 
 
@@ -514,7 +538,10 @@ class Progress:
                 stage=self.stage,
                 status=status,
                 bytes_processed=self.bytes,
-                counter_semantics="byte operations, may count raw and compressed passes; not unique raw pool bytes",
+                counter_semantics=(
+                    "byte operations, may count raw and compressed passes; not "
+                    "unique raw pool bytes"
+                ),
                 elapsed_s=self.clock() - self.started,
                 byte_progress_age_s=self.clock() - self.last_progress,
             ),
@@ -594,7 +621,10 @@ def archive_run(run, destination, stage_dir, budgets, check):
                         if stat.S_ISREG(mode):
                             if not member.isfile():
                                 raise Stop(
-                                    "Hardlink/special tar member requires review"
+                                    (
+                                        "Hardlink/special tar member requires "
+                                        "review"
+                                    )
                                 )
                             with path.open("rb") as source:
                                 wrapped = HashIO(source, progress)
@@ -619,7 +649,10 @@ def archive_run(run, destination, stage_dir, budgets, check):
                             )
                         else:
                             raise Stop(
-                                "File/broken symlink or special file requires review"
+                                (
+                                    "File/broken symlink or special file "
+                                    "requires review"
+                                )
                             )
             output.flush()
             os.fsync(output.fileno())
@@ -771,7 +804,9 @@ def memory_snapshot():
             ),
         )
     except (OSError, ValueError, StopIteration):
-        pass  # Explicit null means unavailable, never zero or successful cgroup isolation.
+        # Explicit null means unavailable, never zero or successful cgroup
+        # isolation.
+        pass
     return result
 
 
@@ -798,7 +833,8 @@ def collection_prerequisites(plan, dry_run=False):
     ):
         raise Stop("Assessment implementation must be in source lock")
     preparation = reference(plan["producer_preparation"])
-    # The coordinator supplies exact JSON top-level assertions from Simulation's report.
+    # The coordinator supplies exact JSON top-level assertions from Simulation's
+    # report.
     assertions = plan.get("preparation_assertions", {})
     if not assertions or any(
         preparation.get(k) != v for k, v in assertions.items()
@@ -862,7 +898,10 @@ def collection_prerequisites(plan, dry_run=False):
             or receipt.get("selected_concurrency") != plan["concurrency"]
         ):
             raise Stop(
-                "Matching benchmark/endurance receipt required before collection"
+                (
+                    "Matching benchmark/endurance receipt required before "
+                    "collection"
+                )
             )
         benchmark = reference(receipt["benchmark_receipt"])
         if (
@@ -884,7 +923,10 @@ def collection_prerequisites(plan, dry_run=False):
             raise Stop("Endurance benchmark chain mismatch")
     if phase in {"benchmark", "endurance"} and not dry_run:
         raise Stop(
-            "Collection gates must use the finite gate driver, not direct collector CLI"
+            (
+                "Collection gates must use the finite gate driver, not direct "
+                "collector CLI"
+            )
         )
 
 
@@ -928,7 +970,10 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
         or not 1 <= concurrency <= (16 if collection else 2)
     ):
         raise Stop(
-            "Require legacy 1200..1800/concurrency1..2 or collection duration/lanes"
+            (
+                "Require legacy 1200..1800/concurrency1..2 or collection "
+                "duration/lanes"
+            )
         )
     lanes = plan["lanes"]
     if (
@@ -1035,7 +1080,10 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
             seconds = case.get("mission_seconds", duration)
             if (case["scenario"] == "low_soc_normal") != (seconds == 180):
                 raise Stop(
-                    "Collection low-SOC requires180s; other scenarios cannot use180s"
+                    (
+                        "Collection low-SOC requires180s; other scenarios "
+                        "cannot use180s"
+                    )
                 )
         signature = (case["scenario"], case["seed"])
         partition = (
@@ -1124,7 +1172,8 @@ def verify_run_source_snapshot(plan, source):
         ):
             raise Stop("Run source snapshot mismatch: " + name)
     if plan.get("protocol") in COLLECTION_PROTOCOLS:
-        # The installed native runtime is sealed per host from the tracked source recipe.
+        # The installed native runtime is sealed per host from the tracked
+        # source recipe.
         names = (
             "vendor/PX4-Autopilot/build/px4_sitl_default/bin/px4",
             "build/current/libDronePowertrain.so",
@@ -1133,7 +1182,10 @@ def verify_run_source_snapshot(plan, source):
         if transport in plan["source_hashes"]:
             if "artifacts/runtime-manifest.json" not in plan["source_hashes"]:
                 raise Stop(
-                    "Private transport requires the installed producer runtime seal"
+                    (
+                        "Private transport requires the installed producer "
+                        "runtime seal"
+                    )
                 )
             names += (transport,)
         if any(name not in plan["source_hashes"] for name in names):
@@ -1143,7 +1195,10 @@ def verify_run_source_snapshot(plan, source):
         expected = {name: plan["source_hashes"][name] for name in names}
         if source.get("runtime_binary_sha256") != expected:
             raise Stop(
-                "Run collection runtime binary snapshot mismatch (PX4 / collection plugin)"
+                (
+                    "Run collection runtime binary snapshot mismatch (PX4 / "
+                    "collection plugin)"
+                )
             )
     else:
         for name, digest in plan["source_hashes"].items():
@@ -1170,7 +1225,10 @@ def prepare_external_parent(
         if part.is_relative_to(mount) and part.exists():
             if not part.is_dir() or part.stat().st_dev != device:
                 raise Stop(
-                    "External output parent is not a directory on the mounted device"
+                    (
+                        "External output parent is not a directory on the "
+                        "mounted device"
+                    )
                 )
     external.parent.mkdir(parents=True, exist_ok=True)
     process_helper.check_mount(external.parent)
@@ -1178,7 +1236,8 @@ def prepare_external_parent(
 
 def validate_storage_selection(plan):
     if plan.get("storage_policy") is None:
-        return  # Old frozen plans retain their original mandatory X31 mount checks.
+        # Old frozen plans retain their original mandatory X31 mount checks.
+        return
     config = reference(plan["storage_config"])
     if (
         config.get("storage_policy") != plan["storage_policy"]
@@ -1454,7 +1513,10 @@ def speed_comparison_scope(plan, cases):
         or cases[0].get("seed") != config["seed_base"] + 2000
     ):
         raise Stop(
-            "Invalid controlled speed comparison; no seed reuse outside this finite test"
+            (
+                "Invalid controlled speed comparison; no seed reuse outside "
+                "this finite test"
+            )
         )
     if single:
         return candidate_baseline(config)[1]
@@ -1496,7 +1558,8 @@ def _execute_locked(plan, cases, process_helper):
     budgets = plan["budgets"]
     claim_root = Path(plan.get("project_root", root)) / "Data/operations/claims"
     claim_root.mkdir(parents=True, exist_ok=True)
-    # Persistent claims prevent whole-task resubmission; only bounded in-task attempts repeat.
+    # Persistent claims prevent whole-task resubmission; only bounded in-task
+    # attempts repeat.
     with (claim_root / (plan["campaign_id"] + ".claim")).open(
         "x", encoding="utf-8"
     ) as f:
@@ -1508,13 +1571,17 @@ def _execute_locked(plan, cases, process_helper):
             row = read(p)
         except FileNotFoundError:
             if processing_signal:
-                continue  # Verified previous groups may retire; persistent seed claims still guard reuse.
+                # Verified previous groups may retire; persistent seed claims
+                # still guard reuse.
+                continue
             raise
         if (
             comparison_previous is not None
             and p.parents[1].name in comparison_previous
         ):
-            continue  # Same test's explicit matched-seed replicate, never a training run/retry.
+            # Same test's explicit matched-seed replicate, never a training
+            # run/retry.
+            continue
         existing.add((row.get("name"), row.get("seed")))
     if any((c["scenario"], c["seed"]) in existing for c in cases):
         raise Stop("Existing raw seed/scenario reuse forbidden")
@@ -1665,7 +1732,10 @@ def _execute_locked(plan, cases, process_helper):
                     stop_new("Output admission cap reached; drain active cases")
                 if time.monotonic() - started >= budgets["campaign_wall_s"]:
                     stop_new(
-                        "Campaign admission deadline reached; drain active cases"
+                        (
+                            "Campaign admission deadline reached; drain active "
+                            "cases"
+                        )
                     )
             except Exception as exc:
                 stop_new(str(exc))
@@ -1796,13 +1866,17 @@ def _execute_locked(plan, cases, process_helper):
                     flight_progress()
                     if memory_halt.is_set():
                         raise Stop(
-                            "Memory budget exceeded: stop owned active commands; no retry"
+                            (
+                                "Memory budget exceeded: stop owned active "
+                                "commands; no retry"
+                            )
                         )
                     if halt.is_set() and plan.get("phase") == "benchmark":
                         raise Stop(
                             "Benchmark failure: stop all owned active commands"
                         )
-                    # Peer/source/admission failure only closes admission. Own stage timeout
+                    # Peer/source/admission failure only closes admission. Own
+                    # stage timeout
                     # still invokes the existing owner-verified cleanup helper.
 
                 try:
@@ -1930,7 +2004,10 @@ def _execute_locked(plan, cases, process_helper):
                         "fault_after_mission_s"
                     ):
                         raise Stop(
-                            "Producer operation conditions/fault schedule mismatch"
+                            (
+                                "Producer operation conditions/fault schedule "
+                                "mismatch"
+                            )
                         )
                     if (
                         plan.get("speed_comparison")
@@ -2042,16 +2119,17 @@ def _execute_locked(plan, cases, process_helper):
                     )
                     if record.get("producer_status") == "failed":
                         record["error"] += (
-                            f"; producer {record.get('producer_stage') or 'unknown stage'}: "
-                            + record["producer_termination_reason"]
-                        )
+                            f"; producer "
+                            f"{record.get('producer_stage') or 'unknown stage'}: "
+                        ) + record["producer_termination_reason"]
                     if shared_failure(exc) or (
                         not plan.get("continue_after_case_failure")
                         and attempt >= limit
                     ):
                         stop_new(record["error"])
                     elif not halt.is_set():
-                        # Reuse only a demonstrably free lane. Never unlink an unclaimed socket.
+                        # Reuse only a demonstrably free lane. Never unlink an
+                        # unclaimed socket.
                         try:
                             socket_path = Path(
                                 f"/tmp/px4-sock-{lane['instance']}"
@@ -2077,7 +2155,8 @@ def _execute_locked(plan, cases, process_helper):
                             record["lane_retired"] = str(cleanup_exc)
                             atomic(folder / "attempt-result.json", record)
                             write_record(case["case_id"], record)
-                            return  # Other lanes still consume the finite queue.
+                            # Other lanes still consume the finite queue.
+                            return
                 if record["status"] == "FAILED_PRESERVED":
                     history.append(
                         dict(
@@ -2145,9 +2224,15 @@ def _execute_locked(plan, cases, process_helper):
             for p in runs.iterdir()
             if p.is_dir() and p.name not in baseline_dirs
         ],
-        "storage": "one gzip tar per run; no persistent extracted consumer copy; local originals retained",
+        "storage": (
+            "one gzip tar per run; no persistent extracted consumer copy; "
+            "local originals retained"
+        ),
         "stop_reason": stop_reason,
-        "ai_compatibility": "Existing R2 raw-directory package cannot consume archives directly; explicit later extraction/admission required.",
+        "ai_compatibility": (
+            "Existing R2 raw-directory package cannot consume archives "
+            "directly; explicit later extraction/admission required."
+        ),
     }
     atomic(local / "ledger.json", final)
     try:

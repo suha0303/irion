@@ -1,4 +1,6 @@
-"""Build only the user-approved1674 plan. This module never starts collection/training."""
+"""Build only the user-approved1674 plan. This module never starts
+collection/training.
+"""
 
 import copy
 import secrets
@@ -36,7 +38,9 @@ def approval():
 
 
 def build(lr, seed, excluded):
-    """Independent groups get unique seeds; each evaluation pair shares one seed."""
+    """Independent groups get unique seeds; each evaluation pair shares one
+    seed.
+    """
     import sys
 
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
@@ -261,7 +265,10 @@ def validate(rows, lr):
         )
         if len(normal_cells) != 27 or set(normal_cells.values()) != {quota}:
             raise ValueError(
-                "Every standalone normal condition must retain its approved quota"
+                (
+                    "Every standalone normal condition must retain its "
+                    "approved quota"
+                )
             )
     for cohort, expected in (("development", 81), ("final", 243)):
         selected = [c for c in rows if c["cohort"] == cohort]

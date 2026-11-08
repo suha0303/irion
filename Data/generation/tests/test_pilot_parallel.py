@@ -1,4 +1,6 @@
-"""Scheduler fixtures exercise concurrency/ownership boundaries, never native flight."""
+"""Scheduler fixtures exercise concurrency/ownership boundaries, never native
+flight.
+"""
 
 import hashlib
 import threading

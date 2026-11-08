@@ -186,7 +186,11 @@ def test_command_stop_and_owned_cleanup(tmp_path):
             [
                 sys.executable,
                 "-c",
-                'import subprocess,time; subprocess.Popen(["sleep","60"],start_new_session=True); time.sleep(60)',
+                (
+                    "import subprocess,time; "
+                    'subprocess.Popen(["sleep","60"],start_new_session=True); '
+                    "time.sleep(60)"
+                ),
             ],
             tmp_path,
             log,

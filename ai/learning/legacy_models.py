@@ -128,7 +128,8 @@ class TransformerForecast(nn.Module):
         for parameter in self.parameters():
             if parameter.ndim > 1:
                 nn.init.xavier_uniform_(parameter)
-        # Fixed history length; avoid rebuilding deterministic positional tensors each batch.
+        # Fixed history length; avoid rebuilding deterministic positional
+        # tensors each batch.
         position = torch.arange(100).unsqueeze(1)
         div = torch.exp(torch.arange(0, h, 2) * (-math.log(10000.0) / h))
         pe = torch.zeros(100, h)

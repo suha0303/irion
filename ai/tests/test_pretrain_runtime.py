@@ -1,4 +1,6 @@
-"""Runtime pinning and real four-worker numeric equivalence; no SITL or services."""
+"""Runtime pinning and real four-worker numeric equivalence; no SITL or
+services.
+"""
 
 import concurrent.futures
 import os

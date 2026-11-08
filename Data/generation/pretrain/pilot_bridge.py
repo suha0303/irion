@@ -1,4 +1,6 @@
-"""Data projections for the AI-owned one-shot gates; no models or native-field guesses."""
+"""Data projections for the AI-owned one-shot gates; no models or
+native-field guesses.
+"""
 
 import copy
 import hashlib
@@ -22,7 +24,9 @@ def ref(path):
 
 
 def dependencies(path):
-    """Only owner-delivered final paths/CLI templates can enable the pipeline."""
+    """Only owner-delivered final paths/CLI templates can enable the
+    pipeline.
+    """
     if not Path(path).is_file():
         raise Pending("AI/native final handoff missing: " + str(path))
     value = read(path)
@@ -106,7 +110,9 @@ def dependencies(path):
 
 
 def short_dependencies(value):
-    """Validate the owner's separate static180 contract, never historical native6 READY."""
+    """Validate the owner's separate static180 contract, never historical
+    native6 READY.
+    """
     if value.get("task_id") != "SHORT_CYCLE_20261107":
         raise ValueError("Explicit short-cycle task required")
     if value.get("status") in {"FAILED", "STOPPED"}:
@@ -130,7 +136,10 @@ def short_dependencies(value):
         or value.get("no_LR108_or_main_training_link") is not True
     ):
         raise ValueError(
-            "Explicit frozen short180/45/9pair/16flight/RTF2/CPU4/max3 scope required"
+            (
+                "Explicit frozen short180/45/9pair/16flight/RTF2/CPU4/max3 "
+                "scope required"
+            )
         )
     frozen_ref = value["source_freeze"]
     if ref(frozen_ref["path"])["sha256"] != frozen_ref["sha256"]:
@@ -153,7 +162,10 @@ def short_dependencies(value):
         k in paths for k in ("native_completion", "development_receipt")
     ):
         raise ValueError(
-            "New short policies required without historical development6 dependency"
+            (
+                "New short policies required without historical development6 "
+                "dependency"
+            )
         )
     for name, path in paths.items():
         if ref(path)["sha256"] != value["sha256"][name]:
@@ -333,7 +345,10 @@ def snapshot(task, directory):
                     or a["state"] != "COMPLETED"
                 ):
                     raise ValueError(
-                        "Quality rejection projection requires short physical COMPLETED"
+                        (
+                            "Quality rejection projection requires short "
+                            "physical COMPLETED"
+                        )
                     )
                 attempts[-1].update(
                     status="quality_rejected",
@@ -515,7 +530,9 @@ def check(task, spec, *, case_id=None, pair_path=None, phase=None):
 
 
 def pair(task, spec, normal_id, anomaly_id):
-    """Execute an owner-delivered native verifier, then map its fields by AI policy."""
+    """Execute an owner-delivered native verifier, then map its fields by AI
+    policy.
+    """
     ledger = read(task / "ledger.json")["cases"]
     normal, anomaly = ledger[normal_id], ledger[anomaly_id]
     directory = task / "pilot/pairs" / normal["case"]["group_id"]
@@ -532,7 +549,10 @@ def pair(task, spec, normal_id, anomaly_id):
         or not any(x in argv[1] for x in ("verify", "check"))
     ):
         raise ValueError(
-            "Reviewed Sim pair verification CLI required; flight/control commands forbidden"
+            (
+                "Reviewed Sim pair verification CLI required; flight/control "
+                "commands forbidden"
+            )
         )
     if not output.exists():
         with (directory / "verify.log").open("x", encoding="utf-8") as log:

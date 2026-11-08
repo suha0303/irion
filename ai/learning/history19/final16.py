@@ -1,4 +1,6 @@
-"""One-shot FINAL16 input checks. No flights, retries, model imports or fitting."""
+"""One-shot FINAL16 input checks. No flights, retries, model imports or
+fitting.
+"""
 
 import argparse
 import hashlib
@@ -78,7 +80,9 @@ def authorization(*, fixture_only=False):
 
 
 def expected_plan(namespace, *, fixture_only=False):
-    """Project the coordinator's independently frozen source definitions, not old flights."""
+    """Project the coordinator's independently frozen source definitions, not
+    old flights.
+    """
     auth = authorization(fixture_only=fixture_only)
     if sha(regular(EXPECTED)) != EXPECTED_SHA256:
         raise ValueError("Coordinator expected16 definitions changed")
@@ -110,7 +114,10 @@ def expected_plan(namespace, *, fixture_only=False):
         }
     ):
         raise ValueError(
-            "Only the no-fit cohort projection of original definitions is allowed"
+            (
+                "Only the no-fit cohort projection of original definitions is "
+                "allowed"
+            )
         )
     names = {
         f"final16-pair-{i:02d}-{role}"
@@ -268,7 +275,10 @@ def prepare_request(bundle_path, output):
         for key in ("external_audit", "external_audits", "quality_rejection")
     ):
         raise ValueError(
-            "Historical external audits and retry exceptions are outside FINAL16"
+            (
+                "Historical external audits and retry exceptions are outside "
+                "FINAL16"
+            )
         )
     _write(output, request)
     return request
@@ -296,10 +306,14 @@ def plan_and_ledger(ctx, registry):
         c["case_id"]: c for c in expected["cases"]
     }:
         raise ValueError(
-            "Exactly16 unchanged expected cases, fresh seeds/groups and eight pairs required"
+            (
+                "Exactly16 unchanged expected cases, fresh seeds/groups and "
+                "eight pairs required"
+            )
         )
     check_protection(cases, registry, usage=USAGE)
-    # Prior entries must explicitly exclude this new scope too, not just old45 intake.
+    # Prior entries must explicitly exclude this new scope too, not just old45
+    # intake.
     for entry in registry["entries"]:
         if (
             entry.get("purpose") != FINAL16
@@ -319,7 +333,10 @@ def plan_and_ledger(ctx, registry):
         )
         if not {"fit", "calibration", "final_test"} <= uses:
             raise ValueError(
-                "Every FINAL16 case/attempt, including failures, needs permanent fit exclusion"
+                (
+                    "Every FINAL16 case/attempt, including failures, needs "
+                    "permanent fit exclusion"
+                )
             )
 
     ledger = ctx.doc("ledger")
@@ -331,7 +348,10 @@ def plan_and_ledger(ctx, registry):
         raise ValueError("Separate FINAL16 ledger required")
     if len(rows) != 16 or {r["case_id"] for r in rows} != set(by_id):
         raise ValueError(
-            "All16 cases, including failed/pending, must remain in the denominator"
+            (
+                "All16 cases, including failed/pending, must remain in the "
+                "denominator"
+            )
         )
     raw_ids, failures, completed, stopped = set(), 0, 0, 0
     for row in rows:
@@ -367,7 +387,10 @@ def plan_and_ledger(ctx, registry):
                 or a.get("quality_rejection") is not None
             ):
                 raise ValueError(
-                    "FINAL16 raw/index/seed/group/parent identity changed or retry attempted"
+                    (
+                        "FINAL16 raw/index/seed/group/parent identity changed "
+                        "or retry attempted"
+                    )
                 )
             if a["status"] in {"failed", "stopped"} and not a.get(
                 "failure_reason"
@@ -482,7 +505,10 @@ def final_checks(ctx, cases, ledger):
             or r["run_id"] != entry["attempts"][0]["run_id"]
         ):
             raise ValueError(
-                "All16 nonempty actual no-fit cases and sole successful raws required"
+                (
+                    "All16 nonempty actual no-fit cases and sole successful "
+                    "raws required"
+                )
             )
         for key in (
             "source_manifest",
@@ -510,7 +536,9 @@ def final_checks(ctx, cases, ledger):
         status="FINAL16_INPUT_AND_PAIR_CHECKS_PASSED",
         cases_checked=16,
         pairs_checked=8,
-        scope="AI_input_only_Data_quality_and_actual_termination_still_required",
+        scope=(
+            "AI_input_only_Data_quality_and_actual_termination_still_required"
+        ),
     )
 
 
@@ -543,7 +571,10 @@ def main(request_path, output=None):
                 != cases[cid]["operation_sha256"]
             ):
                 raise ValueError(
-                    "Actual operation differs from the coordinator's frozen definition"
+                    (
+                        "Actual operation differs from the coordinator's "
+                        "frozen definition"
+                    )
                 )
             result = check_case(
                 ctx,

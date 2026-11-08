@@ -1,4 +1,6 @@
-"""Finite server-side coordinator and read-only terminal. No LLM or automatic retries."""
+"""Finite server-side coordinator and read-only terminal. No LLM or automatic
+retries.
+"""
 
 import argparse
 import fcntl
@@ -112,7 +114,10 @@ def submit(root, phase, cfg):
         and comparison.execution_scope(cfg) == "training_only"
     ):
         raise ValueError(
-            "Evaluation submission is not authorized for this training-only attempt"
+            (
+                "Evaluation submission is not authorized for this "
+                "training-only attempt"
+            )
         )
     if comparison.is_comparison(cfg):
         comparison.config_check(cfg)
@@ -124,7 +129,10 @@ def submit(root, phase, cfg):
         ).items()
     ):
         raise ValueError(
-            "Only the currently approved p02/DIS01 single-GPU allocation is allowed"
+            (
+                "Only the currently approved p02/DIS01 single-GPU allocation "
+                "is allowed"
+            )
         )
     receipt = read(root / "prepared.json")
     if sha(root / "server-profile.json") != receipt["server_profile_sha256"]:
@@ -161,8 +169,14 @@ def submit(root, phase, cfg):
             + "export DRONE_AI_PROFILE="
             + shlex.quote(str(root / "server-profile.json"))
             + "\n"
-            + "export PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
-            + "export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2\nexec "
+            + (
+                "export PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 "
+                "CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
+            )
+            + (
+                "export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 "
+                "MKL_NUM_THREADS=2\nexec "
+            )
             + shlex.join(
                 [
                     python_for(root, required=True),
@@ -263,7 +277,9 @@ def wait_release(root, record, state, cfg):
 
 
 def phase_files_visible(root, phase, cfg):
-    """Read metadata and open expected files; leave hash checks to existing verification."""
+    """Read metadata and open expected files; leave hash checks to existing
+    verification.
+    """
     if phase == "fit":
         seal = read(root / "compute/result-seal.json")
         training_only = comparison.execution_scope(cfg) == "training_only"
@@ -285,7 +301,10 @@ def phase_files_visible(root, phase, cfg):
             )
         ):
             raise ValueError(
-                "Training-only result contains unauthorized post-training phases"
+                (
+                    "Training-only result contains unauthorized post-training "
+                    "phases"
+                )
             )
         for name in seal["files"]:
             with child(root / "compute", name).open("rb"):
@@ -306,7 +325,9 @@ def phase_files_visible(root, phase, cfg):
 
 
 def wait_phase_files(root, phase, state, cfg):
-    """A released allocation can precede NFS visibility; retry only ENOENT reads."""
+    """A released allocation can precede NFS visibility; retry only ENOENT
+    reads.
+    """
     started = time.monotonic()
     deadline = started + FILE_VISIBILITY_SECONDS
     state.update(
@@ -359,22 +380,41 @@ def report(root, cfg):
     lines = [
         "X500 " + cfg["revision"],
         "Development evaluation only; final test not used.",
-        "Model | events detected/total | normal union alarms/hour | selected epoch",
+        (
+            "Model | events detected/total | normal union alarms/hour | "
+            "selected epoch"
+        ),
     ]
     for name in cfg["models"]:
         m = metrics["models"][name]
         training = read(root / "compute/models" / name / "training.json")
         lines.append(
             f"{name} | {m['events']['detected']}/{m['events']['events']} | "
-            f"{m['normal_episodes_per_hour']['union']} | {training.get('selected_epoch', 'n/a')}"
+            f"{m['normal_episodes_per_hour']['union']} | "
+            f"{training.get('selected_epoch', 'n/a')}"
         )
     lines += [
         "",
-        "Forecast errors, onset delays, coverage and unavailable cases: evaluation/metrics.json",
-        f"One model seed{cfg.get('seed', 17)}. Development groups only; poor results never trigger retraining.",
-        "Models: compute/models/<model>/{model.safetensors or ridge.npz, scaler.npz, model.json}",
-        "Neural best.pt and last.pt are separate from exported best weights. No cross-round accumulation.",
-        "REPORT_READY_STOPPED: both own allocations released; no next round authorized.",
+        (
+            "Forecast errors, onset delays, coverage and unavailable cases: "
+            "evaluation/metrics.json"
+        ),
+        (
+            f"One model seed{cfg.get('seed', 17)}. Development groups only; "
+            f"poor results never trigger retraining."
+        ),
+        (
+            "Models: compute/models/<model>/{model.safetensors or ridge.npz, "
+            "scaler.npz, model.json}"
+        ),
+        (
+            "Neural best.pt and last.pt are separate from exported best "
+            "weights. No cross-round accumulation."
+        ),
+        (
+            "REPORT_READY_STOPPED: both own allocations released; no next "
+            "round authorized."
+        ),
     ]
     (root / "report.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -382,18 +422,30 @@ def report(root, cfg):
 def training_report(root, cfg):
     lines = [
         "X500 " + cfg["revision"],
-        "Training and model export only; calibration, inference and development evaluation not run.",
+        (
+            "Training and model export only; calibration, inference and "
+            "development evaluation not run."
+        ),
         "Model | selected epoch | training seconds",
     ]
     for name in cfg["models"]:
         trained = read(root / "compute/models" / name / "training.json")
         lines.append(
-            f"{name} | {trained.get('selected_epoch', 'n/a')} | {trained.get('seconds', 'n/a')}"
+            (
+                f"{name} | {trained.get('selected_epoch', 'n/a')} | "
+                f"{trained.get('seconds', 'n/a')}"
+            )
         )
     lines.extend(
         [
-            "Models: compute/models/<model>; best and last checkpoints are preserved separately.",
-            "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL: own allocation released; no next work scheduled.",
+            (
+                "Models: compute/models/<model>; best and last checkpoints are "
+                "preserved separately."
+            ),
+            (
+                "TRAINING_READY_STOPPED_PENDING_EVALUATION_APPROVAL: own "
+                "allocation released; no next work scheduled."
+            ),
         ]
     )
     (root / "training-report.txt").write_text(
@@ -533,7 +585,8 @@ def control(root):
             except Exception:
                 pass
         # A timed-out sbatch can have succeeded before its receipt was written.
-        # Never label such an allocation stopped solely because submission raised.
+        # Never label such an allocation stopped solely because submission
+        # raised.
         try:
             queue_uncertain = bool(own_queue())
         except Exception:
@@ -593,20 +646,42 @@ def render(root):
     model_count = len(cfg.get("models", [])) or 10
     lines = [
         (
-            "Drone AI / 최종 시험324run · 학습 완료 신경망16 + baseline2 · batch256 · seed0"
+            (
+                "Drone AI / 최종 시험324run · 학습 완료 신경망16 + baseline2 · batch256 · "
+                "seed0"
+            )
             if final
-            else f"Drone AI / 1200run · 신경망{neural_count} · 전체{model_count} · batch256 · seed0"
+            else (
+                f"Drone AI / 1200run · 신경망{neural_count} · 전체{model_count} · "
+                f"batch256 · seed0"
+            )
             if is_comparison
-            else "Drone AI / 신경망2 + baseline2 · hidden128 · 2층 · batch256 · seed17"
+            else (
+                "Drone AI / 신경망2 + baseline2 · hidden128 · 2층 · batch256 · "
+                "seed17"
+            )
         ),
-        f"{state.get('status', 'NOT_STARTED')} | 단계 {phase} / {progress.get('stage', 'allocation')} | job {state.get('job_id', '미확인')}",
+        (
+            f"{state.get('status', 'NOT_STARTED')} | 단계 {phase} / "
+            f"{progress.get('stage', 'allocation')} | job "
+            f"{state.get('job_id', '미확인')}"
+        ),
         "─" * 90,
         (
-            "흐름: 고정 모델·scaler·임계값 확인 → 최종 추론 → 별도 최종 평가·기록 → 반납·정지 (학습·보정·분석 없음)"
+            (
+                "흐름: 고정 모델·scaler·임계값 확인 → 최종 추론 → 별도 최종 평가·기록 → 반납·정지 "
+                "(학습·보정·분석 없음)"
+            )
             if final
-            else f"흐름: {neural_count}구성 메모리·복원·처리율 → {model_count}종 학습·저장 → 반납·정지 (보정·평가 승인 대기)"
+            else (
+                f"흐름: {neural_count}구성 메모리·복원·처리율 → {model_count}종 학습·저장 → "
+                f"반납·정지 (보정·평가 승인 대기)"
+            )
             if cfg.get("execution_scope") == "training_only"
-            else f"흐름: {model_count}종 공통 수치 검사 → 새 정상 보정·개발 추론 → 별도 평가 → 반납·정지 (학습 없음)"
+            else (
+                f"흐름: {model_count}종 공통 수치 검사 → 새 정상 보정·개발 추론 → 별도 평가 → 반납·정지 "
+                f"(학습 없음)"
+            )
             if cfg.get("execution_scope") == "post_training_evaluation"
             else "흐름: 8구성 메모리·복원 → 10종 비교 → 정상 보정·개발 추론 → 별도 평가 → 정지"
             if is_comparison
@@ -632,26 +707,38 @@ def render(root):
         )
     if state.get("file_visibility"):
         lines.append(
-            f"파일 가시성: {state['file_visibility_phase']} / {state['file_visibility']} "
-            f"| 대기 {state['file_visibility_waited_s']:.1f}/{state['file_visibility_limit_s']}초 "
+            f"파일 가시성: {state['file_visibility_phase']} / "
+            f"{state['file_visibility']} "
+            f"| 대기 {state['file_visibility_waited_s']:.1f}/"
+            f"{state['file_visibility_limit_s']}초 "
             f"| 현재 할당 반납 {'확인' if state.get('allocation_released') else '대기'}"
         )
     if is_comparison and "models_completed" in progress:
         lines.append(
-            f"모델 산출물: {len(progress['models_completed'])}/{model_count} (보정·평가는 별도)"
+            (
+                f"모델 산출물: {len(progress['models_completed'])}/{model_count} "
+                f"(보정·평가는 별도)"
+            )
         )
     if progress.get("gate_phase"):
         lines.append("복원 검사: " + progress["gate_phase"])
     if progress.get("epoch"):
         lines.append(
-            f"epoch {progress['epoch']}/{progress.get('epochs', 60)} (조기 종료 가능) | batch {progress.get('batch', 0)}/{progress.get('batches', '?')}"
+            (
+                f"epoch {progress['epoch']}/{progress.get('epochs', 60)} (조기 "
+                f"종료 가능) | batch "
+                f"{progress.get('batch', 0)}/{progress.get('batches', '?')}"
+            )
         )
     total = progress.get("total", 0)
     done = progress.get("done", 0)
     if total:
         percent = max(0, min(100, 100 * done / total))
         lines.append(
-            f"현재 단계 [{'█' * int(percent / 5):·<20}] {percent:5.1f}%  {done}/{total} (전체 시간 진행률 아님)"
+            (
+                f"현재 단계 [{'█' * int(percent / 5):·<20}] {percent:5.1f}%  "
+                f"{done}/{total} (전체 시간 진행률 아님)"
+            )
         )
     if progress.get("cpu_workers") and str(
         progress.get("stage", "")
@@ -677,7 +764,11 @@ def render(root):
             else "미확인"
         )
         lines.append(
-            f"GPU {label}: 연산 {gpu.get('utilization_pct')}% | VRAM {memory} | {gpu.get('power_w')}W | {gpu.get('temperature_c')}°C"
+            (
+                f"GPU {label}: 연산 {gpu.get('utilization_pct')}% | VRAM "
+                f"{memory} | {gpu.get('power_w')}W | "
+                f"{gpu.get('temperature_c')}°C"
+            )
         )
     else:
         lines.append(

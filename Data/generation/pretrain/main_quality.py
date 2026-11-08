@@ -1,4 +1,6 @@
-"""Data control for AI-verified production rejection; original physical state is immutable."""
+"""Data control for AI-verified production rejection; original physical state
+is immutable.
+"""
 
 from . import ai19
 from .common import read, verify
@@ -65,7 +67,10 @@ def allowed(cfg, case, prior):
         or value.get("run_id") != prior.get("run_id")
     ):
         raise ValueError(
-            "Completed retry requires this exact independently rejected case/UUID"
+            (
+                "Completed retry requires this exact independently rejected "
+                "case/UUID"
+            )
         )
     ai19.ai_modules()
     from learning.collection19 import check_quality_rejection

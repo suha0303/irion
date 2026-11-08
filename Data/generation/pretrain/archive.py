@@ -1,4 +1,6 @@
-"""Verify compressed source and materialize only six consumer files, never truth."""
+"""Verify compressed source and materialize only six consumer files, never
+truth.
+"""
 
 import hashlib
 import tarfile
@@ -47,7 +49,8 @@ def extract_consumer(row, budget):
     target = external(row["path"], "consumer")
     target.mkdir(exist_ok=False)
     seen, selected = set(), set()
-    # Iterate members rather than extract/extractall: links and paths are never followed.
+    # Iterate members rather than extract/extractall: links and paths are never
+    # followed.
     with tarfile.open(archive, mode="r|gz") as stream:
         for member in stream:
             budget.check()
@@ -62,7 +65,8 @@ def extract_consumer(row, budget):
                 raise ValueError("unsafe/duplicate archive member")
             seen.add(name)
             if name not in RAW_FILES:
-                # Even a safe link to a selected member is never dereferenced or materialized.
+                # Even a safe link to a selected member is never dereferenced or
+                # materialized.
                 continue
             if (
                 not member.isfile()
@@ -94,7 +98,8 @@ def extract_consumer(row, budget):
             selected.add(name)
     if selected != RAW_FILES or sha(archive) != reference["sha256"]:
         raise ValueError("missing consumer files or archive changed")
-    # Partial output is deliberately retained on all failures; automatic retry forbidden.
+    # Partial output is deliberately retained on all failures; automatic retry
+    # forbidden.
     return {
         "archive_sha256": reference["sha256"],
         "files": row["files"],

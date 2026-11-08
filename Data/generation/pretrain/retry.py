@@ -1,4 +1,6 @@
-"""Bounded per-unit retries; legacy task configurations remain single-attempt."""
+"""Bounded per-unit retries; legacy task configurations remain
+single-attempt.
+"""
 
 import errno
 

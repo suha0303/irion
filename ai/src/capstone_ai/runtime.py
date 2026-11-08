@@ -57,7 +57,8 @@ def replay_forecasts(canonical, bundle, out):
             if previous_segment is not None and previous_segment != segment:
                 ledger.advance(t, closed=True)
                 emit()
-                # Pending forecasts remain immutable, alarm state cannot span a new segment.
+                # Pending forecasts remain immutable, alarm state cannot span a
+                # new segment.
                 ledger.alarm = type(ledger.alarm)(cal["high"])
             previous_segment = segment
             valid = all(frame["quality"][n] == "valid" for n in TARGETS)
@@ -116,7 +117,10 @@ def replay_forecasts(canonical, bundle, out):
         "missing_or_late": sum(
             d["scores"] is None for d in ledger.decisions.values()
         ),
-        "execution": "offline_logical_replay; live inference clock synchronization not verified",
+        "execution": (
+            "offline_logical_replay; live inference clock synchronization not "
+            "verified"
+        ),
         "forecast_hash": ledger.forecast_hash(),
         "files": {p.name: sha(p) for p in out.glob("*.jsonl")},
     }

@@ -299,7 +299,10 @@ def test_one_run_has_no_automatic_retry_even_for_recorder_stall(
             dict(
                 run=str(raw),
                 status="failed",
-                reason="recording_stalled: PX4 clock advanced but raw capture did not",
+                reason=(
+                    "recording_stalled: PX4 clock advanced but raw capture did "
+                    "not"
+                ),
             ),
         )
         raise pilot45.Blocked("fixture failure")
@@ -333,7 +336,11 @@ def test_foreign_service_is_never_stopped(monkeypatch, tmp_path):
     def show(command, **kwargs):
         commands.append(command)
         return SimpleNamespace(
-            stdout="MainPID=0\nActiveState=inactive\nLoadState=loaded\nExecStart=foreign task\n"
+            stdout=(
+                "MainPID=0\nActiveState="
+                "inactive\nLoadState=loaded\nExecStart="
+                "foreign task\n"
+            )
         )
 
     monkeypatch.setattr(pilot45.subprocess, "run", show)
@@ -422,8 +429,10 @@ def test_standalone_worker_runs_one_case_then_stops_without_fit(
 def test_fixture_archive_shared_frames_two_views_and_independent_audit(
     monkeypatch, tmp_path
 ):
-    # Only admission and weather evidence are synthetic here. Archive/extraction,
-    # the causal AI engine, both actual readers and numeric audit execute unchanged.
+    # Only admission and weather evidence are synthetic here.
+    # Archive/extraction,
+    # the causal AI engine, both actual readers and numeric audit execute
+    # unchanged.
     raw = raw_fixture(tmp_path / "raw", rid="raw")
     mapping, _, _, _ = ai19.ai_modules()
     import learning.admission19 as admission

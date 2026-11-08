@@ -1,4 +1,6 @@
-"""Normal-only calibration and sealed-record evaluation, independent of model fitting."""
+"""Normal-only calibration and sealed-record evaluation, independent of model
+fitting.
+"""
 
 import math
 from collections import Counter
@@ -161,7 +163,9 @@ def fit_calibration(
         else "provisional",
         "reference_error_scale_scaled": scale.tolist(),
         "error_scale_physical": (scale * physical[None, :] ** 2).tolist(),
-        "scale_fit": "normal validation only, q95 per lead/target, scaled floor1e-8",
+        "scale_fit": (
+            "normal validation only, q95 per lead/target, scaled floor1e-8"
+        ),
         "high": chosen["high"],
         "chosen": chosen,
         "candidates": candidates,
@@ -169,12 +173,17 @@ def fit_calibration(
         "per_run": per_run,
         "group_bootstrap": grouped_rate_interval(per_run),
         "poisson_zero_event_95_upper_per_hour": zero_upper,
-        "poisson_assumption": "independent constant-rate episodes; reference, not a guarantee",
+        "poisson_assumption": (
+            "independent constant-rate episodes; reference, not a guarantee"
+        ),
         "additional_zero_event_hours_for_reference_upper_1": max(
             0, -math.log(0.05) - hours
         ),
         "independent_false_alarm_target_verified": False,
-        "reason": "threshold-fit data cannot certify independent false-alarm performance",
+        "reason": (
+            "threshold-fit data cannot certify independent false-alarm "
+            "performance"
+        ),
     }
 
 

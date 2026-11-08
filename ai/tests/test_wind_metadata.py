@@ -1,4 +1,6 @@
-"""Metadata-only fixtures; no flight, neural forward, scaler fit or evaluation."""
+"""Metadata-only fixtures; no flight, neural forward, scaler fit or
+evaluation.
+"""
 
 import copy
 

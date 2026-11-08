@@ -208,7 +208,8 @@ class NpzReplay(SessionRun):
 
     def series(self, start_ms=0, end_ms=None, max_points=6000):
         end_ms = self.duration_ms if end_ms is None else end_ms
-        # A bounded chart representation; a seek loads its surrounding five minutes.
+        # A bounded chart representation; a seek loads its surrounding five
+        # minutes.
         step = max(100, (end_ms - start_ms) / max_points)
         points = []
         last = -float("inf")

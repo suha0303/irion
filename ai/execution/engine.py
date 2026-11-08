@@ -1,4 +1,6 @@
-"""Reuse existing forecast models/loss; bounded batches and equivalent primal ridge."""
+"""Reuse existing forecast models/loss; bounded batches and equivalent primal
+ridge.
+"""
 
 import gc
 import hashlib
@@ -40,7 +42,8 @@ def deterministic_backend(device):
 
 
 def ridge_fit(train, validation, folder, progress):
-    # (X'X + alpha I)^-1 X'Y == X'(XX' + alpha I)^-1 Y, including regularized bias.
+    # (X'X + alpha I)^-1 X'Y == X'(XX' + alpha I)^-1 Y, including regularized
+    # bias.
     d = train["X"].shape[1] * train["X"].shape[2] + train["C"].shape[1] + 1
     gram, rhs = np.zeros((d, d)), np.zeros((d, 40))
     started = time.monotonic()
@@ -134,7 +137,10 @@ def probe_models(cfg, train, out, progress, device="cuda"):
                 peak = torch.cuda.max_memory_reserved()
                 if free < 1.5 * peak + 1024**3:
                     raise MemoryError(
-                        "Insufficient GPU headroom for measured full training batch"
+                        (
+                            "Insufficient GPU headroom for measured full "
+                            "training batch"
+                        )
                     )
                 evidence[name] = dict(
                     batch_size=len(x),
@@ -142,7 +148,9 @@ def probe_models(cfg, train, out, progress, device="cuda"):
                     total_bytes=total,
                     peak_reserved_bytes=peak,
                     includes=["transfer", "forward", "backward", "optimizer"],
-                    policy="discard probe weights and reset seed before main fit",
+                    policy=(
+                        "discard probe weights and reset seed before main fit"
+                    ),
                 )
             else:
                 evidence[name] = dict(test_only_cpu=True)
@@ -211,7 +219,10 @@ def neural_fit(name, cfg, train, val, folder, progress, device="cuda"):
                     / min((index + 1) * cfg["batch_size"], len(train["X"])),
                     steps_per_s=(index + 1) / elapsed,
                     phase_eta_s=elapsed / (index + 1) * (steps - index - 1),
-                    eta_scope="remaining train batches of this epoch; validation/other models excluded",
+                    eta_scope=(
+                        "remaining train batches of this epoch; "
+                        "validation/other models excluded"
+                    ),
                     gpu_reserved_bytes=torch.cuda.memory_reserved()
                     if device == "cuda"
                     else None,
@@ -408,10 +419,13 @@ def preflight_models(
     diagnostic_only=False,
     numerical_policy=None,
 ):
-    """Check every model on the same normal validation sample before any full replay.
+    """Check every model on the same normal validation sample before any full
+    replay.
 
-    Diagnostic mode records observations only. A supplied policy is frozen once and
-    applied unchanged to every model. Without a policy the legacy strict numerical
+    Diagnostic mode records observations only. A supplied policy is frozen
+    once and
+    applied unchanged to every model. Without a policy the legacy strict
+    numerical
     check is retained. No calibration fit or development input is accessed here.
     """
     from learning import replay_validation
@@ -435,7 +449,8 @@ def preflight_models(
         raise ValueError(
             "Diagnostic mode cannot choose or apply acceptance criteria"
         )
-    # Detach the policy from the caller and bind its exact common value in evidence.
+    # Detach the policy from the caller and bind its exact common value in
+    # evidence.
     policy_json = json.dumps(
         numerical_policy, sort_keys=True, separators=(",", ":"), allow_nan=False
     )
@@ -465,7 +480,10 @@ def preflight_models(
         for suffix in (".json", ".decision.json", ".npz")
     ):
         raise ValueError(
-            "Preflight evidence exists; use a new attempt without overwriting it"
+            (
+                "Preflight evidence exists; use a new attempt without "
+                "overwriting it"
+            )
         )
     records, failures = [], []
     common_input_sha, common_sample_sha = None, None
@@ -528,7 +546,10 @@ def preflight_models(
                     != prediction_batch_size
                 ):
                     raise ValueError(
-                        "Neural predictor batch differs from common preflight batch: "
+                        (
+                            "Neural predictor batch differs from common "
+                            "preflight batch: "
+                        )
                         + name
                     )
                 with backend_factory(predict_device):
@@ -554,8 +575,10 @@ def preflight_models(
                         report_path, policy, output=decision_path
                     )
             except ValueError as exc:
-                # A completed numerical failure is evidence for the comparison; keep
-                # checking the other models. Unexpected/data errors stop immediately.
+                # A completed numerical failure is evidence for the comparison;
+                # keep
+                # checking the other models. Unexpected/data errors stop
+                # immediately.
                 if (
                     not expected_failure_path.is_file()
                     or read(expected_failure_path).get("status")
@@ -582,7 +605,10 @@ def preflight_models(
                 full_sample_sha = report.get("sample_sha256")
                 if not isinstance(full_sample_sha, str) or not full_sample_sha:
                     raise ValueError(
-                        "Preflight report lacks normal target/identity binding: "
+                        (
+                            "Preflight report lacks normal target/identity "
+                            "binding: "
+                        )
                         + name
                     )
                 if common_sample_sha is None:
@@ -678,7 +704,10 @@ def calibrate(
             or reuse_calibration
         ):
             raise ValueError(
-                "Sensitivity requires one shared gate and fresh full calibration"
+                (
+                    "Sensitivity requires one shared gate and fresh full "
+                    "calibration"
+                )
             )
         from learning.sensitivity import run_sensitivity_gate
 
@@ -726,7 +755,10 @@ def calibrate(
             and sha(out / "models" / name / "scaler.npz") != common_scaler
         ):
             raise ValueError(
-                "Shared normal cache requires the same train-only scaler for every model"
+                (
+                    "Shared normal cache requires the same train-only scaler "
+                    "for every model"
+                )
             )
         folder = out / "calibration" / name
         if development_executor is not None:
@@ -780,7 +812,8 @@ def calibrate(
                 cal = normalized_role(
                     dataset, "normal_calibration", predictor.scaler
                 )
-            # Fixed normal-only calibration. No event truth is present in the remote input package.
+            # Fixed normal-only calibration. No event truth is present in the
+            # remote input package.
             with backend_factory(predict_device):
                 vr = val["Y"] - predictor.predict_scaled(val["X"], val["C"])
                 cr = cal["Y"] - predictor.predict_scaled(cal["X"], cal["C"])
@@ -801,8 +834,10 @@ def calibrate(
             folder.mkdir(parents=True)
             write(folder / "calibration.json", fitted)
             if preserve_normal_residuals:
-                # Exact normal-only inputs permit a later, separately authorized calibration
-                # policy without another model forward pass or access to development truth.
+                # Exact normal-only inputs permit a later, separately authorized
+                # calibration
+                # policy without another model forward pass or access to
+                # development truth.
                 evidence = folder / "normal-residuals.npz"
                 np.savez_compressed(
                     evidence,
@@ -829,7 +864,9 @@ def calibrate(
                         ],
                         roles=["normal_validation", "normal_calibration"],
                         target_order=TARGETS,
-                        residual_convention="observed_minus_predicted_in_train_scaler_space",
+                        residual_convention=(
+                            "observed_minus_predicted_in_train_scaler_space"
+                        ),
                         truth_used=False,
                         paired_case_ids={
                             run_id: groups[run_id]

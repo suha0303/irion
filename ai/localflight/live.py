@@ -1,7 +1,10 @@
-"""Passive MAVLink journal -> bounded CPU forecasts -> explicit end-of-flight report.
+"""Passive MAVLink journal -> bounded CPU forecasts -> explicit end-of-flight
+report.
 
-Receipt-clock sampling is deliberate: no inferred network latency correction. Source
-clocks detect duplicates/reboots; gaps reset history. Never sends a vehicle command.
+Receipt-clock sampling is deliberate: no inferred network latency
+correction. Source
+clocks detect duplicates/reboots; gaps reset history. Never sends a
+vehicle command.
 """
 
 import json
@@ -139,7 +142,8 @@ def decode(name, f, p, request):
         return dict(climb_rate=-v if v is not None else None)
     if name == "POSITION_TARGET_LOCAL_NED":
         v = number(f.get("vz"))
-        # Only LOCAL_NED. Body/local-offset frames require a separate conversion.
+        # Only LOCAL_NED. Body/local-offset frames require a separate
+        # conversion.
         return dict(
             climb_target=-v
             if v is not None
@@ -336,7 +340,8 @@ def completed(events, journal, output, request, origin, *, end_us=None):
         for j, indices in enumerate(chunks):
             folder = output / f"segment-{i}-{j}"
             folder.mkdir()
-            # Immutable local hard links avoid copying the entire flight per segment.
+            # Immutable local hard links avoid copying the entire flight per
+            # segment.
             os.link(output / "source.jsonl", folder / "source.jsonl")
             np.savez(
                 folder / "frames.npz",
@@ -359,7 +364,10 @@ def completed(events, journal, output, request, origin, *, end_us=None):
                 mapping_verified=True,
                 mapping_evidence=request["profile"].get("mapping_evidence")
                 or "사용자가 저장한 MAVLink 채널/인스턴스 설정",
-                mapping_scope="Declared MAVLink receipt-clock adapter; real performance unverified",
+                mapping_scope=(
+                    "Declared MAVLink receipt-clock adapter; real performance "
+                    "unverified"
+                ),
                 source_path="source.jsonl",
                 source_sha256=source_hash,
                 file=dict(

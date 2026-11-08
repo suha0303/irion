@@ -51,7 +51,10 @@ def show(base, details=False):
         state.get("allocation", {}).get("leader", "-"),
     )
     print(
-        f"실행 작업 {len(workers)}/9 = 인수한 학습 {adopted} + 현재 관리자 작업 {len(workers) - adopted} · 기록 기준"
+        (
+            f"실행 작업 {len(workers)}/9 = 인수한 학습 {adopted} + 현재 관리자 작업 "
+            f"{len(workers) - adopted} · 기록 기준"
+        )
     )
     print(
         "DIS05",
@@ -79,13 +82,19 @@ def show(base, details=False):
         v = read(p) if p.exists() else {}
         phase = v.get("stage", "시작 중")
         if "epoch" in v:
-            progress = f"epoch {v['epoch']}/60 · batch {v.get('batch', '-')}/{v.get('batches', '-')}"
+            progress = (
+                f"epoch {v['epoch']}/60 · batch "
+                f"{v.get('batch', '-')}/{v.get('batches', '-')}"
+            )
         else:
             progress = (
                 f"run {v.get('completed_runs', '-')}/{v.get('total_runs', '-')}"
             )
         print(
-            f"{row['node']} {row['source']} {row.get('kind', 'search')} {row['model']:32} | {phase} | {progress}"
+            (
+                f"{row['node']} {row['source']} {row.get('kind', 'search')} "
+                f"{row['model']:32} | {phase} | {progress}"
+            )
         )
     print("─" * 100)
     finished = sum(
@@ -101,7 +110,11 @@ def show(base, details=False):
                 print(name, m["status"])
                 continue
             print(
-                f"{name:34} LR {m['best']['lr']:.6g} val {m['best']['best_validation_loss']:.6g} 비교 {m['rounds']}차 {m['status']}"
+                (
+                    f"{name:34} LR {m['best']['lr']:.6g} val "
+                    f"{m['best']['best_validation_loss']:.6g} 비교 "
+                    f"{m['rounds']}차 {m['status']}"
+                )
             )
     if state.get("reason"):
         print(state["reason"])

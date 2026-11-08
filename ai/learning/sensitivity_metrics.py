@@ -1,7 +1,9 @@
 """Frozen-prediction batch sensitivity on continuous normal-only blocks.
 
-The caller supplies a separately fitted diagnostic calibration. This module never
-fits a threshold, loads a model, reads development truth, or changes a criterion.
+The caller supplies a separately fitted diagnostic calibration. This
+module never
+fits a threshold, loads a model, reads development truth, or changes a
+criterion.
 """
 
 import hashlib
@@ -29,7 +31,10 @@ def validate_policy(policy):
     }
     if not isinstance(policy, dict) or set(policy) != required:
         raise ValueError(
-            "One complete common sensitivity policy is required; extra keys forbidden"
+            (
+                "One complete common sensitivity policy is required; extra "
+                "keys forbidden"
+            )
         )
     if (
         policy["schema"] != SCHEMA
@@ -40,7 +45,10 @@ def validate_policy(policy):
         or policy["max_changed_alarm_states"] != 0
     ):
         raise ValueError(
-            "Sensitivity requires batch256, exact repeats and zero alarm changes"
+            (
+                "Sensitivity requires batch256, exact repeats and zero alarm "
+                "changes"
+            )
         )
     for key in (
         "max_scaled_abs",
@@ -182,8 +190,10 @@ def assess_sensitivity(
     """Return ``(report, evidence_arrays)`` without modifying supplied inputs.
 
     Numerical rejection returns FAILED_STOPPED so the caller can preserve exact
-    arrays. Malformed data/calibration/identity raises ValueError. Physical scales
-    must already map the four scaled targets to rad/s, rad/s, rad/s and pack volts.
+    arrays. Malformed data/calibration/identity raises ValueError.
+    Physical scales
+    must already map the four scaled targets to rad/s, rad/s, rad/s and
+    pack volts.
     Every comparison uses the same fixed diagnostic scale and high thresholds.
     """
     validate_policy(policy)
@@ -216,7 +226,8 @@ def assess_sensitivity(
         finite=True,
         positive=True,
     )
-    # Bind the complete calibration, including fitting provenance where supplied.
+    # Bind the complete calibration, including fitting provenance where
+    # supplied.
     calibration_sha = _canonical_hash(diagnostic_calibration)
     finite = all(
         np.isfinite(value).all() for value in (reference, batch, repeat)
@@ -244,7 +255,9 @@ def assess_sensitivity(
         "threshold_changed_between_paths": False,
         "event_truth_used": False,
         "production_calibration_reused": False,
-        "interpretation": "normal-block sensitivity only; not event recall, false-alarm certification, "
+        "interpretation": "normal-block sensitivity only; not "
+        "event recall, false-"
+        "alarm certification, "
         "real-time latency validation or equivalence for every possible input",
     }
     arrays = {
@@ -283,7 +296,8 @@ def assess_sensitivity(
     ):
         constraints["finite_derived_scores"] = False
         report["reason"] = (
-            "Derived numeric error or score overflow; alarm comparison not executed"
+            "Derived numeric error or score overflow; alarm comparison not "
+            "executed"
         )
         return report, arrays
     constraints.update(

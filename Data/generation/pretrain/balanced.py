@@ -1,4 +1,6 @@
-"""Balanced300 design: finite roles, stratified healthy conditions and frozen paths."""
+"""Balanced300 design: finite roles, stratified healthy conditions and frozen
+paths.
+"""
 
 import copy
 import math
@@ -159,5 +161,8 @@ def validate(cases_record):
     base = cases_record[0].get("composition_seed")
     if type(base) is not int or cases_record != cases(base):
         raise ValueError(
-            "Balanced300 membership/paths differ from frozen deterministic design"
+            (
+                "Balanced300 membership/paths differ from frozen deterministic "
+                "design"
+            )
         )

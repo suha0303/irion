@@ -235,8 +235,10 @@ class MessageRates:
                     ack = await self._exchange(run, session, row, 511)
                 except asyncio.TimeoutError:
                     row["status"] = "ack_timeout"
-                    # ACK has no message ID. Stop to avoid attributing a late ACK
-                    # to the next SET command. Manual retry starts a new attempt.
+                    # ACK has no message ID. Stop to avoid attributing a late
+                    # ACK
+                    # to the next SET command. Manual retry starts a new
+                    # attempt.
                     session["state"] = "incomplete"
                     return
                 row["ack"] = ack["result"]

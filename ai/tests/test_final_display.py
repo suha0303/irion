@@ -1,4 +1,6 @@
-"""Read-only UI: distinguish queued, sealed runs and actual released completion."""
+"""Read-only UI: distinguish queued, sealed runs and actual released
+completion.
+"""
 
 import copy
 import importlib.util

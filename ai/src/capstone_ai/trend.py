@@ -60,7 +60,10 @@ def analyze_registry(path, out):
         "origin": registry["origin"],
         "consumer": "capstone_ai.trend",
         "comparisons": comparisons,
-        "claim": "comparability only; no continuous aging, health certification, SOH or RUL inferred",
+        "claim": (
+            "comparability only; no continuous aging, health certification, "
+            "SOH or RUL inferred"
+        ),
         "aggregate_trend": None
         if not comparisons or not all(x["comparable"] for x in comparisons)
         else "eligible_for_scored_history",

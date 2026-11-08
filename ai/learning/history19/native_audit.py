@@ -1,4 +1,6 @@
-"""Hash-bound external full-gate evidence; historical generation is never relabelled."""
+"""Hash-bound external full-gate evidence; historical generation is never
+relabelled.
+"""
 
 from pathlib import Path
 
@@ -40,7 +42,8 @@ def verified_check(
     duration_us,
     fixture_only=False,
 ):
-    """Verify Sim audit/2 plus the separate full assessment. Does not invoke Sim APIs.
+    """Verify Sim audit/2 plus the separate full assessment. Does not invoke
+    Sim APIs.
 
     auditor_binding is an explicitly pinned AI hash-verification receipt created
     while the six historical generation dependencies were available. Their bytes
@@ -95,13 +98,19 @@ def verified_check(
         for key, value in expected_generation.items()
     ):
         raise ValueError(
-            "External audit belongs to another generation, not the current producer"
+            (
+                "External audit belongs to another generation, not the current "
+                "producer"
+            )
         )
     proof = required(receipt, "audit")
     declared_manifest = regular(required(proof, "manifest_path"))
     if sha(declared_manifest) != sha(manifest_path):
         raise ValueError(
-            "Historical auditor relocation must preserve the manifest content hash"
+            (
+                "Historical auditor relocation must preserve the manifest "
+                "content hash"
+            )
         )
     for name, digest in manifest["audit_files"].items():
         if sha(regular(declared_manifest.parent / name)) != digest:
@@ -137,7 +146,10 @@ def verified_check(
         )
     ):
         raise ValueError(
-            "External audit run/raw integrity/original failure/generation mismatch"
+            (
+                "External audit run/raw integrity/original failure/generation "
+                "mismatch"
+            )
         )
     original_check_present = (raw / "evaluation/joint-check.json").is_file()
     if proof.get("raw_joint_check_present") is not original_check_present:
@@ -170,7 +182,10 @@ def verified_check(
         or full.get("cpu_audit") != proof
     ):
         raise ValueError(
-            "api.verify alone is insufficient: actual four full gates are required"
+            (
+                "api.verify alone is insufficient: actual four full gates are "
+                "required"
+            )
         )
     checked = required(full, "native_consumption_audit")
     if checked.get("status") != "passed" or any(

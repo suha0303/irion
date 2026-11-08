@@ -1,4 +1,6 @@
-"""Fixed104 composition, independent sets, sealed legacy checks, fail-stop scheduling."""
+"""Fixed104 composition, independent sets, sealed legacy checks, fail-stop
+scheduling.
+"""
 
 from collections import Counter
 

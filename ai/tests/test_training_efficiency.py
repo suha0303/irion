@@ -1,4 +1,6 @@
-"""Numerical equivalence and failure guards for the measured training hot paths."""
+"""Numerical equivalence and failure guards for the measured training hot
+paths.
+"""
 
 import copy
 
@@ -97,7 +99,8 @@ def test_bad_gradient_or_overflow_cannot_change_weights_or_optimizer(kind, bad):
     optimizer = make_optimizer(model.parameters(), 0.001, policy_for(kind))
     inputs = (torch.randn(2, 100, 19), torch.randn(2, 6), torch.randn(2, 10, 4))
     with backend("cpu"):
-        # Populate optimizer state first; a failed step must preserve existing moments too.
+        # Populate optimizer state first; a failed step must preserve existing
+        # moments too.
         safe_step(model, optimizer, *inputs)
         weights = copy.deepcopy(model.state_dict())
         state = copy.deepcopy(optimizer.state_dict())
@@ -151,7 +154,8 @@ def test_normalization_throttles_writes_but_preserves_checks_values_and_final_st
     common.write(
         tmp_path / "manifest.json", {"hashes": {path.name: common.sha(path)}}
     )
-    # A fast interval should perform boundary writes only. All memory checks remain.
+    # A fast interval should perform boundary writes only. All memory checks
+    # remain.
     monkeypatch.setattr(common.time, "monotonic", lambda: 100.0)
     checks, writes = [], []
     monkeypatch.setattr(

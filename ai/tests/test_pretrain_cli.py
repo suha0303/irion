@@ -1,4 +1,6 @@
-"""Short local fixtures only. Never start SITL, services or production preparation."""
+"""Short local fixtures only. Never start SITL, services or production
+preparation.
+"""
 
 import copy
 import json
@@ -406,7 +408,8 @@ def test_expanded_memory_includes_postcollection_cpu(
 def test_create_collection_expansion_frozen_config(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "HOME", tmp_path)
     monkeypatch.setattr(cli, "producer_sources", lambda: {})
-    # Legacy config serialization only; no service or hash verification is run here.
+    # Legacy config serialization only; no service or hash verification is run
+    # here.
     monkeypatch.setattr(cli, "sha", lambda path: "fixture-digest")
     args = cli.parser().parse_args(
         [
@@ -885,7 +888,9 @@ def test_parallel_handoff_uses_existing_numeric_algorithms(
 
 
 def test_real_worker_on_small_synthetic_raw_stream(tmp_path):
-    """Exercise the worker entry point and original engine, with72s synthetic data only."""
+    """Exercise the worker entry point and original engine, with72s synthetic
+    data only.
+    """
     common.package_imports()
     from capstone_ai.cli import process
     from pretrain.worker import execute

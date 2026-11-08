@@ -77,7 +77,10 @@ def compare(base, repeat, candidate):
             )
         ):
             raise ValueError(
-                "Feature/transform/comparison interval contract changed with speed"
+                (
+                    "Feature/transform/comparison interval contract changed "
+                    "with speed"
+                )
             )
         if set(base["topic_quality"]) != set(trial["topic_quality"]):
             raise ValueError("Comparison topic set changed")
@@ -159,7 +162,10 @@ def compare(base, repeat, candidate):
         topic_quality=raw,
         protocol=base.get("protocol", "information-v1"),
         comparison_intervals=base.get("comparison_intervals"),
-        scope="single hover120s, one lane, one matched seed; no16-lane/maneuver-wide or bitwise-equivalence claim",
+        scope=(
+            "single hover120s, one lane, one matched seed; "
+            "no16-lane/maneuver-wide or bitwise-equivalence claim"
+        ),
     )
 
 
@@ -263,7 +269,10 @@ def _run(runner):
                 ),
             )
             raise RuntimeError(
-                f"{factor}x information gate failed; remaining speed candidates not run"
+                (
+                    f"{factor}x information gate failed; remaining speed "
+                    f"candidates not run"
+                )
             )
     write(
         output / "results.json",
@@ -275,7 +284,10 @@ def _run(runner):
             production_speed_changed=False,
             production_default=2,
             automatic_retry=False,
-            limitations="Pilot only; exact bit equality separately recorded. Single lane, hover, one seed.",
+            limitations=(
+                "Pilot only; exact bit equality separately recorded. Single "
+                "lane, hover, one seed."
+            ),
             **basis,
         ),
     )
@@ -299,7 +311,9 @@ def run(runner):
 
 
 def review(task, output):
-    """Recompute only preserved completed trials; never generate or resume flights."""
+    """Recompute only preserved completed trials; never generate or resume
+    flights.
+    """
     task, output = Path(task).resolve(), Path(output).resolve()
     cfg = read(task / "config.json")
     state = read(task / "operator/state.json")
@@ -340,7 +354,11 @@ def review(task, output):
         dict(
             protocol=PROTOCOL,
             comparison_intervals=INTERVALS,
-            rationale="Fixed steady mission window;60s context entirely within mission. Selected before review computation; no error tolerances widened.",
+            rationale=(
+                "Fixed steady mission window;60s context entirely within "
+                "mission. Selected before review computation; no error "
+                "tolerances widened."
+            ),
             implementation_sha256={
                 p.name: sha(p)
                 for p in (
@@ -403,7 +421,11 @@ def review(task, output):
             automatic_retry=False,
             production_speed_changed=False,
             missing_factors=[8] if len(results) < 4 else [],
-            limitation="Post-failure correction of comparison scope on existing trials; independent confirmation and8x remain untested if absent.",
+            limitation=(
+                "Post-failure correction of comparison scope on existing "
+                "trials; independent confirmation and8x remain untested if "
+                "absent."
+            ),
         )
         if sha(old) != old_hash:
             raise ValueError("Original results changed during review")

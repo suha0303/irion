@@ -1,4 +1,6 @@
-"""Synthetic subprocesses only:16-lane admission, independent archives, optional gates."""
+"""Synthetic subprocesses only:16-lane admission, independent archives,
+optional gates.
+"""
 
 from pathlib import Path
 
@@ -94,7 +96,8 @@ def test_expanded_memory_collect_and_optional_gates_bound(
         cgroup_memory_current_bytes=12_000_000_000,
     )
     assert c.budget_memory_used(plan, sample) == 10_000_000_000
-    # An unrelated modified approval cannot silently inherit the expanded policy.
+    # An unrelated modified approval cannot silently inherit the expanded
+    # policy.
     dump(
         config_path,
         dict(mode="prepare", use_available_ram=True, min_available_ram_gb=1),

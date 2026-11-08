@@ -1,4 +1,6 @@
-"""Finite45-case no-fit pilot. No LLM callbacks, scheduler, training or old ctx6 path."""
+"""Finite45-case no-fit pilot. No LLM callbacks, scheduler, training or old
+ctx6 path.
+"""
 
 import argparse
 import fcntl
@@ -87,7 +89,10 @@ def authorization(path=AUTH):
         or not value.get("not_authorized", {}).get("llm_monitoring")
     ):
         raise Blocked(
-            "Explicit finite45/no-training/no-LLM-monitor authorization required"
+            (
+                "Explicit finite45/no-training/no-LLM-monitor authorization "
+                "required"
+            )
         )
     return value
 
@@ -95,7 +100,10 @@ def authorization(path=AUTH):
 def mission_contract(duration):
     if type(duration) is not int or duration not in (180, 480):
         raise ValueError(
-            "Only explicit180s short-cycle or default480s missions are supported"
+            (
+                "Only explicit180s short-cycle or default480s missions are "
+                "supported"
+            )
         )
     return (45, 60, 75) if duration == 180 else (180, 240, 300)
 
@@ -125,7 +133,9 @@ def short_authorization():
 
 
 def build_cases(seed, *, duration=480, case_prefix="p27"):
-    """Freeze geometry before flight; pairs share inputs, never raw or retry identities."""
+    """Freeze geometry before flight; pairs share inputs, never raw or retry
+    identities.
+    """
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
     from capstone_sim import (
         bounded_wind,
@@ -295,7 +305,10 @@ def validate_cases(rows, *, duration=480):
             )
         ):
             raise ValueError(
-                "Independent one-to-one control with matched requested conditions required"
+                (
+                    "Independent one-to-one control with matched requested "
+                    "conditions required"
+                )
             )
     sys.path.insert(0, str(ROOT / "simulation/sim/src"))
     from capstone_sim.normal_variation import validate
@@ -341,7 +354,9 @@ def validate_cases(rows, *, duration=480):
 
 
 def protection():
-    """Integrate all existing raw/parent/hash/pair identities and persistent old claims."""
+    """Integrate all existing raw/parent/hash/pair identities and persistent
+    old claims.
+    """
     records = []
     for p in sorted((ROOT / "simulation/runs").glob("*/run.json")):
         if p.is_symlink() or p.parent.is_symlink():
@@ -385,7 +400,10 @@ def protection():
         schema="drone-data.pilot45.protection/1",
         records=records,
         existing_claims=claims,
-        policy="All prior raw including development/failed/training are excluded; never delete",
+        policy=(
+            "All prior raw including development/failed/training are excluded; "
+            "never delete"
+        ),
     )
 
 
@@ -494,16 +512,21 @@ def resources(remaining=0, per_case=0):
         raise Blocked("Available RAM below1GB; no new admission")
     if snapshot["disk_free_bytes"] < 50_000_000_000 + remaining * per_case:
         raise Blocked(
-            "Disk50GB reserve plus remaining conservative incremental budget unavailable"
+            (
+                "Disk50GB reserve plus remaining conservative incremental "
+                "budget unavailable"
+            )
         )
     return snapshot
 
 
 def estimate():
-    """Measured file sizes plus an explicit conservative duplication/output budget."""
-    index = (
-        ROOT
-        / "docs/data/reports/wind5-gust-support-20261107/development-reference-runs.json"
+    """Measured file sizes plus an explicit conservative duplication/output
+    budget.
+    """
+    index = ROOT / (
+        "docs/data/reports/wind5-gust-support-20261107/development-"
+        "reference-runs.json"
     )
     sizes, consumer = [], []
     if index.exists():
@@ -526,7 +549,10 @@ def estimate():
         per_case_conservative_increment_bytes=per_case,
         total_increment_bytes=45 * per_case,
         reserve_bytes=50_000_000_000,
-        basis="1.25*(raw + archive upper1.05raw + consumer +128MiB outputs); not pilot measurement",
+        basis=(
+            "1.25*(raw + archive upper1.05raw + consumer +128MiB outputs); not "
+            "pilot measurement"
+        ),
     )
 
 
@@ -542,7 +568,10 @@ def validate_manifest(manifest):
             manifest["seed_base"], duration=180, case_prefix="s180"
         ):
             raise ValueError(
-                "Short-cycle must retain the exact new180s case/seed/condition definition"
+                (
+                    "Short-cycle must retain the exact new180s "
+                    "case/seed/condition definition"
+                )
             )
         return validate_cases(manifest["cases"], duration=duration)
     if not manifest.get("single_integration"):
@@ -568,7 +597,10 @@ def validate_manifest(manifest):
         expected["attempts_max"] = 3
     if manifest["cases"] != [expected]:
         raise ValueError(
-            "Integration scope is exactly one healthy480s line/strong case, one attempt"
+            (
+                "Integration scope is exactly one healthy480s line/strong "
+                "case, one attempt"
+            )
         )
     return manifest["cases"]
 
@@ -627,7 +659,10 @@ def recovery_authorization():
         )
     ):
         raise Blocked(
-            "Explicit source-fix/integration/pilot recovery authorization required"
+            (
+                "Explicit source-fix/integration/pilot recovery authorization "
+                "required"
+            )
         )
     return value
 
@@ -668,9 +703,9 @@ def recovery_context(previous, receipt):
         "deactivating",
     }:
         raise Blocked("Previous owned task must have terminated")
-    audit = (
-        ROOT
-        / "ai/reports/ai19-single-run-integration-20261107/attempt-02/result-review-01/termination-audit.json"
+    audit = ROOT / (
+        "ai/reports/ai19-single-run-integration-20261107/attempt-02/"
+        "result-review-01/termination-audit.json"
     )
     proof = read(audit)
     if proof.get("actual_raw_runs") != 0 or not proof.get("checks", {}).get(
@@ -687,14 +722,18 @@ def recovery_context(previous, receipt):
         previous_attempt=1,
         namespace=previous.name,
         native_parent_run_id=None,
-        native_parent_reason="Previous launcher failed before a native run/UUID existed",
+        native_parent_reason=(
+            "Previous launcher failed before a native run/UUID existed"
+        ),
         files={str(p): sha(p) for p in paths},
         environment_receipt=str(Path(receipt).absolute()),
     )
 
 
 def short_repair_context(previous, receipt):
-    """Admit only hash-proven seed-FFI failures after an explicit producer correction."""
+    """Admit only hash-proven seed-FFI failures after an explicit producer
+    correction.
+    """
     short_authorization()
     previous = task_path(previous)
     receipt = ai19.no_links(receipt)
@@ -723,7 +762,10 @@ def short_repair_context(previous, receipt):
         path = previous / member
         if accepted["files"].get(str(path)) != sha(path):
             raise Blocked(
-                "Complete previous task identity and cleanup must be hash-pinned"
+                (
+                    "Complete previous task identity and cleanup must be "
+                    "hash-pinned"
+                )
             )
     if accepted["files"].get(str(previous / "ledger.json")) != sha(
         previous / "ledger.json"
@@ -746,7 +788,10 @@ def short_repair_context(previous, receipt):
         or any(e.get("run") for e in ledger["cases"].values())
     ):
         raise Blocked(
-            "This repair admits failed startup only; no successful raw may be regenerated"
+            (
+                "This repair admits failed startup only; no successful raw may "
+                "be regenerated"
+            )
         )
     unit, pid, props = service_identity(previous)
     if pid or props.get("ActiveState") != "failed" or props.get("ControlGroup"):
@@ -795,7 +840,10 @@ def short_repair_context(previous, receipt):
             path = raw / member
             if accepted["files"].get(str(path)) != sha(path):
                 raise Blocked(
-                    "Exact failed raw identity/producer snapshot must be hash-pinned"
+                    (
+                        "Exact failed raw identity/producer snapshot must be "
+                        "hash-pinned"
+                    )
                 )
         meta, scenario = (
             read(raw / "run.json"),
@@ -825,7 +873,10 @@ def short_repair_context(previous, receipt):
             )
         ):
             raise Blocked(
-                "Only the exact proven no-flight uint32 bridge failure may be retried"
+                (
+                    "Only the exact proven no-flight uint32 bridge failure may "
+                    "be retried"
+                )
             )
     files = dict(accepted["files"], **{str(receipt): sha(receipt)})
     return dict(
@@ -886,7 +937,10 @@ def init(
         short_recovery_from and not short_cycle
     ):
         raise ValueError(
-            "Short repair requires its previous task and exact correction receipt"
+            (
+                "Short repair requires its previous task and exact correction "
+                "receipt"
+            )
         )
     if recovery_from and launch_receipt is None:
         raise ValueError(
@@ -1091,7 +1145,10 @@ def init(
             producer=binding,
             source_sha256=frozen_sources(task, extra),
             paired_run_options={},
-            integration_scope="one standalone raw -> shared frames -> two19 readers -> audit -> STOP; no paired admission",
+            integration_scope=(
+                "one standalone raw -> shared frames -> two19 readers -> audit "
+                "-> STOP; no paired admission"
+            ),
         )
     write(task / "config.json", config)
     (task / "config.sha256").write_text(
@@ -1104,7 +1161,10 @@ def init(
             stage="prepare",
             reason="Coordinator starts one standalone integration only"
             if single
-            else "Explicit short180 source/policy seal and AI static gate required"
+            else (
+                "Explicit short180 source/policy seal and AI static gate "
+                "required"
+            )
             if short_cycle
             else "Final paired6 seal and AI/Data intake receipts required",
             task=name,
@@ -1161,7 +1221,10 @@ def seal(task, sim_receipt, ai_receipt):
     task = task_path(task)
     if read(task / "config.json").get("single_integration"):
         raise Blocked("Standalone integration cannot be upgraded to paired45")
-    reason = "Pilot45 blocked: actual paired6 and reviewed native-to-AI mapping are not implemented"
+    reason = (
+        "Pilot45 blocked: actual paired6 and reviewed native-to-AI mapping are "
+        "not implemented"
+    )
     write(
         task / "operator/state.json",
         dict(
@@ -1180,7 +1243,9 @@ def seal(task, sim_receipt, ai_receipt):
 def prepare_pilot(
     name, draft, integration, handoff, *, integration_acceptance=None
 ):
-    """Create a new sealed task; the old draft and all failed tasks stay unchanged."""
+    """Create a new sealed task; the old draft and all failed tasks stay
+    unchanged.
+    """
     from . import pilot_bridge
 
     recovery_authorization()
@@ -1200,7 +1265,10 @@ def prepare_pilot(
         or quality["prepared_and_audited"] != 1
     ):
         raise Blocked(
-            "Same-producer standalone integration and both actual views must pass first"
+            (
+                "Same-producer standalone integration and both actual views "
+                "must pass first"
+            )
         )
     binding = ai19.producer_binding()
     from learning.admission19 import check_producer
@@ -1215,7 +1283,10 @@ def prepare_pilot(
     task = init(name, old["seed_base"])
     if read(task / "manifest.json")["cases"] != old["cases"]:
         raise Blocked(
-            "New final producer changed frozen planned cases; review before flight"
+            (
+                "New final producer changed frozen planned cases; review "
+                "before flight"
+            )
         )
     cfg = read(task / "config.json")
     snapshot = task / "dependency-handoff.json"
@@ -1450,7 +1521,10 @@ def preflight(task):
         )
     ):
         raise Blocked(
-            "Full parallel planned case ledger must be initialized before submission"
+            (
+                "Full parallel planned case ledger must be initialized before "
+                "submission"
+            )
         )
     unstarted = [
         c
@@ -1517,7 +1591,10 @@ def start(task, resume=False):
         and not cfg.get("ai_ready")
     ):
         raise Blocked(
-            "Pilot45 execution remains blocked; coordinator integration19 is separate"
+            (
+                "Pilot45 execution remains blocked; coordinator integration19 "
+                "is separate"
+            )
         )
     if not cfg.get("sealed"):
         raise Blocked("Final dependency seal missing; use pilot45 seal")
@@ -1535,7 +1612,8 @@ def start(task, resume=False):
         if pid or props.get("ActiveState") in {"activating", "deactivating"}:
             raise Blocked("Do not resume an active service")
         if props.get("ActiveState") == "active":
-            # RemainAfterExit has no PID; release only this identity-checked own unit.
+            # RemainAfterExit has no PID; release only this identity-checked own
+            # unit.
             subprocess.run(["systemctl", "--user", "stop", unit], check=True)
         state = read(task / "operator/state.json")
         if state["status"] in {
@@ -1549,7 +1627,10 @@ def start(task, resume=False):
         reconcile_completed(task, ledger)
         if any(a.get("state") == "RUNNING" for a in ledger["attempts"]):
             raise Blocked(
-                "Interrupted physical attempt requires explicit reconciliation, not blind retry"
+                (
+                    "Interrupted physical attempt requires explicit "
+                    "reconciliation, not blind retry"
+                )
             )
         request = task / "operator/resume-request.json"
         if request.exists():
@@ -1572,7 +1653,9 @@ def start(task, resume=False):
 
 
 def reconcile_completed(task, ledger):
-    """One-shot reconciliation; never equate an unknown/stopped flight with success."""
+    """One-shot reconciliation; never equate an unknown/stopped flight with
+    success.
+    """
     for cid, entry in ledger["cases"].items():
         for attempt in entry["attempts"]:
             if attempt["state"] != "RUNNING":
@@ -1650,7 +1733,9 @@ def stop(task, immediate=False):
 
 
 def resumed_registry_identity(task, config, old, record):
-    """Only frozen SHORT members may share pair/group identity, never raw or retry IDs."""
+    """Only frozen SHORT members may share pair/group identity, never raw or
+    retry IDs.
+    """
     resumed = config["short_resume"]
     if (
         not config.get("short_cycle")
@@ -1809,7 +1894,9 @@ def register(task, record):
 
 
 def retryable(result, attempts, stopped=False):
-    """Only the existing, explicit recorder-clock stall is independent infrastructure."""
+    """Only the existing, explicit recorder-clock stall is independent
+    infrastructure.
+    """
     reason = result.get("reason", "")
     return (
         not stopped
@@ -1822,7 +1909,9 @@ def retryable(result, attempts, stopped=False):
 
 
 def physical(task, case, entry, ledger, folder, denied):
-    """Preserve every attempt and parent. Successful raw survives preprocessing recovery."""
+    """Preserve every attempt and parent. Successful raw survives
+    preprocessing recovery.
+    """
     while not entry.get("run"):
         cfg = read(task / "config.json")
         namespace = cfg.get("lineage_namespace", task.name)
@@ -1837,7 +1926,10 @@ def physical(task, case, entry, ledger, folder, denied):
             verify(recovery["files"])
         if previous and not previous.get("retry_allowed") and not corrected:
             raise Blocked(
-                "Prior physical failure is not approved independent infrastructure"
+                (
+                    "Prior physical failure is not approved independent "
+                    "infrastructure"
+                )
             )
         number = len(entry["attempts"]) + 1
         if (
@@ -1953,7 +2045,10 @@ def physical(task, case, entry, ledger, folder, denied):
         write(task / "ledger.json", ledger)
         if entry.get("run") and failure is not None:
             raise Blocked(
-                "Completed raw retained; recover processing without another flight"
+                (
+                    "Completed raw retained; recover processing without "
+                    "another flight"
+                )
             ) from failure
         if not entry.get("run"):
             if not attempt["retry_allowed"]:
@@ -1971,7 +2066,9 @@ def physical(task, case, entry, ledger, folder, denied):
 
 
 def child(task, request, log, *, on_progress=None, resource_snapshot=None):
-    """Only this independent finite program polls its own child; never an LLM callback."""
+    """Only this independent finite program polls its own child; never an LLM
+    callback.
+    """
     job = read(request)
     instance = job.get("instance", 0)
     c = collector()
@@ -2098,7 +2195,10 @@ def child(task, request, log, *, on_progress=None, resource_snapshot=None):
                         != job["case"]["operation_variation"]
                     ):
                         raise Blocked(
-                            "Progress run parent/operation does not belong to this lane"
+                            (
+                                "Progress run parent/operation does not belong "
+                                "to this lane"
+                            )
                         )
                     claim(
                         raw,
@@ -2172,7 +2272,10 @@ def child(task, request, log, *, on_progress=None, resource_snapshot=None):
             raise Blocked(blocked)
         if process.returncode:
             raise Blocked(
-                f"Case child exit{process.returncode}; preserve log and no blind retry: {log}"
+                (
+                    f"Case child exit{process.returncode}; preserve log and no "
+                    f"blind retry: {log}"
+                )
             )
     if cfg.get("mode") != "main19":
         verify(read(task / "config.json")["source_sha256"])
@@ -2385,7 +2488,10 @@ def worker(task):
                 )
                 if processing > 3:
                     raise Blocked(
-                        "Maximum3 preprocessing attempts; successful raw retained"
+                        (
+                            "Maximum3 preprocessing attempts; successful raw "
+                            "retained"
+                        )
                     )
                 output = (
                     STORE

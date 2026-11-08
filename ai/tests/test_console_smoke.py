@@ -1,4 +1,6 @@
-"""Synthetic CPU and sealed-sample checks; never submit a GPU job or train real data."""
+"""Synthetic CPU and sealed-sample checks; never submit a GPU job or train
+real data.
+"""
 
 import copy
 from pathlib import Path
@@ -362,7 +364,10 @@ def legacy_fixture(upstream):
     manifest.update(
         runs=rows,
         unique_train_frames=10000,
-        scaler_fit="normal_train unique valid airborne frames; context once per train origin",
+        scaler_fit=(
+            "normal_train unique valid airborne frames; context once per train "
+            "origin"
+        ),
     )
     write(manifest_path, manifest)
     seal = {p.name: sha(p) for p in (upstream / "dataset").iterdir()}
@@ -498,7 +503,9 @@ def test_gpu_telemetry_closes_on_gate_failure_without_declaring_success(
 
 
 def benchmark_fixture(upstream):
-    """Match the Data runner's flat, test-only three-partition handoff layout."""
+    """Match the Data runner's flat, test-only three-partition handoff
+    layout.
+    """
     fixture(upstream)
     dataset = upstream / "dataset"
     for path in (upstream / "evidence").iterdir():

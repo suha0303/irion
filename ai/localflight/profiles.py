@@ -67,7 +67,10 @@ def validate(profile: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Unknown aircraft profile schema or fields")
     if not re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", profile.get("id", "")):
         raise ValueError(
-            "Aircraft ID must contain 1..64 letters, digits, underscores or hyphens"
+            (
+                "Aircraft ID must contain 1..64 letters, digits, underscores "
+                "or hyphens"
+            )
         )
     if (
         not isinstance(profile.get("name"), str)
@@ -186,7 +189,8 @@ def save_profile(root: str | Path, profile: dict[str, Any]) -> dict[str, Any]:
         ValueError: Validation fails or existing version contents conflict.
         OSError: The destination cannot be created or written.
     """
-    # Identity is application bookkeeping, not a required manufacturer specification.
+    # Identity is application bookkeeping, not a required manufacturer
+    # specification.
     if not profile.get("id"):
         import uuid
 

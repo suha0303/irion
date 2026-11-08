@@ -1,4 +1,6 @@
-"""FINAL16 admission and finite scheduler checks; no native process is started."""
+"""FINAL16 admission and finite scheduler checks; no native process is
+started.
+"""
 
 import copy
 import hashlib
@@ -184,7 +186,8 @@ def test_all16_real_registration_boundaries_in_isolated_registry(
 ):
     task, rows = fixture(tmp_path)
     registry = tmp_path / "registry.jsonl"
-    # Replay the recorded pre-FINAL16 boundary after the actual authorized cycle completed.
+    # Replay the recorded pre-FINAL16 boundary after the actual authorized cycle
+    # completed.
     registry.write_text(
         "".join(
             line
@@ -227,7 +230,8 @@ def test_native_revision_must_be_v2_even_if_both_wrong_values_match(
     )
     from learning.history19.final16 import CRITICAL
 
-    # This negative field test uses a synthetic current-code freeze, not old release READY.
+    # This negative field test uses a synthetic current-code freeze, not old
+    # release READY.
     freeze = tmp_path / "freeze.json"
     common.write(
         freeze,

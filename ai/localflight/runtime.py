@@ -110,7 +110,10 @@ class Runtime:
         else:
             if len(a) != 1 or not 101 <= a.shape[1] <= 10000:
                 raise ValueError(
-                    "Run health requires one contiguous completed run of 101..10000 frames"
+                    (
+                        "Run health requires one contiguous completed run of "
+                        "101..10000 frames"
+                    )
                 )
             n = np.asarray(lengths)
             if n.dtype != np.int64 or n.shape != (1,) or n[0] != a.shape[1]:

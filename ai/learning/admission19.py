@@ -52,12 +52,18 @@ def partition(role, cohort=None):
     if role in FIT_ROLES:
         if cohort is not None and cohort != role:
             raise ValueError(
-                "Fit/calibration role cannot be renamed into an evaluation cohort"
+                (
+                    "Fit/calibration role cannot be renamed into an evaluation "
+                    "cohort"
+                )
             )
         return role
     if role not in TEST_ROLES or cohort not in EVALUATION_COHORTS:
         raise ValueError(
-            "Evaluation role requires explicit preliminary/development/final cohort"
+            (
+                "Evaluation role requires explicit "
+                "preliminary/development/final cohort"
+            )
         )
     return "evaluation:" + cohort
 
@@ -90,7 +96,10 @@ def validate_lineages(rows):
                 old_scope, old_role = previous
                 if old_scope != scope:
                     raise ValueError(
-                        "Raw flight/retry/paired/group leakage across splits or cohorts"
+                        (
+                            "Raw flight/retry/paired/group leakage across "
+                            "splits or cohorts"
+                        )
                     )
                 if old_role != row["role"] and not key.startswith(
                     ("pair:", "group:")
@@ -103,7 +112,9 @@ def validate_lineages(rows):
 
 
 def check_protection(rows, registry, *, usage):
-    """Apply Data's frozen global identity exclusions, including unseen past cohorts."""
+    """Apply Data's frozen global identity exclusions, including unseen past
+    cohorts.
+    """
     if registry.get("schema") != "drone-ai.global-protection/1":
         raise ValueError("Explicit frozen global protection registry required")
     forbidden = {}
@@ -156,7 +167,10 @@ def digest(value):
 def check_producer(producer, expected):
     if expected is None:
         raise ValueError(
-            "An explicit frozen expected producer binding is required for actual data"
+            (
+                "An explicit frozen expected producer binding is required for "
+                "actual data"
+            )
         )
     if not isinstance(producer, dict) or not isinstance(expected, dict):
         raise ValueError("Explicit producer binding objects required")
@@ -176,7 +190,9 @@ def check_producer(producer, expected):
 
 
 def source_evidence(row, producer):
-    """Validate declared selection/transition summaries; never emit neural features."""
+    """Validate declared selection/transition summaries; never emit neural
+    features.
+    """
     partition(row["role"], row.get("cohort"))
     if row.get("origin") != "px4_sitl":
         raise ValueError("Actual intake requires px4_sitl origin")
@@ -210,7 +226,10 @@ def source_evidence(row, producer):
         or not digest(mission.get("source_sha256"))
     ):
         raise ValueError(
-            "Actual mission/landing execution boundaries and source hash required"
+            (
+                "Actual mission/landing execution boundaries and source hash "
+                "required"
+            )
         )
     keys = row.get("lineage", [])
     if any(
@@ -267,7 +286,10 @@ def source_evidence(row, producer):
         )
     ):
         raise ValueError(
-            "Current joint-profile scenario required; old component faults unsupported"
+            (
+                "Current joint-profile scenario required; old component faults "
+                "unsupported"
+            )
         )
     initial_b, target_b = (
         battery.get("initial_stage"),

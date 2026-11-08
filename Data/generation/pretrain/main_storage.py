@@ -1,4 +1,6 @@
-"""Durable case capsules and exact owned-only retirement for the user-run campaign."""
+"""Durable case capsules and exact owned-only retirement for the user-run
+campaign.
+"""
 
 import hashlib
 import json
@@ -71,7 +73,9 @@ def committed(path, *, deep=True):
 
 
 def commit(task, entry, target, baseline):
-    """Keep every regular archived raw byte plus exports; retire only current intermediates."""
+    """Keep every regular archived raw byte plus exports; retire only current
+    intermediates.
+    """
     task, target = Path(task), Path(target)
     raw, output = map(Path, (entry["run"], entry["output"]))
     prepared = read(entry["receipt"])
@@ -144,7 +148,8 @@ def commit(task, entry, target, baseline):
                     ),
                 )
             )["archive"]["members"]
-        # Freeze identities before reading any payload. A file added/changed after
+        # Freeze identities before reading any payload. A file added/changed
+        # after
         # packing must never become eligible for deletion just because the final
         # tree was sampled after compression.
         stamps = {str(p): tree_stamp(p) for p in targets}
@@ -271,7 +276,8 @@ def publish(sources, target, *, expected=None, source_identity=None):
             if publication.exists() and read(publication).get(
                 "candidate_path"
             ) == str(candidate):
-                # fsync/write-receipt succeeded but atomic publication was interrupted.
+                # fsync/write-receipt succeeded but atomic publication was
+                # interrupted.
                 artifact = written_artifact(candidate)
                 candidate.replace(final)
                 fd = os.open(target, os.O_RDONLY | os.O_DIRECTORY)
@@ -288,7 +294,8 @@ def publish(sources, target, *, expected=None, source_identity=None):
                 reason="interrupted_before_completed_write_receipt",
             )
             durable(target / (candidate.name + ".discarded.json"), discarded)
-            candidate.unlink()  # Only the exact incomplete path recorded by this case.
+            # Only the exact incomplete path recorded by this case.
+            candidate.unlink()
     candidate = target / ("capsule-" + str(time.time_ns()) + ".partial.tar.xz")
     durable(pending, dict(path=str(candidate), source_identity=source_identity))
     artifact = pack_files(

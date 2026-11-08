@@ -4,7 +4,9 @@ import numpy as np
 
 
 class ClockAudit:
-    """Per message/instance, so interleaved sensors cannot invent clock resets."""
+    """Per message/instance, so interleaved sensors cannot invent clock
+    resets.
+    """
 
     def __init__(self):
         self.streams = {}
@@ -94,7 +96,10 @@ class ClockAudit:
         return dict(
             streams=self.streams,
             gap_marker_us=500000,
-            scope="Recording continuity only; 0.5 s marks gaps, not an AI admission tolerance",
+            scope=(
+                "Recording continuity only; 0.5 s marks gaps, not an AI "
+                "admission tolerance"
+            ),
             recorded_intersections=[
                 dict(start_us=a, end_us=b, duration_s=(b - a) / 1e6)
                 for a, b in (common or [])
@@ -107,7 +112,9 @@ class ClockAudit:
 
 
 def clock_maps(settings):
-    """Fit a positive affine map from confirmed clock pairs, never from model error."""
+    """Fit a positive affine map from confirmed clock pairs, never from model
+    error.
+    """
     if settings is None:
         return {}
     if not isinstance(settings, dict) or len(settings) > 32:
@@ -135,7 +142,10 @@ def clock_maps(settings):
             or not np.all(np.diff(pairs[:, 1]) > 0)
         ):
             raise ValueError(
-                "Synchronization anchors must be finite, nonnegative and increasing"
+                (
+                    "Synchronization anchors must be finite, nonnegative and "
+                    "increasing"
+                )
             )
         x, y = pairs[:, 0], pairs[:, 1]
         slope = float(
@@ -171,7 +181,9 @@ def corrected_time(key, stamp, maps):
 
 
 def split_streams(streams, maps):
-    """Order monotonic streams only; the adapter must resolve physical reset boundaries."""
+    """Order monotonic streams only; the adapter must resolve physical reset
+    boundaries.
+    """
     unknown = set(maps) - set(streams)
     if unknown:
         raise ValueError(
@@ -184,12 +196,16 @@ def split_streams(streams, maps):
         duplicates = 0
         clipped = 0
         for available, sample, values in records:
-            # Preserve first duplicate: a later record cannot replace past information.
+            # Preserve first duplicate: a later record cannot replace past
+            # information.
             if previous is not None and (
                 available < previous[0] or sample < previous[1]
             ):
                 raise ValueError(
-                    f"{key}: clock reversal needs a source-order epoch boundary; cannot align topic arrays by reset count"
+                    (
+                        f"{key}: clock reversal needs a source-order epoch "
+                        f"boundary; cannot align topic arrays by reset count"
+                    )
                 )
             if previous is not None and available == previous[0]:
                 duplicates += 1

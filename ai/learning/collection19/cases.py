@@ -1,4 +1,6 @@
-"""Independent case input audit, including a lossless native-evidence capsule."""
+"""Independent case input audit, including a lossless native-evidence
+capsule.
+"""
 
 import sys
 from pathlib import Path
@@ -96,7 +98,9 @@ def _row_paths(export_root):
 
 
 def compare_views(export_root, *, producer, protection):
-    """One bounded run, using current model readers and every canonical eligible origin."""
+    """One bounded run, using current model readers and every canonical
+    eligible origin.
+    """
     root, online, whole, row = _row_paths(export_root)
     keys = {"case:" + row["case_id"], "run:" + row["run_id"], *row["lineage"]}
     registry = read_protection(protection, keys)
@@ -151,7 +155,10 @@ def compare_views(export_root, *, producer, protection):
         or not np.all(segments == segment)
     ):
         raise ValueError(
-            "Online windows omitted/duplicated eligible mission origins or mixed segments"
+            (
+                "Online windows omitted/duplicated eligible mission origins or "
+                "mixed segments"
+            )
         )
     at = {int(t): i for i, t in enumerate(times)}
     for key in ("X", "Y"):
@@ -166,7 +173,10 @@ def compare_views(export_root, *, producer, protection):
                 )
             if not np.allclose(block, expected, atol=ATOL, rtol=RTOL):
                 raise ValueError(
-                    "Window features/arrived targets differ from causal canonical values"
+                    (
+                        "Window features/arrived targets differ from causal "
+                        "canonical values"
+                    )
                 )
     first, last, count = grid(row)
     return dict(
@@ -300,7 +310,10 @@ def audit_case(
         or assessment.get("errors")
     ):
         raise ValueError(
-            "Preserved official pre-retirement full assessment must pass all gates"
+            (
+                "Preserved official pre-retirement full assessment must pass "
+                "all gates"
+            )
         )
     source_binding = assessment.get("source_binding")
     if source_binding is not None:
@@ -344,7 +357,10 @@ def audit_case(
             sys.dont_write_bytecode = prior
         if consumed != json_file(raw / "evaluation/joint-check.json"):
             raise ValueError(
-                "Preserved CHECK differs from actual native CSV/reference verification"
+                (
+                    "Preserved CHECK differs from actual native CSV/reference "
+                    "verification"
+                )
             )
         native_verification = "legacy_receipt_native_csv_rechecked"
     result = dict(
@@ -365,7 +381,10 @@ def audit_case(
         native_verification=native_verification,
         comparison_tolerance=dict(atol=ATOL, rtol=RTOL),
         eligible_for_fit=False,
-        audit_scope="Canonical/arrays checked once; hash-bound full assessment reused for native evidence, legacy receipts rechecked",
+        audit_scope=(
+            "Canonical/arrays checked once; hash-bound full assessment reused "
+            "for native evidence, legacy receipts rechecked"
+        ),
         model_forward_steps=0,
         optimizer_steps=0,
         GPU_jobs=0,

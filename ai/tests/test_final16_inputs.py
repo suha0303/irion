@@ -1,4 +1,6 @@
-"""FINAL16 fixtures: independent scope, actual shared19 case engine, never real flights."""
+"""FINAL16 fixtures: independent scope, actual shared19 case engine, never
+real flights.
+"""
 
 import copy
 import hashlib
@@ -178,7 +180,8 @@ def final_request(tmp_path, monkeypatch):
     )
     put("capsule", capsule)
     report = normal.parent / "pair-0.json"
-    # The native fixture names its pair report here; discover only direct JSON files.
+    # The native fixture names its pair report here; discover only direct JSON
+    # files.
     report = next(
         p
         for p in normal.parent.glob("*.json")
@@ -444,7 +447,8 @@ def test_final_requires_all_sixteen_and_eight_distinct_actual_pair_receipts(
             scaler_threshold_fits=0,
             GPU_jobs=0,
         )
-        # Inner metadata exercises aggregation; the outer fixture remains synthetic.
+        # Inner metadata exercises aggregation; the outer fixture remains
+        # synthetic.
         if damage == "reused_pair":
             evidence["pilot_pair_native_evidence"] = "0" * 64
         if i == 0:

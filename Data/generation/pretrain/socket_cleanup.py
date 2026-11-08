@@ -81,7 +81,8 @@ def claim(run, instance, destination):
             try:
                 fds.add(os.readlink(fd))
             except FileNotFoundError:
-                continue  # File descriptors can close while enumerating a live process.
+                # File descriptors can close while enumerating a live process.
+                continue
         if not any(f"socket:[{inode}]" in fds for inode in inodes):
             return
         current = process(pid)
@@ -94,7 +95,8 @@ def claim(run, instance, destination):
         ):
             return
     except FileNotFoundError:
-        return  # PX4 is still starting or has already exited; never guess ownership.
+        # PX4 is still starting or has already exited; never guess ownership.
+        return
     write(
         destination,
         dict(

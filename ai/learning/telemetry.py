@@ -36,7 +36,10 @@ def own_gpu_uuid(rows, pid):
     matches = {row[1] for row in rows if len(row) == 2 and row[0] == str(pid)}
     if len(matches) != 1:
         raise ValueError(
-            "Cannot identify the worker's single allocated GPU; telemetry unavailable"
+            (
+                "Cannot identify the worker's single allocated GPU; telemetry "
+                "unavailable"
+            )
         )
     return matches.pop()
 
@@ -80,7 +83,8 @@ class Telemetry:
         self.memory_max = 0.0
 
     def start(self):
-        # Called only after DIS01/owner/GPU-count validation. Initialize this PID's context.
+        # Called only after DIS01/owner/GPU-count validation. Initialize this
+        # PID's context.
         import torch
 
         self.marker = torch.zeros(1, device="cuda")
@@ -110,7 +114,11 @@ class Telemetry:
                 try:
                     sample = parse_gpu(
                         query(
-                            "uuid,utilization.gpu,utilization.memory,memory.used,memory.total,power.draw,temperature.gpu"
+                            (
+                                "uuid,utilization.gpu,utilization.memory,"
+                                "memory.used,memory.total,power.draw,"
+                                "temperature.gpu"
+                            )
                         ),
                         self.uuid,
                     )
@@ -156,6 +164,9 @@ class Telemetry:
                 else None,
                 max_device_used_mib=self.memory_max if self.count else None,
                 period_seconds=2,
-                includes="all phases actually executed by this worker; device-level samples",
+                includes=(
+                    "all phases actually executed by this worker; device-level "
+                    "samples"
+                ),
             ),
         )

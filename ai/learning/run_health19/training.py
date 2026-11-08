@@ -1,4 +1,6 @@
-"""Bounded CPU development fit. No Slurm submission, server access or full-run launch."""
+"""Bounded CPU development fit. No Slurm submission, server access or
+full-run launch.
+"""
 
 import hashlib
 import json

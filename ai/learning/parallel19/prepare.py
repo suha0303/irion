@@ -1,4 +1,6 @@
-"""Build portable normalized normal-only caches from independently audited aggregates."""
+"""Build portable normalized normal-only caches from independently audited
+aggregates.
+"""
 
 import os
 import shutil
@@ -72,7 +74,8 @@ def prepare(task, output):
         ) or not np.array_equal(shared.scale, scaler["x_scale"]):
             raise ValueError("Representations must share train-only scaler")
         # Shards can cross role boundaries. Select metadata first, never decode
-        # calibration/test arrays. Temporary regular hardlinks preserve the bytes.
+        # calibration/test arrays. Temporary regular hardlinks preserve the
+        # bytes.
         with tempfile.TemporaryDirectory(
             dir=output, prefix="fit-selection-"
         ) as work:

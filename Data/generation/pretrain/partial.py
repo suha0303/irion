@@ -1,4 +1,6 @@
-"""Process exactly one failed run, then assemble the complete existing dataset."""
+"""Process exactly one failed run, then assemble the complete existing
+dataset.
+"""
 
 import shutil
 from pathlib import Path
@@ -41,7 +43,8 @@ def inputs(source):
         and identity(state["pid"]) == state["pid_start_ticks"]
     ):
         raise ValueError("Previous worker still running")
-    # Workflow changes are allowed; preprocessing implementation/package must match.
+    # Workflow changes are allowed; preprocessing implementation/package must
+    # match.
     verify(
         {
             p: h
@@ -155,7 +158,11 @@ def create_partial(source, name):
         gates=False,
         collection_authorized=False,
         training_authorized=False,
-        scope="One failed run with maximum3 attempts; reuse successful results; assemble/audit all runs; stop. No extraction, collection or training.",
+        scope=(
+            "One failed run with maximum3 attempts; reuse successful results; "
+            "assemble/audit all runs; stop. No extraction, collection or "
+            "training."
+        ),
     )
     config["source_sha256"].update({str(p): sha(p) for p in evidence})
     write(task / "config.json", config)
@@ -195,7 +202,8 @@ def finish_partial(runner):
         dict(passed=True, reused=len(completed), retry_run=failed),
     )
     row = next(r for r in frozen["runs"] if r["run_id"] == failed)
-    # Existing extracted inputs are hash-checked by the worker; no extraction or freeze repeats.
+    # Existing extracted inputs are hash-checked by the worker; no extraction or
+    # freeze repeats.
     runner.batch(
         "prepared-preprocess-one",
         "preprocess",

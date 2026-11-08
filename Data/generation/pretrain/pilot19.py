@@ -1,4 +1,6 @@
-"""One pilot raw -> two no-fit19 views. The caller exits this process per run."""
+"""One pilot raw -> two no-fit19 views. The caller exits this process per
+run.
+"""
 
 import json
 import resource
@@ -27,7 +29,9 @@ FINAL16_COHORT = "final16_development_reference"
 
 
 def source_evidence(raw, binding, scenario):
-    """Consume producer checks and recorded endpoints; truth never enters an array."""
+    """Consume producer checks and recorded endpoints; truth never enters an
+    array.
+    """
     from capstone_sim import battery_aging, propulsion_health
 
     battery = read(raw / "evaluation/battery-selection.json")
@@ -409,7 +413,9 @@ def prepare_one(
 
 
 def audit_one(output, expected_path, *, short_cycle=False, final16=False):
-    """Separate process: readers plus canonical/NPZ values, mission grid and units."""
+    """Separate process: readers plus canonical/NPZ values, mission grid and
+    units.
+    """
     mapping, _, _, _ = ai19.ai_modules()
     from capstone_ai.dataset import feature_transform, target_transform
     from learning.history19.data import inspect_run

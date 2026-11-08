@@ -1,6 +1,8 @@
-"""Completed contiguous 10 Hz mission intervals, with normal-only fitting and lineage checks.
+"""Completed contiguous 10 Hz mission intervals, with normal-only fitting and
+lineage checks.
 
-NPZ values use physical common19 units (pack volts/amperes). No old window dataset
+NPZ values use physical common19 units (pack volts/amperes). No old window
+dataset
 is selected or converted. This consumer format does not change the raw contract.
 """
 
@@ -78,7 +80,10 @@ class Run:
             np.diff(self.time_us) == 100000
         ):
             raise ValueError(
-                "Gaps, clock resets and missing data require explicit abstention"
+                (
+                    "Gaps, clock resets and missing data require explicit "
+                    "abstention"
+                )
             )
         return self
 
@@ -254,9 +259,11 @@ def iter_manifests(
     protection=None,
     usage="input_check",
 ):
-    """Audit all small lineage records first, then decode/release one run at a time.
+    """Audit all small lineage records first, then decode/release one run at
+    a time.
 
-    Pass every role/cohort manifest for the campaign together. A single role file
+    Pass every role/cohort manifest for the campaign together. A single
+    role file
     cannot establish independence from unseen files. No scaler/model is fitted.
     """
     records = [
@@ -314,7 +321,10 @@ def iter_manifests(
                 or arrays["time_us"][-1] != ((end - 1) // 100000) * 100000
             ):
                 raise ValueError(
-                    "Complete declared mission interval required; no quality trimming"
+                    (
+                        "Complete declared mission interval required; no "
+                        "quality trimming"
+                    )
                 )
             run = Run(
                 item["run_id"],
@@ -326,7 +336,8 @@ def iter_manifests(
                 arrays["time_us"],
                 item.get("cohort"),
             )
-        # Match the model's initial100 policy before reporting intake availability.
+        # Match the model's initial100 policy before reporting intake
+        # availability.
         if len(run.values) <= 100:
             raise ValueError("Run unavailable: no post-initial100 observations")
         yield run.validate()
@@ -342,7 +353,10 @@ def load_manifest(
     rows = list(manifest_rows(path, expected_producer, protection, usage))
     if len(rows) > 16:
         raise ValueError(
-            "Use iter_manifests for more than16 runs; never accumulate the campaign"
+            (
+                "Use iter_manifests for more than16 runs; never accumulate the "
+                "campaign"
+            )
         )
     return list(
         iter_manifests(

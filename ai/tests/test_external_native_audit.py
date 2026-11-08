@@ -1,4 +1,6 @@
-"""Synthetic external audit integrity/denominator guards; no actual trace replay."""
+"""Synthetic external audit integrity/denominator guards; no actual trace
+replay.
+"""
 
 import json
 from pathlib import Path

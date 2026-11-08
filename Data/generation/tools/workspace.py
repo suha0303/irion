@@ -1,4 +1,6 @@
-"""Install/check/export a source checkout. Never collect data or submit a trainer."""
+"""Install/check/export a source checkout. Never collect data or submit a
+trainer.
+"""
 
 import argparse
 import hashlib
@@ -103,7 +105,9 @@ def host_supported():
 
 @contextmanager
 def setup_lock():
-    """Never replace a data environment while an independent pipeline owns it."""
+    """Never replace a data environment while an independent pipeline owns
+    it.
+    """
     import fcntl
 
     path = ROOT / "Data/operations/pretrain/pretrain.lock"
@@ -121,7 +125,10 @@ def setup_lock():
 def setup(args):
     if not host_supported():
         raise ValueError(
-            "Supported host: Ubuntu 24.04 x86_64 with a local systemd user session"
+            (
+                "Supported host: Ubuntu 24.04 x86_64 with a local systemd user "
+                "session"
+            )
         )
     with setup_lock():
         return install_environment(args)
@@ -131,7 +138,10 @@ def install_environment(args):
     python = shutil.which("python3.12")
     if python is None:
         raise ValueError(
-            "python3.12 + python3.12-venv are required; see docs/data/PORTABLE_SETUP.md"
+            (
+                "python3.12 + python3.12-venv are required; see "
+                "docs/data/PORTABLE_SETUP.md"
+            )
         )
     if ENV.exists() and not (ENV / "bin/python").is_file():
         raise ValueError(
@@ -236,7 +246,8 @@ print('Python3.12; pinned CPU dependencies; sealed preprocessing; data imports O
         checks["user_service_manager"] = probe(
             ["systemctl", "--user", "show-environment"]
         )
-        # Environment variable values can contain secrets; expose only the exit status.
+        # Environment variable values can contain secrets; expose only the exit
+        # status.
         checks["user_service_manager"]["detail"] = (
             "systemctl --user show-environment (values omitted)"
         )
@@ -245,8 +256,10 @@ print('Python3.12; pinned CPU dependencies; sealed preprocessing; data imports O
                 str(ROOT / "simulation/.venv/bin/python"),
                 "-B",
                 "-c",
-                "import sys;sys.path.insert(0,sys.argv[1]);from capstone_sim import collection_config;"
-                "collection_config.assert_frozen();print(collection_config.producer_lock_path())",
+                "import sys;sys.path.insert(0,sys.argv[1]);from capstone_"
+                "sim import collection_config;"
+                "collection_config.assert_frozen();print(collection_"
+                "config.producer_lock_path())",
                 str(ROOT / "simulation/sim/src"),
             ]
         )
@@ -275,7 +288,9 @@ print('Python3.12; pinned CPU dependencies; sealed preprocessing; data imports O
 
 
 def source_files(root=ROOT):
-    """An explicit source export, independent of Git and all host/job/model state."""
+    """An explicit source export, independent of Git and all host/job/model
+    state.
+    """
     result = {}
 
     def add(path):
@@ -362,7 +377,8 @@ def export(args):
         includes_models=False,
         includes_host_runtime=False,
     )
-    # Never place job state in the new source tree. Output is exclusive, never overwrites a user file.
+    # Never place job state in the new source tree. Output is exclusive, never
+    # overwrites a user file.
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         with (
@@ -383,7 +399,8 @@ def export(args):
                 info.size, info.mode = len(content), 0o644
                 archive.addfile(info, body)
     except BaseException:
-        # Preserve an incomplete export as evidence rather than presenting it as a usable package.
+        # Preserve an incomplete export as evidence rather than presenting it as
+        # a usable package.
         if destination.exists():
             failed = Path(
                 tempfile.mkdtemp(

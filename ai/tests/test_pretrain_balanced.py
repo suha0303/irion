@@ -1,4 +1,6 @@
-"""Finite300 design, disk numeric equivalence, bounded display and swap policy."""
+"""Finite300 design, disk numeric equivalence, bounded display and swap
+policy.
+"""
 
 import copy
 import shutil
@@ -53,7 +55,8 @@ def test_mixed_programs_retain_their_existing_motion_bounds():
     sys.path.insert(0, str(common.ROOT / "simulation/sim/src"))
     from capstone_sim.normal_variation import target
 
-    # Mixed paths keep their original contract; roaming random paths have separate tests.
+    # Mixed paths keep their original contract; roaming random paths have
+    # separate tests.
     maxima = np.zeros(3)
     for case in balanced.cases(202680000):
         if case.get("path_mode") != "mixed":

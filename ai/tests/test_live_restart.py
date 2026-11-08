@@ -1,4 +1,6 @@
-"""Synthetic adapter exercise, explicitly not evidence of a real live producer."""
+"""Synthetic adapter exercise, explicitly not evidence of a real live
+producer.
+"""
 
 import copy
 import json

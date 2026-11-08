@@ -39,7 +39,8 @@ def validate_backend(config):
 def backend_scope(config):
     validate_backend(config)
     before = cudnn_flags()
-    # Pass every flag: cudnn.flags defaults would otherwise alter unrelated settings.
+    # Pass every flag: cudnn.flags defaults would otherwise alter unrelated
+    # settings.
     with torch.backends.cudnn.flags(**{**before, "enabled": False}):
         yield
     if cudnn_flags() != before:
@@ -119,7 +120,8 @@ def trace_batch(folder, phase, device, training, enabled):
         return
     from .control import write
 
-    # CPU dispatcher events include CUDA ATen calls; no CUPTI installation is needed.
+    # CPU dispatcher events include CUDA ATen calls; no CUPTI installation is
+    # needed.
     with torch.profiler.profile(
         activities=[torch.profiler.ProfilerActivity.CPU]
     ) as profile:
@@ -128,7 +130,10 @@ def trace_batch(folder, phase, device, training, enabled):
     write(
         folder / ("backend-" + phase + ".json"),
         {
-            "scope": "existing first batch only; dispatcher events, not kernel timing",
+            "scope": (
+                "existing first batch only; dispatcher events, not kernel "
+                "timing"
+            ),
             "device": device.type,
             "training": training,
             "cudnn_flags": cudnn_flags(),

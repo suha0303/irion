@@ -1,4 +1,6 @@
-"""Frozen SGD/Adam settings and step-based warmup/cosine for the normalization study."""
+"""Frozen SGD/Adam settings and step-based warmup/cosine for the
+normalization study.
+"""
 
 import math
 
@@ -73,7 +75,9 @@ def warmup_steps(total_steps, policy):
 
 
 class WarmupCosine:
-    """Validate once per run, then evaluate the fixed schedule without rebuilding policies."""
+    """Validate once per run, then evaluate the fixed schedule without
+    rebuilding policies.
+    """
 
     def __init__(self, total_steps, peak_rate, policy):
         self.warmup = warmup_steps(total_steps, policy)
@@ -105,5 +109,7 @@ class WarmupCosine:
 
 
 def learning_rate(step, total_steps, peak_rate, policy):
-    """Compatibility helper; training and benchmarks construct one schedule per run."""
+    """Compatibility helper; training and benchmarks construct one schedule
+    per run.
+    """
     return WarmupCosine(total_steps, peak_rate, policy)(step)

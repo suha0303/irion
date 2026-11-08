@@ -1,7 +1,9 @@
-"""Read-only, causal MAVLink decoding shared by replay and future stream adapters.
+"""Read-only, causal MAVLink decoding shared by replay and future stream
+adapters.
 
 Never use simulator labels as model output. Never merge samples across an epoch.
-All wall/source nanoseconds stay Python integers; UI receives relative milliseconds.
+All wall/source nanoseconds stay Python integers; UI receives relative
+milliseconds.
 """
 
 import hashlib

@@ -1,4 +1,6 @@
-"""Only the missing audit may run; completed dataset/other audits are read-only."""
+"""Only the missing audit may run; completed dataset/other audits are
+read-only.
+"""
 
 from types import SimpleNamespace
 

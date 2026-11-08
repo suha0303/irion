@@ -1,4 +1,6 @@
-"""Prepare the reviewed C03 continuation; use the existing finite runner, never submit."""
+"""Prepare the reviewed C03 continuation; use the existing finite runner,
+never submit.
+"""
 
 import ast
 import copy
@@ -10,7 +12,9 @@ from .common import HOME, ROOT, now, read, sha, verify, write
 
 
 def physical_projection(previous, value, original):
-    """Keep the immutable52-row source; exclude only one strictly proven non-submission."""
+    """Keep the immutable52-row source; exclude only one strictly proven
+    non-submission.
+    """
     result = copy.deepcopy(original)
     reference = value.get("administrative_not_submitted")
     unknown = [a for a in original["attempts"] if not a.get("run_id")]
@@ -41,7 +45,10 @@ def physical_projection(previous, value, original):
         or proof.get("matching_native_parent_run_ids") != []
     ):
         raise pilot45.Blocked(
-            "Only the exact closed C04 unsubmitted administrative row is excludable"
+            (
+                "Only the exact closed C04 unsubmitted administrative row is "
+                "excludable"
+            )
         )
     row = unknown[0]
     cid = row["case_id"]
@@ -69,7 +76,10 @@ def physical_projection(previous, value, original):
         or any(Path(path).exists() for path in proof["absent_paths"])
     ):
         raise pilot45.Blocked(
-            "Exact frozen before-submit controlflow and absent dispatch evidence required"
+            (
+                "Exact frozen before-submit controlflow and absent dispatch "
+                "evidence required"
+            )
         )
     snapshot = proof["registry_snapshot"]
     if sha(snapshot["path"]) != snapshot["sha256"]:
@@ -107,13 +117,18 @@ def physical_projection(previous, value, original):
         not a.get("run_id") for a in result["attempts"]
     ):
         raise pilot45.Blocked(
-            "C05 retains all51 actual physical UUIDs and the separate administrative proof"
+            (
+                "C05 retains all51 actual physical UUIDs and the separate "
+                "administrative proof"
+            )
         )
     return result
 
 
 def context(previous, acceptance):
-    """Verify exact28 accepted/3 quality-rejected/1 native-failed/13 unstarted cases."""
+    """Verify exact28 accepted/3 quality-rejected/1 native-failed/13
+    unstarted cases.
+    """
     pilot45.short_authorization()
     previous = pilot45.task_path(previous)
     acceptance = ai19.no_links(acceptance)
@@ -268,12 +283,18 @@ def context(previous, acceptance):
                     )
                 ):
                     raise pilot45.Blocked(
-                        "Only the exact reviewed native readiness failure is admissible"
+                        (
+                            "Only the exact reviewed native readiness failure "
+                            "is admissible"
+                        )
                     )
     expected_physical = 48 if profile == "c04_idle_only" else 51
     if len(ledger["attempts"]) != expected_physical:
         raise pilot45.Blocked(
-            "All original physical attempts, including C02 failures, must remain"
+            (
+                "All original physical attempts, including C02 failures, must "
+                "remain"
+            )
         )
     return dict(
         previous_task=str(previous),
@@ -301,7 +322,9 @@ def context(previous, acceptance):
 
 
 def allowed(config, case, prior):
-    """One reviewed retry, never a successful raw or an unrelated new failure."""
+    """One reviewed retry, never a successful raw or an unrelated new
+    failure.
+    """
     resume = config.get("short_resume")
     if (
         not resume
@@ -345,7 +368,10 @@ def allowed(config, case, prior):
             != resume["quality_rejections"][cid]
         ):
             raise pilot45.Blocked(
-                "Explicit quality rejection required for this physically completed parent"
+                (
+                    "Explicit quality rejection required for this physically "
+                    "completed parent"
+                )
             )
     elif (
         prior["state"] != "FAILED_PRESERVED"
@@ -356,7 +382,9 @@ def allowed(config, case, prior):
 
 
 def current_reader_evidence(spec, previous, ledger, resume):
-    """Reuse the owner's actual28 current audit result; preserve original export bindings."""
+    """Reuse the owner's actual28 current audit result; preserve original
+    export bindings.
+    """
     validation = spec["validation"]["current_readers_existing28"]
     item = validation["evidence"]
     if (
@@ -435,7 +463,10 @@ def current_reader_evidence(spec, previous, ledger, resume):
             or audit.get("online_windows", 0) <= 0
         ):
             raise pilot45.Blocked(
-                "Additional C04 success must retain its same-reader independent audit"
+                (
+                    "Additional C04 success must retain its same-reader "
+                    "independent audit"
+                )
             )
         audits[cid] = dict(
             path=e["audit_receipt"], sha256=sha(e["audit_receipt"])
@@ -444,7 +475,9 @@ def current_reader_evidence(spec, previous, ledger, resume):
 
 
 def prepare(name, previous, acceptance, handoff):
-    """Build and statically seal a new task; no service/native/model invocation."""
+    """Build and statically seal a new task; no service/native/model
+    invocation.
+    """
     from . import pilot_bridge, pilot_parallel
 
     if not pilot45.re.fullmatch(r"[A-Za-z0-9_-]{1,60}", name):
@@ -504,7 +537,10 @@ def prepare(name, previous, acceptance, handoff):
         path = ROOT / numeric
         if cfg["source_sha256"].get(str(path)) != sha(path):
             raise pilot45.Blocked(
-                "Numerical reader/source changed beyond this ledger-only review: "
+                (
+                    "Numerical reader/source changed beyond this ledger-only "
+                    "review: "
+                )
                 + numeric
             )
     for cid, entry in ledger["cases"].items():
@@ -548,7 +584,8 @@ def prepare(name, previous, acceptance, handoff):
             }
             entry["reuse_audit"] = dict(ref, case_id=cid)
             entry["consumer_compatibility"] = (
-                "original_binding_and_arrays_preserved_current_readers_reaudited"
+                "original_binding_and_arrays_preserved_current_readers_"
+                "reaudited"
             )
     indexed = {
         (cid, a["number"]): a

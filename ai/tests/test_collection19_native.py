@@ -1,4 +1,6 @@
-"""Full480 synthetic native/public API integration; no producer command or physical run."""
+"""Full480 synthetic native/public API integration; no producer command or
+physical run.
+"""
 
 import csv
 import importlib
@@ -323,7 +325,10 @@ def rejected(full480):
         contract_passed=False,
         physical_gate_passed=False,
         errors=[
-            "Joint native consumption: Incomplete actual reference consumption coverage"
+            (
+                "Joint native consumption: Incomplete actual reference "
+                "consumption coverage"
+            )
         ],
     )
     full480["assessment"] = put(p, a)

@@ -1,4 +1,6 @@
-"""One independent16-flight input check; reuse the finite runner without45 exemptions."""
+"""One independent16-flight input check; reuse the finite runner without45
+exemptions.
+"""
 
 import copy
 import os
@@ -118,7 +120,10 @@ def validate_config(cfg):
         )
     ):
         raise pilot45.Blocked(
-            "Exact FINAL16/16flight/RTF2/CPU4-after-flight/max1 contract required"
+            (
+                "Exact FINAL16/16flight/RTF2/CPU4-after-flight/max1 contract "
+                "required"
+            )
         )
     if cfg.get("authorization") != dict(
         path=str(AUTH), sha256=AUTH_SHA
@@ -142,7 +147,10 @@ def validate_ledger(task, *, complete=False, pristine=False):
         or len(ledger["attempts"]) > 16
     ):
         raise pilot45.Blocked(
-            "FINAL16 complete denominator without inherited/admin attempts required"
+            (
+                "FINAL16 complete denominator without inherited/admin attempts "
+                "required"
+            )
         )
     attempts = []
     for c in rows:
@@ -269,7 +277,10 @@ def dependencies(value):
         or value["sha256"]["runtime_manifest"] != binding["runtime_sha256"]
     ):
         raise pilot45.Blocked(
-            "FINAL16 source/runtime aliases must be the actual authorized producer"
+            (
+                "FINAL16 source/runtime aliases must be the actual authorized "
+                "producer"
+            )
         )
     if (binding["source_manifest_sha256"], binding["runtime_sha256"]) != (
         authorization()["producer"]["source_sha256"],

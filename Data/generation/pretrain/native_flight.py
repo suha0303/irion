@@ -1,4 +1,6 @@
-"""Run the producer through its own launcher; Data never imports its flight runtime."""
+"""Run the producer through its own launcher; Data never imports its flight
+runtime.
+"""
 
 import json
 import os
@@ -95,7 +97,10 @@ def read_result(path):
     path = Path(path)
     if path.stat().st_size > 1024 * 1024:
         raise ValueError(
-            "Producer stdout exceeds bounded JSON result size; preserve for review"
+            (
+                "Producer stdout exceeds bounded JSON result size; preserve "
+                "for review"
+            )
         )
     value = json.loads(path.read_text(encoding="utf-8"))
     if value.get("status") not in {"completed", "failed"} or not isinstance(

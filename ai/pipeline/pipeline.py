@@ -1,4 +1,6 @@
-"""Explicit R1 role wrappers. No test.npz reader and no event-truth evaluator."""
+"""Explicit R1 role wrappers. No test.npz reader and no event-truth
+evaluator.
+"""
 
 import json
 import shutil
@@ -26,7 +28,9 @@ from .fit import neural_fit
 
 
 def scaler_from_train(frames, contexts, preprocess=None):
-    """Caller supplies unique valid normal_train frames and once-per-origin contexts only."""
+    """Caller supplies unique valid normal_train frames and once-per-origin
+    contexts only.
+    """
     x = feature_transform(frames, preprocess)
     c = np.asarray(contexts)
     if (
@@ -152,7 +156,10 @@ def prepare(frozen, out, preprocess, budget, *, process_run=None):
         {
             "runs": frozen["runs"],
             "audit": report,
-            "scaler_fit": "normal_train unique valid airborne frames; context once per train origin",
+            "scaler_fit": (
+                "normal_train unique valid airborne frames; context once per "
+                "train origin"
+            ),
             "unique_train_frames": len(unique_frames),
             "hashes": {p.name: sha(p) for p in out.glob("*.npz")},
         },
@@ -199,7 +206,8 @@ def bundles(dataset, out, preprocess, budget, *, lstm_backend=None):
         if name == "lstm":
             result = neural_fit(neural_config, train, val, folder, budget)
         elif name == "ridge_forecast":
-            # Same predeclared dual-ridge solver and validation selection as training.py, on CPU.
+            # Same predeclared dual-ridge solver and validation selection as
+            # training.py, on CPU.
             x, v = flat(train), flat(val)
             y = train["Y"].reshape(len(x), -1)
             best = float("inf")
@@ -259,7 +267,9 @@ def bundles(dataset, out, preprocess, budget, *, lstm_backend=None):
 
 
 def calibrate_and_seal(dataset, models, out, budget):
-    """One normal calibration per model, then development inference; never joins truth."""
+    """One normal calibration per model, then development inference; never
+    joins truth.
+    """
     out.mkdir(exist_ok=False)
     rows = read(dataset / "manifest.json")["runs"]
     groups = {r["run_id"]: r["paired_case_id"] for r in rows}
@@ -317,7 +327,9 @@ def seal_development(
     predictor=None,
     prediction_batch_size=1,
 ):
-    """Zero airborne exposure is an unavailable case, never a dropped case or healthy zero."""
+    """Zero airborne exposure is an unavailable case, never a dropped case or
+    healthy zero.
+    """
     frames = [
         json.loads(s)
         for s in (canonical / "frames.jsonl")
@@ -357,7 +369,10 @@ def seal_development(
         "episodes_per_hour": None,
         "excluded_case": False,
         "truth_join": "coordinator_pending",
-        "coordinator_action": "retain case/event denominators as unavailable; do not call positive-exposure evaluation_metrics",
+        "coordinator_action": (
+            "retain case/event denominators as unavailable; do not call "
+            "positive-exposure evaluation_metrics"
+        ),
         "preprocessing_exclusions": summary["exclusions"],
     }
     write(target / "summary.json", result)

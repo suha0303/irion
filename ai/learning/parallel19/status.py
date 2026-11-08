@@ -24,8 +24,14 @@ def show(root):
             e["node"],
             e["model"],
             s.get("stage", "시작 중"),
-            f"epoch {s.get('epoch', '-')}/60 batch {s.get('batch', '-')}/{s.get('batches', '-')}",
-            f"LR {s.get('lr', s.get('candidate', '-'))} GPU {s.get('gpu_allocated_bytes', 0) / 1e9:.2f}GB",
+            (
+                f"epoch {s.get('epoch', '-')}/60 batch "
+                f"{s.get('batch', '-')}/{s.get('batches', '-')}"
+            ),
+            (
+                f"LR {s.get('lr', s.get('candidate', '-'))} GPU "
+                f"{s.get('gpu_allocated_bytes', 0) / 1e9:.2f}GB"
+            ),
         )
     if d.get("reason"):
         print(d["reason"])

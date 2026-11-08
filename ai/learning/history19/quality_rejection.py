@@ -1,4 +1,6 @@
-"""Narrow short180 retry evidence for three physically completed, rejected C03 raws."""
+"""Narrow short180 retry evidence for three physically completed, rejected
+C03 raws.
+"""
 
 import csv
 import json
@@ -9,9 +11,9 @@ from learning.admission19 import check_producer
 from .pilot import ROOT, json_file, regular, sha
 
 TASK = "SHORT_CYCLE_20261107"
-CATALOG = (
-    ROOT
-    / "ai/reports/quality-rejection-20261107/attempt-01/approved-rejections-v2.json"
+CATALOG = ROOT / (
+    "ai/reports/quality-rejection-20261107/attempt-01/approved-"
+    "rejections-v2.json"
 )
 CATALOG_SHA256 = (
     "a2b35fe0b41a3d524d7172de1d30ff52109c207f113b539ee3e39819d6ed9e79"
@@ -178,7 +180,10 @@ def _evidence(catalog, run_id, fixture_only):
         or over != 1
     ):
         raise ValueError(
-            "Actual one-gap rejection and complete1801 reference coverage required"
+            (
+                "Actual one-gap rejection and complete1801 reference coverage "
+                "required"
+            )
         )
     return dict(
         max_gap_us=max_gap,
@@ -189,7 +194,9 @@ def _evidence(catalog, run_id, fixture_only):
 
 
 def publish(run_id, output, *, fixture_only=False):
-    """Write new evidence only; never change physical metadata, data, or execution state."""
+    """Write new evidence only; never change physical metadata, data, or
+    execution state.
+    """
     if run_id not in APPROVED_RUNS:
         raise ValueError(
             "Run is not one of the three authorized quality rejections"
@@ -230,7 +237,9 @@ def publish(run_id, output, *, fixture_only=False):
 def verify_attempt(
     ctx, case, attempt, *, expected_producer, native_policy_sha256
 ):
-    """Return True for verified quality_rejected, otherwise preserve the old guard."""
+    """Return True for verified quality_rejected, otherwise preserve the old
+    guard.
+    """
     rejected = attempt.get("status") == "quality_rejected"
     if not rejected:
         if attempt.get("quality_rejection") is not None or (

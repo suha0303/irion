@@ -1,4 +1,6 @@
-"""Selection metadata is consumed here, never passed into a neural forward call."""
+"""Selection metadata is consumed here, never passed into a neural forward
+call.
+"""
 
 import json
 from pathlib import Path
@@ -205,7 +207,8 @@ def build(config_path, out):
             )
             accepted += 1
         if row["split"] == "train":
-            # Count each valid, airborne frame once, regardless of overlapping windows.
+            # Count each valid, airborne frame once, regardless of overlapping
+            # windows.
             train_frames.extend(
                 [
                     [f["values"][n] for n in FEATURES]
@@ -252,7 +255,10 @@ def build(config_path, out):
             "groups": groups,
             "profile": "common19_ctx6",
             "target_order": TARGETS,
-            "scaler_fit": "unique valid airborne normal train frames; context once per train origin",
+            "scaler_fit": (
+                "unique valid airborne normal train frames; context once per "
+                "train origin"
+            ),
             "unique_train_frames": len(unique_x),
             "counts": {s: len(a) for s, a in arrays.items()},
             "hashes": {p.name: sha(p) for p in out.glob("*.npz")},

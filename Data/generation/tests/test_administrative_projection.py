@@ -1,4 +1,6 @@
-"""A UUID-less administrative record is retained separately, never invented as physical."""
+"""A UUID-less administrative record is retained separately, never invented
+as physical.
+"""
 
 import copy
 
@@ -85,7 +87,8 @@ def test_C05_counter_fixture_separates14_new31_reused_and_one_administrative_rec
     cfg = common.read(task / "config.json")
     ledger = copy.deepcopy(common.read(task / "ledger.json"))
     pending = cfg["short_resume"]["pending_native_cases"]
-    # Reconstruct the initial C05 counter fixture after the live C05 task has completed.
+    # Reconstruct the initial C05 counter fixture after the live C05 task has
+    # completed.
     ledger["attempts"] = [
         a for a in ledger["attempts"] if a.get("execution_task") != str(task)
     ]

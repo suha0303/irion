@@ -1,4 +1,6 @@
-"""Causal canonical replay: seal predictions before the separate truth evaluator."""
+"""Causal canonical replay: seal predictions before the separate truth
+evaluator.
+"""
 
 import json
 import os
@@ -26,10 +28,12 @@ def records(path):
 def prediction_stream(
     ordered_windows, predictor, config, batch_size, timings, check=None
 ):
-    """Batch independent past-only inputs; the replay still issues in logical time.
+    """Batch independent past-only inputs; the replay still issues in logical
+    time.
 
     Batching does not measure online single-request latency. A chunk may contain
-    later origins, but its predictions cannot enter the ledger before those origins.
+    later origins, but its predictions cannot enter the ledger before
+    those origins.
     No target frames, detector state, or evaluator truth enter this calculation.
     """
     scale = predictor.scaler
@@ -54,7 +58,9 @@ def prediction_stream(
 
 
 def prepare_replay(canonical, bundle, *, frames=None):
-    """Read one immutable run; inference and CPU replay can consume it separately."""
+    """Read one immutable run; inference and CPU replay can consume it
+    separately.
+    """
     canonical, bundle = Path(canonical), Path(bundle)
     config = read_json(canonical / "summary.json")["config"]
     if config != read_json(bundle / "preprocessing.json"):
@@ -129,7 +135,9 @@ def replay_prepared(
     batch_seconds,
     prediction_batch_size,
 ):
-    """CPU-only causal ledger/writer; consumes past-only forecasts in frame order."""
+    """CPU-only causal ledger/writer; consumes past-only forecasts in frame
+    order.
+    """
     out = Path(out)
     out.mkdir(parents=True, exist_ok=False)
     windows, frames = prepared["windows"], prepared["frames"]
@@ -205,14 +213,20 @@ def replay_prepared(
             "forecast_count": len(ledger.forecasts),
             "decisions": len(decisions),
             "operational_spans_us": intervals,
-            "exposure_definition": "first-to-last observed airborne envelope per clock, includes intervening gaps",
+            "exposure_definition": (
+                "first-to-last observed airborne envelope per clock, includes "
+                "intervening gaps"
+            ),
             "preprocessing_exclusions": summary["exclusions"],
             "warmup_frames": sum(f["warmup"] for f in frames),
             "logical_replay_only": True,
             "live_deadline_verification": "not_executed",
             "prediction_batch_size_requested": prediction_batch_size,
             "prediction_batches": len(batch_seconds),
-            "durability": "both JSONL files synced before run seal; interrupted run is not reusable",
+            "durability": (
+                "both JSONL files synced before run seal; interrupted run is "
+                "not reusable"
+            ),
             "compute_seconds_p50_p95_p99": np.quantile(
                 latencies, [0.5, 0.95, 0.99]
             ).tolist()
@@ -315,5 +329,8 @@ def evaluate_sealed(replay_folder, events_path, observation_start):
         "point_metrics": point_metrics(truth, decisions, observation_start),
         "forecast_seal": sha(folder / "seal.json"),
         "truth_sha256": sha(events_path),
-        "matching_rule": "per-event awareness and new-episode recall; simultaneous events may share one alarm; no cause attribution",
+        "matching_rule": (
+            "per-event awareness and new-episode recall; simultaneous events "
+            "may share one alarm; no cause attribution"
+        ),
     }

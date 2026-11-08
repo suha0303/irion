@@ -50,7 +50,9 @@ def test_systemd_cleanup_preserves_arguments_with_spaces_and_specifiers():
 
 
 def test_relocated_preprocess_assemble_and_audit_without_torch(tmp_path):
-    """Only exported collection code and storage helper exist in the other checkout."""
+    """Only exported collection code and storage helper exist in the other
+    checkout.
+    """
     clone = tmp_path / "another machine with spaces"
     source = common.ROOT / "Data/generation"
     shutil.copytree(

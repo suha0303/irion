@@ -154,7 +154,8 @@ def test_symmetric_common_tolerance_and_absolute_cap(tmp_path):
     )
     output = tmp_path / "diagnostic.json"
     diagnose_prediction_batch(predictor, normal_sample(), output)
-    # Symmetric reference magnitude2 gives tolerance1.2. A batched-only magnitude
+    # Symmetric reference magnitude2 gives tolerance1.2. A batched-only
+    # magnitude
     # would incorrectly give0.6 for these exact saved predictions.
     explicit = policy(atol=0.0, rtol=0.6, max_absolute_difference=1.0)
     result = assess_diagnostic(output, explicit)

@@ -1,4 +1,6 @@
-"""Explicit180s no-fit input gate. No dependency on old development6 or pilot READY."""
+"""Explicit180s no-fit input gate. No dependency on old development6 or pilot
+READY.
+"""
 
 import argparse
 import json
@@ -27,7 +29,9 @@ AUTH = ROOT / "ai/reports/short-cycle-20261107/attempt-01/authorization.json"
 def prepare_policy(
     native_policy_path, producer_binding_path, output, *, fixture_only=False
 ):
-    """Write a new AI projection only after explicit short auth and native180 policy."""
+    """Write a new AI projection only after explicit short auth and native180
+    policy.
+    """
     from .joint_native import ORIGIN, WIND_CLOCK, check_policy
 
     auth = json_file(AUTH)
@@ -147,7 +151,9 @@ def prepare_request(bundle_path, output):
 def consumer_inputs(
     ctx, *, scope_task=TASK, cohort=SHORT, usage="short_cycle_input_check"
 ):
-    """Shared generation/config verification; no campaign membership or count changes."""
+    """Shared generation/config verification; no campaign membership or count
+    changes.
+    """
     from learning.admission19 import FINAL16
 
     if (scope_task, cohort, usage) not in {
@@ -160,7 +166,10 @@ def consumer_inputs(
         for k in ("native_completion", "development_receipt")
     ):
         raise ValueError(
-            "Short-cycle must not depend on historical development6 or pilot READY"
+            (
+                "Short-cycle must not depend on historical development6 or "
+                "pilot READY"
+            )
         )
     expected = ctx.doc("expected_producer")
     check_producer(expected, expected)
@@ -308,7 +317,10 @@ def final_checks(ctx, cases, ledger):
             or r["run_id"] != entry["attempts"][-1]["run_id"]
         ):
             raise ValueError(
-                "Unresolved/failed/unavailable case remains in full45 denominator"
+                (
+                    "Unresolved/failed/unavailable case remains in full45 "
+                    "denominator"
+                )
             )
         for key in (
             "source_manifest",
@@ -336,7 +348,9 @@ def final_checks(ctx, cases, ledger):
         status="SHORT45_INPUT_AND_PAIR_CHECKS_PASSED",
         cases_checked=45,
         pairs_checked=9,
-        scope="AI_input_only_Data_quality_and_actual_termination_still_required",
+        scope=(
+            "AI_input_only_Data_quality_and_actual_termination_still_required"
+        ),
     )
 
 

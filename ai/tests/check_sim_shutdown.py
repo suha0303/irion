@@ -1,4 +1,6 @@
-"""No SITL: test shutdown escalation and a real child taking nine seconds to exit."""
+"""No SITL: test shutdown escalation and a real child taking nine seconds to
+exit.
+"""
 
 import signal
 import subprocess

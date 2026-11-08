@@ -1,4 +1,6 @@
-"""The two explicitly supported no-fit integration durations; default stays480s."""
+"""The two explicitly supported no-fit integration durations; default
+stays480s.
+"""
 
 PROFILES = {"standard480": 480000000, "short180": 180000000}
 NATIVE_ADAPTERS = (

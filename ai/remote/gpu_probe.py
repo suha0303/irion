@@ -224,7 +224,10 @@ def main():
         job_id = os.environ.get("SLURM_JOB_ID", "")
         if not job_id.isdigit():
             raise ValueError(
-                "no Slurm allocation; login-node execution refused before torch import"
+                (
+                    "no Slurm allocation; login-node execution refused before "
+                    "torch import"
+                )
             )
         raw = subprocess.check_output(
             ["scontrol", "show", "job", "-o", job_id], text=True
@@ -269,7 +272,8 @@ def main():
                 )
             except importlib.metadata.PackageNotFoundError:
                 report["runtime_packages"][name] = None
-        # Read driver metadata only; no physical GPU selection or CUDA env changes.
+        # Read driver metadata only; no physical GPU selection or CUDA env
+        # changes.
         try:
             driver = subprocess.run(
                 [

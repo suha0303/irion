@@ -1,4 +1,6 @@
-"""Actual finite scheduler fixtures:16 flight lanes/one4-slot pool, no native execution."""
+"""Actual finite scheduler fixtures:16 flight lanes/one4-slot pool, no native
+execution.
+"""
 
 import copy
 import hashlib

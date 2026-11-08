@@ -119,7 +119,10 @@ def check_case(
         "abnormal" if case["role"] == "anomaly_test" else "confirmed_healthy"
     ):
         raise ValueError(
-            "Actual source health eligibility differs from the frozen pilot role"
+            (
+                "Actual source health eligibility differs from the frozen "
+                "pilot role"
+            )
         )
     if case["case_kind"] == "anomaly":
         battery_fault = "rpt_16" in (
@@ -174,7 +177,10 @@ def check_case(
             or not set(case["lineage"]) <= set(item["lineage"])
         ):
             raise ValueError(
-                "Views must retain pilot purpose/cohort and frozen case/attempt identities"
+                (
+                    "Views must retain pilot purpose/cohort and frozen "
+                    "case/attempt identities"
+                )
             )
         if item.get("origin") != (
             "synthetic_unit_fixture"
@@ -191,7 +197,10 @@ def check_case(
             or evidence["propulsion_selection"] != propulsion
         ):
             raise ValueError(
-                "View selection/scenario summary differs from actual raw metadata"
+                (
+                    "View selection/scenario summary differs from actual raw "
+                    "metadata"
+                )
             )
     for key in ("lineage", "mission_interval", "source_evidence", "origin"):
         if row[key] != other[key]:
@@ -226,13 +235,19 @@ def check_case(
         != projected["native_sources_sha256"]
     ):
         raise ValueError(
-            "Mission boundary must bind actual native start, LAND and physics receipts"
+            (
+                "Mission boundary must bind actual native start, LAND and "
+                "physics receipts"
+            )
         )
     if projected.get("external_audit_evidence") != mission.get(
         "external_audit_evidence"
     ):
         raise ValueError(
-            "Both views must preserve the explicit external full-audit provenance"
+            (
+                "Both views must preserve the explicit external full-audit "
+                "provenance"
+            )
         )
     ctx.checked.append("actual_case_receipt_and_both_view_identity")
     canonical = ctx.ref("canonical_frames")
@@ -267,7 +282,10 @@ def check_case(
                 frame["quality"][n] != "valid" for n in FEATURES
             ):
                 raise Unavailable(
-                    "Mission contains missing/nonvalid features or non-airborne state; retained in denominator"
+                    (
+                        "Mission contains missing/nonvalid features or "
+                        "non-airborne state; retained in denominator"
+                    )
                 )
             lineage = required(frame, "lineage")
             if not lineage:
@@ -282,7 +300,10 @@ def check_case(
                 for r in lineage.values()
             ):
                 raise ValueError(
-                    "Canonical sample/available provenance uses a future observation"
+                    (
+                        "Canonical sample/available provenance uses a future "
+                        "observation"
+                    )
                 )
             key = (frame["segment_id"], frame["time_us"])
             if key in frames:
@@ -304,7 +325,10 @@ def check_case(
     times = list(range(first, last + 1, 100000))
     if len(times) <= 100 or set(frames) != {(segment, t) for t in times}:
         raise Unavailable(
-            "Incomplete/short actual mission; no edge trimming or gap interpolation"
+            (
+                "Incomplete/short actual mission; no edge trimming or gap "
+                "interpolation"
+            )
         )
     physical = np.stack([frames[(segment, t)] for t in times])
     actual_runs = list(
@@ -317,7 +341,10 @@ def check_case(
     )
     if not np.allclose(actual_runs[0].values, physical, atol=ATOL, rtol=RTOL):
         raise ValueError(
-            "Run NPZ must preserve physical pack V/A, not transformed or shifted data"
+            (
+                "Run NPZ must preserve physical pack V/A, not transformed or "
+                "shifted data"
+            )
         )
     del actual_runs
     inspected = inspect_run(
@@ -338,7 +365,10 @@ def check_case(
         or np.any(segments != segment)
     ):
         raise ValueError(
-            "Online windows must cover every eligible mission origin; no selective omission"
+            (
+                "Online windows must cover every eligible mission origin; no "
+                "selective omission"
+            )
         )
     target_columns = [FEATURES.index(n) for n in TARGETS]
     for name, offsets in (("X", range(-99, 1)), ("Y", range(1, 11))):
@@ -366,7 +396,10 @@ def check_case(
                 values, np.stack(expected_values), atol=ATOL, rtol=RTOL
             ):
                 raise ValueError(
-                    "Online X/Y differs from causal canonical values or was transformed twice"
+                    (
+                        "Online X/Y differs from causal canonical values or "
+                        "was transformed twice"
+                    )
                 )
     ctx.checked.append(
         "both19_views_match_full_mission_canonical_once_only_units"
@@ -398,7 +431,10 @@ def check_case(
             entry = all_ledger[partner["case_id"]]
             if entry["status"] != "completed" or not entry["attempts"]:
                 raise Pending(
-                    "Pilot pair counterpart has not completed; reuse existing raw, do not regenerate"
+                    (
+                        "Pilot pair counterpart has not completed; reuse "
+                        "existing raw, do not regenerate"
+                    )
                 )
             role = (
                 "normal"

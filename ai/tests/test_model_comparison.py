@@ -1,4 +1,6 @@
-"""Synthetic CPU/data and mocked scheduler checks; never submits a real GPU job."""
+"""Synthetic CPU/data and mocked scheduler checks; never submits a real GPU
+job.
+"""
 
 import copy
 import os
@@ -575,7 +577,10 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
     frozen["revision_lock"] = dict(
         preprocessing_sha256=sha(
             ROOT
-            / "Data/generation/pretrain/resources/preprocessing/preprocessing.json"
+            / (
+                "Data/generation/pretrain/resources/preprocessing/"
+                "preprocessing.json"
+            )
         )
     )
     for row in frozen["runs"]:

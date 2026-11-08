@@ -1,4 +1,6 @@
-"""Recover one failed audit, reusing completed preprocessing and audit outputs."""
+"""Recover one failed audit, reusing completed preprocessing and audit
+outputs.
+"""
 
 from pathlib import Path
 
@@ -167,7 +169,12 @@ def create_audit_recovery(source, name):
         gates=False,
         collection_authorized=False,
         training_authorized=False,
-        scope="One failed audit with maximum3 attempts; reuse existing dataset/scaler and successful audits; global verification and stop. No collection, extraction, preprocessing, assembly or training.",
+        scope=(
+            "One failed audit with maximum3 attempts; reuse existing "
+            "dataset/scaler and successful audits; global verification and "
+            "stop. No collection, extraction, preprocessing, assembly or "
+            "training."
+        ),
     )
     config["source_sha256"].update({str(p): sha(p) for p in evidence})
     write(task / "config.json", config)

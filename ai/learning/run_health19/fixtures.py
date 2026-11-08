@@ -1,4 +1,6 @@
-"""Deterministic synthetic *software tests*, never real SITL or detection evidence."""
+"""Deterministic synthetic *software tests*, never real SITL or detection
+evidence.
+"""
 
 import numpy as np
 

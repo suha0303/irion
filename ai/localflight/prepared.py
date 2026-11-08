@@ -72,7 +72,10 @@ def load(path, *, normal=False):
         m.get("health") != "confirmed_normal" or not m.get("health_evidence")
     ):
         raise ValueError(
-            "Confirmed normal flight and its evidence required; probability is insufficient"
+            (
+                "Confirmed normal flight and its evidence required; "
+                "probability is insufficient"
+            )
         )
     if not m.get("source_sha256") or len(m["source_sha256"]) != 64:
         raise ValueError("Original flight identity required")
@@ -130,7 +133,8 @@ def load(path, *, normal=False):
 
 
 def windows(metadata, values, times, scaler):
-    # Explicit nameplate conversion; the frozen training scaler itself is never refit.
+    # Explicit nameplate conversion; the frozen training scaler itself is never
+    # refit.
     physical = values.copy()
     physical[:, 17] /= metadata["profile"]["series_cells"]
     physical[:, 18] /= metadata["profile"]["capacity_ah"]
@@ -163,7 +167,10 @@ def distinct_flights(records):
     profiles = [m["profile"] for m in records]
     if any(p != profiles[0] for p in profiles[1:]):
         raise ValueError(
-            "Adaptation and comparison require the same aircraft profile version"
+            (
+                "Adaptation and comparison require the same aircraft profile "
+                "version"
+            )
         )
     origins = {m["origin"] for m in records}
     if len(origins) > 1:

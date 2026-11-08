@@ -1,4 +1,6 @@
-"""Different startup lengths must not alter fixed mission comparison; real gaps must fail."""
+"""Different startup lengths must not alter fixed mission comparison; real
+gaps must fail.
+"""
 
 import copy
 import json

@@ -30,7 +30,9 @@ def regular(path):
 
 
 def capsule_row(source, store, label, row, pins):
-    """Bind a capsule to the original freeze and independently completed CPU units."""
+    """Bind a capsule to the original freeze and independently completed CPU
+    units.
+    """
     rid = row["run_id"]
     if not re.fullmatch(r"[0-9a-f]{32}", rid):
         raise ValueError("Invalid capsule run identity")
@@ -152,7 +154,9 @@ def capsule_row(source, store, label, row, pins):
 
 
 def inputs(source):
-    """Read stopped-task metadata; large archive hashes are checked during restore."""
+    """Read stopped-task metadata; large archive hashes are checked during
+    restore.
+    """
     from x500_storage import guard, task_root
 
     from .composition import validate_roles
@@ -193,7 +197,8 @@ def inputs(source):
     if config.get("planned_cases") != str(planned_path):
         raise ValueError("Source planned case path mismatch")
     verify({str(planned_path): config["source_sha256"][str(planned_path)]})
-    # Execution code may have the approved fix; preprocessing semantics must remain identical.
+    # Execution code may have the approved fix; preprocessing semantics must
+    # remain identical.
     immutable = {
         p: digest
         for p, digest in config["source_sha256"].items()
@@ -420,7 +425,12 @@ def create_recovery(source, name):
         recovery_source_task=admitted["source"],
         recovery_inputs=str(manifest),
         external_additional_bytes_max=required,
-        scope="Restore existing verified capsules; assemble one train-only scaler, independently verify, package and stop. No collection/training/automatic retry; preserve source task and capsules.",
+        scope=(
+            "Restore existing verified capsules; assemble one train-only "
+            "scaler, independently verify, package and stop. No "
+            "collection/training/automatic retry; preserve source task and "
+            "capsules."
+        ),
     )
     config["source_sha256"].update(
         {str(planned): sha(planned), str(manifest): sha(manifest)}
@@ -497,7 +507,8 @@ def run(runner):
                 "New portable archive changed; preserve working data"
             )
         verify_bundle(path, ref["members"], budget)
-    # Only this fresh task's working copies may be retired. Source capsules remain intact.
+    # Only this fresh task's working copies may be retired. Source capsules
+    # remain intact.
     paths = [prepared / "dataset", prepared / "audit-work"]
     retire_owned(
         paths,

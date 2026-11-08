@@ -1,4 +1,6 @@
-"""Local immutable adapted models, portable backups and explicit profile selection."""
+"""Local immutable adapted models, portable backups and explicit profile
+selection.
+"""
 
 import hashlib
 import json
@@ -244,7 +246,10 @@ def select_model(root, model_id, comparison, *, bundle):
         or measured.get("profile_version") != fingerprint(descriptor["profile"])
     ):
         raise ValueError(
-            "An independent local comparison of this model and profile is required"
+            (
+                "An independent local comparison of this model and profile is "
+                "required"
+            )
         )
     return change_selection(
         root,

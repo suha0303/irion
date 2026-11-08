@@ -1,4 +1,6 @@
-"""MAIN-only known native-gap rejection proof; no retry submission or raw writes."""
+"""MAIN-only known native-gap rejection proof; no retry submission or raw
+writes.
+"""
 
 import csv
 import sys
@@ -92,7 +94,10 @@ def _inspect(
         or not first_us <= physics["notice_us"] <= first_us + 500000
     ):
         raise ValueError(
-            "Invalid native clock/start/LAND/physics notice is not a gap-only rejection"
+            (
+                "Invalid native clock/start/LAND/physics notice is not a "
+                "gap-only rejection"
+            )
         )
     assessment_path = bound(assessment_ref)
     assessment = json_file(assessment_path)
@@ -205,7 +210,10 @@ def verify_quality_rejection(
         case_id is not None and case_key(case_id) != value["case_id"]
     ):
         raise ValueError(
-            "Physical COMPLETED or logical case cannot be disguised during retry"
+            (
+                "Physical COMPLETED or logical case cannot be disguised during "
+                "retry"
+            )
         )
     if policy_bundle is None:
         policy_bundle = {

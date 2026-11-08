@@ -1,4 +1,6 @@
-"""Exercise final workflow directory admission with the real six-file extractor."""
+"""Exercise final workflow directory admission with the real six-file
+extractor.
+"""
 
 import hashlib
 import io
@@ -75,7 +77,8 @@ def final_extraction(tmp_path, monkeypatch):
     def batch(name, action, items, workers, out, **kwargs):
         actions.append(action)
         if action == "extract":
-            # Do not create the missing parent here: the workflow owns that step.
+            # Do not create the missing parent here: the workflow owns that
+            # step.
             worker.execute(
                 dict(
                     action="extract",
@@ -135,7 +138,8 @@ def test_final_workflow_creates_nested_parent_before_real_extraction(
 ):
     fixture = final_extraction
     assert not fixture.consumer.exists()
-    # Reproduce the old call ordering: the per-run extractor cannot create its parent.
+    # Reproduce the old call ordering: the per-run extractor cannot create its
+    # parent.
     with pytest.raises(FileNotFoundError):
         fixture.archive.extract_consumer(fixture.row, common.Budget())
     final.run(fixture.runner)

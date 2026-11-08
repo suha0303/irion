@@ -65,8 +65,10 @@ def neural_fit(name, cfg, train, val, folder, resume=None, stop_after=None):
     start, best, history = 0, float("inf"), []
     best_state = copy.deepcopy(model.state_dict())
     if resume:
-        # Only our own locally generated checkpoint is accepted by this training API.
-        # RNG byte tensors must remain on CPU; load_state_dict moves model/optimizer state.
+        # Only our own locally generated checkpoint is accepted by this training
+        # API.
+        # RNG byte tensors must remain on CPU; load_state_dict moves
+        # model/optimizer state.
         ck = torch.load(resume, map_location="cpu")
         if ck["config"] != cfg or ck["data_signature"] != data_signature:
             raise ValueError("resume config mismatch")

@@ -22,7 +22,8 @@ class SixteenPorts(unittest.TestCase):
             target = collection_config.prepare_fc(Path(temp), upstream)
             commands = []
             for lane in range(16):
-                # Execute the actual generated shell with a recording stub, never PX4.
+                # Execute the actual generated shell with a recording stub,
+                # never PX4.
                 result = subprocess.run(
                     [
                         "sh",

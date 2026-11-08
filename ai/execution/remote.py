@@ -1,4 +1,6 @@
-"""Login-node submission/status only; CUDA code runs exclusively inside the checked job."""
+"""Login-node submission/status only; CUDA code runs exclusively inside the
+checked job.
+"""
 
 import argparse
 import fcntl
@@ -77,8 +79,14 @@ def submit(root):
             + "export PYTHONPATH="
             + shlex.quote(str(root / "ai") + ":" + str(root / "ai/src"))
             + "\n"
-            + "export PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
-            + "export OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2\n"
+            + (
+                "export PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 "
+                "CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
+            )
+            + (
+                "export OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 "
+                "MKL_NUM_THREADS=2\n"
+            )
             + "exec "
             + shlex.join(
                 [
@@ -158,7 +166,8 @@ def snapshot(root):
             ]
         )
     except subprocess.CalledProcessError as exc:
-        # Slurm can purge a finished job from squeue before its accounting disappears.
+        # Slurm can purge a finished job from squeue before its accounting
+        # disappears.
         # Other query failures must not be interpreted as release.
         if "invalid job id" not in (exc.stderr or "").lower():
             raise
@@ -258,7 +267,8 @@ def worker(root, inventory_sha):
             from pipeline.runtime import check
 
             progress.update(stage="resource_admission")
-            # Existing DIS01/owner/TRES/Python/Torch/CUDA/GPU checks; no CUDA_VISIBLE_DEVICES writes.
+            # Existing DIS01/owner/TRES/Python/Torch/CUDA/GPU checks; no
+            # CUDA_VISIBLE_DEVICES writes.
             environment = check(
                 root / "ai", out, "train", job_prefix="drone-ai-"
             )
@@ -266,7 +276,10 @@ def worker(root, inventory_sha):
             required = cfg["memory"]["estimated_host_peak_bytes"]
             if available < required + 1024**3:
                 raise MemoryError(
-                    f"RAM admission: available{available}, conservative peak{required}, reserve1GiB"
+                    (
+                        f"RAM admission: available{available}, conservative "
+                        f"peak{required}, reserve1GiB"
+                    )
                 )
             write(
                 out / "host-memory-admission.json",

@@ -56,7 +56,8 @@ def run(es, chunk=317):
         part = es[start : start + chunk]
         for e in part:
             p.ingest(e)
-        # Finalize strictly below the last timestamp, allowing ties in the next batch.
+        # Finalize strictly below the last timestamp, allowing ties in the next
+        # batch.
         p.advance(part[-1]["clock_id"], part[-1]["available_time_us"] - 1)
     p.advance(es[-1]["clock_id"], es[-1]["available_time_us"])
     return p
@@ -92,7 +93,8 @@ def test_filter_analytic_step_and_frequency():
     f.update(70000, 1.0)
     assert f.at(160000)[1] == pytest.approx(1 - 3 * math.exp(-2))
 
-    # Analytic continuous cascade gain; verify numerical driven response at 1 and 20 Hz.
+    # Analytic continuous cascade gain; verify numerical driven response at 1
+    # and 20 Hz.
     def gain(hz):
         lp = LowPass(0, 0.0, 0.08)
         outputs = []

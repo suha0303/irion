@@ -205,7 +205,8 @@ class SessionRun:
             if cut:
                 del self.entries[:cut]
                 del self.times[:cut]
-            # The decoding cache is not an archive. Retain only the display window.
+            # The decoding cache is not an archive. Retain only the display
+            # window.
             for key in list(self.core.by_stream):
                 times = self.core.stream_times[key]
                 n = max(
@@ -261,8 +262,10 @@ class SessionRun:
         ):
             self.issue("다른 component 제외", record)
             return False
-        # Preserve the full passive transport for the independent common19 adapter.
-        # Display-only decoding may exclude IMU messages or nonzero battery instances.
+        # Preserve the full passive transport for the independent common19
+        # adapter.
+        # Display-only decoding may exclude IMU messages or nonzero battery
+        # instances.
         self._write(
             {
                 "type": "mavlink",

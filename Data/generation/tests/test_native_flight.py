@@ -1,4 +1,6 @@
-"""Exercise the real Sim interpreter boundary without a flight or dependency install."""
+"""Exercise the real Sim interpreter boundary without a flight or dependency
+install.
+"""
 
 import importlib.util
 import json
@@ -79,7 +81,10 @@ def test_child_collects_json_after_real_other_interpreter_exits(
         dict(action="flight", task=str(task), case=case, receipt=str(receipt)),
     )
     program = (
-        "import json,sys;print('fixture stderr',file=sys.stderr);print(json.dumps("
+        (
+            "import json,sys;print('fixture "
+            "stderr',file=sys.stderr);print(json.dumps("
+        )
         + repr(dict(run=str(raw), status="completed"))
         + "))"
     )

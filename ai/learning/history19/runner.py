@@ -1,4 +1,6 @@
-"""Finite explicit SGD suite; normal-only LR probes and unchanged resource/resume gates."""
+"""Finite explicit SGD suite; normal-only LR probes and unchanged
+resource/resume gates.
+"""
 
 import os
 import subprocess
@@ -289,7 +291,10 @@ def gates(cfg, out, train, val, binding, selected, progress):
 def fit(manifest, out, *, approved=False):
     if not approved:
         raise ValueError(
-            "Explicit --approve-training required; code changes do not start training"
+            (
+                "Explicit --approve-training required; code changes do not "
+                "start training"
+            )
         )
     out = Path(out).absolute()
     manifest = Path(manifest).absolute()
@@ -342,7 +347,10 @@ def fit(manifest, out, *, approved=False):
             64 * 1024**3, available
         ):
             raise MemoryError(
-                "Fixed64GiB host-memory plan rejected; no smaller batch or omission"
+                (
+                    "Fixed64GiB host-memory plan rejected; no smaller batch or "
+                    "omission"
+                )
             )
         import shutil
 

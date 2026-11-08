@@ -440,7 +440,10 @@ def test_data_subprocess_imports_no_training_dependencies():
     env = dict(
         os.environ, PYTHONPATH=f"{ROOT}/Data/generation:{ROOT}/ai:{ROOT}/ai/src"
     )
-    command = 'import sys;from pretrain.ai19 import ai_modules;ai_modules();assert "torch" not in sys.modules'
+    command = (
+        "import sys;from pretrain.ai19 import ai_modules;ai_modules();assert "
+        '"torch" not in sys.modules'
+    )
     subprocess.run(
         [str(ROOT / "Data/generation/.venv/bin/python"), "-B", "-c", command],
         env=env,

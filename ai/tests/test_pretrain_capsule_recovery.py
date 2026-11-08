@@ -1,4 +1,6 @@
-"""Stopped capsule recovery never recollects or modifies the failed source task."""
+"""Stopped capsule recovery never recollects or modifies the failed source
+task.
+"""
 
 import copy
 from pathlib import Path

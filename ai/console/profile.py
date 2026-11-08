@@ -66,7 +66,10 @@ def validate(value):
     if ssh is not None:
         if not isinstance(ssh, dict) or set(ssh) != {"host", "user", "port"}:
             raise ValueError(
-                "SSH accepts host/user/port only; use terminal or SSH agent for auth"
+                (
+                    "SSH accepts host/user/port only; use terminal or SSH "
+                    "agent for auth"
+                )
             )
         if not isinstance(ssh["host"], str) or not re.fullmatch(
             r"[A-Za-z0-9][A-Za-z0-9._:-]{0,252}", ssh["host"]
@@ -140,7 +143,8 @@ def ssh_command(profile):
     ssh = profile["ssh"]
     if ssh is None:
         raise ValueError("This profile has no SSH destination")
-    # Do not disable host-key checks or collect passwords. SSH handles terminal authentication.
+    # Do not disable host-key checks or collect passwords. SSH handles terminal
+    # authentication.
     return [
         "ssh",
         "-o",

@@ -1,4 +1,6 @@
-"""Actual user menu -> complete frozen task factory, with submission blocked by a mock."""
+"""Actual user menu -> complete frozen task factory, with submission blocked
+by a mock.
+"""
 
 import hashlib
 from pathlib import Path
@@ -56,7 +58,8 @@ def test_main_factory_includes_existing_lr108_once_and_user_menu_submits_one_sco
     home, store = factory(monkeypatch, tmp_path)
     lr = main.create("lr108", storage_root=store, name="main19-fixture-lr108")
     cfg = common.read(lr / "config.json")
-    # Boundary fixture: the already independently accepted catalogue is immutable input.
+    # Boundary fixture: the already independently accepted catalogue is
+    # immutable input.
     for case in common.read(lr / "manifest.json")["cases"]:
         rid = hashlib.md5(
             case["case_id"].encode(), usedforsecurity=False
@@ -99,7 +102,8 @@ def test_main_factory_includes_existing_lr108_once_and_user_menu_submits_one_sco
     screens = []
     monkeypatch.setattr(cli, "start", lambda t: calls.append(Path(t)))
     monkeypatch.setattr(cli, "watch", lambda t: screens.append(Path(t)))
-    # The actual factory is reused; no service/native/model can be invoked by this test.
+    # The actual factory is reused; no service/native/model can be invoked by
+    # this test.
     monkeypatch.setattr("builtins.input", lambda _: "2")
     original_start = main.user_start
     monkeypatch.setattr(

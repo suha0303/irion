@@ -1,4 +1,6 @@
-"""Merge frozen portable datasets offline, using one global train-only scaler."""
+"""Merge frozen portable datasets offline, using one global train-only
+scaler.
+"""
 
 import argparse
 import copy
@@ -50,7 +52,10 @@ def merge_records(parts):
             )
         if any(row["role"] not in ROLES for row in frozen["runs"]):
             raise ValueError(
-                "Only training/validation/calibration/development roles may merge"
+                (
+                    "Only training/validation/calibration/development roles "
+                    "may merge"
+                )
             )
         rows.extend(copy.deepcopy(frozen["runs"]))
         cases.extend(copy.deepcopy(part["cases"]))
@@ -66,7 +71,9 @@ def merge_records(parts):
         status="DATA_FROZEN",
         revision=first["revision"],
         revision_lock=shared,
-        producer_revision_scope="per_source_revision_locks; heterogeneous producer source hashes",
+        producer_revision_scope=(
+            "per_source_revision_locks; heterogeneous producer source hashes"
+        ),
         source_revision_locks=[p["frozen"]["revision_lock"] for p in parts],
         protected_inventory_sha256=first["protected_inventory_sha256"],
         runs=rows,
@@ -189,8 +196,10 @@ def create(bundles, name):
         continue_after_case_failure=False,
         unit_attempts_max=3,
         external_additional_bytes_max=3 * required + 50_000_000_000,
-        scope="Merge existing portable datasets; reuse canonical preprocessing, refit "
-        "one train scaler, independently audit, pack and stop. No flight/training.",
+        scope="Merge existing portable datasets; reuse canonical "
+        "preprocessing, refit "
+        "one train scaler, independently audit, pack and stop. No "
+        "flight/training.",
     )
     by_id = {row["case_id"]: row for row in cases}
     planned = Path(config["planned_cases"])
@@ -228,7 +237,10 @@ def create(bundles, name):
             restore_bytes=required,
             scratch_cap_bytes=config["external_additional_bytes_max"],
             source_pins=pins,
-            compatibility="Same battery/PX4/physics/profile/preprocessing; producer revisions kept per source",
+            compatibility=(
+                "Same battery/PX4/physics/profile/preprocessing; producer "
+                "revisions kept per source"
+            ),
         ),
     )
     return task

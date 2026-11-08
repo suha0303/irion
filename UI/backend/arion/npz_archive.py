@@ -247,7 +247,10 @@ class NpzArchive:
             ]
             if len(items) != job["rows"]:
                 raise ValueError("저널 구간과 NPZ 행 수 불일치")
-            filename = f"chunk-{job['start_sequence']:012d}-{job['end_sequence']:012d}.npz"
+            filename = (
+                f"chunk-{job['start_sequence']:012d}-"
+                f"{job['end_sequence']:012d}.npz"
+            )
             path = self.path / filename
             with self.lock:
                 meta = deepcopy(self.data["metadata"])
@@ -330,7 +333,8 @@ class NpzArchive:
             self._save()
 
     def recover(self):
-        # Reconstruct pending boundaries from the immutable journal, one chunk at a time.
+        # Reconstruct pending boundaries from the immutable journal, one chunk
+        # at a time.
         self.wait()
         with self.lock:
             self.data["received_rows"] = 0

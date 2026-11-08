@@ -1,4 +1,6 @@
-"""Finite disposable batch benchmark; requires explicit approval for any CUDA operation."""
+"""Finite disposable batch benchmark; requires explicit approval for any CUDA
+operation.
+"""
 
 import gc
 import math
@@ -16,7 +18,9 @@ from .training import Batches, backend, project_lock, safe_step
 
 
 def _validation_timing(model, arrays, batch_size, device, progress):
-    """One separately timed full validation pass through the production loader."""
+    """One separately timed full validation pass through the production
+    loader.
+    """
     prepare_started = time.monotonic()
     batches = Batches(arrays, batch_size, device)
     prepare_seconds = time.monotonic() - prepare_started
@@ -88,10 +92,13 @@ def estimate_fit_budget(
     elapsed_seconds,
     wall_hours,
 ):
-    """Measured-time projection, with explicit assumptions, before fresh main fits.
+    """Measured-time projection, with explicit assumptions, before fresh main
+    fits.
 
-    A successful admission is not a prediction guarantee: the enforced wall budget
-    still stops the job. Early stopping is never assumed to make an over-budget run fit.
+    A successful admission is not a prediction guarantee: the enforced
+    wall budget
+    still stops the job. Early stopping is never assumed to make an
+    over-budget run fit.
     """
     if not rows or any(
         type(v) is not int or v < 1
@@ -164,9 +171,18 @@ def estimate_fit_budget(
         approved_hard_wall_seconds=wall_hours * 3600,
         assumptions=[
             "Full maximum epoch count; no early-stopping discount",
-            "Warm-cache actual loader measurements extrapolated to every training batch",
-            "25% timing margin plus one-hour unmeasured baseline/checkpoint/I/O reserve",
-            "Already elapsed normalization, memory/resume and timing gates included once",
+            (
+                "Warm-cache actual loader measurements extrapolated to every "
+                "training batch"
+            ),
+            (
+                "25% timing margin plus one-hour unmeasured "
+                "baseline/checkpoint/I/O reserve"
+            ),
+            (
+                "Already elapsed normalization, memory/resume and timing gates "
+                "included once"
+            ),
         ],
         excluded_stages=[
             "calibration",
@@ -329,7 +345,10 @@ def _measure(
                     passed=passed,
                     device=device,
                     representative_windows=batches.count,
-                    input_mode="Actual Batches loader over supplied arrays/mmap; finite-input scan warms cache; cold disk load excluded",
+                    input_mode=(
+                        "Actual Batches loader over supplied arrays/mmap; "
+                        "finite-input scan warms cache; cold disk load excluded"
+                    ),
                     includes=[
                         "loader gather/read",
                         "GPU transfer when CUDA",

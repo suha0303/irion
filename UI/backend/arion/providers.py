@@ -247,7 +247,8 @@ class ProviderRegistry:
                                 time.perf_counter(),
                                 e["decided_at_ms"],
                             )
-                    # Bound diagnostics bookkeeping; file journals retain complete event history.
+                    # Bound diagnostics bookkeeping; file journals retain
+                    # complete event history.
                     if len(self.received) > 5000:
                         self.received = dict(
                             list(self.received.items())[-4000:]
@@ -274,7 +275,8 @@ class ProviderRegistry:
         events = []
         for e in self.store.analysis(run.run_id, cursor):
             if e["provider_id"] == "legacy":
-                continue  # legacy snapshot is served by the original compatibility route
+                # legacy snapshot is served by the original compatibility route
+                continue
             state = by_id.get(e["provider_id"], {})
             if e["origin"] == "fixture":
                 allowed = (

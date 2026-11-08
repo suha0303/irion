@@ -1,4 +1,6 @@
-"""Exercise the real prepare/scaler and independent numeric audit with tiny canonical data."""
+"""Exercise the real prepare/scaler and independent numeric audit with tiny
+canonical data.
+"""
 
 import json
 import shutil

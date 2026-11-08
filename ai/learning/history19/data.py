@@ -1,4 +1,6 @@
-"""New dataset contract: X/Y and lineage only, without legacy dataset conversion."""
+"""New dataset contract: X/Y and lineage only, without legacy dataset
+conversion.
+"""
 
 import zipfile
 from contextlib import ExitStack
@@ -29,9 +31,11 @@ def inspect_run(
     protection=None,
     usage="input_check",
 ):
-    """Read-only per-run intake for preliminary/development/final, without a scaler.
+    """Read-only per-run intake for preliminary/development/final, without a
+    scaler.
 
-    Does not load the fit dataset, fit statistics, forecast, or evaluate detection.
+    Does not load the fit dataset, fit statistics, forecast, or evaluate
+    detection.
     Campaign-wide lineage and unavailable-run inventory must also be audited.
     """
     path = Path(manifest_path).absolute()
@@ -141,7 +145,10 @@ def inspect_run(
                         ).all()
                     ):
                         raise ValueError(
-                            "Missing/nonfinite or truncated online input/arrived target"
+                            (
+                                "Missing/nonfinite or truncated online "
+                                "input/arrived target"
+                            )
                         )
                 if stream.read(1):
                     raise ValueError("Trailing online bytes")
@@ -158,7 +165,9 @@ def inspect_run(
 
 
 def verify_train_frames(path, train_ids, scaler, progress=None, *, chunk=8192):
-    """Recompute existing train statistics in bounded chunks, without fitting/saving a scaler."""
+    """Recompute existing train statistics in bounded chunks, without
+    fitting/saving a scaler.
+    """
     fields = ("values", "run_id", "clock_id", "segment_id", "time_us")
     headers = npz_headers(path)
     if set(headers) != set(fields):
@@ -372,7 +381,10 @@ def load(
         with np.load(paths[role], allow_pickle=False) as source:
             if set(source.files) != ARRAYS:
                 raise ValueError(
-                    "New NPZ requires X/Y and identity arrays only; C/truth forbidden"
+                    (
+                        "New NPZ requires X/Y and identity arrays only; "
+                        "C/truth forbidden"
+                    )
                 )
             arrays = {k: source[k].copy() for k in ARRAYS - {"X", "Y"}}
         n = headers["X"]["shape"][0]
@@ -453,7 +465,10 @@ def load(
                         )
                         if not np.isfinite(raw).all():
                             raise ValueError(
-                                "Missing/nonfinite inputs or arrived targets forbidden"
+                                (
+                                    "Missing/nonfinite inputs or arrived "
+                                    "targets forbidden"
+                                )
                             )
                         normalized = (raw - scaler[prefix + "_mean"]) / scaler[
                             prefix + "_scale"
@@ -480,7 +495,9 @@ def load(
 
 
 def arrived_samples(engine, mission=None):
-    """Join future targets after issuing history-only windows; preserve exclusions."""
+    """Join future targets after issuing history-only windows; preserve
+    exclusions.
+    """
     from capstone_ai.dataset import feature_transform, target_transform
 
     lookup = {
@@ -537,7 +554,10 @@ def arrived_samples(engine, mission=None):
         )
     if not selected:
         raise ValueError(
-            "No arrived valid target windows; never replace with zero-error targets"
+            (
+                "No arrived valid target windows; never replace with "
+                "zero-error targets"
+            )
         )
     windows, targets = zip(*selected)
     arrays = dict(

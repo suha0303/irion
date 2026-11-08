@@ -1,6 +1,8 @@
-"""One explicitly approved final inference/evaluation, with frozen models and thresholds.
+"""One explicitly approved final inference/evaluation, with frozen models and
+thresholds.
 
-The finite controller runs in server tmux. No training, calibration, model selection,
+The finite controller runs in server tmux. No training, calibration, model
+selection,
 automatic retries, result interpretation, or LLM calls are implemented here.
 """
 
@@ -133,7 +135,10 @@ def config_check(cfg):
         type(cfg.get(k)) is not type(v) or cfg[k] != v for k, v in fixed.items()
     ):
         raise ValueError(
-            "One fixed18-model final evaluation without fitting or analysis required"
+            (
+                "One fixed18-model final evaluation without fitting or "
+                "analysis required"
+            )
         )
     from execution.evaluate import final_protocol
 
@@ -288,7 +293,8 @@ def prepare(args):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(runtime.parent / rel, target)
     # The uploaded staging directory is exclusively owned by this deployment.
-    # Moving avoids another11.9GB copy and cannot alter the preserved local source.
+    # Moving avoids another11.9GB copy and cannot alter the preserved local
+    # source.
     for name in ("dataset", "truth"):
         shutil.move(str(data / name), str(root / "input" / name))
     shutil.copyfile(args.profile, root / "server-profile.json")
@@ -406,7 +412,8 @@ def prepare(args):
     write(root / "input/config.json", cfg)
     inventory = {n: h for n, h in runtime_inventory.items()}
     inventory.update({"config.json": sha(root / "input/config.json")})
-    # Bulk canonical data are verified once in each allocated phase, not on every UI read.
+    # Bulk canonical data are verified once in each allocated phase, not on
+    # every UI read.
     inventory["dataset/manifest.json"] = sha(
         root / "input/dataset/manifest.json"
     )
@@ -485,8 +492,14 @@ def submit(root, phase, cfg):
             )
             + "\nexport DRONE_AI_PROFILE="
             + shlex.quote(str(root / "server-profile.json"))
-            + "\nexport PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
-            + "export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 MKL_NUM_THREADS=2\nexec "
+            + (
+                "\nexport PYTHONDONTWRITEBYTECODE=1 PYTHONFAULTHANDLER=1 "
+                "CUBLAS_WORKSPACE_CONFIG=:4096:8\n"
+            )
+            + (
+                "export OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 "
+                "MKL_NUM_THREADS=2\nexec "
+            )
             + shlex.join(
                 [
                     python_for(root, required=True),
@@ -838,7 +851,8 @@ def worker(root, phase):
                     evaluation_mode="final_test",
                     completion_status="EVALUATION_COMPLETE_PENDING_RELEASE",
                 )
-            # Record fixed metrics in model declaration order. Never rank, select or interpret.
+            # Record fixed metrics in model declaration order. Never rank,
+            # select or interpret.
             with (root / "evaluation/model-results.csv").open(
                 "x", encoding="utf-8"
             ) as f:

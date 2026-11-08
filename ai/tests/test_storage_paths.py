@@ -1,4 +1,6 @@
-"""Selected local/custom storage reaches frozen plans and real CPU extraction workers."""
+"""Selected local/custom storage reaches frozen plans and real CPU extraction
+workers.
+"""
 
 import hashlib
 import io
@@ -77,7 +79,8 @@ def test_task_storage_is_frozen_into_plan_and_independent_launch(
                 ),
             )
         )
-    # The actual collector space guard must not call its legacy X31-only checker.
+    # The actual collector space guard must not call its legacy X31-only
+    # checker.
     c.check_output_storage(
         plan,
         Path(plan["external_output"]),

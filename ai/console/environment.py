@@ -1,4 +1,6 @@
-"""CPU-only environment diagnostics: no CUDA context, installation, or GPU job."""
+"""CPU-only environment diagnostics: no CUDA context, installation, or GPU
+job.
+"""
 
 import argparse
 import importlib.metadata
@@ -85,7 +87,10 @@ def diagnose(profile):
                 if current_flat_evidence
                 else "legacy_smoke_snapshot"
             ),
-            "main_training_admission": "unchanged; functionality-only inputs do not authorize main training",
+            "main_training_admission": (
+                "unchanged; functionality-only inputs do not authorize main "
+                "training"
+            ),
         },
     )
     output = absolute_path(profile["output_root"])
@@ -117,8 +122,10 @@ def diagnose(profile):
         "training_started": False,
         "main_training_started": False,
         "installation_plan": (
-            "Select an existing supported Python environment. If dependencies are missing, "
-            "review a user-owned environment installation plan first; setup never changes "
+            "Select an existing supported Python environment. If "
+            "dependencies are missing, "
+            "review a user-owned environment installation plan first; "
+            "setup never changes "
             "a shared environment or installs packages automatically."
         ),
     }

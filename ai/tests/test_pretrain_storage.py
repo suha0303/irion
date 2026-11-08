@@ -1,4 +1,6 @@
-"""Portable byte equality, truth separation and tamper rejection, no real data."""
+"""Portable byte equality, truth separation and tamper rejection, no real
+data.
+"""
 
 import io
 import tarfile

@@ -386,7 +386,8 @@ def run(args):
             },
         )
         calibration_hash = sha(out / "calibration.json")
-        # The complete threshold record is frozen before the first final forward.
+        # The complete threshold record is frozen before the first final
+        # forward.
         f = predict(m, entry, root, final, scaler, saved, cohort + "_inference")
     records = []
     for row in final:
@@ -474,7 +475,10 @@ def run(args):
             else None,
             "summary": summary,
             "finished_at": time.time(),
-            "scope": "offline held-out X500 simulation; not real-time or hardware certification",
+            "scope": (
+                "offline held-out X500 simulation; not real-time or hardware "
+                "certification"
+            ),
             "final_used_for_selection": False,
             "optimizer_steps": 0,
         },

@@ -40,7 +40,9 @@ def _rank(row):
 
 
 def build_plan(manifest_path):
-    """Select ten fixed run blocks and bind the complete upstream manifest hash."""
+    """Select ten fixed run blocks and bind the complete upstream manifest
+    hash.
+    """
     manifest_path = Path(manifest_path)
     if (
         any(p.is_symlink() for p in (manifest_path, *manifest_path.parents))
@@ -63,7 +65,10 @@ def build_plan(manifest_path):
             _text(row.get("paired_case_id"), "paired_case_id")
             if row.get("health_eligibility") != "confirmed_healthy":
                 raise ValueError(
-                    "Diagnostic selection requires confirmed healthy normal runs"
+                    (
+                        "Diagnostic selection requires confirmed healthy "
+                        "normal runs"
+                    )
                 )
             normal.append(row)
     regression = next(
@@ -139,7 +144,10 @@ def build_plan(manifest_path):
         development_or_final_test_used=False,
         diagnostic_calibration_reused_for_full=False,
         run_and_paired_group_disjoint=True,
-        failure_policy="Stop on missing, short, duplicate or discontinuous input; no fallback",
+        failure_policy=(
+            "Stop on missing, short, duplicate or discontinuous input; no "
+            "fallback"
+        ),
         windows={
             purpose: sum(s["windows"] for s in parts)
             for purpose, parts in selections.items()
@@ -148,7 +156,9 @@ def build_plan(manifest_path):
 
 
 def validate_plan(plan, manifest_path):
-    """Require the exact metadata-derived plan, including recorded regression scope."""
+    """Require the exact metadata-derived plan, including recorded regression
+    scope.
+    """
     expected = build_plan(manifest_path)
     if plan != expected:
         raise ValueError(
@@ -158,7 +168,8 @@ def validate_plan(plan, manifest_path):
 
 
 def verify_selection_layout(plan, dataset_path):
-    """Check availability before GPU submission, reading identities and headers only.
+    """Check availability before GPU submission, reading identities and
+    headers only.
 
     Broadcast zeros are shape-only placeholders, never observations. The report
     expressly does not establish feature quality; the allocated worker must hash
@@ -177,7 +188,10 @@ def verify_selection_layout(plan, dataset_path):
         model_executed=False,
         roles={},
         selection_evidence={},
-        limitation="Headers and identity continuity only; worker must verify hashes and real values",
+        limitation=(
+            "Headers and identity continuity only; worker must verify hashes "
+            "and real values"
+        ),
     )
     required = {*_ARRAY_SHAPES, "run_id", "segment", "origin_us"}
     for role in sorted(NORMAL_ROLES):
@@ -214,7 +228,8 @@ def verify_selection_layout(plan, dataset_path):
                     "Invalid normal-role time identity header: " + key
                 )
         with np.load(path, allow_pickle=False) as archive:
-            # Do not index X/C/Y members: even np.load on compressed members would
+            # Do not index X/C/Y members: even np.load on compressed members
+            # would
             # materialize the entire role, defeating this host-only admission.
             identities = {
                 key: archive[key] for key in ("run_id", "segment", "origin_us")
@@ -254,7 +269,8 @@ def verify_selection_layout(plan, dataset_path):
 
 
 def select_arrays(normal_role_arrays, selections):
-    """Copy only the frozen contiguous blocks from one normalized normal-role array.
+    """Copy only the frozen contiguous blocks from one normalized normal-role
+    array.
 
     Returned X/C/Y and identities are in selection order. ``source_indices``
     identifies original rows; ``selection_index`` marks the block of each row.
@@ -364,7 +380,10 @@ def select_arrays(normal_role_arrays, selections):
             np.diff(selected_origins) != STEP_US
         ):
             raise ValueError(
-                "Frozen diagnostic block must stay within one contiguous1s segment"
+                (
+                    "Frozen diagnostic block must stay within one contiguous1s "
+                    "segment"
+                )
             )
         if any(
             not np.isfinite(arrays[key][selected]).all()

@@ -284,7 +284,9 @@ def create_app(data_dir=None):
                 "npz": store.npz_report(run_id),
             },
             headers={
-                "Content-Disposition": f'attachment; filename="{run_id}-inspection.json"'
+                "Content-Disposition": (
+                    f'attachment; filename="{run_id}-inspection.json"'
+                )
             },
         )
 
@@ -474,7 +476,11 @@ def create_app(data_dir=None):
             "render_ack": stats(metrics),
             "result_receipt_to_render_ack": stats(result_metrics),
             "target_ms": 500,
-            "method": "UI의 React commit 뒤 requestAnimationFrame 확인을 서버가 수신한 왕복 상한값. 결과 수신 지표는 수신 시 이미 재생 시각에 도달한 신규 API 결과만 포함. AI 추론 시간·500ms API 폴링 대기는 제외.",
+            "method": (
+                "UI의 React commit 뒤 requestAnimationFrame 확인을 서버가 수신한 왕복 상한값. "
+                "결과 수신 지표는 수신 시 이미 재생 시각에 도달한 신규 API 결과만 포함. AI 추론 시간·500ms "
+                "API 폴링 대기는 제외."
+            ),
         }
 
     @app.websocket("/api/ws/runs/{run_id}")

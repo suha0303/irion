@@ -43,7 +43,8 @@ def tree_stamp(path):
             s.st_mtime_ns,
         ]
         if stat.S_ISLNK(s.st_mode):
-            # PX4 creates etc/test_data links. Record the link, never traverse its target.
+            # PX4 creates etc/test_data links. Record the link, never traverse
+            # its target.
             result[str(p)].append(os.readlink(p))
         elif stat.S_ISDIR(s.st_mode):
             with os.scandir(p) as entries:
@@ -210,7 +211,8 @@ def restore_capsules(runner, rows, prepared, budget):
         if sha(status) != receipt["audit_status_sha256"]:
             raise ValueError("Restored audit completion proof changed")
         audit_sources[row["run_id"]] = (status.parent, status)
-        # Identity remains in the small per-run capsule until final package verification.
+        # Identity remains in the small per-run capsule until final package
+        # verification.
         shutil.rmtree(target)
         runner.resources()
         runner.update(done=i + 1)
@@ -232,7 +234,10 @@ class Pipeline:
             or runner.config.get("storage_profile") != "stream_compact"
         ):
             raise ValueError(
-                "Explicit new streaming collection required; never convert an old task"
+                (
+                    "Explicit new streaming collection required; never convert "
+                    "an old task"
+                )
             )
         self.root = external(STORE / "streamed/pretrain" / self.task.name)
         self.root.mkdir(parents=True, exist_ok=False)
@@ -360,7 +365,8 @@ class Pipeline:
             {"audit/" + p.name: p for p in audit.iterdir() if p.is_file()}
         )
         sources["audit/status.json"] = status_path
-        # Preserve the exact small identity bytes that were checked against the raw archive.
+        # Preserve the exact small identity bytes that were checked against the
+        # raw archive.
         for name in [
             "run.json",
             "reference/source_lock.json",
@@ -371,7 +377,8 @@ class Pipeline:
             shutil.copy2(consumer / name, saved)
             sources["identity/" + name] = saved
         scenario_path = target / "scenario.json"
-        # Scenario bytes are read from the verified raw directory, never generated from labels.
+        # Scenario bytes are read from the verified raw directory, never
+        # generated from labels.
         if (
             sha(raw / "evaluation/scenario.json")
             != row["archive"]["members"]["evaluation/scenario.json"]["sha256"]
@@ -400,7 +407,8 @@ class Pipeline:
         write(target / "receipt.json", receipt)
         verify_bundle(Path(artifact["path"]), artifact["members"], self.budget)
         self.r.resources()
-        # A successful retry retires only its current successful UUID; failed attempts stay untouched.
+        # A successful retry retires only its current successful UUID; failed
+        # attempts stay untouched.
         retired = retire_owned(
             paths,
             owned,
@@ -481,7 +489,8 @@ class Pipeline:
                 )
             verify_bundle(path, ref["members"], self.budget)
         paths = [prepared / "dataset"]
-        # Delete only successful restored caches, leaving any failed attempt trees in place.
+        # Delete only successful restored caches, leaving any failed attempt
+        # trees in place.
         paths += [prepared / "audit-work" / row["run_id"] for row in rows]
         paths += [
             Path(read(row["compact_source"]["receipt"])["artifact"]["path"])
@@ -567,7 +576,9 @@ def run(runner):
                 try:
                     runner.flight("collection", width, chunk_cases, label)
                 except IncompleteCollection:
-                    pass  # Completed originals still receive verified per-run handling.
+                    # Completed originals still receive verified per-run
+                    # handling.
+                    pass
                 runner.begin(
                     label + "-freeze", total=len(chunk_cases), workers=1
                 )

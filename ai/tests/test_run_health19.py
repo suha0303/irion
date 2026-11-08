@@ -1,4 +1,6 @@
-"""Run-model software tests. All inputs are synthetic, never detection evidence."""
+"""Run-model software tests. All inputs are synthetic, never detection
+evidence.
+"""
 
 import dataclasses
 import hashlib

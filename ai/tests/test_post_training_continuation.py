@@ -1,4 +1,6 @@
-"""Stopped calibration evidence is reusable; development inference is always fresh."""
+"""Stopped calibration evidence is reusable; development inference is always
+fresh.
+"""
 
 import copy
 import os

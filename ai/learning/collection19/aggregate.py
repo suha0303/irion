@@ -62,7 +62,10 @@ def _reader_row(row):
     value = {k: v for k, v in row.items() if k in ROW_FIELDS}
     if len(json.dumps(value)) > 16384:
         raise ValueError(
-            "Model row exceeds16KiB; keep archive inventories in the case capsule"
+            (
+                "Model row exceeds16KiB; keep archive inventories in the case "
+                "capsule"
+            )
         )
     return value
 
@@ -79,7 +82,9 @@ def _file_identity(path):
 
 
 def _input_path(record, key):
-    """Reuse one hash binding only while this invocation's source identity stays fixed."""
+    """Reuse one hash binding only while this invocation's source identity
+    stays fixed.
+    """
     ref = record["audit"]["input_refs"][key]
     cached = record.setdefault("input_paths", {})
     if key not in cached:
@@ -209,7 +214,8 @@ def _ledger(ref, case, producer, all_raw_ids, policy_bundle):
                 )
             rejected += 1
         elif a["run_id"] in recovery_rejected and a["status"] == "completed":
-            # Physical completion is preserved; the bound original input rejection
+            # Physical completion is preserved; the bound original input
+            # rejection
             # and explicit user authority permit only this selected replacement.
             rejected += 1
         elif a["status"] == "completed" and i < len(attempts):
@@ -238,7 +244,10 @@ def _records(index_path, scope, producer, protection, policy_bundle):
         for line in stream:
             if len(line) > 65536:
                 raise ValueError(
-                    "Collection index entry exceeds64KiB; use per-case references"
+                    (
+                        "Collection index entry exceeds64KiB; use per-case "
+                        "references"
+                    )
                 )
             record = json.loads(line)
             cid = case_key(record["case_id"])
@@ -264,7 +273,10 @@ def _records(index_path, scope, producer, protection, policy_bundle):
                 "unavailable",
             }:
                 raise ValueError(
-                    "Every logical case needs accepted/failed/unavailable status"
+                    (
+                        "Every logical case needs accepted/failed/unavailable "
+                        "status"
+                    )
                 )
             totals[record["status"]] += 1
             if record["status"] != "accepted":
@@ -297,7 +309,10 @@ def _records(index_path, scope, producer, protection, policy_bundle):
                 or ledger["attempts"][-1].get("quality_rejection") is not None
             ):
                 raise ValueError(
-                    "Accepted export must bind the last original successful physical raw"
+                    (
+                        "Accepted export must bind the last original "
+                        "successful physical raw"
+                    )
                 )
             export = Path(record["export_root"]).absolute()
             if set(audit.get("input_refs", {})) != {
@@ -339,7 +354,8 @@ def _records(index_path, scope, producer, protection, policy_bundle):
                     "Paired case needs preserved official native pair evidence"
                 )
             rows.append(row)
-            # Keep bounded reader metadata, never archive inventories or whole raw receipts.
+            # Keep bounded reader metadata, never archive inventories or whole
+            # raw receipts.
             audit = {
                 k: v
                 for k, v in audit.items()
@@ -367,7 +383,10 @@ def _records(index_path, scope, producer, protection, policy_bundle):
             )
     if not expected_ids <= seen:
         raise ValueError(
-            "All planned logical cases, including failures, must remain in index"
+            (
+                "All planned logical cases, including failures, must remain in "
+                "index"
+            )
         )
     validate_lineages(rows)
     identities = {"run:" + rid for rid in raw_ids} | {
@@ -386,9 +405,11 @@ def _records(index_path, scope, producer, protection, policy_bundle):
 
 
 def _pairs(records, producer, policy_bundle):
-    """Audit immutable before-retirement pair report plus rechecked case consumption proofs.
+    """Audit immutable before-retirement pair report plus rechecked case
+    consumption proofs.
 
-    Applied-wind truth evaluation is preserved official evidence, not rerun from retired raw.
+    Applied-wind truth evaluation is preserved official evidence, not
+    rerun from retired raw.
     """
     groups = {}
     policy = json_file(policy_bundle["paired_policy"])
@@ -486,7 +507,9 @@ def _new_root(output):
 def _compile(
     records, output, *, scope, producer, registry, fixture_only, progress=None
 ):
-    """Low-level bounded writer; production entry below enforces the complete frozen scope."""
+    """Low-level bounded writer; production entry below enforces the complete
+    frozen scope.
+    """
     root = _new_root(output)
     records = sorted(records, key=lambda r: r["row"]["run_id"])
     import re
@@ -502,7 +525,10 @@ def _compile(
     validation = [r for r in records if r["row"]["role"] == "normal_validation"]
     if not train or not validation:
         raise ValueError(
-            "Independent train and validation required; no scaler from other roles"
+            (
+                "Independent train and validation required; no scaler from "
+                "other roles"
+            )
         )
     train_ids = sorted(r["row"]["run_id"] for r in train)
     if len(train_ids) != len(set(train_ids)):
@@ -869,7 +895,10 @@ def _compare_packed(path, key, expected):
             n = min(len(remainder), len(values) - offset)
             if not np.array_equal(remainder[:n], values[offset : offset + n]):
                 raise ValueError(
-                    "Packed member differs from original canonical/source values or identity"
+                    (
+                        "Packed member differs from original canonical/source "
+                        "values or identity"
+                    )
                 )
             remainder, offset = remainder[n:], offset + n
     if (remainder is not None and len(remainder)) or next(
@@ -881,7 +910,9 @@ def _compare_packed(path, key, expected):
 def _audit_compiled(
     records, dataset_root, *, scope, producer, registry, progress=None
 ):
-    """Separate two-pass long-double canonical statistics and source-to-packed row comparison."""
+    """Separate two-pass long-double canonical statistics and
+    source-to-packed row comparison.
+    """
     root = Path(dataset_root)
     manifest = json_file(root / "history19-manifest.json")
     if manifest.get("collection_scope") != scope:
@@ -893,7 +924,8 @@ def _audit_compiled(
     train_ids = sorted(r["row"]["run_id"] for r in train)
     if manifest["scaler_fit_run_ids"] != train_ids:
         raise ValueError("Train-only membership changed")
-    # _records verified the successful per-case audit and every bound input hash.
+    # _records verified the successful per-case audit and every bound input
+    # hash.
     # Reuse that unchanged-input proof; below we independently check the newly
     # compiled arrays and train-only scalers, rather than rebuilding case views.
     _progress(
@@ -948,7 +980,10 @@ def _audit_compiled(
         scaler["x_mean"], center, atol=1e-10, rtol=1e-10
     ) or not np.allclose(scaler["x_scale"], scale, atol=1e-10, rtol=1e-10):
         raise ValueError(
-            "Scaler differs from independent unique mission canonical statistics"
+            (
+                "Scaler differs from independent unique mission canonical "
+                "statistics"
+            )
         )
     indices = [FEATURES.index(k) for k in TARGETS]
     if any(
@@ -993,7 +1028,8 @@ def _audit_compiled(
                         yield feature_transform(values, config)
                     continue
                 # The canonical passes above already established the complete
-                # grid and one segment. Generate its identities in bounded blocks
+                # grid and one segment. Generate its identities in bounded
+                # blocks
                 # instead of reparsing the same JSON four more times.
                 first, _, size = grid(row)
                 for offset in range(0, size, 8192):
@@ -1026,7 +1062,8 @@ def _audit_compiled(
         raise ValueError(
             "Both model representations must share exactly the same scaler"
         )
-    # Compare every packed source row; hashes/headers alone are not a coverage test.
+    # Compare every packed source row; hashes/headers alone are not a coverage
+    # test.
     for role in ("normal_train", "normal_validation"):
         selected = sorted(
             (r for r in records if r["row"]["role"] == role),

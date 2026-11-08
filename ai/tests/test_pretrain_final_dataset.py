@@ -1,4 +1,6 @@
-"""Final holdout design and menu integration; no real flights, services or scoring."""
+"""Final holdout design and menu integration; no real flights, services or
+scoring.
+"""
 
 import copy
 from collections import Counter, defaultdict
@@ -706,7 +708,8 @@ def test_final_conditions_preserve_health_and_requested_motion():
                 sum(p["duration_s"] for p in program) == row["mission_seconds"]
             )
             assert {p["path"]["kind"] for p in program} >= {"altitude", "line"}
-        # Command programs must actually vary the declared axes, not just labels.
+        # Command programs must actually vary the declared axes, not just
+        # labels.
         samples = [
             target(t, spec) for t in range(30, row["mission_seconds"] - 10, 5)
         ]

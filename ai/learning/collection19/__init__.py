@@ -1,4 +1,6 @@
-"""User-operated MAIN/LR input preparation only. No jobs, models, training or deletion."""
+"""User-operated MAIN/LR input preparation only. No jobs, models, training or
+deletion.
+"""
 
 from .aggregate import (
     aggregate,

@@ -1,4 +1,6 @@
-"""Validate renamed metadata against the unchanged, hash-locked preprocessing package."""
+"""Validate renamed metadata against the unchanged, hash-locked preprocessing
+package.
+"""
 
 import copy
 import re
@@ -18,7 +20,9 @@ ALIAS = dict(
 
 
 def make_preprocessor(metadata, config, metadata_sha256):
-    """Return an engine and optional validation receipt; never rewrite raw input bytes."""
+    """Return an engine and optional validation receipt; never rewrite raw
+    input bytes.
+    """
     from capstone_ai.preprocessing import Preprocessor
 
     vehicle = metadata.get("vehicle", {})
@@ -46,7 +50,8 @@ def make_preprocessor(metadata, config, metadata_sha256):
         validation = copy.deepcopy(metadata)
         validation["vehicle"]["battery_profile_id"] = SEALED_BATTERY_ID
         alias = dict(ALIAS, metadata_sha256=metadata_sha256)
-    # All original mapping, frames, bindings, units and nameplate checks still run.
+    # All original mapping, frames, bindings, units and nameplate checks still
+    # run.
     engine = Preprocessor(validation, config)
     # The name alias is needed only by the sealed constructor. Event processing,
     # checkpoint identity and output inventory retain the original metadata.
@@ -55,7 +60,9 @@ def make_preprocessor(metadata, config, metadata_sha256):
 
 
 def verify_metadata_alias(summary):
-    """Audit a declared alias without reading raw/truth data or changing its identity."""
+    """Audit a declared alias without reading raw/truth data or changing its
+    identity.
+    """
     alias = summary.get("evidence", {}).get("metadata_validation_alias")
     if alias is not None:
         digest = summary["input_hashes"]["observations/metadata.json"]

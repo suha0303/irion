@@ -163,7 +163,8 @@ class LocalFlight:
             try:
                 await self.task
             except asyncio.CancelledError:
-                # Cancellation before the coroutine's first instruction bypasses its finally.
+                # Cancellation before the coroutine's first instruction bypasses
+                # its finally.
                 if job_id:
                     path = self.job_path(job_id)
                     row = json.loads(path.read_text(encoding="utf-8"))
@@ -422,7 +423,8 @@ def attach(app, root=None):
             ):
                 raise ValueError("종료 후 구간을 선택하세요.")
             manifest = result["analyses"][index]["manifest"]
-            # Paths are from the locally completed job, never supplied by the client.
+            # Paths are from the locally completed job, never supplied by the
+            # client.
             if not Path(manifest).is_relative_to(folder / "completed"):
                 raise ValueError("Live package path mismatch")
             job = service.create_job(
@@ -488,7 +490,10 @@ def attach(app, root=None):
                 or len(dev_ids) > 1
             ):
                 raise ValueError(
-                    "Use 1..3 adaptation flights and at most one development flight"
+                    (
+                        "Use 1..3 adaptation flights and at most one "
+                        "development flight"
+                    )
                 )
             train = [
                 completed(i, "prepare")["result"]["manifest"] for i in train_ids

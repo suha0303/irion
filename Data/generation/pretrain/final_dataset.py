@@ -1,4 +1,6 @@
-"""Fixed final holdout: collect and audit canonical data, never fit or score a model."""
+"""Fixed final holdout: collect and audit canonical data, never fit or score
+a model.
+"""
 
 import copy
 import random
@@ -65,7 +67,8 @@ def operating_conditions(motion, environment, seed, stratum):
 
     rng = random.Random(seed ^ 0xF324)
 
-    # Three equal strata for independent normal replicates; pairs sample one stratum.
+    # Three equal strata for independent normal replicates; pairs sample one
+    # stratum.
     def draw(low, high):
         return low + (high - low) * (stratum + rng.random()) / 3
 
@@ -149,7 +152,10 @@ def cases(seed_base):
     }
     if len(normal) != 9 or len(anomaly) != 6:
         raise ValueError(
-            "Final holdout requires the existing nine normal/six anomaly definitions"
+            (
+                "Final holdout requires the existing nine normal/six anomaly "
+                "definitions"
+            )
         )
     rows = []
 
@@ -259,7 +265,9 @@ def validate(rows):
 
 
 def protection_inputs(exclude_task=None):
-    """Only manifests/planned membership, never old raw observations or model scores."""
+    """Only manifests/planned membership, never old raw observations or model
+    scores.
+    """
     paths = [RESOURCES / "protected-inventory.json"]
     for storage in sorted({ROOT / "Data", Path(STORE)}):
         paths += sorted(
@@ -301,7 +309,10 @@ def reject_overlap(rows, protected):
         row["group_id"] for row in rows
     } & set(protected["group_ids"]):
         raise ValueError(
-            "Final holdout seed/group overlaps existing development or previous collection"
+            (
+                "Final holdout seed/group overlaps existing development or "
+                "previous collection"
+            )
         )
 
 
@@ -325,12 +336,18 @@ def configure(task, config, rows):
         pipeline_overlap=False,
         unit_attempts_max=3,
         continue_after_case_failure=True,
-        scope="Final holdout324: collect, canonical preprocess, independent quality audit, seal; no scaler fit, training, calibration or scoring",
+        scope=(
+            "Final holdout324: collect, canonical preprocess, independent "
+            "quality audit, seal; no scaler fit, training, calibration or "
+            "scoring"
+        ),
     )
 
 
 def admit_rows(folder, planned, protected, destination):
-    """Use the existing archive identity reader, with final-specific role guards."""
+    """Use the existing archive identity reader, with final-specific role
+    guards.
+    """
     package_imports()
     from preprocessing_tools.control import RAW_FILES
 
@@ -455,7 +472,10 @@ def admit_rows(folder, planned, protected, destination):
                 + case["mission_seconds"] * 1_000_000
             ):
                 raise ValueError(
-                    "Final actual mission fault schedule missing or inconsistent"
+                    (
+                        "Final actual mission fault schedule missing or "
+                        "inconsistent"
+                    )
                 )
         elif schedule is not None:
             raise ValueError("Final unscheduled case contains a fault schedule")
@@ -598,7 +618,10 @@ def run(runner):
         runs=admitted,
         pairs=dict(pairs),
         lineage_groups=len({row["group_id"] for row in admitted}),
-        independence_basis="Distinct seeded resets between groups; each normal/anomaly pair remains correlated; no empirical independence claim",
+        independence_basis=(
+            "Distinct seeded resets between groups; each normal/anomaly pair "
+            "remains correlated; no empirical independence claim"
+        ),
         producer_binding=read(folder / "plan.json")["source_hashes"],
         protection=dict(
             path=config["final_protection"],
@@ -613,15 +636,24 @@ def run(runner):
         canonical_sha256=canonical_hashes,
         quality_by_run=quality,
         scaler_fit_performed=False,
-        normalization="Unscaled canonical inputs/targets; final inference must use existing training scaler",
+        normalization=(
+            "Unscaled canonical inputs/targets; final inference must use "
+            "existing training scaler"
+        ),
         training_authorized=False,
         calibration_authorized=False,
         final_test_scoring_authorized=False,
-        truth_policy="Truth remains evaluator-only in source archives; canonical preprocessing uses exact six consumer files",
+        truth_policy=(
+            "Truth remains evaluator-only in source archives; canonical "
+            "preprocessing uses exact six consumer files"
+        ),
         zero_target_runs=[
             rid for rid, q in quality.items() if not q["accepted_targets"]
         ],
-        exposure_note="Quality airborne seconds and accepted targets are not model-scored exposure",
+        exposure_note=(
+            "Quality airborne seconds and accepted targets are not "
+            "model-scored exposure"
+        ),
     )
     write(output / "sealed-manifest.json", sealed)
     write(

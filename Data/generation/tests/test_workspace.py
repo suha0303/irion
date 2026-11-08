@@ -1,4 +1,6 @@
-"""Source distribution excludes machine state and retains executable data contracts."""
+"""Source distribution excludes machine state and retains executable data
+contracts.
+"""
 
 import argparse
 import json
@@ -74,7 +76,8 @@ def test_source_export_is_verified_and_launcher_is_relocatable(
     )
     assert result.returncode == 0, result.stderr
     assert all(name in result.stdout for name in ("setup", "doctor", "export"))
-    # A clean clone fails with an actionable setup message, never an old machine path.
+    # A clean clone fails with an actionable setup message, never an old machine
+    # path.
     result = subprocess.run(
         [str(clone / "Data/generation/drone-pretrain"), "--help"],
         cwd="/tmp",

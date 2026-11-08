@@ -1,4 +1,6 @@
-"""Recovery/projection/wait gates use fixtures; native flight remains unexecuted."""
+"""Recovery/projection/wait gates use fixtures; native flight remains
+unexecuted.
+"""
 
 from pathlib import Path
 
@@ -35,9 +37,9 @@ def test_recovery_keeps_failed_attempt_and_exact_old_case(
     log.write_text(
         "ModuleNotFoundError: No module named 'pymavlink'\n", encoding="utf-8"
     )
-    audit = (
-        tmp_path
-        / "ai/reports/ai19-single-run-integration-20261107/attempt-02/result-review-01/termination-audit.json"
+    audit = tmp_path / (
+        "ai/reports/ai19-single-run-integration-20261107/attempt-02/"
+        "result-review-01/termination-audit.json"
     )
     common.write(
         audit, dict(actual_raw_runs=0, checks=dict(shared_locks_free=True))
@@ -374,7 +376,8 @@ def test_data_pair_uses_ai_projector_for_status_passed_native_report(
     monkeypatch, tmp_path, reject
 ):
     # The native report intentionally has no boolean passed/AI metric keys.
-    # Actual native validation is owned/tested by AI; this checks Data delegation.
+    # Actual native validation is owned/tested by AI; this checks Data
+    # delegation.
     import learning.history19.pilot_connector as connector
 
     task = tmp_path / "task"

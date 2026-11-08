@@ -1,4 +1,6 @@
-"""Production menu, finite retries, checkpoint and retirement fixtures; native dispatch0."""
+"""Production menu, finite retries, checkpoint and retirement fixtures;
+native dispatch0.
+"""
 
 import hashlib
 import json

@@ -35,7 +35,9 @@ BATCH_SIZE = 2
 
 
 def _prefix(path, key, count, headers):
-    """Read a bounded numeric/string prefix rather than decompressing a whole role."""
+    """Read a bounded numeric/string prefix rather than decompressing a whole
+    role.
+    """
     header = headers[key]
     shape, dtype = header["shape"], np.dtype(header["descr"])
     if (
@@ -66,7 +68,9 @@ def _prefix(path, key, count, headers):
 
 
 def _current_evidence(upstream, *, flat=False):
-    """Keep full handoff/quality admission intact for current extracted packages."""
+    """Keep full handoff/quality admission intact for current extracted
+    packages.
+    """
     dataset = child(upstream, "dataset")
     evidence = upstream if flat else child(upstream, "evidence")
     prefix = "" if flat else "evidence/"
@@ -130,20 +134,30 @@ def _current_evidence(upstream, *, flat=False):
             if benchmark
             else "full split lineage",
             note=(
-                "Fresh 120-second benchmark flights are test-only processing partitions. "
-                "Independent numeric quality and train-only scaler evidence are checked, "
-                "but these flights do not establish main-training admission, data diversity "
-                "or detection performance. Original paired/raw-flight lineage fields are "
-                "not fabricated; benchmark case/group/seed/run IDs are checked instead."
+                "Fresh 120-second benchmark flights are test-only "
+                "processing partitions. "
+                "Independent numeric quality and train-only scaler "
+                "evidence are checked, "
+                "but these flights do not establish main-training "
+                "admission, data diversity "
+                "or detection performance. Original paired/raw-flight "
+                "lineage fields are "
+                "not fabricated; benchmark case/group/seed/run IDs are "
+                "checked instead."
             )
             if benchmark
-            else "Full handoff evidence is used only for a tiny correctness gate.",
+            else (
+                "Full handoff evidence is used only for a tiny correctness "
+                "gate."
+            ),
         ),
     )
 
 
 def _benchmark_membership(handoff, frozen, quality):
-    """Admit only three fresh independent test partitions, never production data."""
+    """Admit only three fresh independent test partitions, never production
+    data.
+    """
     rows = frozen.get("runs", [])
     if (
         handoff.get("training_eligible") is not False
@@ -244,7 +258,8 @@ def _legacy_snapshot(upstream):
         != expected_counts
         or manifest.get("scaler_fit")
         != (
-            "normal_train unique valid airborne frames; context once per train origin"
+            "normal_train unique valid airborne frames; context once per "
+            "train origin"
         )
         or type(manifest.get("unique_train_frames")) is not int
         or manifest["unique_train_frames"] <= 0
@@ -265,10 +280,14 @@ def _legacy_snapshot(upstream):
             quality_evidence_reverified=False,
             training_eligible=False,
             note=(
-                "Original admission handoff is recorded by hash but its full quality evidence "
-                "is not present in this historical server snapshot. Only its inventory, config, "
-                "split lineage, archive/scaler seals and tiny normal samples are checked. "
-                "This does not establish current main-training admission or detection quality."
+                "Original admission handoff is recorded by hash but its "
+                "full quality evidence "
+                "is not present in this historical server snapshot. Only "
+                "its inventory, config, "
+                "split lineage, archive/scaler seals and tiny normal "
+                "samples are checked. "
+                "This does not establish current main-training admission "
+                "or detection quality."
             ),
         ),
     )
@@ -397,7 +416,10 @@ def sample_input(upstream, destination):
         scaler_fitted=False,
         scaler_scope="all_selected_normal_train",
         throughput_measured=False,
-        limitation="Tiny cached prefix is only a correctness gate; not representative performance",
+        limitation=(
+            "Tiny cached prefix is only a correctness gate; not representative "
+            "performance"
+        ),
     )
 
 
@@ -507,7 +529,9 @@ def _child(root, model, phase, profile=None):
 
 
 def restore_gate(root, cfg, progress, *, profile=None):
-    """Six sequential fresh processes; compare exact continuation, not only loading."""
+    """Six sequential fresh processes; compare exact continuation, not only
+    loading.
+    """
     root = Path(root)
     proofs = {}
     for index, model in enumerate(MODELS):
@@ -606,13 +630,18 @@ def restore_gate(root, cfg, progress, *, profile=None):
         if not all(checks.values()):
             raise ValueError(
                 model
-                + " exact save/restore continuation mismatch; stop without retry"
+                + (
+                    " exact save/restore continuation mismatch; stop without "
+                    "retry"
+                )
             )
     return proofs
 
 
 def run(profile, root):
-    """CUDA worker; controller alone declares final success after Slurm release."""
+    """CUDA worker; controller alone declares final success after Slurm
+    release.
+    """
     from console.profile import load
 
     profile = Path(profile).expanduser().absolute()
@@ -681,7 +710,8 @@ def run(profile, root):
         from learning.telemetry import Telemetry
 
         telemetry = Telemetry(root)
-        telemetry.start()  # Allocation was checked before this PID creates any CUDA context.
+        # Allocation was checked before this PID creates any CUDA context.
+        telemetry.start()
         try:
             proofs = restore_gate(root, cfg, progress, profile=profile)
         finally:
@@ -695,12 +725,17 @@ def run(profile, root):
             truth_used=False,
             automatic_retry=False,
             llm_calls=0,
-            gpu_allocation_released="controller must confirm actual Slurm termination",
+            gpu_allocation_released=(
+                "controller must confirm actual Slurm termination"
+            ),
             elapsed_s=time.monotonic() - started,
             optimizer_steps_total=16,
             sample=source,
             proofs=proofs,
-            scope="LSTM/Transformer hidden32 layers2 batch2 seed0; save and exact fresh-process restore only",
+            scope=(
+                "LSTM/Transformer hidden32 layers2 batch2 seed0; save and "
+                "exact fresh-process restore only"
+            ),
             excludes=[
                 "main training",
                 "calibration",

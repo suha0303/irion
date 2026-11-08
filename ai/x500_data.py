@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Read-only progress display for the finite long-run collector. No LLM calls."""
+"""Read-only progress display for the finite long-run collector. No LLM
+calls.
+"""
 
 from __future__ import annotations
 
@@ -57,7 +59,10 @@ def estimate_eta(plan, ledger, resources, cases):
             seconds=max(0, total_work - completed_work)
             * elapsed
             / completed_work,
-            basis=f"완료 {len(completed)}run / 명목임무 {completed_work:.0f}s 처리에 wall {elapsed:.0f}s; 병렬·검증·압축 포함 처리율",
+            basis=(
+                f"완료 {len(completed)}run / 명목임무 {completed_work:.0f}s 처리에 wall "
+                f"{elapsed:.0f}s; 병렬·검증·압축 포함 처리율"
+            ),
             confidence="low; 조건·길이·동시성·저장속도 변화에 민감, 보장/신뢰구간 아님",
         )
     return result
@@ -93,7 +98,8 @@ def snapshot(plan_path):
     for case_id, row in cases.items():
         if row.get("status") in ARCHIVED:
             continue
-        # Case IDs are untrusted even in a status file. Never read outside execution.
+        # Case IDs are untrusted even in a status file. Never read outside
+        # execution.
         if (
             not case_id
             or Path(case_id).name != case_id
@@ -137,7 +143,9 @@ def snapshot(plan_path):
                 flight.update(
                     observed_simulation_elapsed_s=None,
                     live_rtf=None,
-                    simulation_clock_basis="Producer progress stale or timestamp invalid",
+                    simulation_clock_basis=(
+                        "Producer progress stale or timestamp invalid"
+                    ),
                 )
         progress = []
         for name in ("archive-progress.json", "archive-verify-progress.json"):
@@ -186,7 +194,10 @@ def render(state):
     percent = "미정" if state["percent"] is None else f"{state['percent']:.1f}%"
     lines = [
         f"X500 {state['campaign']}",
-        f"압축·검증 완료 {percent}  {state['archived']}/{state['total']}  {state['status']}",
+        (
+            f"압축·검증 완료 {percent}  {state['archived']}/{state['total']}  "
+            f"{state['status']}"
+        ),
     ]
     if state["updated_unix"] is not None:
         age = max(0, time.time() - state["updated_unix"])
@@ -212,7 +223,8 @@ def render(state):
     for case_id, result in state.get("measurements", {}).items():
         lines.append(
             f"{case_id}: 유효관측 {result['observed_valid_seconds']:.1f}s / "
-            f"실제 wall {result['flight_command_wall_s']:.1f}s / 유효 RTF {result['effective_rtf']:.3f}"
+            f"실제 wall {result['flight_command_wall_s']:.1f}s / 유효 RTF "
+            f"{result['effective_rtf']:.3f}"
         )
     if state.get("phase") in {"benchmark", "endurance"}:
         lines.append("사전 gate 자료: 학습·최종 시험 데이터에 포함하지 않음")
@@ -235,7 +247,10 @@ def render(state):
     lines.append(f"  근거: {eta['basis']}; 불확실성: {eta['confidence']}")
     for worker in state["workers"]:
         lines.append(
-            f"instance {worker['instance']}: {worker['case']} / {worker['scenario']} / {worker['status']}"
+            (
+                f"instance {worker['instance']}: {worker['case']} / "
+                f"{worker['scenario']} / {worker['status']}"
+            )
         )
         flight = worker["flight"]
         simulation_elapsed = flight.get("observed_simulation_elapsed_s")
@@ -246,17 +261,25 @@ def render(state):
             else flight.get("wall_elapsed_s")
         )
         lines.append(
-            f"  비행 simulation 경과 {simulation_elapsed if simulation_elapsed is not None else '미확인'} / 목표 {worker['target_mission_seconds']}s; "
-            f"wall {round(wall, 1) if wall is not None else '미확인'}s (기록값); 실시간 RTF {live_rtf if live_rtf is not None else '미확인'}"
+            f"  비행 simulation 경과 "
+            f"{simulation_elapsed if simulation_elapsed is not None else '미확인'} / 목표 {worker['target_mission_seconds']}s; "
+            f"wall {round(wall, 1) if wall is not None else '미확인'}s "
+            f"(기록값); 실시간 RTF {live_rtf if live_rtf is not None else '미확인'}"
         )
         if flight.get("producer_run_id"):
             lines.append(
-                f"  관측 run {flight['producer_run_id']} / producer 갱신 {flight.get('producer_progress_updated_utc')}"
+                (
+                    f"  관측 run {flight['producer_run_id']} / producer 갱신 "
+                    f"{flight.get('producer_progress_updated_utc')}"
+                )
             )
         for progress in worker["progress"]:
             count = progress.get("bytes_processed") or 0
             lines.append(
-                f"  {progress['stage']}: {count / 1e6:.1f} MB 처리 / {progress['status']}"
+                (
+                    f"  {progress['stage']}: {count / 1e6:.1f} MB 처리 / "
+                    f"{progress['status']}"
+                )
             )
         if worker["status"] == "VERIFYING":
             lines.append(

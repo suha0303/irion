@@ -112,7 +112,8 @@ class LocalLive:
             data_root=str(self.service.root),
         )
         await self.service.call(dict(request, action="live_validate"))
-        # Recheck after subprocess awaits: only one worker/job may acquire the CPU.
+        # Recheck after subprocess awaits: only one worker/job may acquire the
+        # CPU.
         if self.service.active or self.workers:
             raise HTTPException(409, "다른 로컬 AI 작업이 실행 중입니다.")
         folder.mkdir()

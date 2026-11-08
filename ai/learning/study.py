@@ -223,7 +223,10 @@ def select_rates(cfg, out, train, validation, progress):
             )
             if initial != initialization.setdefault(key, initial):
                 raise ValueError(
-                    "Candidates and optimizers must start from identical weights"
+                    (
+                        "Candidates and optimizers must start from identical "
+                        "weights"
+                    )
                 )
             trials.append(
                 dict(

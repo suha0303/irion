@@ -1,4 +1,6 @@
-"""New user-selected campaigns preserve old evidence and never dispatch native flights."""
+"""New user-selected campaigns preserve old evidence and never dispatch
+native flights.
+"""
 
 import copy
 import json

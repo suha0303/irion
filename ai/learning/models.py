@@ -75,7 +75,8 @@ class InterLayerNormStack(nn.Module):
                         nn.init.orthogonal_(gate)
                 else:
                     nn.init.zeros_(parameter)
-            # The two native biases are added. Initialize only one forget slice to+1.
+            # The two native biases are added. Initialize only one forget slice
+            # to+1.
             with torch.no_grad():
                 layer.bias_ih_l0[spec.hidden : 2 * spec.hidden].fill_(1)
 

@@ -130,7 +130,10 @@ def producer_manifest():
     path = collection_config.producer_lock_path()
     if path != PRODUCER_MANIFEST:
         raise ValueError(
-            "Current producer runtime manifest required; run ./Data/generation/drone-data setup --simulation"
+            (
+                "Current producer runtime manifest required; run "
+                "./Data/generation/drone-data setup --simulation"
+            )
         )
     record = read(path)
     if any(
@@ -144,7 +147,10 @@ def producer_manifest():
         }.items()
     ):
         raise ValueError(
-            "Producer runtime identity mismatch; run ./Data/generation/drone-data doctor"
+            (
+                "Producer runtime identity mismatch; run "
+                "./Data/generation/drone-data doctor"
+            )
         )
     if not record.get("files"):
         raise ValueError("Producer runtime inventory is empty")
@@ -249,7 +255,9 @@ def admission(workers, peak_per_worker, available):
         and available - required >= 4_000_000_000,
         estimated_bytes=required,
         available_bytes=available,
-        basis="1.25 * worker peak RSS * workers +256MB; >=4GB free, <=8GB own RAM",
+        basis=(
+            "1.25 * worker peak RSS * workers +256MB; >=4GB free, <=8GB own RAM"
+        ),
     )
 
 

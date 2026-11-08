@@ -81,7 +81,10 @@ def slurm_command(profile, root):
     wrapped += "; export DRONE_AI_PROFILE=" + shlex.quote(
         str(root / "server-profile.json")
     )
-    wrapped += "; export CUBLAS_WORKSPACE_CONFIG=:4096:8 OPENBLAS_NUM_THREADS=2 OMP_NUM_THREADS=2 PYTHONDONTWRITEBYTECODE=1"
+    wrapped += (
+        "; export CUBLAS_WORKSPACE_CONFIG=:4096:8 OPENBLAS_NUM_THREADS=2 "
+        "OMP_NUM_THREADS=2 PYTHONDONTWRITEBYTECODE=1"
+    )
     wrapped += "; exec " + shlex.join(worker_command(profile, root))
     return [
         "sbatch",
@@ -134,7 +137,10 @@ def initialize(profile_file, root):
             "llm_calls": 0,
             "python": profile["python"],
             "main_training_started": False,
-            "scope": "Finite correctness test only; short optimizer/save/restore steps are allowed",
+            "scope": (
+                "Finite correctness test only; short optimizer/save/restore "
+                "steps are allowed"
+            ),
         },
     )
     return root, profile
@@ -143,7 +149,8 @@ def initialize(profile_file, root):
 def start(profile_file, root):
     root, profile = initialize(profile_file, root)
     session = "drone-ai-smoke-" + root.name
-    # tmux owns the controller; closing the launcher, SSH, or watch screen does not stop it.
+    # tmux owns the controller; closing the launcher, SSH, or watch screen does
+    # not stop it.
     body = "export PYTHONPATH=" + shlex.quote(
         os.environ.get("PYTHONPATH", str(ROOT / "ai"))
     )
@@ -285,7 +292,9 @@ def file_sha(path):
 def released_result(
     path, update, *, visibility_seconds=120, interval_seconds=5
 ):
-    """After confirmed Slurm release, tolerate only transient ENOENT visibility."""
+    """After confirmed Slurm release, tolerate only transient ENOENT
+    visibility.
+    """
     started = time.monotonic()
     deadline = started + visibility_seconds
     while True:
@@ -308,14 +317,17 @@ def released_result(
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise TimeoutError(
-                    f"Released job result stayed invisible for {visibility_seconds}s: {path}; "
+                    f"Released job result stayed invisible for "
+                    f"{visibility_seconds}s: {path}; "
                     f"last error: {exc}"
                 ) from exc
             time.sleep(min(interval_seconds, remaining))
 
 
 def reconcile(root):
-    """Inspect one existing terminated job, preserving its original controller evidence."""
+    """Inspect one existing terminated job, preserving its original
+    controller evidence.
+    """
     root = absolute_path(root)
     if (root / "reconciliation.json").exists():
         raise FileExistsError(
@@ -456,9 +468,13 @@ def reconcile(root):
         "profile_sha256": digest(profile_file),
         "result_sha256": file_sha(compute / "result.json"),
         "restore_proof_sha256": file_sha(compute / "restore-proof.json"),
-        "scope": "Read-only Slurm reconciliation of one existing smoke; no GPU operation or retry",
+        "scope": (
+            "Read-only Slurm reconciliation of one existing smoke; no GPU "
+            "operation or retry"
+        ),
     }
-    # Exclusive write preserves both original control.json and any previous reconciliation.
+    # Exclusive write preserves both original control.json and any previous
+    # reconciliation.
     with (root / "reconciliation.json").open("x", encoding="utf-8") as stream:
         json.dump(reconciliation, stream, indent=2, ensure_ascii=False)
         stream.write("\n")
@@ -491,7 +507,10 @@ def controller(root):
         "retries": 0,
         "submission_attempted": False,
         "main_training_started": False,
-        "scope": "Short GPU optimizer/save/restore correctness test; no main training",
+        "scope": (
+            "Short GPU optimizer/save/restore correctness test; no main "
+            "training"
+        ),
     }
 
     def update(**fields):
@@ -520,7 +539,8 @@ def controller(root):
         update(status="SMOKE_SUBMITTED", job_id=job_id, submitted_jobs=[job_id])
         job_description(job_id, state["owner"])
         deadline = time.monotonic() + 2 * 3600
-        # This finite program waits for its single job; no LLM API, callback or auto-retry exists.
+        # This finite program waits for its single job; no LLM API, callback or
+        # auto-retry exists.
         while True:
             record = accounting(job_id, state["owner"])
             queue = command(
@@ -565,7 +585,10 @@ def controller(root):
                 job_description(job_id, state["owner"])
                 command(["scancel", job_id])
                 raise TimeoutError(
-                    "Finite smoke wait expired; own confirmed job cancellation requested"
+                    (
+                        "Finite smoke wait expired; own confirmed job "
+                        "cancellation requested"
+                    )
                 )
             time.sleep(5)
     except BaseException as exc:
@@ -576,7 +599,8 @@ def controller(root):
             reason=f"{type(exc).__name__}: {exc}",
             stopped=time.time(),
         )
-        # Never label a submitted allocation stopped without evidence from Slurm.
+        # Never label a submitted allocation stopped without evidence from
+        # Slurm.
         if state["job_id"]:
             with contextlib.suppress(Exception):
                 record = accounting(state["job_id"], state["owner"])

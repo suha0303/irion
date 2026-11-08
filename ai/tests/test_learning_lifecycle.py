@@ -1,4 +1,6 @@
-"""CPU fixtures and simulated scheduler responses. No remote submission or production fit."""
+"""CPU fixtures and simulated scheduler responses. No remote submission or
+production fit.
+"""
 
 import os
 import sys

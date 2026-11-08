@@ -281,7 +281,10 @@ def test_truth_join_preserves_sealed_forecasts_and_refuses_tamper(tmp_path):
     original = sha(forecast)
     a = evaluate_sealed(tmp_path, events, 0)
     events.write_text(
-        '{"event_id":"b","onset_kind":"in_flight_step","applied_time_us":2000000}\n',
+        (
+            '{"event_id":"b","onset_kind":"in_flight_step","applied_time_'
+            'us":2000000}\n'
+        ),
         encoding="utf-8",
     )
     b = evaluate_sealed(tmp_path, events, 0)

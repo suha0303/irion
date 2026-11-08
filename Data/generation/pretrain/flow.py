@@ -1,4 +1,6 @@
-"""Length-homogeneous flights overlap one CPU group; bounded raw backlog, no LLM."""
+"""Length-homogeneous flights overlap one CPU group; bounded raw backlog, no
+LLM.
+"""
 
 import copy
 import time
@@ -74,7 +76,10 @@ def collect_overlapping(runner, pipeline, planned, groups):
                     status="FAILED_STOPPED",
                     reason=f"{type(exc).__name__}: {exc}",
                     traceback=traceback.format_exc(),
-                    policy="close flight admission; drain owned peers; preserve all pending groups",
+                    policy=(
+                        "close flight admission; drain owned peers; preserve "
+                        "all pending groups"
+                    ),
                 ),
             )
             cpu.update(
@@ -92,7 +97,8 @@ def collect_overlapping(runner, pipeline, planned, groups):
     try:
         for set_index, batches in enumerate(groups):
             for index, cases in enumerate(batches):
-                # At most one older CPU group plus the next flight group retain raw outputs.
+                # At most one older CPU group plus the next flight group retain
+                # raw outputs.
                 if len(pending) >= 2:
                     runner.update(
                         stage="waiting-for-processing-capacity",
@@ -101,7 +107,9 @@ def collect_overlapping(runner, pipeline, planned, groups):
                     receive()
                 if stop.exists():
                     while pending:
-                        receive()  # Re-raise the original background failure before any new flight.
+                        # Re-raise the original background failure before any
+                        # new flight.
+                        receive()
                     raise RuntimeError(
                         "Processing failure signal; no new flight admitted"
                     )
@@ -134,7 +142,8 @@ def collect_overlapping(runner, pipeline, planned, groups):
         cpu.update(status="PROCESSING_COMPLETE", finished=time.time())
     finally:
         pool.shutdown(wait=True, cancel_futures=True)
-        # Final assembly uses the main coordinator again, after every CPU group is finished.
+        # Final assembly uses the main coordinator again, after every CPU group
+        # is finished.
         pipeline.r = runner
         runner.update(
             stream_completed=cpu.state.get("stream_completed", 0),

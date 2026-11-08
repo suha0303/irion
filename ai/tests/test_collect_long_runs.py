@@ -181,7 +181,8 @@ def test_processing_failure_drains_current_flight_even_inside_sample_interval(
 
     def command(args, cwd, log, check, seconds):
         result = original(args, cwd, log, check, seconds)
-        # Producer has finished, but verification/export of its owned run must drain.
+        # Producer has finished, but verification/export of its owned run must
+        # drain.
         if args[1] != "verify":
             dump(
                 Path(plan["processing_stop_signal"]), dict(reason="CPU failed")

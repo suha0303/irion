@@ -1,4 +1,6 @@
-"""Keep every planned case and failed attempt visible beside frozen v7 metrics."""
+"""Keep every planned case and failed attempt visible beside frozen v7
+metrics.
+"""
 
 import argparse
 import json
@@ -52,7 +54,10 @@ def account(lock, attempts, comparison):
                     events = row["events"]
                     if len(events) != int(abnormal):
                         raise ValueError(
-                            "truth event count differs from locked one-event case"
+                            (
+                                "truth event count differs from locked "
+                                "one-event case"
+                            )
                         )
                     if abnormal:
                         event = events[0]
@@ -104,8 +109,13 @@ def account(lock, attempts, comparison):
             / seconds
             if seconds > 0 and alarms == 0
             else None,
-            "poisson_assumption": "independent constant-rate episodes; reference only",
-            "normal_exposure_scope": "three hover paired groups, not diverse or long-duration qualification",
+            "poisson_assumption": (
+                "independent constant-rate episodes; reference only"
+            ),
+            "normal_exposure_scope": (
+                "three hover paired groups, not diverse or long-duration "
+                "qualification"
+            ),
             "new_episode_detections": sum(
                 e["new_episode_detected"] for e in events
             ),
@@ -127,7 +137,10 @@ def account(lock, attempts, comparison):
         "test_tuning": False,
         "missing_or_failed_attempts_are_not_healthy": True,
         "performance_pass_claim": False,
-        "interpretation": "frozen-model independent pilot; report misses, no recall acceptance threshold invented",
+        "interpretation": (
+            "frozen-model independent pilot; report misses, no recall "
+            "acceptance threshold invented"
+        ),
     }
 
 

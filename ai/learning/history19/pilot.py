@@ -25,9 +25,9 @@ AUTH = ROOT / "ai/reports/p27-pilot45-20261107/attempt-01/authorization.json"
 RECOVERY_AUTH = (
     ROOT / "ai/reports/p27-pilot45-20261107/recovery-01/authorization.json"
 )
-HISTORICAL_EXCLUSIONS = (
-    ROOT
-    / "ai/reports/p27-precollection-20261107/seal-review-05-bounded/development-reference-exclusions.json"
+HISTORICAL_EXCLUSIONS = ROOT / (
+    "ai/reports/p27-precollection-20261107/seal-review-05-"
+    "bounded/development-reference-exclusions.json"
 )
 CRITICAL = (
     "ai/learning/admission19.py",
@@ -177,7 +177,10 @@ def policy_check(ctx, expected, *, short_cycle=False):
         or policy.get("posthoc_adjustment") is not False
     ):
         raise ValueError(
-            "Producer source-clock alignment and unchanged mission-only policy required"
+            (
+                "Producer source-clock alignment and unchanged mission-only "
+                "policy required"
+            )
         )
     for key in ("policy_id", "wind_model_clock", "native_receipt_schema"):
         if not isinstance(required(policy, key), str) or not policy[key]:
@@ -394,7 +397,10 @@ def comparison_evidence(ctx, pair, policy, label):
         )
     if native.get("passed") is not True:
         raise Pending(
-            "Actual native pair verification is not passed, including coverage gates"
+            (
+                "Actual native pair verification is not passed, including "
+                "coverage gates"
+            )
         )
     for key in COMPARISON_FIELDS:
         if policy.get("native_adapter") in NATIVE_ADAPTERS:
@@ -478,7 +484,10 @@ def check_native_completion(document, *, fixture=False):
     )
     if document.get("schema") != schema or document.get("task_id") != TASK:
         raise ValueError(
-            "Known actual native completion schema/task required; never infer mappings"
+            (
+                "Known actual native completion schema/task required; never "
+                "infer mappings"
+            )
         )
     if (
         document.get("passed") is not True
@@ -515,7 +524,10 @@ def plan_and_ledger(
             or usage != "short_cycle_input_check"
         ):
             raise ValueError(
-                "Quality rejection retries are restricted to the explicit short cycle"
+                (
+                    "Quality rejection retries are restricted to the explicit "
+                    "short cycle"
+                )
             )
     manifest = ctx.doc("pilot_manifest")
     if (
@@ -552,7 +564,10 @@ def plan_and_ledger(
             or not case["lineage"]
         ):
             raise ValueError(
-                "Explicit frozen seed/operation/pair/lineage required for each case"
+                (
+                    "Explicit frozen seed/operation/pair/lineage required for "
+                    "each case"
+                )
             )
         if case["role"] != (
             "anomaly_test" if case["case_kind"] == "anomaly" else "normal_test"
@@ -574,7 +589,10 @@ def plan_and_ledger(
         )
         if not {"fit", "calibration", "final_test"} <= protected:
             raise ValueError(
-                "Every pilot case must be globally excluded from future fit/calibration/final"
+                (
+                    "Every pilot case must be globally excluded from future "
+                    "fit/calibration/final"
+                )
             )
     for anomaly in anomalies:
         pair = [c for c in controls if c["pair_id"] == anomaly["pair_id"]]
@@ -583,7 +601,10 @@ def plan_and_ledger(
             for k in ("seed", "motion", "environment", "operation_sha256")
         ):
             raise ValueError(
-                "Every anomaly needs its own matching independent normal control"
+                (
+                    "Every anomaly needs its own matching independent normal "
+                    "control"
+                )
             )
     if len({c["pair_id"] for c in anomalies}) != 9:
         raise ValueError(
@@ -595,7 +616,10 @@ def plan_and_ledger(
         for t in ("existing", "step", "ramp")
     }:
         raise ValueError(
-            "Pilot anomaly cases must preserve all nine family/timing combinations"
+            (
+                "Pilot anomaly cases must preserve all nine family/timing "
+                "combinations"
+            )
         )
     ledger = ctx.doc("ledger")
     if (
@@ -606,7 +630,10 @@ def plan_and_ledger(
     entries = ledger.get("cases", [])
     if len(entries) != 45 or {r["case_id"] for r in entries} != case_ids:
         raise ValueError(
-            "Failed/pending/unavailable cases cannot disappear from denominator45"
+            (
+                "Failed/pending/unavailable cases cannot disappear from "
+                "denominator45"
+            )
         )
     by_id = {c["case_id"]: c for c in cases}
     raw_ids, failures, quality_rejected = set(), 0, 0
@@ -673,7 +700,10 @@ def plan_and_ledger(
             not attempts or attempts[-1]["status"] != "completed"
         ):
             raise ValueError(
-                "Completed/unavailable case must preserve its completed physical raw"
+                (
+                    "Completed/unavailable case must preserve its completed "
+                    "physical raw"
+                )
             )
         if row["status"] == "quality_rejected" and (
             not attempts or attempts[-1]["status"] != "quality_rejected"
@@ -694,7 +724,10 @@ def plan_and_ledger(
         )
         if not {"fit", "calibration", "final_test"} <= protected:
             raise ValueError(
-                "Every pilot attempt, including failures, needs permanent raw-ID exclusion"
+                (
+                    "Every pilot attempt, including failures, needs permanent "
+                    "raw-ID exclusion"
+                )
             )
     counts = dict(
         planned_cases=45,
@@ -786,7 +819,10 @@ def prerequisites(ctx):
             ".sh",
         } or path.stat().st_size > 2 * (1 << 20):
             raise ValueError(
-                "Capsule hashes small source/config files, never model/data trees"
+                (
+                    "Capsule hashes small source/config files, never "
+                    "model/data trees"
+                )
             )
         if expected_hash != sha(path):
             raise ValueError(
@@ -831,7 +867,10 @@ def prerequisites(ctx):
             <= protected
         ):
             raise ValueError(
-                "Development77+6 must be globally excluded from pilot/fit/calibration/final"
+                (
+                    "Development77+6 must be globally excluded from "
+                    "pilot/fit/calibration/final"
+                )
             )
     cases, ledger, counts = plan_and_ledger(ctx, registry)
     ctx.ledger_counts = counts

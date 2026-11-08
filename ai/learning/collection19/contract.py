@@ -1,4 +1,6 @@
-"""Independent MAIN480 authority and frozen plan checks; no collection or fitting."""
+"""Independent MAIN480 authority and frozen plan checks; no collection or
+fitting.
+"""
 
 from collections import Counter
 from pathlib import Path
@@ -52,7 +54,9 @@ def authorization():
 
 
 def check_scope():
-    """Read bounded plan metadata only; historical execution_ready flags stay unchanged."""
+    """Read bounded plan metadata only; historical execution_ready flags stay
+    unchanged.
+    """
     auth = authorization()
     plans = auth["frozen_plans"]
     main, lr = json_file(bound(plans["main"])), json_file(bound(plans["LR"]))
@@ -150,7 +154,11 @@ def prepare_policy(
             receipt_min_offset_us=0,
             receipt_max_offset_us=500000,
         ),
-        prior_plan_native_policy_note="Frozen LR v1/execution_ready=false is historical planning metadata; this separate contract binds actual current v2. Original plans are unchanged.",
+        prior_plan_native_policy_note=(
+            "Frozen LR v1/execution_ready=false is historical planning "
+            "metadata; this separate contract binds actual current v2. "
+            "Original plans are unchanged."
+        ),
         authorizes_automatic_start=False,
         authorizes_training=False,
     )
@@ -208,7 +216,9 @@ def check_case_record(row, case):
 
 
 def read_protection(value, identities=None):
-    """Old JSON registries or bounded JSONL entries; never an unbounded global ledger."""
+    """Old JSON registries or bounded JSONL entries; never an unbounded
+    global ledger.
+    """
     import json
 
     if isinstance(value, dict):

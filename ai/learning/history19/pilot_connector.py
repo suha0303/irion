@@ -1,4 +1,6 @@
-"""One-shot path-to-request connector; no producer execution or native-field guessing."""
+"""One-shot path-to-request connector; no producer execution or native-field
+guessing.
+"""
 
 import argparse
 import json
@@ -50,7 +52,9 @@ def project_pair_receipt(
     anomaly_run=None,
     external_audits=None,
 ):
-    """Data calls this after the official native verifier; no Data field mapping."""
+    """Data calls this after the official native verifier; no Data field
+    mapping.
+    """
     from .joint_native import pair
 
     policy = json_file(policy_path)
@@ -77,10 +81,13 @@ def native_mission_interval(
     run_path,
     external_audit=None,
 ):
-    """Return the complete actual controller-consumption interval, including LAND tail.
+    """Return the complete actual controller-consumption interval, including
+    LAND tail.
 
-    The source member name and native field paths come from the AI-reviewed frozen
-    projection, after Sim publishes its final receipt. No fallback to request/ACK.
+    The source member name and native field paths come from the
+    AI-reviewed frozen
+    projection, after Sim publishes its final receipt. No fallback to
+    request/ACK.
     """
     receipt_path, run_path = regular(receipt_path), regular(run_path)
     policy, native_policy, run = (
@@ -218,8 +225,10 @@ def native_mission_interval(
 def prepare_request(bundle_path, output):
     """Hash delivered paths once. AI owns paired_policy/development projections.
 
-    A new Sim schema is deliberately rejected until its actual mapping is reviewed.
-    This writes a request only; callers must then run the independent check-input.
+    A new Sim schema is deliberately rejected until its actual mapping is
+    reviewed.
+    This writes a request only; callers must then run the independent
+    check-input.
     """
     bundle_path = regular(bundle_path)
     bundle = json_file(bundle_path)

@@ -1,4 +1,6 @@
-"""Explicit finite recovery authorization; original physical outcomes stay immutable."""
+"""Explicit finite recovery authorization; original physical outcomes stay
+immutable.
+"""
 
 from learning.history19.pilot import ROOT, json_file
 

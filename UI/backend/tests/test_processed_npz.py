@@ -311,7 +311,12 @@ def test_sqlite_one_time_read_only_migration_and_provider_identity(tmp_path):
     }
     with sqlite3.connect(database) as db:
         db.executescript(
-            "CREATE TABLE runs(id TEXT,sha TEXT,name TEXT,path TEXT,created_at TEXT); CREATE TABLE detections(payload TEXT); CREATE TABLE profiles(id TEXT,payload TEXT); CREATE TABLE providers(id TEXT,payload TEXT);"
+            (
+                "CREATE TABLE runs(id TEXT,sha TEXT,name TEXT,path "
+                "TEXT,created_at TEXT); CREATE TABLE detections(payload TEXT); "
+                "CREATE TABLE profiles(id TEXT,payload TEXT); CREATE TABLE "
+                "providers(id TEXT,payload TEXT);"
+            )
         )
         db.execute(
             "INSERT INTO runs VALUES(?,?,?,?,?)",
@@ -496,7 +501,8 @@ def test_saved_result_and_future_seek_do_not_inflate_latency(tmp_path):
                 ]
                 == 0
             )
-        # A new result arriving while the replay cursor is before its decision is also excluded.
+        # A new result arriving while the replay cursor is before its decision
+        # is also excluded.
         e["event_id"] = "future"
         app.state.store.save_analysis([e])
         key = app.state.providers.key(e)

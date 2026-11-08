@@ -1,4 +1,6 @@
-"""Publish a read-only final artifact inventory after verified allocation release."""
+"""Publish a read-only final artifact inventory after verified allocation
+release.
+"""
 
 import argparse
 import fcntl

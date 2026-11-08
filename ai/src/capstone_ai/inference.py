@@ -146,7 +146,8 @@ class PendingForecasts:
                     float(normalized[:, :3].mean()),
                     float(normalized[:, 3].mean()),
                 ]
-            # Arrival jitter must not break consecutive origin blocks in a live stream.
+            # Arrival jitter must not break consecutive origin blocks in a live
+            # stream.
             status = self.alarm.update(scores, f["origin_time_us"] + 1000000)
             if f["status"] in {"forecast_late", "forecast_timing_unverified"}:
                 status["state"] = f["status"]

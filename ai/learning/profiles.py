@@ -23,7 +23,9 @@ def specs(profile):
 
 
 def select_batch(measurements):
-    """Prefer throughput, never allocate useless tensors to reach a memory target."""
+    """Prefer throughput, never allocate useless tensors to reach a memory
+    target.
+    """
     admitted = [
         r
         for r in measurements
