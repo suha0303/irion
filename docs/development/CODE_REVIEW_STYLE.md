@@ -96,7 +96,16 @@ WebSocket 설정을 포함한 해당 파일 4개가 통과했다. 중복 제거�
 92개가 최종 통과했으며, 한 번의 전체 92개 통과로 표현하지 않는다.
 
 PyTorch TypedStorage와 Starlette TestClient의 기존 사용 중단 예정 안내는
-남는다. 공개 main push와 CI 결과는 확인 후 아래에 추가한다.
+남는다. GitHub Actions의 기존 Node.js 20 action 경고도 별도 유지보수
+항목이며 이번 Python 스타일 정리에서 action의 major 버전을 바꾸지 않았다.
+
+M7 `a61ab15`, M8 `8c203ed`를 기존 공개 `main`에 올렸다.
+[공개 CI 43625823358](https://github.com/suha0303/irion/actions/runs/43625823358)는
+M8 소스 커밋에서 `cpu-data`와 `frontend`가 모두 통과했다. 공개 CPU 시험
+253 통과·86 `local_evidence` 제외, 프런트엔드 26 통과, 포맷·빌드 및
+Python 333개 Ruff 검사가 성공했다. 공개 환경에서 제외한 86개를 통과로
+세지 않으며 로컬 전체 검사와 구분한다. 결과 기록만 추가한 후속 문서
+커밋은 workflow 경로 필터상 재실행하지 않는다.
 
 봉인된 시뮬레이션 Python 시험의 기존 **22개 실패**는 미해결이다.
 모델 가중치·봉인 값·동결 전처리·helper·과거 실패 증거를 수정하지 않았다.
