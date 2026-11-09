@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pretrain import ai19, common
+from pretrain import ai19, cli, common
 
 ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location(
@@ -454,8 +454,6 @@ def test_data_subprocess_imports_no_training_dependencies():
 def test_legacy_fresh_cli_blocks_current_battery_before_task_creation(
     monkeypatch, tmp_path
 ):
-    from pretrain import cli
-
     args = cli.parser().parse_args(
         ["init", "--name", "blocked", "--mode", "collect"]
     )

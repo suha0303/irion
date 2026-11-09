@@ -5,6 +5,7 @@ User policy 2026-11-14: cross-backend numerical deltas are informational, not a
 release gate. Retain the historical allclose statistic for traceability.
 """
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -19,8 +20,6 @@ from .runtime import Runtime
 def check(bundle, dataset):
     catalog, dataset = Catalog(bundle), Path(dataset)
     with (dataset / "online-index.jsonl").open(encoding="utf-8") as f:
-        import json
-
         reference = next(
             r for r in map(json.loads, f) if r["role"] == "normal_validation"
         )

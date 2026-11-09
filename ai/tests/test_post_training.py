@@ -10,9 +10,12 @@ from types import SimpleNamespace
 
 import pytest
 
+import execution.prepare
+import learning.sensitivity_data
 from execution.common import read, sha, write
 from learning import comparison, operator
 from learning import post_training as post
+from learning.study import configure
 
 
 def config():
@@ -133,6 +136,8 @@ def test_control_failure_stops_before_evaluator(tmp_path, monkeypatch):
     phases = []
 
     def submit(root, phase, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del root, cfg
         phases.append(phase)
         return dict(phase=phase, job_id="123", uid=os.getuid())
 
@@ -160,6 +165,8 @@ def test_no_final_completion_until_both_jobs_release(tmp_path, monkeypatch):
     phases = []
 
     def submit(root, phase, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del cfg
         assert not (root / "completion.json").exists()
         if phase == "evaluate":
             operator.require_success(read(root / "release.json"))
@@ -169,6 +176,8 @@ def test_no_final_completion_until_both_jobs_release(tmp_path, monkeypatch):
     monkeypatch.setattr(post, "submit", submit)
 
     def wait(root, record, state, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del state, cfg
         assert not (root / "completion.json").exists()
         return dict(
             job_id=record["job_id"],
@@ -229,6 +238,8 @@ def test_unacknowledged_submission_never_counts_as_stopped(
     )
 
     def submit(root, phase, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del cfg
         if phase == unknown_phase:
             write(
                 root / (phase + "-submission-intent.json"), {"argv": ["sbatch"]}
@@ -391,8 +402,6 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
         source_dataset_sha256="dataset",
     )
     if normalization_study:
-        from learning.study import configure
-
         source_cfg = configure(source_cfg)
     comparison.config_check(source_cfg)
     write(source / "input/config.json", source_cfg)
@@ -512,7 +521,6 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
         ),
     )
     monkeypatch.setattr(post, "dataset_binding", lambda *a: {})
-    import execution.prepare
 
     monkeypatch.setattr(
         execution.prepare, "npz_headers", lambda *a: {"X": {"bytes": 1024}}
@@ -521,8 +529,6 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
     if policy_kind is not None:
         if policy_kind == "sensitivity":
             from test_post_training_sensitivity import policy
-
-            import learning.sensitivity_data
 
             monkeypatch.setattr(
                 learning.sensitivity_data,

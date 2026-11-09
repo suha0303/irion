@@ -200,6 +200,8 @@ def test_single_candidate_never_repeats_baseline_or_runs_more_flights(
             calls.append(("cpu", args[1]))
 
         def flight(self, phase, count, rows, label):
+            # Unused; retain the substituted callable's keyword parameters.
+            del phase
             calls.append(("flight", rows))
             assert count == 1 and len(rows) == 1 and rows[0]["seed"] == 2100
             folder = self.task / label

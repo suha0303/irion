@@ -7,12 +7,15 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from pretrain import assembly, common, composition, merge
+from pretrain import assembly, cli, common, composition, merge, storage
+from pretrain.runner import Runner
 
 
-@pytest.fixture
-def parts(monkeypatch):
+@pytest.fixture(name="parts")
+def fixture_parts(monkeypatch):
     def validate(rows, cases, protected, profile, *, case_sets):
+        # Unused; retain the substituted callable's keyword parameters.
+        del protected
         assert profile == "balanced300"
         assert len({r["run_id"] for r in rows}) == len(rows)
         assert [r["case_id"] for r in rows] == [r["case_id"] for r in cases]
@@ -66,8 +69,6 @@ def test_locked_final_test_never_enters_merge(parts):
 def test_restore_reports_verified_members_without_mutating_bundle(
     tmp_path, monkeypatch
 ):
-    from pretrain import storage
-
     monkeypatch.setattr(storage, "external", lambda p: p)
     bundle = tmp_path / "bundle"
     bundle.mkdir()
@@ -96,8 +97,6 @@ def test_restore_reports_verified_members_without_mutating_bundle(
 
 
 def test_merge_cli_does_not_render_unstarted_collection_counters(tmp_path):
-    from pretrain import cli
-
     common.write(
         tmp_path / "config.json",
         dict(
@@ -115,8 +114,6 @@ def test_merge_cli_does_not_render_unstarted_collection_counters(tmp_path):
 
 
 def test_merge_memory_policy_reserves_one_gigabyte(monkeypatch):
-    from pretrain import cli
-
     monkeypatch.setattr(
         cli,
         "collector",
@@ -139,8 +136,6 @@ def test_merge_memory_policy_reserves_one_gigabyte(monkeypatch):
 
 
 def test_merge_runner_rejects_flight_calls(tmp_path):
-    from pretrain.runner import Runner
-
     common.write(
         tmp_path / "config.json",
         dict(mode="merge_prepared", unit_attempts_max=3),
@@ -168,6 +163,8 @@ def test_two_sources_refit_one_train_scaler_and_independently_verify(tmp_path):
     frozen = dict(runs=rows)
 
     def adopt(raw, target, config):
+        # Unused; retain the substituted callable's keyword parameters.
+        del config
         shutil.copytree(raw, target)
         return common.read(target / "summary.json")
 

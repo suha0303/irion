@@ -6,7 +6,7 @@ import pytest
 from test_post_training import fresh_config
 
 from execution.common import sha, write
-from learning import comparison, study
+from learning import comparison, operator, study
 from learning import post_training as post
 
 
@@ -57,8 +57,8 @@ def test_baseline_reference_cannot_silently_change(change):
         post.config_check(cfg)
 
 
-@pytest.fixture
-def signed(tmp_path):
+@pytest.fixture(name="signed")
+def fixture_signed(tmp_path):
     source = tmp_path / "trained"
     write(source / "input/ai/frozen.py", {"source": "frozen"})
     cfg = dict(
@@ -222,8 +222,6 @@ def test_baselines_require_same_frozen_inputs(monkeypatch, field):
 
 
 def test_post_training_watch_counts_models_and_release(tmp_path):
-    from learning import operator
-
     cfg = dict(
         revision=study.REVISION,
         execution_scope=post.SCOPE,

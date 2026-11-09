@@ -2,6 +2,7 @@
 
 import copy
 
+from localflight.logs import scan_bin
 from localflight.profile_from_log import suggest
 from localflight.profiles import eligibility, save_profile
 
@@ -211,8 +212,6 @@ def test_px4_explicit_cell_count_capacity_and_changed_setting():
 def test_inventory_retains_invalid_parameter_changes(monkeypatch):
     from pymavlink import DFReader
 
-    from localflight.logs import scan_bin
-
     class Message:
         def __init__(self, value):
             self.value = value
@@ -225,6 +224,8 @@ def test_inventory_retains_invalid_parameter_changes(monkeypatch):
 
     class Reader:
         def __init__(self, path):
+            # Unused; retain the substituted callable's keyword parameters.
+            del path
             self.rows = iter([Message(44000), Message(float("nan")), None])
 
         def recv_msg(self):

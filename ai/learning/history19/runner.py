@@ -3,6 +3,7 @@ resource/resume gates.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -352,7 +353,6 @@ def fit(manifest, out, *, approved=False):
                     "omission"
                 )
             )
-        import shutil
 
         if shutil.disk_usage(out).free < plan["array_bytes"] + 24 * 1024**3:
             raise OSError("Insufficient disk for new mmap cache and evidence")

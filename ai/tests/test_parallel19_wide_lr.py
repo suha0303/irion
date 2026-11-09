@@ -5,6 +5,7 @@ import copy
 import pytest
 
 from learning.parallel19.control import read, write
+from learning.parallel19.handover_upgrade import preserve_final_selections
 from learning.parallel19.refine import (
     candidates,
     finish_round,
@@ -127,8 +128,6 @@ def test_remaining_model_can_use_all_nine_candidate_slots(tmp_path):
 
 
 def test_handover_preserves_selections_from_paused_snapshot(tmp_path):
-    from learning.parallel19.handover_upgrade import preserve_final_selections
-
     old = tmp_path / "old"
     new = tmp_path / "new"
     selection = {"lr": 0.1, "model_sha256": "same"}

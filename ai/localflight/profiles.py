@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import re
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -192,8 +193,6 @@ def save_profile(root: str | Path, profile: dict[str, Any]) -> dict[str, Any]:
     # Identity is application bookkeeping, not a required manufacturer
     # specification.
     if not profile.get("id"):
-        import uuid
-
         profile = dict(profile, id="aircraft-" + uuid.uuid4().hex[:12])
     if not profile.get("name"):
         profile = dict(profile, name=profile["id"])

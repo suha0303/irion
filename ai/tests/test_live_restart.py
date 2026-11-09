@@ -40,6 +40,8 @@ def test_resume_does_not_close_pending_at_replayed_segment_boundary(
         """Supply a resumed frame boundary without closing pending forecasts."""
 
         def __init__(self, path, consumer):
+            # Unused; retain the substituted callable's keyword parameters.
+            del path
             self.engine, self.index, self.closed, self.last_mark = (
                 consumer,
                 0,
@@ -89,6 +91,8 @@ def test_resume_does_not_close_pending_at_replayed_segment_boundary(
             self.scaler = {"x_mean": 0, "x_scale": 1, "c_mean": 0, "c_scale": 1}
 
         def predict_scaled(self, x, c):
+            # Unused; retain the substituted callable's keyword parameters.
+            del x, c
             return np.zeros((1, 10, 4))
 
         def physical(self, prediction):

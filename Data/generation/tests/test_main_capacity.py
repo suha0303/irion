@@ -40,6 +40,8 @@ def test_preflight_reports_shortfall_and_preserves_guard(
     checks = []
 
     def resources(config, *, scratch=0):
+        # Unused; retain the substituted callable's keyword parameters.
+        del config
         checks.append(scratch)
         return dict(disk_free_bytes=90_000_000_000)
 

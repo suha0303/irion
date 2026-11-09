@@ -7,8 +7,10 @@ import numpy as np
 import pytest
 from test_localflight_adapt import flight
 
+import localflight.bin_reader as reader_module
 from capstone_ai.mapping import FEATURES
-from localflight.catalog import digest
+from localflight.analysis import analyze
+from localflight.catalog import DEFAULT_BUNDLE, digest
 from localflight.prepare import bin_events, bin_values, causal_frames, prepare
 from localflight.prepared import distinct_flights, load, windows
 from localflight.runtime import Runtime
@@ -214,8 +216,6 @@ def test_large_finite_sensor_excursions_are_retained():
 def test_bin_keeps_only_file_prefix_at_first_reset_or_corruption(
     monkeypatch, failure
 ):
-    import localflight.bin_reader as reader_module
-
     class Reader:
         """Yield controlled BIN records to exercise prefix preservation."""
 
@@ -262,9 +262,6 @@ def test_bin_keeps_only_file_prefix_at_first_reset_or_corruption(
 
 
 def test_segmented_health_does_not_carry_context_between_segments(tmp_path):
-    from localflight.analysis import analyze
-    from localflight.catalog import DEFAULT_BUNDLE
-
     path = flight(tmp_path, "segmented", "evaluation")
     m = json.loads(path.read_text(encoding="utf-8"))
     data = path.parent / "frames.npz"

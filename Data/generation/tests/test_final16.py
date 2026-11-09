@@ -301,6 +301,8 @@ def test_exact16_concurrent_then_cpu4_or_failure_drain(
     calls, overlap = [], []
 
     def child(unused_task, request, log, *, on_progress=None):
+        # Unused; retain the substituted callable's keyword parameters.
+        del log, on_progress
         j = common.read(request)
         kind = "flight" if j["action"] == "flight" else "cpu"
         with lock:

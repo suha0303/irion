@@ -15,6 +15,8 @@ from fastapi.testclient import TestClient
 from test_pipeline import long_records
 from test_streaming_v2 import stream_event
 
+import arion.npz_archive as archive_module
+from arion.ai import fixture_events
 from arion.contracts import InputProfile, SignalDefinition, SourceConfig
 from arion.file_io import hash_file
 from arion.main import create_app
@@ -199,8 +201,6 @@ def test_gap_invalidates_pose_and_segment_boundaries(tmp_path):
 def test_failed_chunk_retries_from_journal_and_recovery_preserves_partial_tail(
     tmp_path, monkeypatch
 ):
-    import arion.npz_archive as archive_module
-
     store = StoreV2(tmp_path)
     run = create_processed(store)
     original = archive_module.atomic_npz
@@ -476,7 +476,6 @@ def test_saved_result_and_future_seek_do_not_inflate_latency(tmp_path):
             "\n".join(json.dumps(r) for r in long_records()).encode(),
             "latency.jsonl",
         )
-        from arion.ai import fixture_events
 
         e = fixture_events(run)[0]
         e.pop("input_sha256")

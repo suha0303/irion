@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from pretrain import cli, collection, common, runner
+from pretrain import cli, collection, common, main_collection, runner
 
 
 @pytest.mark.parametrize("count", common.CHOICES)
@@ -214,6 +214,8 @@ def test_broken_utf8_input_reprompts_all(monkeypatch, capsys):
     )
 
     def enter(prompt):
+        # Unused; retain the substituted callable's keyword parameters.
+        del prompt
         value = next(inputs)
         if isinstance(value, Exception):
             raise value
@@ -253,8 +255,6 @@ def test_expanded_memory_service_uses_available_minus_reserve(monkeypatch):
 def test_lr_menu_routes_to_current_collection_without_legacy_create(
     monkeypatch,
 ):
-    from pretrain import main_collection
-
     calls = []
     monkeypatch.setattr("builtins.input", lambda prompt: "1")
     monkeypatch.setattr(
@@ -365,8 +365,6 @@ def test_new_flight_finish_persists_count_and_duration(tmp_path, monkeypatch):
 
 
 def test_main_collection_menu_propagates_current_admission_failure(monkeypatch):
-    from pretrain import main_collection
-
     def blocked(scope):
         assert scope == "main"
         raise ValueError("fixture current admission blocked")
@@ -575,7 +573,11 @@ def test_expanded_floor_stops_only_owned_cpu_workers(tmp_path, monkeypatch):
         return r.state["resources"]
 
     class Child:
+        """Record termination of synthetic workers owned by this test."""
+
         def __init__(self, command, **unused_kw):
+            # Unused; retain the substituted callable's keyword parameters.
+            del command
             self.pid = 1000 + len(children)
             self.code = None
             children.append(self)
@@ -643,6 +645,8 @@ def test_all_benchmark_uses_fresh_flights_before_cpu(
     frozen = {"status": "BENCHMARK_ONLY", "runs": []}
 
     def flight(phase, workers, rows, label):
+        # Unused; retain the substituted callable's keyword parameters.
+        del label
         assert phase == "benchmark" and workers == count
         assert len(rows) == max(3, count)
         assert all(
@@ -801,6 +805,8 @@ def test_parallel_handoff_uses_existing_numeric_algorithms(
     monkeypatch.setattr(runner, "external", Path)
 
     def batch(name, action, rows, workers, out, **kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del workers
         out.mkdir(parents=True)
         if action == "preprocess":
             for row in rows:
@@ -1087,6 +1093,8 @@ def test_all_collection_sets_attempted_before_partial_dataset_rejected(
     calls = []
 
     def flight(phase, count, rows, label):
+        # Unused; retain the substituted callable's keyword parameters.
+        del phase, count, rows
         calls.append(label)
         if len(calls) == 1:
             raise collection.IncompleteCollection("fixture partial")

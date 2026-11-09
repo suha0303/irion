@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from execution.common import sha, write
+from execution.common import read, sha, write
 from learning.bottleneck import profiled_step
 from learning.diagnostic import same
 from learning.models import StudySpec, make_model
@@ -35,8 +35,8 @@ def test_profiled_work_matches_production_step(name, kind):
     assert same(left.state_dict(), right.state_dict())
 
 
-@pytest.fixture
-def controller(tmp_path, monkeypatch):
+@pytest.fixture(name="controller")
+def fixture_controller(tmp_path, monkeypatch):
     script = (
         Path(__file__).resolve().parents[1]
         / "reports/bottleneck-20261101/attempt-01/operator/control.py"
@@ -85,8 +85,6 @@ def test_controller_stops_before_duplicate_submission(
 def test_controller_never_retries_unknown_submission(
     controller, tmp_path, monkeypatch
 ):
-    from execution.common import read
-
     monkeypatch.setattr(controller.operator, "own_queue", lambda: "")
     commands = []
     monkeypatch.setattr(
@@ -109,8 +107,6 @@ def test_controller_never_retries_unknown_submission(
 def test_controller_records_completion_only_after_release(
     controller, tmp_path, monkeypatch
 ):
-    from execution.common import read
-
     monkeypatch.setattr(controller.operator, "own_queue", lambda: "")
     commands = []
     monkeypatch.setattr(

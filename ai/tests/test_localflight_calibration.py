@@ -10,6 +10,7 @@ from localflight import calibration
 from localflight.adapt import fit as adapt
 from localflight.analysis import analyze
 from localflight.catalog import DEFAULT_BUNDLE, digest
+from localflight.live import arrived_decision
 
 
 def make_flight(root, name, role, *, clock=None):
@@ -124,8 +125,6 @@ def test_calibration_rejects_leakage_unknown_roles_and_changed_clock(tmp_path):
 
 
 def test_live_decision_waits_for_actual_target_and_rejects_gap_reset():
-    from localflight.live import arrived_decision
-
     pending = [
         dict(origin=10000000, due=11000000, reset=0, scaled=[0, 0, 0, 4])
     ]

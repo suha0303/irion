@@ -4,7 +4,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from localflight.distribution import build, copy_regular, prune_overlay_metadata
+from localflight.distribution import (
+    build,
+    copy_regular,
+    prune_overlay_metadata,
+    ui_source,
+)
+from localflight.logs import inspect_log
 
 
 def test_distribution_does_not_overwrite_or_follow_symlinks(tmp_path):
@@ -35,8 +41,6 @@ def test_low_disk_stops_before_creating_partial_application(
 
 
 def test_oversized_log_rejected_before_parser_reads_it(tmp_path):
-    from localflight.logs import inspect_log
-
     path = tmp_path / "large.BIN"
     with path.open("wb") as stream:
         stream.truncate(256 * 1024 * 1024 + 1)
@@ -46,8 +50,6 @@ def test_oversized_log_rejected_before_parser_reads_it(tmp_path):
 
 
 def test_distribution_finds_public_clone_and_developer_ui_layouts(tmp_path):
-    from localflight.distribution import ui_source
-
     with pytest.raises(ValueError, match="complete project checkout"):
         ui_source(tmp_path)
     development = tmp_path / "irion-upload/UI"

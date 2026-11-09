@@ -2,7 +2,7 @@
 
 import pytest
 
-from pretrain import common, composition, partial, runner
+from pretrain import assembly, common, composition, partial, runner
 
 
 @pytest.mark.parametrize("fails", [False, True])
@@ -34,6 +34,8 @@ def test_one_run_only_and_failure_blocks_aggregation(
     calls = []
 
     def batch(name, action, rows, workers, out):
+        # Unused; retain the substituted callable's keyword parameters.
+        del name, out
         assert (
             action == "preprocess"
             and workers == 1
@@ -46,6 +48,8 @@ def test_one_run_only_and_failure_blocks_aggregation(
     monkeypatch.setattr(r, "batch", batch)
 
     def finish(frozen, root, label, workers, *, canonical_sources):
+        # Unused; retain the substituted callable's keyword parameters.
+        del label
         assert len(frozen["runs"]) == 2 and workers == 4
         assert canonical_sources == {
             "good": source / "prepared/canonical-work/good"
@@ -103,6 +107,8 @@ def test_successful_canonical_copy_preserves_original_and_checks_hash(
         pass
 
     def prepare(frozen, out, config, budget, *, process_run):
+        # Unused; retain the substituted callable's keyword parameters.
+        del config, budget
         target = out / "canonical/good"
         assert (
             process_run(frozen["runs"][0]["path"], target, summary["config"])
@@ -114,8 +120,6 @@ def test_successful_canonical_copy_preserves_original_and_checks_hash(
         assert not (target / "checkpoint.json").exists()
         assert before == {p: p.read_bytes() for p in before}
         raise EndCheck
-
-    from pretrain import assembly
 
     monkeypatch.setattr(assembly, "prepare", prepare)
     with pytest.raises(EndCheck):

@@ -9,9 +9,11 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from capstone_ai.detection_protocol import fit_calibration
 from execution import engine
 from execution.common import read, sha, write
 from learning import sensitivity
+from learning.sensitivity_metrics import assess_sensitivity
 
 
 def arrays(run_id, count=3, *, block=0):
@@ -30,8 +32,8 @@ def arrays(run_id, count=3, *, block=0):
     )
 
 
-@pytest.fixture
-def gate(tmp_path, monkeypatch):
+@pytest.fixture(name="gate")
+def fixture_gate(tmp_path, monkeypatch):
     root, out = tmp_path / "upstream", tmp_path / "compute"
     dataset = root / "dataset"
     names = ["first", "second", "third"]
@@ -62,9 +64,13 @@ def gate(tmp_path, monkeypatch):
     fatal_models = set()
 
     def predictor(folder, device):
+        # Unused; retain the substituted callable's keyword parameters.
+        del device
         name = folder.name
 
         def predict(x, c):
+            # Unused; retain the substituted callable's keyword parameters.
+            del c
             events.append(("predict", name, len(x)))
             if name in fatal_models:
                 raise RuntimeError("fixture forward failed")
@@ -78,6 +84,8 @@ def gate(tmp_path, monkeypatch):
         )
 
     def normalized(dataset, role, scaler):
+        # Unused; retain the substituted callable's keyword parameters.
+        del dataset, scaler
         events.append(("load", role))
         assert role in {"normal_validation", "normal_calibration"}
         return arrays(role)
@@ -105,6 +113,8 @@ def gate(tmp_path, monkeypatch):
     def assess(
         reference, first, repeat, actual, identities, fitted, physical, supplied
     ):
+        # Unused; retain the substituted callable's keyword parameters.
+        del identities
         name = next(
             event[1] for event in reversed(events) if event[0] == "predict"
         )
@@ -196,9 +206,6 @@ def test_common_inputs_policy_and_separate_diagnostic_fit(gate):
 def test_actual_assessor_keeps_semantic_and_file_calibration_hashes(
     gate, monkeypatch
 ):
-    from capstone_ai.detection_protocol import fit_calibration
-    from learning.sensitivity_metrics import assess_sensitivity
-
     gate.policy = dict(
         schema="drone-ai.sensitivity-policy/1",
         batch_size=256,
@@ -312,6 +319,8 @@ def test_predict_blocks_preserves_run_boundaries_and_tail():
     seen = []
 
     def predict(x, c):
+        # Unused; retain the substituted callable's keyword parameters.
+        del c
         seen.append((len(x), np.unique(x[:, 0, 0]).tolist()))
         return np.broadcast_to(x[:, :1, :1], (len(x), 10, 4)).copy()
 

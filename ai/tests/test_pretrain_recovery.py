@@ -2,11 +2,11 @@
 
 import pytest
 
-from pretrain import cli, common, recovery, runner
+from pretrain import cli, collection, common, recovery, runner
 
 
-@pytest.fixture
-def source(tmp_path, monkeypatch):
+@pytest.fixture(name="source")
+def fixture_source(tmp_path, monkeypatch):
     monkeypatch.setattr(recovery, "HOME", tmp_path)
     task = tmp_path / "tasks/source"
     common.write(
@@ -142,8 +142,6 @@ def test_resume_console_has_no_collection_flow(tmp_path):
 def test_recovery_freeze_output_is_new_not_original(
     source, tmp_path, monkeypatch
 ):
-    from pretrain import collection
-
     task = tmp_path / "new"
     common.write(
         task / "config.json",

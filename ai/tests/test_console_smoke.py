@@ -9,8 +9,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from console import smoke
+from console import profile, smoke
 from execution.common import Progress, read, sha, write
+from learning import telemetry
 
 
 def fixture(upstream):
@@ -298,8 +299,6 @@ def test_bad_child_scope_and_phase_preserves_prior_files(tmp_path):
 def test_worker_allocation_failure_preserved_before_data_or_model(
     tmp_path, monkeypatch
 ):
-    from console import profile
-
     output = tmp_path / "output"
     root = output / "attempt/compute"
     profile_file = tmp_path / "profile.json"
@@ -452,9 +451,6 @@ def test_broken_full_evidence_never_falls_back_to_legacy(tmp_path):
 def test_gpu_telemetry_closes_on_gate_failure_without_declaring_success(
     tmp_path, monkeypatch
 ):
-    from console import profile
-    from learning import telemetry
-
     output = tmp_path / "output"
     root = output / "attempt/compute"
     profile_file = tmp_path / "profile.json"
@@ -474,6 +470,8 @@ def test_gpu_telemetry_closes_on_gate_failure_without_declaring_success(
     )
 
     def sample(upstream, destination):
+        # Unused; retain the substituted callable's keyword parameters.
+        del upstream
         destination.write_bytes(b"mock sample, no GPU data")
         return {"hashes": {"dataset/scaler.npz": "mock scaler"}}
 

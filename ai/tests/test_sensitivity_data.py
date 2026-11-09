@@ -19,8 +19,8 @@ from learning.sensitivity_data import (
 )
 
 
-@pytest.fixture
-def manifest(tmp_path):
+@pytest.fixture(name="manifest")
+def fixture_manifest(tmp_path):
     rows = []
     for role in ("normal_validation", "normal_calibration"):
         for scenario in SCENARIOS:
@@ -275,8 +275,8 @@ def test_role_identity_and_shape_guards(kind):
         select_arrays(source, specs)
 
 
-@pytest.fixture
-def layout_dataset(manifest):
+@pytest.fixture(name="layout_dataset")
+def fixture_layout_dataset(manifest):
     path, _ = manifest
     plan = build_plan(path)
     for role in ("normal_validation", "normal_calibration"):

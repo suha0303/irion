@@ -21,6 +21,7 @@ from safetensors.torch import save_file
 from capstone_ai.training import loss, seed_all
 from execution.common import write
 
+from ..optimization import WarmupCosine, make_optimizer, validate
 from .models import STUDY_REVISION, make_model
 
 
@@ -211,8 +212,6 @@ def _run_fit(
             "The normalization study requires its explicit optimization policy"
         )
     if study:
-        from ..optimization import WarmupCosine, make_optimizer, validate
-
         validate(optimization)
         if optimization["optimizer"] != "sgd":
             raise ValueError("History19 supports SGD only")

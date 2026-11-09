@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from pretrain import cli, common, training19
+from pretrain import cli, common, main_collection, training19, training19_main
 
 
 def test_lr108_exact_conditions_roles_and_independent_identities():
@@ -113,8 +113,6 @@ def test_new_menu_keeps_lr_main_existing_screen_and_exit(monkeypatch, capsys):
 def test_menu1_lr_dispatch_is_user_selected_and_does_not_start_main(
     monkeypatch,
 ):
-    from pretrain import main_collection
-
     calls = []
     task = Path("fixture-task")
     monkeypatch.setattr("builtins.input", lambda p: "1")
@@ -130,8 +128,6 @@ def test_menu1_lr_dispatch_is_user_selected_and_does_not_start_main(
 def test_missing_main_approval_blocks_before_task_creation(
     monkeypatch, tmp_path
 ):
-    from pretrain import main_collection, training19_main
-
     monkeypatch.setattr(
         training19_main, "AUTH", tmp_path / "missing-approval.json"
     )
@@ -140,8 +136,6 @@ def test_missing_main_approval_blocks_before_task_creation(
 
 
 def test_approved_main_menu_dispatches_the_whole_scope(monkeypatch):
-    from pretrain import main_collection
-
     calls = []
     task = Path("fixture-task")
     monkeypatch.setattr("builtins.input", lambda p: "2")
@@ -154,8 +148,6 @@ def test_approved_main_menu_dispatches_the_whole_scope(monkeypatch):
 
 
 def test_main_builder_has_exact1674_and_byte_equivalent_lr_subset():
-    from pretrain import training19_main
-
     lr = dict(
         purpose=training19.LR_PURPOSE, seed_base=1, cases=training19.cases(1)
     )
@@ -196,8 +188,6 @@ def test_main_builder_has_exact1674_and_byte_equivalent_lr_subset():
 
 @pytest.mark.parametrize("fault", ["drop", "lr_role", "pair_wind"])
 def test_main_rejects_missing_case_lr_repartition_or_changed_pair(fault):
-    from pretrain import training19_main
-
     lr = dict(
         purpose=training19.LR_PURPOSE, seed_base=1, cases=training19.cases(1)
     )
@@ -217,8 +207,6 @@ def test_main_rejects_missing_case_lr_repartition_or_changed_pair(fault):
 def test_main_prepare_cannot_create_anything_before_user_final_approval(
     monkeypatch, tmp_path
 ):
-    from pretrain import training19_main
-
     monkeypatch.setattr(
         training19_main, "AUTH", tmp_path / "missing-approval.json"
     )

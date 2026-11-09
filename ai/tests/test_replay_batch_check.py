@@ -16,6 +16,8 @@ def test_batch_check_saves_normal_only_result_and_stops_on_difference(
     calls = []
 
     def predict(x, c):
+        # Unused; retain the substituted callable's keyword parameters.
+        del c
         calls.append(len(x))
         values = np.repeat(x[:, :1, :4], 10, axis=1)
         return values + (perturb if len(x) > 1 else 0)

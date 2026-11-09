@@ -126,8 +126,8 @@ def test_training_only_display_requires_fit_release_and_never_claims_evaluation(
     assert "evaluation/metrics.json" not in output
 
 
-@pytest.fixture
-def machine(tmp_path):
+@pytest.fixture(name="machine")
+def fixture_machine(tmp_path):
     return {
         "schema": profile.SCHEMA,
         "name": "test",
@@ -511,6 +511,8 @@ def test_train_prepare_only_delegates_explicit_command_and_profile(
     calls = []
 
     def fake(settings, module, arguments, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del settings
         calls.append((module, arguments))
         return 0
 

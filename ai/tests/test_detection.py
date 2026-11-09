@@ -19,6 +19,8 @@ from capstone_ai.detection_protocol import (
     grouped_rate_interval,
     point_metrics,
 )
+from capstone_ai.detection_replay import evaluate_sealed, require_new_holdout
+from capstone_ai.source import dump, sha
 
 
 def observed(ledger, origin, delay=0, values=None):
@@ -231,8 +233,6 @@ def test_nonfinite_forecast_scale_and_duplicate_exposure_rejected():
 
 
 def test_holdout_rejects_old_raw_retry_pair_and_allows_new_pair():
-    from capstone_ai.detection_replay import require_new_holdout
-
     prior = [
         {
             "run_id": "old",
@@ -259,9 +259,6 @@ def test_holdout_rejects_old_raw_retry_pair_and_allows_new_pair():
 
 
 def test_truth_join_preserves_sealed_forecasts_and_refuses_tamper(tmp_path):
-    from capstone_ai.detection_replay import evaluate_sealed
-    from capstone_ai.source import dump, sha
-
     forecast = tmp_path / "forecasts.jsonl"
     forecast.write_text(
         '{"fixture": "immutable prediction"}\n', encoding="utf-8"

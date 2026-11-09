@@ -8,14 +8,13 @@ from types import SimpleNamespace
 
 import pytest
 
+import x500_storage
 from pretrain import capsule_recovery as recovery
-from pretrain import common, composition, storage, streaming
+from pretrain import cli, collection, common, composition, storage, streaming
 
 
-@pytest.fixture
-def source(tmp_path, monkeypatch):
-    import x500_storage
-
+@pytest.fixture(name="source")
+def fixture_source(tmp_path, monkeypatch):
     home, store, package = (
         tmp_path / "operations",
         tmp_path / "store",
@@ -314,8 +313,6 @@ def test_live_source_rejected(source, monkeypatch):
 def test_new_task_freezes_preserved_inputs_without_collection(
     source, tmp_path, monkeypatch
 ):
-    from pretrain import cli
-
     created = tmp_path / "new"
     created.mkdir()
 
@@ -392,7 +389,6 @@ def test_real_restore_and_final_package_keep_source_capsule(
             parts=[dict(cases=[], frozen=frozen)],
         ),
     )
-    from pretrain import collection
 
     monkeypatch.setattr(collection, "combine_frozen", lambda *a: frozen)
     monkeypatch.setattr(recovery, "STORE", streaming.STORE)
@@ -400,6 +396,8 @@ def test_real_restore_and_final_package_keep_source_capsule(
     monkeypatch.setattr(storage, "external", Path)
 
     def finalize(frozen, prepared, label, workers, preaudited):
+        # Unused; retain the substituted callable's keyword parameters.
+        del label
         assert workers == 4 and row["run_id"] in preaudited
         dataset = prepared / "dataset"
         dataset.mkdir()

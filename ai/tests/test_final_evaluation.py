@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 from test_reassessment import Progress, fixture_evaluation
 
+import capstone_ai.training as training
 from execution.common import read, sha, write
 from execution.evaluate import (
     default_protocol_manifest,
@@ -56,6 +57,8 @@ def final_fixture(tmp_path):
     cfg["protocol"] = final_protocol(cfg["source_protocol"])
 
     def truth(row, target, progress):
+        # Unused; retain the substituted callable's keyword parameters.
+        del progress
         target.write_bytes(
             (old / "truth" / (row["run_id"] + ".jsonl")).read_bytes()
         )
@@ -68,7 +71,6 @@ def test_final_scoring_matches_development_math_without_fitting(
 ):
     cfg, inference, expected, truth = final_fixture(tmp_path)
     import capstone_ai.detection_protocol as protocol
-    import capstone_ai.training as training
 
     def forbidden(*unused_args, **unused_kwargs):
         pytest.fail("Final evaluator cannot load weights or fit calibration")
@@ -179,6 +181,8 @@ def test_failed_final_inference_never_submits_evaluator(tmp_path, monkeypatch):
     submitted = []
 
     def submit(root, phase, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del root, cfg
         submitted.append(phase)
         return dict(job_id="123", uid=os.getuid(), phase=phase)
 

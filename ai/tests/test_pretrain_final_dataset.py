@@ -11,8 +11,9 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from capstone_sim.normal_variation import FIELDS, target, validate
 
-from pretrain import cli, collection, common, composition
+from pretrain import cli, collection, common, composition, main_collection
 from pretrain import final_dataset as final
 
 
@@ -234,8 +235,6 @@ def test_final_cannot_request_training_multipliers_or_gate_fit(extra):
 
 
 def test_removed_final_menu_reprompts_without_starting(monkeypatch, capsys):
-    from pretrain import main_collection
-
     choices = iter(["4", "0"])
     monkeypatch.setattr("builtins.input", lambda *args: next(choices))
     monkeypatch.setattr(
@@ -273,6 +272,8 @@ def test_final_run_only_uses_existing_extract_preprocess_audit(
     state = {}
 
     def batch(name, action, items, workers, out, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del name, workers
         calls.append(action)
         if action == "extract":
             assert (output / "consumer/final-test" / task.name).is_dir()
@@ -484,6 +485,8 @@ def test_final_admission_checks_metadata_roles_and_protection(
     )
 
     def source_check(plan, source):
+        # Unused; retain the substituted callable's keyword parameters.
+        del plan
         if source["fixture"] != "valid":
             raise ValueError("Source mismatch")
 
@@ -622,8 +625,6 @@ if action=='audit':
 
 
 def test_menu_exit_never_creates_or_starts_a_task(monkeypatch):
-    from pretrain import main_collection
-
     monkeypatch.setattr("builtins.input", lambda *args: "0")
     monkeypatch.setattr(
         main_collection,
@@ -672,8 +673,6 @@ def test_failed_final_collection_cannot_enter_preprocessing(
 
 
 def test_final_conditions_preserve_health_and_requested_motion():
-    from capstone_sim.normal_variation import FIELDS, target, validate
-
     rows = final.cases(170001000)
     for row in rows:
         spec = row["operation_variation"]

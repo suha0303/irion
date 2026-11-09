@@ -12,8 +12,8 @@ from pretrain import socket_cleanup as cleanup
 from pretrain.common import read, write
 
 
-@pytest.fixture
-def layout(tmp_path, monkeypatch):
+@pytest.fixture(name="layout")
+def fixture_layout(tmp_path, monkeypatch):
     root = tmp_path / "root"
     home = root / "Data/operations/pretrain"
     task = home / "tasks/fixture"
@@ -28,8 +28,8 @@ def layout(tmp_path, monkeypatch):
     return root, home, task, sockets
 
 
-@pytest.fixture
-def owned(layout):
+@pytest.fixture(name="owned")
+def fixture_owned(layout):
     root, _, task, sockets = layout
     run = root / "runs" / ("a" * 32)
     (run / "px4").mkdir(parents=True)
@@ -77,7 +77,8 @@ def owned(layout):
         child.stdout.close()
 
 
-def test_live_owner_preserved_then_forced_exit_cleaned(layout, owned):
+@pytest.mark.usefixtures("layout")
+def test_live_owner_preserved_then_forced_exit_cleaned(owned):
     child, path, receipt = owned
     data = read(receipt)
     with pytest.raises(ValueError, match="still running"):
@@ -97,7 +98,8 @@ def test_live_owner_preserved_then_forced_exit_cleaned(layout, owned):
 
 
 @pytest.mark.parametrize("replacement", ["socket", "file", "symlink"])
-def test_replaced_path_preserved(layout, owned, replacement):
+@pytest.mark.usefixtures("layout")
+def test_replaced_path_preserved(owned, replacement):
     child, path, receipt = owned
     child.kill()
     child.wait(timeout=5)
@@ -116,7 +118,8 @@ def test_replaced_path_preserved(layout, owned, replacement):
     assert path.exists()
 
 
-def test_other_service_receipt_preserved(layout, owned):
+@pytest.mark.usefixtures("layout")
+def test_other_service_receipt_preserved(owned):
     child, path, receipt = owned
     child.kill()
     child.wait(timeout=5)
@@ -163,8 +166,9 @@ def test_locked_project_preserves_socket_and_state(layout, owned):
     assert (task / "operator/state.json").read_bytes() == before
 
 
+@pytest.mark.usefixtures("layout")
 def test_bound_socket_preserved_even_if_owner_check_says_dead(
-    layout, owned, monkeypatch
+    owned, monkeypatch
 ):
     _, path, receipt = owned
     monkeypatch.setattr(cleanup, "process", lambda pid: None)

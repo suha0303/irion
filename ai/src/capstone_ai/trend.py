@@ -1,5 +1,7 @@
 """Compare explicitly continuous, unchanged assets; never infer SOH or RUL."""
 
+from datetime import datetime
+
 from .source import dump, read_json
 
 
@@ -40,8 +42,6 @@ def comparison_gate(previous, current):
     if end is None or start is None:
         reasons.append("chronology_unavailable")
     else:
-        from datetime import datetime
-
         if datetime.fromisoformat(end) >= datetime.fromisoformat(start):
             reasons.append("nonchronological_runs")
     return {

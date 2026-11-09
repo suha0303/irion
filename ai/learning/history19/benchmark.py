@@ -13,6 +13,7 @@ import torch
 from capstone_ai.training import loss, seed_all
 from execution.common import write
 
+from ..optimization import WarmupCosine, make_optimizer
 from .models import make_model
 from .training import Batches, backend, project_lock, safe_step
 
@@ -264,8 +265,6 @@ def _measure(
                 model_setup_started = time.monotonic()
                 model = make_model(spec).to(device)
                 if optimization is not None:
-                    from ..optimization import WarmupCosine, make_optimizer
-
                     optimizer = make_optimizer(
                         model.parameters(), learning_rate, optimization
                     )

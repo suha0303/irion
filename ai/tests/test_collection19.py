@@ -18,7 +18,7 @@ from learning.collection19.contract import check_scope, write_new
 from learning.collection19.streams import Moments, array_blocks, write_npz
 from learning.history19.data import load
 from learning.history19.pilot import ROOT, json_file, sha
-from learning.run_health19.data import iter_manifests
+from learning.run_health19.data import iter_manifests, load_manifest
 
 ag = importlib.import_module("learning.collection19.aggregate")
 
@@ -180,8 +180,8 @@ def export(
     return dict(row=row, export=root, audit=checked), values
 
 
-@pytest.fixture
-def records(tmp_path):
+@pytest.fixture(name="records")
+def fixture_records(tmp_path):
     first, _ = export(tmp_path / "train0", "fixture-t0", "normal_train", 0)
     second, _ = export(tmp_path / "train1", "fixture-t1", "normal_train", 2)
     validation, _ = export(
@@ -378,6 +378,8 @@ def test_aggregate_audits_once_and_returns_both_receipts(
     monkeypatch.setattr(ag, "_pairs", lambda *a: 0)
 
     def audit(records, root, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del records
         calls.append(str(root))
         result = dict(
             passed=True,
@@ -544,8 +546,6 @@ def test_zip64_writer_and_moments_match_independent_small_array(tmp_path):
 def test_whole_input_shards_preserve_small_loader_guard(
     tmp_path,
 ):
-    from learning.run_health19.data import load_manifest
-
     records = []
     for i in range(66):
         role = "normal_validation" if i == 65 else "normal_train"

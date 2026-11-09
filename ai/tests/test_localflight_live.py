@@ -7,7 +7,8 @@ import json
 import numpy as np
 import pytest
 
-from localflight.live import Mapper, completed, decode, validate
+from localflight.calibration import admit_completed
+from localflight.live import DisarmGuard, Mapper, completed, decode, validate
 from localflight.prepare import causal_frames
 from localflight.prepared import load
 
@@ -208,7 +209,6 @@ def test_end_report_runs_real_cpu_without_health_claim(tmp_path):
     manifest = result["analyses"][0]["manifest"]
     with pytest.raises(ValueError, match="Confirmed normal"):
         load(manifest, normal=True)
-    from localflight.calibration import admit_completed
 
     with pytest.raises(ValueError, match="정상 확인"):
         admit_completed(
@@ -233,8 +233,6 @@ def test_end_report_runs_real_cpu_without_health_claim(tmp_path):
 
 
 def test_disarm_requires_armed_and_fresh_debounced_heartbeats():
-    from localflight.live import DisarmGuard
-
     guard = DisarmGuard()
     for t in range(5):
         guard.accept(False, t * 1_000_000)

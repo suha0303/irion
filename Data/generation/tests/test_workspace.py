@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from pretrain import cli
+from pretrain.common import ROOT, collector, read, service_unit, sha, write
 from tools import workspace
 
 
@@ -179,8 +181,6 @@ def test_data_launcher_shell_syntax():
 
 
 def test_collector_loads_preserved_helper_without_execution():
-    from pretrain.common import ROOT, collector, sha
-
     runner = collector()
     support = ROOT / "Data/generation/tools/collection_support.py"
     assert sha(support) == runner.HELPER_SHA
@@ -205,9 +205,6 @@ def test_setup_refuses_an_active_pipeline_before_installing(
 
 
 def test_completed_cleanup_count_uses_proof_without_rewriting_history(tmp_path):
-    from pretrain import cli
-    from pretrain.common import read, write
-
     path = tmp_path / "operator/state.json"
     state = dict(
         status="PRETRAIN_COMPACT_READY_STOPPED_RESTORE_REQUIRED",
@@ -262,9 +259,6 @@ def test_export_failure_preserves_previous_failure_evidence(
 def test_service_start_does_not_expand_dollar_in_project_path(
     tmp_path, monkeypatch
 ):
-    from pretrain import cli
-    from pretrain.common import read, sha, write
-
     home = tmp_path / "checkout ${HOME}" / "control"
     task = home / "tasks/dollar-path"
     write(
@@ -289,8 +283,6 @@ def test_service_start_does_not_expand_dollar_in_project_path(
 def test_service_identity_retains_exact_current_or_historical_unit(
     tmp_path, legacy
 ):
-    from pretrain.common import service_unit, write
-
     task = tmp_path / "tasks/fixture"
     expected = ("x500" if legacy else "drone") + "-pretrain-fixture.service"
     config = {} if legacy else dict(service_unit=expected)
@@ -309,8 +301,6 @@ def test_service_identity_retains_exact_current_or_historical_unit(
 def test_service_uses_frozen_config_before_receipt(
     tmp_path,
 ):
-    from pretrain.common import service_unit, write
-
     task = tmp_path / "tasks/new-task"
     config = dict(service_unit="drone-pretrain-new-task.service")
     write(task / "config.json", config)

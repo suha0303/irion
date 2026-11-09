@@ -8,12 +8,19 @@ import pickle
 import time
 
 import pytest
-from test_preprocessing import CONFIG, META, events
+from test_preprocessing import CONFIG, META, events, run
 
 from capstone_ai.file_wait import FileWaiter
+from capstone_ai.live_inference import live_gc_scope
 from capstone_ai.preprocessing import Preprocessor
-from capstone_ai.resume_state import restore_runtime, save_runtime
-from capstone_ai.source import DirectoryTail, sha
+from capstone_ai.resume_state import (
+    StateReader,
+    adopt_shadow,
+    restore_runtime,
+    save_handover_state,
+    save_runtime,
+)
+from capstone_ai.source import DirectoryTail, Lines, sha
 
 
 def test_fast_runtime_restore_partial_rows_queued_marks_and_duplicate_semantics(
@@ -107,8 +114,6 @@ def test_file_write_wakes_wait_without_timeout(tmp_path):
 
 
 def test_json_storage_shares_labels_without_changing_values(tmp_path):
-    from capstone_ai.source import Lines
-
     first = list(events(1))[0]
     first["fields"]["output"][0] = 0
     second = copy.deepcopy(first)
@@ -157,8 +162,6 @@ def test_consumed_watermark_tracking_is_released_with_repeated_marks(tmp_path):
 
 
 def test_live_gc_deferral_restores_prior_policy_even_on_failure():
-    from capstone_ai.live_inference import live_gc_scope
-
     was_enabled = gc.isenabled()
     try:
         gc.enable()
@@ -179,8 +182,6 @@ def test_live_gc_deferral_restores_prior_policy_even_on_failure():
 def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(
     tmp_path,
 ):
-    from capstone_ai.resume_state import adopt_shadow
-
     obs = tmp_path / "observations"
     obs.mkdir()
     source = obs / "streams.jsonl"
@@ -239,10 +240,6 @@ def test_shadow_prefix_acceptance_preserves_future_causality_and_rejects_lag(
 def test_handover_persists_causal_state_without_mutating_event_archive(
     tmp_path,
 ):
-    from test_preprocessing import run
-
-    from capstone_ai.resume_state import StateReader, save_handover_state
-
     engine = run(list(events(64)))
     tail = DirectoryTail(tmp_path, engine)
     count = len(engine.seen)

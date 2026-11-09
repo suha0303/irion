@@ -196,8 +196,8 @@ def test_ned_height_and_speed(tmp_path):
     assert f["speed_m_s"]["value"] == 5
 
 
-@pytest.fixture
-def service(tmp_path):
+@pytest.fixture(name="service")
+def fixture_service(tmp_path):
     app = create_app(tmp_path / "data")
     content = "\n".join(json.dumps(r) for r in long_records()).encode()
     with TestClient(app) as client:

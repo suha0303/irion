@@ -7,8 +7,8 @@ import pytest
 from pretrain import collection
 
 
-@pytest.fixture
-def readiness(monkeypatch):
+@pytest.fixture(name="readiness")
+def fixture_readiness(monkeypatch):
     record = dict(
         schema="x500.producer-runtime/1",
         revision="X500_CURRENT",

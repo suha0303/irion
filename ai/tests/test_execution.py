@@ -2,6 +2,7 @@
 production data.
 """
 
+import hashlib
 import io
 import json
 import os
@@ -12,7 +13,14 @@ import tarfile
 import numpy as np
 import pytest
 
-from execution import cli, common, engine, prepare, remote
+import pipeline.runtime
+from capstone_ai.mapping import FEATURES
+from capstone_ai.training import flat
+from console.profile import write
+from execution import cli, common, engine, evaluate, prepare, remote
+from learning import comparison
+from learning.lifecycle import make_bundles
+from pipeline.pipeline import normalized_role
 
 
 def server_profile(root):
@@ -40,8 +48,6 @@ def server_profile(root):
 def test_bound_attempt_profile_precedes_inherited_machine_profile(
     tmp_path, monkeypatch
 ):
-    from console.profile import write
-
     attempt = tmp_path / "attempt"
     attempt.mkdir()
     bound = server_profile(tmp_path)
@@ -95,7 +101,6 @@ def arrays(n, steps=100, features=19, context=6):
 def test_primal_ridge_matches_existing_dual_solver(tmp_path):
     train, val = arrays(12, 3, 2, 2), arrays(4, 3, 2, 2)
     result = engine.ridge_fit(train, val, tmp_path, Progress())
-    from capstone_ai.training import flat
 
     x, v = flat(train), flat(val)
     expected = []
@@ -337,9 +342,6 @@ def test_package_paths_reject_traversal(tmp_path):
 def test_four_model_end_to_end_synthetic_cpu_and_fixed_development_evaluator(
     tmp_path, next_version
 ):
-    from capstone_ai.mapping import FEATURES
-    from execution import evaluate
-
     root = tmp_path / "input"
     dataset = root / "dataset"
     dataset.mkdir(parents=True)
@@ -404,7 +406,6 @@ def test_four_model_end_to_end_synthetic_cpu_and_fixed_development_evaluator(
             member = tarfile.TarInfo("evaluation/events.jsonl")
             member.size = len(body)
             tar.addfile(member, io.BytesIO(body))
-        import hashlib
 
         rows.append(
             dict(
@@ -478,8 +479,6 @@ def test_four_model_end_to_end_synthetic_cpu_and_fixed_development_evaluator(
     progress = Progress()
     expected_models = list(common.MODELS)
     if next_version == "comparison":
-        from learning import comparison
-
         expected_models = comparison.MODELS
         cfg.update(
             revision=comparison.REVISION,
@@ -489,9 +488,6 @@ def test_four_model_end_to_end_synthetic_cpu_and_fixed_development_evaluator(
             seed=0,
         )
     if next_version:
-        from learning.lifecycle import make_bundles
-        from pipeline.pipeline import normalized_role
-
         cfg.update(
             layers=2,
             heads=4,
@@ -598,8 +594,6 @@ def test_purged_squeue_job_requires_successful_accounting(
 
 
 def test_worker_stops_before_fit_on_allocation_failure(tmp_path, monkeypatch):
-    import pipeline.runtime
-
     root = remote_fixture(tmp_path, monkeypatch)
     (root.parent / "output").mkdir()
 

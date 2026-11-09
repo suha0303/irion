@@ -8,6 +8,7 @@ import pytest
 from execution.common import read
 from learning.replay_validation import (
     assess_diagnostic,
+    check_prediction_batch,
     diagnose_prediction_batch,
 )
 
@@ -27,6 +28,8 @@ def fake_predictor(perturb=0.0, drift=0.0):
     calls = []
 
     def predict(x, c):
+        # Unused; retain the substituted callable's keyword parameters.
+        del c
         calls.append(len(x))
         value = np.zeros((len(x), 10, 4), dtype=np.float64)
         if len(x) > 1:
@@ -206,8 +209,6 @@ def test_saved_arrays_are_hash_verified(tmp_path):
 def test_input_signature_matches_legacy_and_identity_changes_are_detectable(
     tmp_path,
 ):
-    from learning.replay_validation import check_prediction_batch
-
     predictor, _ = fake_predictor()
     normal = normal_sample()
     legacy = check_prediction_batch(predictor, normal, tmp_path / "legacy.json")

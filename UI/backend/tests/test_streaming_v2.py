@@ -27,8 +27,8 @@ from arion.store_v2 import StoreV2
 from arion.streaming import LiveSources, SessionRun
 
 
-@pytest.fixture
-def store(tmp_path):
+@pytest.fixture(name="store")
+def fixture_store(tmp_path):
     return StoreV2(tmp_path)
 
 

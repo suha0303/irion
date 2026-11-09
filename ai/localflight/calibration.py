@@ -5,6 +5,7 @@ Normal calibration flights are disjoint from fitting/development/evaluation. A
 window count is never presented as a count of independent flights.
 """
 
+import json
 import math
 import re
 import shutil
@@ -214,8 +215,6 @@ def fit(root, model_id, manifests, *, bundle, adapted=None, quantile=0.99):
     path = _path(root, calibration_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("x", encoding="utf-8") as f:
-        import json
-
         json.dump(record, f, ensure_ascii=False, allow_nan=False, indent=2)
     return dict(record, id=calibration_id, active=False)
 

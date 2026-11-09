@@ -5,6 +5,8 @@ import json
 import numpy as np
 import pytest
 
+import capstone_ai.detection_protocol as protocol
+import capstone_ai.training as training
 from capstone_ai.detection import DomainAlarms
 from execution.common import read, sha, write
 from execution.evaluate import ResidualSummary, evaluate, forecast_errors
@@ -117,6 +119,8 @@ def fixture_evaluation(tmp_path):
     )
 
     def truth_provider(row, path, progress):
+        # Unused; retain the substituted callable's keyword parameters.
+        del progress
         if row["run_id"] == "r0":
             value = ""
         elif row["run_id"] == "r1":
@@ -217,8 +221,6 @@ def test_explicit_matching_and_threshold_variants_do_not_refit_models(
     tmp_path, monkeypatch
 ):
     evaluation, _, _ = fixture_evaluation(tmp_path)
-    import capstone_ai.detection_protocol as protocol
-    import capstone_ai.training as training
 
     def forbidden(*unused_args, **unused_kwargs):
         pytest.fail("Reassessment must not execute models or fit thresholds")

@@ -28,6 +28,8 @@ def test_policy_controls_real_scheduler_overlap_without_reflying_successes(
     overlap, flights = [], []
 
     def child(unused_task, request, log, *, on_progress=None):
+        # Unused; retain the substituted callable's keyword parameters.
+        del log, on_progress
         job = common.read(request)
         kind = "flight" if job["action"] == "flight" else "cpu"
         with lock:

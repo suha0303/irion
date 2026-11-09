@@ -70,6 +70,8 @@ def test_pooled_scaler_uses_all_train_and_no_holdout_values(tmp_path):
         row["path"] = str(folder)
 
     def canonical(raw, target, config):
+        # Unused; retain the substituted callable's keyword parameters.
+        del config
         shutil.copytree(raw, target)
         return common.read(Path(target) / "summary.json")
 

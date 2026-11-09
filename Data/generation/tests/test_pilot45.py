@@ -250,6 +250,8 @@ def test_completed_raw_is_retained_after_wrapper_failure(monkeypatch, tmp_path):
     )
 
     def fail_child(task, request, log):
+        # Unused; retain the substituted callable's keyword parameters.
+        del task, log
         common.write(
             common.read(request)["receipt"],
             dict(run=str(raw), status="completed"),
@@ -294,6 +296,8 @@ def test_one_run_has_no_automatic_retry_even_for_recorder_stall(
     )
 
     def fail_child(task, request, log):
+        # Unused; retain the substituted callable's keyword parameters.
+        del task, log
         common.write(
             common.read(request)["receipt"],
             dict(
@@ -371,12 +375,16 @@ def test_standalone_worker_runs_one_case_then_stops_without_fit(
     raw.mkdir()
 
     def physical(task, case, entry, ledger, folder, denied):
+        # Unused; retain the substituted callable's keyword parameters.
+        del task, folder, denied
         actions.append("flight")
         attempt = dict(number=1, state="COMPLETED", parent_attempt_id=None)
         entry.update(run=str(raw), attempts=[attempt])
         ledger["attempts"].append(dict(case_id=case["case_id"], **attempt))
 
     def child(task, request, log):
+        # Unused; retain the substituted callable's keyword parameters.
+        del task, log
         value = common.read(request)
         actions.append(value["action"])
         output = Path(value["output"])

@@ -54,10 +54,14 @@ class FixtureRunner:
         self.update(stage=stage, **fields)
 
     def finish(self, stage, result):
+        # Unused; retain the substituted callable's keyword parameters.
+        del result
         self.state["completed"].append(stage)
         self.update()
 
     def flight(self, phase, workers, cases, label):
+        # Unused; retain the substituted callable's keyword parameters.
+        del phase, workers, cases
         self.flights.append(label)
         if len(self.flights) == 2:
             self.second_flight.set()
@@ -74,6 +78,8 @@ def test_next_flight_overlaps_cpu_but_third_group_waits_for_first_retirement(
     )
 
     def process(rows, label, folder):
+        # Unused; retain the substituted callable's keyword parameters.
+        del folder
         if label.endswith("001"):
             cpu_started.set()
             assert release.wait(5)
@@ -118,6 +124,8 @@ def test_cpu_failure_preserves_first_error_and_stops_new_groups(
     )
 
     def fail(rows, label, folder):
+        # Unused; retain the substituted callable's keyword parameters.
+        del rows, label, folder
         assert r.second_flight.wait(5)
         raise ValueError("original capsule failure")
 

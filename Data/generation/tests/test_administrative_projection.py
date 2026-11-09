@@ -6,7 +6,7 @@ import copy
 
 import pytest
 
-from pretrain import common, pilot45, short_resume
+from pretrain import common, pilot45, pilot_parallel, short_resume
 
 REPORT = (
     common.ROOT / "docs/data/reports/short-cycle-20261107/attempt-01/resume-c05"
@@ -81,8 +81,6 @@ def test_uncertified_or_mismatched_unknown_is_never_discarded(
 def test_c05_counts_new_reused_and_administrative_records(
     failure,
 ):
-    from pretrain import pilot_parallel
-
     task = common.HOME / "tasks/short180-20261107-c05-45"
     cfg = common.read(task / "config.json")
     ledger = copy.deepcopy(common.read(task / "ledger.json"))

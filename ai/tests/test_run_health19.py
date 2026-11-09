@@ -15,6 +15,7 @@ import torch
 from safetensors.torch import load_file
 
 from capstone_ai.mapping import FEATURES
+from execution.common import ROOT
 from learning.history19.training import backend
 from learning.run_health19 import data
 from learning.run_health19.data import Scaler, batch, validate_splits
@@ -356,8 +357,6 @@ def test_cpu_normal_fit_validation_fresh_process_resume_export(
 
 
 def test_config_eight_run_models_match_online_sizes_and_optimizer():
-    from execution.common import ROOT
-
     cfg = json.loads(
         (ROOT / "ai/configs/run-health19.json").read_text(encoding="utf-8")
     )

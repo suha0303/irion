@@ -10,6 +10,8 @@ from types import SimpleNamespace
 import pytest
 from test_post_training import config, fresh_config
 
+import execution.engine
+import pipeline.runtime
 from execution.common import read, sha, write
 from learning import operator
 from learning import post_training as post
@@ -143,10 +145,8 @@ def test_diagnostic_evaluator_stops_before_runtime_or_truth(
 def test_diagnostic_worker_only_checks_normal_validation_and_seals(
     tmp_path, monkeypatch
 ):
-    import execution.engine
     import learning.telemetry
     import learning.training
-    import pipeline.runtime
 
     cfg = diagnostic_config()
     upstream = tmp_path / "upstream"
@@ -196,6 +196,8 @@ def test_diagnostic_worker_only_checks_normal_validation_and_seals(
     )
 
     def preflight(root, out, progress, **kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del root, progress
         preflights.append(kwargs)
         write(out / "batch-checks/preflight.json", {"diagnostic_only": True})
 
@@ -270,6 +272,8 @@ def test_diagnostic_control_releases_one_job_and_never_calibrates(
     _, phases = controller_fixture(tmp_path, monkeypatch)
 
     def release(root, record, state, budget):
+        # Unused; retain the substituted callable's keyword parameters.
+        del record, state, budget
         assert phases == ["diagnose"]
         assert not (root / "completion.json").exists()
         return dict(
@@ -318,6 +322,8 @@ def test_unacknowledged_diagnostic_submission_is_unconfirmed(
     controller_fixture(tmp_path, monkeypatch)
 
     def unknown(root, phase, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del phase, cfg
         write(root / "diagnose-submission-intent.json", {"argv": ["sbatch"]})
         raise TimeoutError("unknown submission")
 

@@ -9,7 +9,13 @@ from types import SimpleNamespace
 import pytest
 from test_pilot45 import init_fixture
 
-from pretrain import common, pilot45, pilot_bridge, pilot_flow
+from pretrain import (
+    common,
+    integration_reuse,
+    pilot45,
+    pilot_bridge,
+    pilot_flow,
+)
 
 
 @pytest.mark.local_evidence
@@ -219,8 +225,6 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(
         run_post_initial100_seconds=21150,
     )
     if reuse:
-        from pretrain import integration_reuse
-
         common.write(task / "accepted-integration.json", dict(fixture=True))
         monkeypatch.setattr(
             integration_reuse,
@@ -231,6 +235,8 @@ def test_flow_executes_only_one_integration_then_one_finite45_stage(
         )
 
     def execute(flow, child, state):
+        # Unused; retain the substituted callable's keyword parameters.
+        del flow, state
         phases.append(child.name)
         return dict(quality=q)
 
@@ -446,8 +452,6 @@ def test_data_pair_uses_ai_projector_for_status_passed_native_report(
 
 
 def test_reuse_source_gate_only_allows_controller_fix(monkeypatch, tmp_path):
-    from pretrain import integration_reuse
-
     task = tmp_path / "old"
     control, preprocessor = (
         tmp_path / "controller.py",
@@ -487,8 +491,6 @@ def test_reuse_source_gate_only_allows_controller_fix(monkeypatch, tmp_path):
 def test_historical_reuse_requires_actual_cleanup_and_child_exit_evidence(
     monkeypatch, tmp_path, fault
 ):
-    from pretrain import integration_reuse
-
     task = tmp_path / "old"
     unit = "owned-completed.service"
     group = "0::/fixture/" + unit + "\n"

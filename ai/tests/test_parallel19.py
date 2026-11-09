@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 import torch
 
+from learning.parallel19 import control
 from learning.parallel19.fit import Data, ranking, trial
 
 
@@ -72,8 +73,6 @@ def test_no_incomplete_or_divergent_selection():
 
 
 def test_completed_receipt_waits_for_nfs_visibility(monkeypatch):
-    from learning.parallel19 import control
-
     calls = []
 
     def read(path):

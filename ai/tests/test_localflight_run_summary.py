@@ -9,10 +9,12 @@ from test_localflight_adapt import flight
 from test_localflight_live import request
 from test_localflight_timing import events
 
+from localflight import analysis
 from localflight.analysis import analyze, analyze_run
 from localflight.catalog import DEFAULT_BUNDLE, digest
 from localflight.live import completed
 from localflight.prepare import causal_frames
+from localflight.prepared import load, segment_ranges
 from localflight.run_summary import aggregate, partition, source_context
 
 
@@ -211,9 +213,6 @@ def test_partition_short_unselected_and_bounded_durations():
 
 
 def test_separate_packages_match_one_segmented_package(tmp_path, monkeypatch):
-    from localflight import analysis
-    from localflight.prepared import load, segment_ranges
-
     original = fixture(tmp_path)
     m, values, times = load(original)
     paths = []

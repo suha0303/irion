@@ -66,13 +66,19 @@ def test_python_indexer_forced_without_changing_environment(monkeypatch):
     from pymavlink import DFReader
 
     class Fake:
+        """Emulate the binary reader and reject native indexing."""
+
         def __init__(self, path):
+            # Unused; retain the substituted callable's keyword parameters.
+            del path
             self.init_arrays_fast()
 
         def init_arrays_fast(self, progress_callback=None):
             raise AssertionError("native indexer used")
 
         def init_arrays(self, progress_callback=None):
+            # Unused; retain the substituted callable's keyword parameters.
+            del progress_callback
             self.python_index = True
 
     monkeypatch.setattr(DFReader, "DFReader_binary", Fake)

@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from capstone_ai.source import read_json, sha
+
 spec = importlib.util.spec_from_file_location(
     "handoff_runner", "ai/handoff/run_smoke.py"
 )
@@ -80,8 +82,6 @@ def test_checksum_list_change_rejected(tmp_path):
 
 
 def test_packaged_source_matches_historical_v5():
-    from capstone_ai.source import read_json, sha
-
     readiness = Path("ai/artifacts/gpu-readiness-v5/readiness.json")
     root = Path("ai/artifacts/gpu-handoff-v6/release/x500-gpu-smoke-v1")
     old = read_json(readiness)

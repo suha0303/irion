@@ -12,14 +12,21 @@ import torch
 from test_post_training_sensitivity import config as sensitivity_config
 from test_replay_optimized import FixturePredictor, case
 
+from capstone_ai import training
 from capstone_ai.detection_replay import records
-from capstone_ai.source import read_json, sha
+from capstone_ai.source import dump, read_json, sha
+from execution import engine
+from execution.common import read, write
+from execution.engine import calibrate
 from learning import post_training as post
 from learning.models import ModelSpec, make_model
 from learning.parallel_replay import (
     ParallelDevelopment,
+    benchmark_workers,
+    build_benchmark_plan,
     finish_development,
     read_development,
+    validate_benchmark_plan,
 )
 from pipeline.pipeline import seal_development
 
@@ -193,9 +200,6 @@ def test_post_training_parallel_scope_is_fixed(change):
 def test_shared_normal_inputs_keep_fresh_calibration_identical(
     tmp_path, monkeypatch
 ):
-    from execution import engine
-    from execution.common import read, write
-
     dataset = tmp_path / "upstream/dataset"
     write(
         dataset / "manifest.json",
@@ -226,14 +230,20 @@ def test_shared_normal_inputs_keep_fresh_calibration_identical(
             active_backend[0] = False
 
     def normalized(dataset, role, scaler):
+        # Unused; retain the substituted callable's keyword parameters.
+        del dataset, scaler
         loads.append(role)
         return {k: v.copy() for k, v in arrays.items()}
 
     class Predictor:
         def __init__(self, folder, device):
+            # Unused; retain the substituted callable's keyword parameters.
+            del folder, device
             self.scaler = {"y_scale": np.ones(4)}
 
         def predict_scaled(self, x, c):
+            # Unused; retain the substituted callable's keyword parameters.
+            del c
             return np.zeros((len(x), 10, 4))
 
     class Executor:
@@ -282,8 +292,6 @@ def test_shared_normal_inputs_keep_fresh_calibration_identical(
 def test_parallel_engine_cannot_reuse_calibration_or_change_batch(
     tmp_path, settings
 ):
-    from execution.engine import calibrate
-
     with pytest.raises(ValueError, match="fresh calibration"):
         calibrate(
             tmp_path,
@@ -308,10 +316,6 @@ def test_larger_pool_budgets_require_matching_cpu_profile(workers):
 def test_benchmark_real_spawn_candidates_and_exact_outputs(
     tmp_path, monkeypatch
 ):
-    from capstone_ai import training
-    from capstone_ai.source import dump
-    from learning.parallel_replay import benchmark_workers, build_benchmark_plan
-
     canonical, bundle, _, _ = case(tmp_path)
     upstream = tmp_path / "upstream"
     destination = upstream / "dataset/canonical/normal-validation"
@@ -370,8 +374,6 @@ def test_benchmark_real_spawn_candidates_and_exact_outputs(
     ],
 )
 def test_benchmark_plan_cannot_expand_or_use_development_truth(change):
-    from learning.parallel_replay import validate_benchmark_plan
-
     plan = dict(
         schema="drone-ai.parallel-replay-benchmark/1",
         candidates=[2, 4, 8],

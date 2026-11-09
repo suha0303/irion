@@ -2,6 +2,7 @@
 
 import pytest
 from capstone_sim import collection_config
+from capstone_sim.runtime_manifest import SOURCE_MANIFEST, sha, verify_runtime
 
 
 def test_current_producer_path_is_stable_even_with_retired_revision_files(
@@ -22,12 +23,6 @@ def test_current_producer_path_is_stable_even_with_retired_revision_files(
 
 
 def test_installed_runtime_is_bound_to_reviewed_source_and_binary():
-    from capstone_sim.runtime_manifest import (
-        SOURCE_MANIFEST,
-        sha,
-        verify_runtime,
-    )
-
     installed = verify_runtime(collection_config.ROOT)
     assert installed["source_manifest_sha256"] == sha(
         collection_config.ROOT / SOURCE_MANIFEST

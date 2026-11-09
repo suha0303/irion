@@ -95,6 +95,8 @@ def test_disk_assembly_matches_legacy_and_independent_audit(tmp_path, tamper):
     config = common.read(common.PACKAGE / "preprocessing.json")
 
     def adopt(raw, target, config):
+        # Unused; retain the substituted callable's keyword parameters.
+        del config
         shutil.copytree(raw, target)
         return common.read(target / "summary.json")
 

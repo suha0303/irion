@@ -37,6 +37,8 @@ def test_one_audit_and_no_preprocessing(tmp_path, monkeypatch, fails):
     calls = []
 
     def batch(name, action, rows, workers, out, *, canonical):
+        # Unused; retain the substituted callable's keyword parameters.
+        del name, out
         assert (
             action == "audit" and workers == 1 and rows == [dict(run_id="bad")]
         )
@@ -48,6 +50,8 @@ def test_one_audit_and_no_preprocessing(tmp_path, monkeypatch, fails):
     monkeypatch.setattr(r, "batch", batch)
 
     def quality(frozen, root, label, dataset, *, audit_sources):
+        # Unused; retain the substituted callable's keyword parameters.
+        del frozen, label
         assert dataset == source / "prepared/dataset"
         assert set(audit_sources) == {"good", "bad"}
         assert audit_sources["good"][0] == source / "prepared/audit-work/good"

@@ -6,12 +6,12 @@ import signal
 import pytest
 from fastapi.testclient import TestClient
 
-from arion import service
+from arion import main, service
 from arion.main import create_app
 
 
-@pytest.fixture
-def state(monkeypatch, tmp_path):
+@pytest.fixture(name="state")
+def fixture_state(monkeypatch, tmp_path):
     monkeypatch.setattr(service, "ROOT", tmp_path)
     monkeypatch.setattr(service, "DATA", tmp_path / "state")
     monkeypatch.setattr(service, "STATE", tmp_path / "state" / "server.json")
@@ -142,8 +142,6 @@ def test_health_exposes_application_and_instance(monkeypatch, tmp_path):
 
 
 def test_index_requires_revalidation(monkeypatch, tmp_path):
-    from arion import main
-
     index = tmp_path / "frontend" / "dist" / "index.html"
     index.parent.mkdir(parents=True)
     index.write_text("<html>시험 화면</html>", encoding="utf-8")

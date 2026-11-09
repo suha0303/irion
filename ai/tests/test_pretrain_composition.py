@@ -127,6 +127,8 @@ def test_two_sets_prepare_once_with_one_global_handoff(tmp_path, monkeypatch):
     calls = []
 
     def flight(phase, count, rows, label):
+        # Unused; retain the substituted callable's keyword parameters.
+        del phase, count
         assert len(rows) == 104
         calls.append(("flight", label))
         folder = r.task / label
@@ -136,6 +138,8 @@ def test_two_sets_prepare_once_with_one_global_handoff(tmp_path, monkeypatch):
     monkeypatch.setattr(r, "flight", flight)
 
     def freeze(task, folder, *, output, progress=None):
+        # Unused; retain the substituted callable's keyword parameters.
+        del task, progress
         record = common.read(folder / "manifest.json")
         common.write(output / "cases.json", record)
         return dict(
@@ -150,6 +154,8 @@ def test_two_sets_prepare_once_with_one_global_handoff(tmp_path, monkeypatch):
     monkeypatch.setattr(collection, "freeze_collection", freeze)
 
     def prepare(frozen, label, workers, *, cases_path):
+        # Unused; retain the substituted callable's keyword parameters.
+        del workers
         assert cases_path == r.task / "cases.json"
         assert (
             len(common.read(cases_path)["cases"]) == len(frozen["runs"]) == 208

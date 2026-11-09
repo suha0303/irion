@@ -22,8 +22,8 @@ def write(path, value):
     return dict(path=str(path), sha256=sha(path))
 
 
-@pytest.fixture
-def evidence(tmp_path, monkeypatch):
+@pytest.fixture(name="evidence")
+def fixture_evidence(tmp_path, monkeypatch):
     catalog = json_file(
         Path(__file__).parent / "fixtures/quality-rejection-catalog.json"
     )

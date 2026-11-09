@@ -129,6 +129,8 @@ def test_controller_stops_after_failed_fit_without_evaluation(
     phases = []
 
     def submit(root, phase, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del root, cfg
         phases.append(phase)
         return dict(job_id="123", phase=phase, uid=os.getuid())
 
@@ -340,6 +342,8 @@ def test_controller_keeps_single_hash_verification_after_visibility(
     phases, verified = [], []
 
     def submit(root, phase, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del root, cfg
         phases.append(phase)
         return dict(job_id=str(123 + len(phases)), phase=phase, uid=os.getuid())
 

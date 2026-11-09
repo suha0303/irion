@@ -13,15 +13,15 @@ from test_wind_metadata import fixture as wind_fixture
 
 from learning.admission19 import FINAL16, check_protection, validate_lineages
 from learning.history19 import final16
-from learning.history19.pilot import CRITICAL, ROOT, json_file, sha
+from learning.history19.pilot import CRITICAL, ROOT, Evidence, json_file, sha
 from learning.history19.pilot_connector import (
     native_mission_interval,
     project_pair_receipt,
 )
 
 
-@pytest.fixture
-def final_request(tmp_path, monkeypatch):
+@pytest.fixture(name="final_request")
+def fixture_final_request(tmp_path, monkeypatch):
     path = short_request(tmp_path / "unit")
     old = json_file(path)
     refs = old["refs"]
@@ -381,8 +381,6 @@ def test_physical_failure_stays_in_sixteen_denominator_and_cannot_pass_final(
 def test_final_requires_all_sixteen_and_eight_distinct_actual_pair_receipts(
     final_request, capsys, damage
 ):
-    from learning.history19.pilot import Evidence
-
     ctx = Evidence(final_request)
     _, _, _, cases, _, _ = final16.prerequisites(ctx)
     r = json_file(final_request)

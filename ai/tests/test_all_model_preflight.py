@@ -14,8 +14,8 @@ from execution.common import read, write
 from learning import replay_validation
 
 
-@pytest.fixture
-def prepared(tmp_path, monkeypatch):
+@pytest.fixture(name="prepared")
+def fixture_prepared(tmp_path, monkeypatch):
     root, out = tmp_path / "upstream", tmp_path / "compute"
     names = ("first", "second", "third")
     dataset = root / "dataset"
@@ -49,6 +49,8 @@ def prepared(tmp_path, monkeypatch):
     events = []
 
     def predictor(folder, device):
+        # Unused; retain the substituted callable's keyword parameters.
+        del device
         return SimpleNamespace(
             name=folder.name,
             scaler={"y_scale": np.ones(4)},
@@ -56,6 +58,8 @@ def prepared(tmp_path, monkeypatch):
         )
 
     def normalized(dataset, role, scaler):
+        # Unused; retain the substituted callable's keyword parameters.
+        del dataset, scaler
         events.append(("load", role))
         assert role in {"normal_validation", "normal_calibration"}
         return dict(
@@ -106,6 +110,8 @@ def test_all_checks_finish_before_first_full_calibration_or_replay(
     p = prepared
 
     def check(predictor, normal, output, **kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del normal
         assert kwargs["batch_size"] == 256
         p.events.append(("gate", predictor.name))
         return save_report(output)
@@ -145,6 +151,8 @@ def test_numerical_failure_collects_other_models_and_prevents_all_full_work(
     p = prepared
 
     def check(predictor, normal, output, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del normal
         p.events.append(("gate", predictor.name))
         if predictor.name in p.names[:2]:
             save_report(output, "FAILED_STOPPED")
@@ -192,11 +200,15 @@ def test_rich_diagnostic_uses_one_policy_and_no_calibration(
     )
 
     def diagnose(predictor, normal, output, **kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del normal
         p.events.append(("gate", predictor.name))
         assert kwargs["batch_size"] == 256
         return save_report(output, "DIAGNOSTIC_COMPLETE")
 
     def assess(report_path, supplied_policy, output):
+        # Unused; retain the substituted callable's keyword parameters.
+        del report_path
         observed_policies.append(supplied_policy.copy())
         return save_report(output)
 
@@ -317,6 +329,8 @@ def test_rich_preflight_rejects_different_normal_targets_or_identity(
     p = prepared
 
     def diagnose(predictor, normal, output, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del normal
         report = save_report(output, "DIAGNOSTIC_COMPLETE")
         if predictor.name == "second":
             report["sample_sha256"] = "different-run-membership"
@@ -356,6 +370,8 @@ def test_actual_rich_diagnostic_and_policy_complete_before_any_full_work(
     )
 
     def normalized(dataset, role, scaler):
+        # Unused; retain the substituted callable's keyword parameters.
+        del dataset, scaler
         assert role == "normal_validation"
         return normal
 
@@ -403,9 +419,13 @@ def test_policy_failure_for_first_model_still_checks_remaining_models(
     checked = []
 
     def diagnose(predictor, normal, output, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del predictor, normal
         return save_report(output, "DIAGNOSTIC_COMPLETE")
 
     def assess(report_path, policy, output):
+        # Unused; retain the substituted callable's keyword parameters.
+        del policy
         checked.append(report_path.stem)
         if report_path.stem == "first":
             save_report(output, "FAILED_STOPPED")

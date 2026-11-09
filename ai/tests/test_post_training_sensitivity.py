@@ -6,6 +6,8 @@ from types import SimpleNamespace
 import pytest
 from test_post_training import fresh_config
 
+import execution.engine
+import pipeline.runtime
 from execution.common import read, sha, write
 from learning import post_training as post
 
@@ -147,10 +149,8 @@ def test_file_and_config_cannot_diverge_even_with_new_inventory(
 def test_worker_passes_one_frozen_gate_and_seals_only_after_success(
     tmp_path, monkeypatch, failed
 ):
-    import execution.engine
     import learning.telemetry
     import learning.training
-    import pipeline.runtime
 
     cfg = config()
     cfg.update(
@@ -198,6 +198,8 @@ def test_worker_passes_one_frozen_gate_and_seals_only_after_success(
     )
 
     def calibrate(root, out, progress, **kw):
+        # Unused; retain the substituted callable's keyword parameters.
+        del root, progress
         calls.append(kw)
         write(
             out / "sensitivity/summary.json",

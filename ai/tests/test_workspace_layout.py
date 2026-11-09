@@ -7,7 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from test_collect_long_runs import c, setup  # noqa: F401
+from capstone_sim import collection_config
+from test_collect_long_runs import c, fixture_setup  # noqa: F401
 
 from pretrain.common import PACKAGE, ROOT, read, sha
 
@@ -31,8 +32,6 @@ def test_four_real_categories_and_no_category_aliases():
 
 
 def test_installed_runtime_and_sealed_package():
-    from capstone_sim import collection_config
-
     collection_config.assert_frozen()
     current = read(collection_config.producer_lock_path())
     assert current["revision"] == "X500_CURRENT"
@@ -44,7 +43,7 @@ def test_installed_runtime_and_sealed_package():
     assert not any(p.is_symlink() for p in PACKAGE.parents)
 
 
-def test_collection_uses_physical_simulator_root(setup):  # noqa: F811
+def test_collection_uses_physical_simulator_root(setup):
     plan, cases, helper, _ = setup
     root = Path(plan["root"])
     runs = root / "runs"

@@ -10,7 +10,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from pretrain import common, native_flight, pilot45, pilot_parallel
+from pretrain import (
+    ai19,
+    common,
+    native_flight,
+    pilot45,
+    pilot_bridge,
+    pilot_parallel,
+)
 
 
 @pytest.mark.local_evidence
@@ -111,6 +118,8 @@ def test_progress_sampler_receives_requested_duration(monkeypatch, tmp_path):
         pass
 
     def progress(root, baseline, selected, lane, duration, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del root, baseline, selected
         observed.append((lane["instance"], duration))
         raise Done
 
@@ -205,8 +214,6 @@ def test_short_bridge_uses_public_ai_connector_for_each_phase(
 ):
     from learning.history19 import short_cycle
 
-    from pretrain import pilot_bridge
-
     task = tmp_path / "task"
     common.write(
         task / "config.json", dict(short_cycle=True, task_id=short_cycle.TASK)
@@ -260,6 +267,8 @@ def test_short_bridge_uses_public_ai_connector_for_each_phase(
     def static_gate(request, receipt):
         # Only public request construction is under test, never actual flight
         # admission.
+        # Unused; retain the substituted callable's keyword parameters.
+        del request
         common.write(receipt, dict(actual_data_verified=True, phase=phase))
         return 0
 
@@ -343,8 +352,6 @@ def test_short_handoff_separates_static180_binding_from_old_ready(
     monkeypatch, tmp_path, change
 ):
     from learning import admission19
-
-    from pretrain import ai19, pilot_bridge
 
     producer = {k: "a" * 64 for k in admission19.PRODUCER_FIELDS}
     producer.update(

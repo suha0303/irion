@@ -11,13 +11,15 @@ import sys
 import numpy as np
 import pytest
 import torch
+from test_preprocessing import CONFIG, META, events
 
 from capstone_ai.mapping import FEATURES, TARGETS
 from execution.common import ROOT, sha
 from learning.history19 import data, runner
+from learning.history19.benchmark import measure
 from learning.history19.models import ModelSpec, make_model
 from learning.history19.predict import Predictor, seal_export
-from learning.history19.preprocessing import Preprocessor
+from learning.history19.preprocessing import Preprocessor, replay
 from learning.history19.training import Batches, backend, run_fit
 from learning.optimization import policy_for
 
@@ -96,6 +98,8 @@ def fixture_dataset(path):
 
 
 def change_array(manifest_path, key, transform):
+    # Unused; retain the substituted callable's keyword parameters.
+    del key
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     role = "normal_train"
     source = manifest_path.parent / (role + ".npz")
@@ -202,8 +206,6 @@ def test_old_conditions_preserved_sgd_only():
 
 
 def new_engine(seconds=20, change_future=False, chunk=317):
-    from test_preprocessing import CONFIG, META, events
-
     cfg = {**CONFIG, "feature_profile": "common19_ctx0", "context_us": 0}
     engine = Preprocessor(META, cfg)
     rows = list(events(seconds))
@@ -521,8 +523,6 @@ def test_finite_three_rate_selection_is_sgd_only(tmp_path, monkeypatch):
 
 
 def test_bounded_cpu_benchmark_uses_new_x_only_model(tmp_path):
-    from learning.history19.benchmark import measure
-
     arrays = {"X": np.zeros((4, 100, 19)), "Y": np.zeros((4, 10, 4))}
     result = measure(
         ModelSpec("lstm", 8),
@@ -538,10 +538,6 @@ def test_bounded_cpu_benchmark_uses_new_x_only_model(tmp_path):
 
 
 def test_raw_file_replay_is_synthetic_and_source_is_unchanged(tmp_path):
-    from test_preprocessing import CONFIG, META, events
-
-    from learning.history19.preprocessing import replay
-
     run = tmp_path / "synthetic-raw"
     (run / "observations").mkdir(parents=True)
     rows = list(events(20))

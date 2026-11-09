@@ -145,6 +145,8 @@ def test_pipeline_actually_dispatches16_and_one_cpu4_pool_preserves3_successes(
     )
 
     def child(task, request, log, *, on_progress=None):
+        # Unused; retain the substituted callable's keyword parameters.
+        del task, log
         job = common.read(request)
         kind = "flight" if job["action"] == "flight" else "cpu"
         with lock:
@@ -417,6 +419,8 @@ def test_children_keep_separate_records_and_shared_state(monkeypatch, tmp_path):
     )
 
     def command(case, parent, options, instance):
+        # Unused; retain the substituted callable's keyword parameters.
+        del case, parent, options
         raw = tmp_path / "simulation/runs" / str(instance)
         raw.mkdir(parents=True, exist_ok=True)
         result = dict(status="completed", run=str(raw))

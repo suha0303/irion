@@ -12,8 +12,8 @@ from learning import operator
 from learning import post_training as post
 
 
-@pytest.fixture
-def prior(tmp_path, monkeypatch):
+@pytest.fixture(name="prior")
+def fixture_prior(tmp_path, monkeypatch):
     root = tmp_path / "previous"
     name = "lstm_h128_l2_s0"
     cfg = dict(

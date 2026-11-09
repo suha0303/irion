@@ -8,6 +8,7 @@ import json
 import math
 import os
 import pwd
+import shutil
 import socket
 import subprocess
 import sys
@@ -615,7 +616,6 @@ def execute(args):
             if selected["status"] != "LR_COMPLETE":
                 raise ValueError("Incomplete LR selection")
             main_fit(entry, data, output, selected["selected_rate"], binding)
-            import shutil
 
             shutil.copy2(
                 Path(plan["inputs"]) / "main/scaler.json",

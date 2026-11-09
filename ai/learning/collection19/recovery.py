@@ -2,6 +2,8 @@
 immutable.
 """
 
+from pathlib import Path
+
 from learning.history19.pilot import ROOT, json_file
 
 from .contract import bound
@@ -61,8 +63,6 @@ def entry(ref, case):
         if run_id is None and isinstance(proof.get("run"), dict):
             run_id = proof["run"].get("run_id")
         if item["reason"] == "physical_attempts_exhausted":
-            from pathlib import Path
-
             run_id = Path(proof["run"]).name
             valid = proof.get("status") == "failed" and not proof.get(
                 "main_shared_failure"

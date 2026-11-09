@@ -12,9 +12,13 @@ import sys
 import numpy as np
 import pytest
 import torch
+from test_model_comparison import config
 from torch import nn
 
-from learning import models
+from capstone_ai.mapping import FEATURES, TARGETS
+from capstone_ai.training import Predictor
+from execution.common import read, sha, write
+from learning import comparison, lifecycle, models, study, training
 from learning.diagnostic import same
 from learning.models import (
     PostDecoderLayer,
@@ -252,9 +256,6 @@ run_fit(StudySpec(name,8),arrays,arrays,root/phase,
     assert initial["state_sha256"] == full["initial_state_sha256"]
     # The model was trained/exported in another process. Restore through the
     # public reader.
-    from capstone_ai.mapping import FEATURES, TARGETS
-    from capstone_ai.training import Predictor
-    from execution.common import sha, write
 
     bundle = tmp_path / "full"
     write(
@@ -307,10 +308,6 @@ run_fit(StudySpec(name,8),arrays,arrays,root/phase,
 
 
 def test_study_contract_is_sixteen_post_ln_variants():
-    from test_model_comparison import config
-
-    from learning import comparison, lifecycle, study
-
     cfg = study.configure(
         dict(
             config(),
@@ -339,8 +336,6 @@ def test_study_contract_is_sixteen_post_ln_variants():
 
 
 def test_configuring_a_study_does_not_mutate_its_contract():
-    from learning import study
-
     cfg = study.configure({})
     cfg["variants"][0]["optimizer"] = "adamw"
     cfg["models"].clear()
@@ -352,9 +347,6 @@ def test_configuring_a_study_does_not_mutate_its_contract():
 def test_learning_rate_selection_is_finite_normal_only_and_bound(
     tmp_path, monkeypatch
 ):
-    from execution.common import read, write
-    from learning import study, training
-
     cfg = dict(
         variants=study.VARIANTS,
         binding=dict(data="normal", scaler="common", sources="frozen"),
@@ -436,8 +428,6 @@ def test_learning_rate_selection_is_finite_normal_only_and_bound(
 
 
 def test_early_stopping_patience_starts_after_warmup(tmp_path, monkeypatch):
-    from learning import training
-
     monkeypatch.setattr(training, "safe_step", lambda *a: torch.tensor(1.0))
     monkeypatch.setattr(training, "loss", lambda *a: torch.tensor(1.0))
     a = dict(

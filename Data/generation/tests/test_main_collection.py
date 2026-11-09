@@ -12,8 +12,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from pretrain import cli, common, main_storage, pilot45, pilot_parallel
+from pretrain import (
+    ai19,
+    cli,
+    common,
+    main_quality,
+    main_storage,
+    main_views,
+    pilot45,
+    pilot_parallel,
+)
 from pretrain import main_collection as main
+from pretrain.display import screen
 
 
 @pytest.mark.local_evidence
@@ -84,8 +94,6 @@ def test_direct_collection_opens_screen_only_when_requested(
 
 
 def test_closed_raw_is_reused_without_intermediate_archive(tmp_path):
-    from pretrain import ai19, main_views
-
     raw = tmp_path / "raw"
     for name in ai19.CONSUMER:
         common.write(raw / name, {"fixture_only": True})
@@ -210,6 +218,8 @@ def test_general_native_failure_gets_total3_and_preserved_parent_then_next_case(
     def child(
         unused_task, request, log, *, on_progress=None, resource_snapshot=None
     ):
+        # Unused; retain the substituted callable's keyword parameters.
+        del log, on_progress, resource_snapshot
         j = common.read(request)
         c = j["case"]
         cid = c["case_id"]
@@ -414,6 +424,8 @@ def test_partial_capsule_failure_is_preserved_and_resume_never_reflies(
     actual = main_storage.pack_files
 
     def crash(sources, path, budget, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del sources, budget
         Path(path).write_bytes(b"interrupted partial")
         raise RuntimeError("power loss before publication")
 
@@ -580,8 +592,6 @@ m.case_entry(p)
 def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
     monkeypatch, tmp_path, quality_failures, transform_failures
 ):
-    from pretrain import main_quality
-
     task, rows, _ = runtime(monkeypatch, tmp_path, count=1)
     native = []
     prepare = []
@@ -594,6 +604,8 @@ def test_quality_rejection_preserves_completed_and_transform_retry_keeps_raw(
     def child(
         unused_task, request, log, *, on_progress=None, resource_snapshot=None
     ):
+        # Unused; retain the substituted callable's keyword parameters.
+        del log, on_progress, resource_snapshot
         j = common.read(request)
         c = j["case"]
         action = j["action"]
@@ -1006,8 +1018,6 @@ def test_main_status_reuses_eight_by_two_grid_and_actual_progress_keys(
 def test_detailed_screen_keeps_all_lanes_and_honest_stage_progress(
     monkeypatch, tmp_path
 ):
-    from pretrain.display import screen
-
     common.write(
         tmp_path / "config.json", dict(scope="main", planned_cases=1674)
     )

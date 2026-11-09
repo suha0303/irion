@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from console.profile import write
 from execution.common import ROOT
 from learning import prepare_compare
 
@@ -35,7 +36,6 @@ def test_mutating_actions_reject_missing_mount_before_read_or_ssh(
     monkeypatch.setattr(
         prepare_compare.subprocess, "run", lambda *a, **k: pytest.fail("No SSH")
     )
-    from console.profile import write
 
     profile = tmp_path / "server-profile.json"
     write(

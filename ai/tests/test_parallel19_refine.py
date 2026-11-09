@@ -6,10 +6,18 @@ import sys
 
 import numpy as np
 import pytest
+import torch
 
+from learning.parallel19.control import read, sha, write
 from learning.parallel19.final_verify import events, predict
+from learning.parallel19.fit import model
 from learning.parallel19.handover import identity
-from learning.parallel19.refine import candidates, finish_round, key
+from learning.parallel19.refine import (
+    candidates,
+    finish_round,
+    key,
+    next_attempt,
+)
 
 
 def item():
@@ -115,11 +123,6 @@ def test_dispatcher_identity_is_process_specific():
 def test_final_predict_uses_only_numeric_features_and_saves_predictions(
     tmp_path, monkeypatch, task
 ):
-    import torch
-
-    from learning.parallel19.control import sha
-    from learning.parallel19.fit import model
-
     torch.set_num_threads(1)
     monkeypatch.setattr(torch.Tensor, "cuda", lambda self: self)
     entry = {
@@ -170,7 +173,6 @@ def test_scheduler_fills_five_idle_slots_before_other_four_baselines_finish(
     tmp_path, monkeypatch
 ):
     from learning.parallel19 import refine as r
-    from learning.parallel19.control import read, sha, write
 
     entries = [
         {
@@ -207,6 +209,8 @@ def test_scheduler_fills_five_idle_slots_before_other_four_baselines_finish(
     monkeypatch.setattr(r.signal, "signal", lambda *a: None)
 
     def baseline(plan, e):
+        # Unused; retain the substituted callable's keyword parameters.
+        del plan
         if int(e["id"][1:]) >= 12:
             return None
         x = item()
@@ -221,6 +225,8 @@ def test_scheduler_fills_five_idle_slots_before_other_four_baselines_finish(
     starts = []
 
     class Process:
+        """Keep a synthetic baseline active until the scheduler stops it."""
+
         def __init__(self, pid):
             self.pid = pid
 
@@ -231,9 +237,13 @@ def test_scheduler_fills_five_idle_slots_before_other_four_baselines_finish(
             pass
 
         def wait(self, timeout):
+            # Unused; retain the substituted callable's keyword parameters.
+            del timeout
             return 0
 
     def start(plan, root, entry, path, node, phase="search"):
+        # Unused; retain the substituted callable's keyword parameters.
+        del plan, root, entry, path, phase
         starts.append(node)
         return Process(len(starts)), open(
             tmp_path / f"log{len(starts)}", "w", encoding="utf-8"
@@ -258,9 +268,6 @@ def test_scheduler_fills_five_idle_slots_before_other_four_baselines_finish(
 
 
 def test_reallocation_only_retries_incomplete_artifacts(tmp_path):
-    from learning.parallel19.control import read, write
-    from learning.parallel19.refine import next_attempt
-
     folder = tmp_path / "candidate-1"
     folder.mkdir()
     (folder / "last.pt").write_bytes(b"evidence")

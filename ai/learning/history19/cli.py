@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import tempfile
 from pathlib import Path
 
 
@@ -95,8 +96,6 @@ def main(argv=None):
             )
         )
     elif args.command == "validate":
-        import tempfile
-
         from .data import load
 
         with tempfile.TemporaryDirectory(prefix="history19-validate-") as temp:

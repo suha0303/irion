@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from pretrain import cli, runner
+from pretrain.common import read, sha, write
 
 
 def test_capsule_recovery_cli_parses_existing_source():
@@ -43,8 +44,6 @@ def test_capsule_recovery_uses_existing_memory_reserve(monkeypatch):
 
 
 def test_capsule_display_never_claims_new_collection(tmp_path, monkeypatch):
-    from pretrain.common import write
-
     write(
         tmp_path / "config.json",
         dict(
@@ -73,8 +72,6 @@ def test_capsule_display_never_claims_new_collection(tmp_path, monkeypatch):
 def test_recovery_service_sets_allocator_before_python_starts(
     tmp_path, monkeypatch
 ):
-    from pretrain.common import read, sha, write
-
     home = tmp_path / "home"
     task = home / "tasks/recovery"
     write(
@@ -101,8 +98,6 @@ def test_recovery_service_sets_allocator_before_python_starts(
 
 
 def test_worker_rejects_missing_allocator_before_claim(tmp_path, monkeypatch):
-    from pretrain.common import sha, write
-
     write(
         tmp_path / "config.json",
         dict(

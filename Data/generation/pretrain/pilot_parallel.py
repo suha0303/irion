@@ -12,6 +12,7 @@ import time
 from collections import Counter, deque
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import ExitStack
+from functools import partial
 from pathlib import Path
 
 from . import ai19, pilot45, pilot_bridge
@@ -781,8 +782,6 @@ class Coordinator:
         else:
             check_retry = pilot45.retryable
             if self.cfg.get("mode") == "main19":
-                from functools import partial
-
                 from .main_collection import retryable as main_retryable
                 from .main_quality import attempts_max
 

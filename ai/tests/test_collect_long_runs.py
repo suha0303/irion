@@ -27,8 +27,8 @@ def dump(path, value):
     path.write_text(json.dumps(value), encoding="utf-8")
 
 
-@pytest.fixture
-def setup(tmp_path, monkeypatch):
+@pytest.fixture(name="setup")
+def fixture_setup(tmp_path, monkeypatch):
     root = tmp_path / "repo"
     root.mkdir()
     (root / "runs").mkdir()
@@ -501,8 +501,8 @@ def test_existing_instance_socket_blocks_without_removal(monkeypatch):
     assert seen == ["/tmp/px4-sock-3"]
 
 
-@pytest.fixture
-def collection_setup(setup):
+@pytest.fixture(name="collection_setup")
+def fixture_collection_setup(setup):
     plan, cases, helper, tmp = setup
     runtime = {}
     for name in (
@@ -999,8 +999,8 @@ def test_size_accounting_tolerates_atomic_status_replacement(
     assert c.bytes_under(tmp_path) == 0
 
 
-@pytest.fixture
-def mission_progress_fixture(tmp_path):
+@pytest.fixture(name="mission_progress_fixture")
+def fixture_mission_progress_fixture(tmp_path):
     root = tmp_path / "progress-repo"
     run = root / "runs" / ("a" * 32)
     now = datetime(2026, 10, 15, 0, 0, tzinfo=timezone.utc)
@@ -1066,6 +1066,8 @@ def test_failed_producer_retains_uuid_and_landing_reason(setup):
     run = Path(plan["root"]) / "runs" / run_id
 
     def command(args, cwd, log, check, seconds):
+        # Unused; retain the substituted callable's keyword parameters.
+        del args, cwd, log, check, seconds
         dump(
             run / "run.json",
             dict(

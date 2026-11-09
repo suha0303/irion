@@ -3,6 +3,7 @@ job.
 """
 
 import copy
+import hashlib
 import os
 import sys
 import time
@@ -13,9 +14,11 @@ import numpy as np
 import pytest
 import torch
 
-from execution.common import read, sha, write
+from execution.common import ROOT, read, sha, write
 from learning import comparison, lifecycle, operator, prepare_compare
-from learning.training import Batches
+from learning.diagnostic import same
+from learning.training import Batches, run_fit
+from pretrain.storage import pack_files
 
 
 class Progress:
@@ -221,6 +224,8 @@ def test_exact_eight_gates_no_extra_model_or_seed(
     measured, children = [], []
 
     def measure(spec, arrays, batches, folder, **kw):
+        # Unused; retain the substituted callable's keyword parameters.
+        del folder
         measured.append((spec, kw["seed"], batches))
         if budget_passed is not None:
             assert kw["warmup"] == 50 and kw["steps"] == 500
@@ -415,8 +420,8 @@ def test_model_ids_do_not_reuse_existing_weights():
         assert sum(p.numel() for p in model.parameters()) > 100_000
 
 
-@pytest.fixture
-def admitted(tmp_path):
+@pytest.fixture(name="admitted")
+def fixture_admitted(tmp_path):
     dataset = tmp_path / "dataset"
     dataset.mkdir()
     rows = []
@@ -510,9 +515,6 @@ def test_cross_split_lineage_rejected_even_with_resealed_manifest(admitted):
 
 
 def test_seed0_continuous_and_resume_match_with_variant_progress(tmp_path):
-    from learning.diagnostic import same
-    from learning.training import run_fit
-
     rng = np.random.default_rng(7)
     arrays = dict(
         X=rng.normal(size=(3, 100, 19)),
@@ -570,9 +572,6 @@ def test_seed0_continuous_and_resume_match_with_variant_progress(tmp_path):
 def test_complete_local_prepare_restores_only_fixture_and_never_submits(
     admitted, tmp_path, monkeypatch, training_only, normalization_study
 ):
-    from execution.common import ROOT
-    from pretrain.storage import pack_files
-
     frozen = read(admitted / "evidence/frozen-manifest.json")
     frozen["revision_lock"] = dict(
         preprocessing_sha256=sha(
@@ -585,8 +584,6 @@ def test_complete_local_prepare_restores_only_fixture_and_never_submits(
     )
     for row in frozen["runs"]:
         if row["role"] in {"normal_dev_eval", "anomaly_dev"}:
-            import hashlib
-
             row["archive"] = dict(
                 members={
                     "evaluation/events.jsonl": dict(
@@ -898,6 +895,8 @@ def test_training_only_controller_releases_one_job_and_does_not_evaluate(
     phases = []
 
     def submit(root, phase, cfg):
+        # Unused; retain the substituted callable's keyword parameters.
+        del root, cfg
         phases.append(phase)
         return {"job_id": "123", "phase": phase}
 
@@ -965,6 +964,8 @@ def test_training_only_worker_never_calibrates_or_infers(tmp_path, monkeypatch):
     )
 
     def normalized(dataset, role, scaler, cache, progress):
+        # Unused; retain the substituted callable's keyword parameters.
+        del dataset, role, scaler, progress
         cache.mkdir(parents=True)
         return {"X": np.zeros((1, 100, 19))}
 

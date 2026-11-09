@@ -15,6 +15,7 @@ import pytest
 
 import x500_storage as paths
 from pretrain import cli, collection, common
+from pretrain.common import collector
 
 
 def test_default_is_project_data_and_custom_path_is_selectable():
@@ -66,7 +67,6 @@ def test_task_storage_is_frozen_into_plan_and_independent_launch(
     assert Path(plan["external_output"]).is_relative_to(root / "archives")
     assert plan["storage_policy"] == config["storage_policy"]
     assert "ai/x500_storage.py" in plan["project_source_hashes"]
-    from pretrain.common import collector
 
     c = collector()
     c.validate_storage_selection(plan)

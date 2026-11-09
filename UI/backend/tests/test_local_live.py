@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 from arion.contracts import SourceConfig
 from arion.main import create_app
@@ -161,8 +162,6 @@ def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
 
 
 def test_configured_ui_port_websocket_origin(tmp_path, monkeypatch):
-    from starlette.websockets import WebSocketDisconnect
-
     monkeypatch.setenv("ARION_PORT", "8879")
     with TestClient(create_app(tmp_path)) as client:
         m = client.post(

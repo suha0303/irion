@@ -16,8 +16,8 @@ from pretrain import common
 from pretrain import final_dataset as final
 
 
-@pytest.fixture
-def final_extraction(tmp_path, monkeypatch):
+@pytest.fixture(name="final_extraction")
+def fixture_final_extraction(tmp_path, monkeypatch):
     common.package_imports()
     from preprocessing_tools.control import RAW_FILES
 
@@ -75,6 +75,8 @@ def final_extraction(tmp_path, monkeypatch):
     status = task / "extract-status.json"
 
     def batch(name, action, items, workers, out, **unused_kwargs):
+        # Unused; retain the substituted callable's keyword parameters.
+        del name, workers
         actions.append(action)
         if action == "extract":
             # Do not create the missing parent here: the workflow owns that

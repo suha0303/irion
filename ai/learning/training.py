@@ -22,6 +22,7 @@ from capstone_ai.training import loss, seed_all
 from execution.common import write
 
 from .models import STUDY_REVISION, make_model
+from .optimization import WarmupCosine, make_optimizer, validate
 
 
 @contextmanager
@@ -209,8 +210,6 @@ def _run_fit(
             "The normalization study requires its explicit optimization policy"
         )
     if study:
-        from .optimization import WarmupCosine, make_optimizer, validate
-
         validate(optimization)
     if device not in {"cpu", "cuda"} or min(batch_size, epochs, patience) < 1:
         raise ValueError("Invalid training settings")

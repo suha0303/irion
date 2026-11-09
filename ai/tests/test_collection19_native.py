@@ -41,8 +41,8 @@ def refresh(raw):
     put(raw / "integrity.json", members)
 
 
-@pytest.fixture
-def full480(tmp_path, monkeypatch, request):
+@pytest.fixture(name="full480")
+def fixture_full480(tmp_path, monkeypatch, request):
     args = native_fixture(tmp_path / "native")
     binding = json_file(args["producer_binding"])
     native = json_file(

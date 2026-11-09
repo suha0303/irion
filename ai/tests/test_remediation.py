@@ -4,11 +4,15 @@ training.
 
 import copy
 
+import numpy as np
 import pytest
 
+from capstone_ai.clock_probe import deadline_bounds
 from capstone_ai.dataset import validate_split, verify_input
 from capstone_ai.evaluation import flight_bootstrap, match_event
+from capstone_ai.inference import PendingForecasts
 from capstone_ai.source import dump, read_json, sha
+from capstone_ai.trend import comparison_gate
 
 
 def test_actual_new_selection_is_group_independent():
@@ -91,8 +95,6 @@ def test_bootstrap_identical_exposure():
 
 
 def test_asset_replacement_and_missing_conditions():
-    from capstone_ai.trend import comparison_gate
-
     records = read_json(
         (
             "simulation/artifacts/remediation-20261014/asset-fixtures/"
@@ -128,8 +130,6 @@ def test_asset_replacement_and_missing_conditions():
 
 
 def test_deadline_bracket_strict_boundary():
-    from capstone_ai.clock_probe import deadline_bounds
-
     a = {"run_id": "r", "host_receive_ns": 10, "sim_time_us": 90, "nonce": 1}
     b = {"run_id": "r", "host_send_ns": 30, "sim_time_us": 99, "nonce": 2}
     assert deadline_bounds(a, b, 20, 100)["status"] == "on_time"
@@ -144,10 +144,6 @@ def test_deadline_bracket_strict_boundary():
 
 
 def test_live_jitter_keeps_origin_cadence_and_unverified_no_score():
-    import numpy as np
-
-    from capstone_ai.inference import PendingForecasts
-
     p = PendingForecasts(np.ones((10, 4)), [1, 1])
     for i, jitter in enumerate([100, 700, 1000]):
         origin = i * 1000000

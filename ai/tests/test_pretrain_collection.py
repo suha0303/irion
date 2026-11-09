@@ -12,15 +12,16 @@ import pytest
 from test_collect_long_runs import (  # noqa: F401 - pytest fixture dependencies
     binding_files,
     c,
-    collection_setup,
     dump,
-    setup,
+    fixture_collection_setup,
+    fixture_setup,
 )
 
+from pretrain import collection, common
 from pretrain.collection import lanes
 
 
-def test_benchmark_requires_bound_memory(collection_setup):  # noqa: F811
+def test_benchmark_requires_bound_memory(collection_setup):
     plan, _, _, tmp = collection_setup
     config_path, memory_path = tmp / "config.json", tmp / "memory.json"
     dump(
@@ -61,7 +62,7 @@ def test_benchmark_requires_bound_memory(collection_setup):  # noqa: F811
 @pytest.mark.parametrize("phase", ["collection", "benchmark", "endurance"])
 def test_expanded_memory_collect_and_optional_gates_bound(
     collection_setup, phase
-):  # noqa: F811
+):
     plan, _, _, tmp = collection_setup
     config_path, memory_path = tmp / "config.json", tmp / "memory.json"
     dump(
@@ -114,7 +115,7 @@ def test_expanded_memory_collect_and_optional_gates_bound(
 @pytest.mark.parametrize("expanded", [False, True])
 def test_optional_gate_sixteen_collection_and_exports(
     collection_setup, export_workers, expanded
-):  # noqa: F811
+):
     plan, _, helper, tmp = collection_setup
     plan.update(
         concurrency=16,
@@ -195,8 +196,6 @@ def test_optional_gate_sixteen_collection_and_exports(
 
 
 def test_fresh_benchmark_freeze_reads_only_new_archives(tmp_path, monkeypatch):
-    from pretrain import collection, common
-
     common.package_imports()
     from preprocessing_tools.control import RAW_FILES
 

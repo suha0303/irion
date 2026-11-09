@@ -11,6 +11,7 @@ import torch
 
 from capstone_ai.models import make_model as reference
 from learning.benchmark import measure
+from learning.diagnostic import candidate_batches, same
 from learning.models import ModelSpec, make_model
 from learning.profiles import PROFILES, select_batch, specs
 from learning.training import Batches, backend, run_fit, safe_step
@@ -302,8 +303,6 @@ def test_checkpoint_schema_is_required(tmp_path):
 
 
 def test_diagnostic_admission_and_exact_comparison():
-    from learning.diagnostic import candidate_batches, same
-
     gib = 1024**3
     selected, rejected = candidate_batches(
         "large", {"free_before_bytes": 45 * gib, "peak_reserved_bytes": gib}
