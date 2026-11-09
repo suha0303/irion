@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from localflight.distribution import build, copy_regular
+from localflight.distribution import build, copy_regular, prune_overlay_metadata
 
 
 def test_distribution_does_not_overwrite_or_follow_symlinks(tmp_path):
@@ -56,3 +56,49 @@ def test_distribution_finds_public_clone_and_developer_ui_layouts(tmp_path):
     public = tmp_path / "UI"
     (public / "backend/arion").mkdir(parents=True)
     assert ui_source(tmp_path) == public
+
+
+@pytest.mark.parametrize("old_suffix", ["dist-info", "egg-info"])
+def test_overlay_prunes_only_superseded_metadata(tmp_path, old_suffix):
+    site, overlay = tmp_path / "site", tmp_path / "overlay"
+    old = site / f"demo_pkg-1.0.{old_suffix}"
+    current = site / "demo_pkg-2.0.dist-info"
+    unrelated = site / "other-1.0.dist-info"
+    replacement = overlay / current.name
+    for path, name, version in [
+        (old, "Demo_Pkg", "1.0"),
+        (current, "demo-pkg", "2.0"),
+        (unrelated, "other", "1.0"),
+        (replacement, "demo-pkg", "2.0"),
+    ]:
+        path.mkdir(parents=True)
+        filename = "PKG-INFO" if path.name.endswith(".egg-info") else "METADATA"
+        (path / filename).write_text(
+            f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n",
+            encoding="utf-8",
+        )
+    package = site / "demo_pkg.py"
+    package.write_text("VERSION = '2.0'\n", encoding="utf-8")
+    overlay_before = (replacement / "METADATA").read_bytes()
+
+    prune_overlay_metadata(site, overlay)
+
+    assert not old.exists()
+    assert current.is_dir() and unrelated.is_dir()
+    assert package.read_text(encoding="utf-8") == "VERSION = '2.0'\n"
+    assert (replacement / "METADATA").read_bytes() == overlay_before
+
+
+def test_overlay_rejects_linked_metadata_before_pruning(tmp_path):
+    site, overlay = tmp_path / "site", tmp_path / "overlay"
+    old = site / "demo-1.0.dist-info"
+    old.mkdir(parents=True)
+    metadata = old / "METADATA"
+    metadata.write_text("Name: demo\nVersion: 1.0\n", encoding="utf-8")
+    overlay.mkdir()
+    (overlay / "demo-2.0.dist-info").symlink_to(old, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="Regular package metadata"):
+        prune_overlay_metadata(site, overlay)
+
+    assert metadata.read_text(encoding="utf-8") == "Name: demo\nVersion: 1.0\n"

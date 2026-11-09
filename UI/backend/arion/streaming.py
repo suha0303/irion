@@ -244,6 +244,24 @@ class SessionRun:
         self.writer.flush()
         os.fsync(self.writer.fileno())
 
+    def record_message_rate_request(
+        self, target, command, message_id, interval_us
+    ):
+        """Journal an already-sent stream configuration request."""
+        with self.lock:
+            if not self.live:
+                raise ValueError("종료된 세션입니다.")
+            self._write(
+                dict(
+                    type="message_rate_request",
+                    target=list(target),
+                    command=command,
+                    message_id=message_id,
+                    interval_us=interval_us,
+                    at_monotonic_ns=time.monotonic_ns(),
+                )
+            )
+
     def append_raw(self, record):
         if not self.live:
             raise ValueError("종료된 세션입니다.")
@@ -387,6 +405,7 @@ class SessionRun:
                 force_boundary=boundary,
             )
             t = self.core.duration_ms
+            epoch = self.core.epoch_at(t)
             values = {}
             processed_values = {}
             for key, spec in self.profile.signals.items():
@@ -429,7 +448,7 @@ class SessionRun:
                 if spec.display_key:
                     values[spec.display_key] = dict(values[key])
             frame = {
-                "epoch": self.core._epoch,
+                "epoch": epoch,
                 "t_ms": t,
                 "values": values,
                 "streams": [],
@@ -442,7 +461,7 @@ class SessionRun:
                 "session_id": self.run_id,
                 "profile_id": self.profile.profile_id,
                 "sequence": p.sequence,
-                "epoch": self.core._epoch,
+                "epoch": epoch,
                 "source_time_ns": p.source_time_ns,
                 "relative_time_ns": round(t * 1e6),
                 "preprocess_version": p.preprocess_version,

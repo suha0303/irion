@@ -1,6 +1,7 @@
 """Check MAVLink rate negotiation, acknowledgments and fallback."""
 
 import asyncio
+import json
 import os
 import pty
 import socket
@@ -104,6 +105,17 @@ def test_interval_protocol_ack_readback_observation_and_disconnect(
             status = sources.rates.status(run.run_id)
             assert status["state"] == "complete" and status["sent"] == 16
             assert len(commands) == 16
+            journal = [
+                json.loads(line)
+                for line in run.path.read_text(encoding="utf-8").splitlines()
+            ]
+            requests = [
+                row
+                for row in journal
+                if row.get("type") == "message_rate_request"
+            ]
+            assert [row["command"] for row in requests] == commands
+            assert all(row["target"] == [201, 1] for row in requests)
             assert all(
                 r["ack"] == 0 and r["readback_us"] > 0 for r in status["rows"]
             )

@@ -57,6 +57,42 @@ def copy_tree(source, destination, *, python_only=False):
         copy_regular(p, Path(destination) / relative)
 
 
+def _metadata_directories(root):
+    for path in sorted(Path(root).iterdir()):
+        if not path.name.endswith((".dist-info", ".egg-info")):
+            continue
+        if path.is_symlink() or not path.is_dir():
+            raise ValueError(
+                f"Regular package metadata directory required: {path}"
+            )
+        metadata = importlib.metadata.Distribution.at(path).metadata
+        name = metadata["Name"]
+        if not name:
+            raise ValueError(f"Package metadata has no Name: {path}")
+        yield name.lower().replace("_", "-"), path
+
+
+def prune_overlay_metadata(site: str | Path, overlay: str | Path) -> None:
+    """Remove superseded metadata from a copied application site-packages.
+
+    Only metadata directories for packages present in the UI overlay are
+    removed. Package code and unrelated distributions remain in place.
+
+    Args:
+        site: Copied application site-packages, which this operation may edit.
+        overlay: UI package directory, read without modification.
+
+    Raises:
+        ValueError: Metadata is linked, is not a directory, or has no Name.
+    """
+    overlay_names = {
+        name: path.name for name, path in _metadata_directories(overlay)
+    }
+    for name, path in _metadata_directories(site):
+        if name in overlay_names and path.name != overlay_names[name]:
+            shutil.rmtree(path)
+
+
 def ui_source(root):
     """Find UI sources in a public clone or the developer upload checkout.
 
@@ -182,14 +218,7 @@ def build(output, ui_packages):
     copy_tree(ui_packages, site)
     # Remove stale duplicate distribution metadata when the overlay upgrades a
     # shared package.
-    overlay_names = {
-        d.metadata["Name"].lower().replace("_", "-"): Path(d._path).name
-        for d in importlib.metadata.distributions(path=[str(ui_packages)])
-    }
-    for d in importlib.metadata.distributions(path=[str(site)]):
-        name = d.metadata["Name"].lower().replace("_", "-")
-        if name in overlay_names and Path(d._path).name != overlay_names[name]:
-            shutil.rmtree(d._path)
+    prune_overlay_metadata(site, ui_packages)
     (output / "drone-local").write_text(LAUNCHER, encoding="utf-8")
     (output / "drone-local").chmod(0o755)
     packages = sorted(

@@ -178,15 +178,8 @@ class MessageRates:
             if handle.write(packet) != len(packet):
                 raise ValueError("시리얼 설정 요청 일부만 전송됨")
         session["sent"] += 1
-        run._write(
-            dict(
-                type="message_rate_request",
-                target=list(session["target"]),
-                command=command,
-                message_id=message_id,
-                interval_us=interval,
-                at_monotonic_ns=time.monotonic_ns(),
-            )
+        run.record_message_rate_request(
+            session["target"], command, message_id, interval
         )
 
     async def _exchange(self, run, session, row, command):
