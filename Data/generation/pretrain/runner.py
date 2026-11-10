@@ -12,12 +12,21 @@ import time
 from collections import deque
 from pathlib import Path
 
+import x500_storage
+
 import pretrain.balanced as pretrain_balanced_module
 import pretrain.capsule_recovery as pretrain_capsule_recovery_module
 import pretrain.final_dataset as pretrain_final_dataset_module
 import pretrain.merge as pretrain_merge_module
 import pretrain.streaming as pretrain_streaming_module
-from pretrain import audit_recovery, collection, partial, recovery
+from pretrain import (
+    audit_recovery,
+    collection,
+    composition,
+    partial,
+    recovery,
+    storage,
+)
 
 from .common import (
     ADMISSION,
@@ -508,7 +517,6 @@ class Runner:
         self, frozen, label, workers, reference=None, full=True, cases_path=None
     ):
         package_imports()
-        from .composition import validate_roles
 
         if full:
             cases = (
@@ -516,7 +524,7 @@ class Runner:
                 if (cases_path or self.task / "cases.json").exists()
                 else read(RESOURCES / "case_manifest.json")["cases"]
             )
-            validate_roles(
+            composition.validate_roles(
                 frozen["runs"],
                 cases,
                 read(RESOURCES / "protected-inventory.json")["runs"],
@@ -789,8 +797,6 @@ class Runner:
             "compact",
             "stream_compact",
         }:
-            from .storage import pack
-
             self.begin(label + "-portable", total=1, workers=1)
             portable = root.parent / (root.name + "-portable")
 
@@ -805,7 +811,7 @@ class Runner:
                         resource_check()
                         self.last_check = time.monotonic()
 
-            receipt = pack(
+            receipt = storage.pack(
                 root,
                 portable,
                 progress=self.update,
@@ -1219,9 +1225,8 @@ def worker(task):
         raise RuntimeError("STOP: Attempt already claimed; no automatic retry")
     lock = (HOME / "pretrain.lock").open("a", encoding="utf-8")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    from x500_storage import environment
 
-    expected = environment(read(task / "config.json"))
+    expected = x500_storage.environment(read(task / "config.json"))
     if expected["X500_STORAGE_ROOT"] != str(STORE):
         raise ValueError(
             "Worker storage mismatch; start through drone-pretrain start"

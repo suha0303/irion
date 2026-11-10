@@ -4,6 +4,8 @@ outputs.
 
 from pathlib import Path
 
+import x500_storage
+
 from .common import (
     ADMISSION,
     HOME,
@@ -56,11 +58,13 @@ def inputs(source):
             }
         }
     )
-    from x500_storage import guard, task_root
 
     config = read(source / "config.json")
-    root = guard(
-        task_root(config) / "processed/pretrain" / source.name / "prepared",
+    root = x500_storage.guard(
+        x500_storage.task_root(config)
+        / "processed/pretrain"
+        / source.name
+        / "prepared",
         config.get("storage_policy"),
     )
     frozen = read(root / "frozen-manifest.json")
@@ -143,9 +147,8 @@ def create_audit_recovery(source, name):
     args = cli.parser().parse_args(
         ["init", "--name", name, "--mode", "collect"]
     )
-    from x500_storage import task_root
 
-    args.storage_root = task_root(original)
+    args.storage_root = x500_storage.task_root(original)
     args.storage_profile = original.get("storage_profile", "standard")
     for key in (
         "workers",

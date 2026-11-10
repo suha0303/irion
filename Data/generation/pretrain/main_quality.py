@@ -5,6 +5,8 @@ is immutable.
 import os
 from pathlib import Path
 
+from pretrain import common
+
 from . import ai19
 from .common import read, verify
 
@@ -23,15 +25,13 @@ def publish(raw, case, binding, assessment_path, output, *, policy_bundle):
     ai19.ai_modules()
     from learning.collection19 import publish_quality_rejection
 
-    from .common import sha
-
     result = publish_quality_rejection(
         raw,
         case_id=case["case_id"],
         producer=binding,
         policy_bundle=policy_bundle,
         assessment_ref=dict(
-            path=str(assessment_path), sha256=sha(assessment_path)
+            path=str(assessment_path), sha256=common.sha(assessment_path)
         ),
         output=output,
     )

@@ -9,6 +9,8 @@ import time
 from collections import Counter
 from pathlib import Path
 
+import x500_storage
+
 import pretrain.storage as pretrain_storage_module
 import pretrain.streaming as pretrain_streaming_module
 from pretrain import composition
@@ -91,9 +93,7 @@ def merge_records(parts):
 def inputs(bundles):
     parts, pins = [], {}
     for bundle in bundles:
-        from x500_storage import guard
-
-        bundle = guard(bundle)
+        bundle = x500_storage.guard(bundle)
         receipt = read(bundle / "receipt.json")
         prepared = bundle.parent / "prepared"
         task = HOME / "tasks" / bundle.parent.name

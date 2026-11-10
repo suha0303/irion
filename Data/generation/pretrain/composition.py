@@ -1,9 +1,10 @@
 """Explicit collection profiles; retain the sealed per-condition safeguards."""
 
+import sys
 from collections import Counter
 
 import pretrain.final_dataset as pretrain_final_dataset_module
-from pretrain import balanced
+from pretrain import balanced, common
 
 from .common import package_imports
 
@@ -125,11 +126,7 @@ def validate_cases(cases, profile):
     for subset in validation_subsets(cases, profile):
         original(subset)
     if profile in {"diverse104", "balanced300"}:
-        import sys
-
-        from .common import ROOT
-
-        sys.path.insert(0, str(ROOT / "simulation/sim/src"))
+        sys.path.insert(0, str(common.ROOT / "simulation/sim/src"))
         from capstone_sim.normal_variation import sample, validate
 
         for case in cases:

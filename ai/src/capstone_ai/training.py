@@ -194,6 +194,41 @@ def flat(data):
     )
 
 
+def fit_ridge(
+    train,
+    validation,
+    *,
+    check_budget=None,
+    nonfinite_message="Nonfinite ridge validation loss",
+):
+    """Select the first minimum-loss ridge fit from the fixed alpha grid.
+
+    Only the current and best coefficient arrays remain resident. A budget
+    callback, when supplied, runs before each solve and may stop the fit.
+    """
+    x, v = flat(train), flat(validation)
+    y = train["Y"].reshape(len(x), -1)
+    history = []
+
+    def candidates():
+        for alpha in (1.0, 10.0, 100.0):
+            if check_budget is not None:
+                check_budget()
+            coefficients = x.T @ np.linalg.solve(
+                x @ x.T + alpha * np.eye(len(x)), y
+            )
+            prediction = (v @ coefficients).reshape(validation["Y"].shape)
+            error = (prediction - validation["Y"]) ** 2
+            score = 0.5 * error[..., :3].mean() + 0.5 * error[..., 3].mean()
+            if not np.isfinite(score):
+                raise ValueError(nonfinite_message)
+            history.append({"alpha": alpha, "validation_loss": float(score)})
+            yield score, coefficients, alpha
+
+    _, selected, chosen = min(candidates(), key=lambda item: item[0])
+    return selected, chosen, history
+
+
 def train_models(config_path):
     cfg = read_json(config_path)
     dataset = Path(cfg["dataset"])
@@ -218,26 +253,7 @@ def train_models(config_path):
         if name in {"lstm", "transformer"}:
             history, difference = neural_fit(name, cfg, train, val, folder)
         elif name == "ridge_forecast":
-            x = flat(train)
-            y = train["Y"].reshape(len(x), -1)
-            v = flat(val)
-            best = float("inf")
-            for alpha in [1.0, 10.0, 100.0]:
-                coefficients = x.T @ np.linalg.solve(
-                    x @ x.T + alpha * np.eye(len(x)), y
-                )
-                prediction = (v @ coefficients).reshape(val["Y"].shape)
-                error = (prediction - val["Y"]) ** 2
-                value = 0.5 * error[..., :3].mean() + 0.5 * error[..., 3].mean()
-                if not np.isfinite(value):
-                    raise ValueError("Nonfinite ridge validation loss")
-                history.append(
-                    {"alpha": alpha, "validation_loss": float(value)}
-                )
-                if value < best:
-                    best = value
-                    best_coefficients = coefficients
-                    chosen = alpha
+            best_coefficients, chosen, history = fit_ridge(train, val)
             np.savez(
                 folder / "ridge.npz",
                 coefficients=best_coefficients,

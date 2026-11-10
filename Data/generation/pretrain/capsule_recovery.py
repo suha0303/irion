@@ -5,6 +5,8 @@ import shutil
 import time
 from pathlib import Path
 
+import x500_storage
+
 import pretrain.collection as pretrain_collection_module
 import pretrain.storage as pretrain_storage_module
 import pretrain.streaming as pretrain_streaming_module
@@ -162,7 +164,6 @@ def inputs(source):
     """Read stopped-task metadata; large archive hashes are checked during
     restore.
     """
-    from x500_storage import guard, task_root
 
     source = Path(source).absolute()
     regular(source / "config.json")
@@ -219,7 +220,9 @@ def inputs(source):
         or sum(map(len, planned)) != config["collection_run_count"]
     ):
         raise ValueError("Source approved run count mismatch")
-    store = guard(task_root(config), config.get("storage_policy"))
+    store = x500_storage.guard(
+        x500_storage.task_root(config), config.get("storage_policy")
+    )
     pins = {
         str(source / name): sha(regular(source / name))
         for name in (
@@ -366,8 +369,6 @@ def inputs(source):
 
 
 def create_recovery(source, name):
-    from x500_storage import task_root
-
     from . import cli
 
     admitted = inputs(source)
@@ -375,7 +376,7 @@ def create_recovery(source, name):
     args = cli.parser().parse_args(
         ["init", "--name", name, "--mode", "collect"]
     )
-    args.storage_root = task_root(original)
+    args.storage_root = x500_storage.task_root(original)
     args.storage_profile = "compact"
     for key in (
         "workers",

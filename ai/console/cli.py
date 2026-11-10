@@ -82,6 +82,8 @@ def configure(args):
 
 
 def environment(settings, profile_file=None):
+    # Paths come from profile_file; keep the public settings keyword.
+    del settings
     child_env = os.environ.copy()
     child_env["PYTHONPATH"] = ":".join(
         str(profile.ROOT / p) for p in ("ai", "ai/src", "Data/generation")

@@ -8,13 +8,72 @@ import numpy as np
 import pytest
 import torch
 
-from capstone_ai.training import loss, seed_all
+from capstone_ai.training import fit_ridge, loss, seed_all
 from execution import common
 from learning import comparison, study
 from learning.diagnostic import same
 from learning.models import make_model
 from learning.optimization import make_optimizer, policy_for
 from learning.training import backend, clip_gradients, safe_step
+
+
+@pytest.mark.parametrize("target", [1.0, 0.0], ids=["minimum", "first-tie"])
+def test_ridge_fixed_grid_selects_intercept_and_preserves_budget_checks(target):
+    data = {
+        "X": np.zeros((2, 1, 1)),
+        "C": np.empty((2, 0)),
+        "Y": np.full((2, 1, 4), target),
+    }
+    checks = []
+    coefficients, alpha, history = fit_ridge(
+        data, data, check_budget=lambda: checks.append(len(checks))
+    )
+    # Two identical observations: the regularized intercept is 2y / (2 + a).
+    np.testing.assert_allclose(coefficients[0], 0.0)
+    np.testing.assert_allclose(coefficients[1], 2 * target / 3)
+    assert alpha == 1.0
+    assert checks == [0, 1, 2]
+    assert [r["alpha"] for r in history] == [1.0, 10.0, 100.0]
+    np.testing.assert_allclose(
+        [r["validation_loss"] for r in history],
+        [(target * a / (2 + a)) ** 2 for a in (1, 10, 100)],
+    )
+
+
+def test_ridge_rejects_nonfinite_validation_with_caller_error():
+    train = {
+        "X": np.zeros((2, 1, 1)),
+        "C": np.empty((2, 0)),
+        "Y": np.ones((2, 1, 4)),
+    }
+    validation = {**train, "Y": np.full((2, 1, 4), np.nan)}
+    with pytest.raises(ValueError, match="caller validation error"):
+        fit_ridge(
+            train, validation, nonfinite_message="caller validation error"
+        )
+
+
+def test_ridge_budget_stop_prevents_later_solves(monkeypatch):
+    data = {
+        "X": np.zeros((2, 1, 1)),
+        "C": np.empty((2, 0)),
+        "Y": np.ones((2, 1, 4)),
+    }
+    solves = []
+    original = np.linalg.solve
+
+    def observed_solve(a, b):
+        solves.append(1)
+        return original(a, b)
+
+    def budget():
+        if solves:
+            raise RuntimeError("budget expired")
+
+    monkeypatch.setattr(np.linalg, "solve", observed_solve)
+    with pytest.raises(RuntimeError, match="budget expired"):
+        fit_ridge(data, data, check_budget=budget)
+    assert len(solves) == 1
 
 
 def reference_step(model, optimizer, x, c, y):

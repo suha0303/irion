@@ -10,9 +10,11 @@ from pathlib import Path
 from learning.admission19 import FINAL16, check_producer, check_protection
 from learning.history19 import joint_native, pilot_connector
 
-from .pilot import CRITICAL as CRITICAL
+from . import pilot
 from .pilot import ROOT, Evidence, Pending, Unavailable, json_file, regular, sha
 from .short_cycle import consumer_inputs
+
+CRITICAL = pilot.CRITICAL
 
 TASK = "FINAL16_20261107"
 AUTH = ROOT / "ai/reports/final16-20261107/attempt-01/authorization.json"

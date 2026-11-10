@@ -534,6 +534,8 @@ def restore_gate(root, cfg, progress, *, profile=None):
     """Six sequential fresh processes; compare exact continuation, not only
     loading.
     """
+    # Each isolated child reloads the frozen configuration from root.
+    del cfg
     root = Path(root)
     proofs = {}
     for index, model in enumerate(MODELS):

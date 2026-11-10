@@ -408,12 +408,15 @@ def snapshot(task, directory):
 
 def capsule(task, spec):
     ai19.ai_modules()
-    from learning.history19.pilot import CRITICAL
+    from learning.history19 import pilot
 
+    critical = pilot.CRITICAL
     if read(task / "config.json").get("final16"):
-        from learning.history19.final16 import CRITICAL
+        from learning.history19 import final16
 
-    files = {name: sha(ROOT / name) for name in CRITICAL}
+        critical = final16.CRITICAL
+
+    files = {name: sha(ROOT / name) for name in critical}
     files.update(
         {
             str(p.relative_to(ROOT)): sha(p)
@@ -431,8 +434,10 @@ def capsule(task, spec):
 
 def check(task, spec, *, case_id=None, pair_path=None, phase=None):
     ai19.ai_modules()
-    from learning.history19.pilot import main
-    from learning.history19.pilot_connector import prepare_request
+    from learning.history19 import pilot, pilot_connector
+
+    main = pilot.main
+    prepare_request = pilot_connector.prepare_request
 
     short = read(task / "config.json").get("short_cycle") is True
     final16 = read(task / "config.json").get("final16") is True
@@ -485,11 +490,17 @@ def check(task, spec, *, case_id=None, pair_path=None, phase=None):
         if pair_path is not None:
             paths["pair_receipt"] = str(pair_path)
     if final16:
-        from learning.history19.final16 import main, prepare_request
+        from learning.history19 import final16 as final16_api
+
+        main = final16_api.main
+        prepare_request = final16_api.prepare_request
 
         bundle["schema"] = "drone-ai.final16.connector/1"
     if short:
-        from learning.history19.short_cycle import main, prepare_request
+        from learning.history19 import short_cycle
+
+        main = short_cycle.main
+        prepare_request = short_cycle.prepare_request
 
         bundle["schema"] = "drone-ai.short-cycle.connector/1"
         if case_id is not None and entry.get("external_audit") is not None:

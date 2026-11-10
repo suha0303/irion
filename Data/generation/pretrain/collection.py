@@ -6,6 +6,8 @@ import importlib.util
 import json
 import sys
 
+import x500_storage
+
 from pretrain import balanced, common, composition, final_dataset
 
 from .common import (
@@ -123,10 +125,13 @@ def preparation_assertions(preparation, profile_id):
 def plan(task, phase, count, case_list, label, export_workers=1):
     c = collector()
     config = read(task / "config.json")
-    from x500_storage import capture, task_root
 
-    storage = task_root(config) if "external_storage" in config else STORE
-    policy = config.get("storage_policy") or capture(storage)
+    storage = (
+        x500_storage.task_root(config)
+        if "external_storage" in config
+        else STORE
+    )
+    policy = config.get("storage_policy") or x500_storage.capture(storage)
     folder = task / label
     folder.mkdir()
     result = copy.deepcopy(read(RESOURCES / "collection/plan.json"))
@@ -320,9 +325,7 @@ def freeze_benchmark(folder):
     package_imports()
     from preprocessing_tools.control import RAW_FILES
 
-    from .common import load
-
-    identity = load(
+    identity = common.load(
         "pretrain_admission_identity", ADMISSION / "freeze.py"
     ).identity
 
@@ -487,7 +490,6 @@ def freeze_collection(task, folder, *, output=None, progress=None):
     write(output / "required-revision.json", source_revision())
     # Identity checks remain serial here; archive extraction/hash verification
     # is parallel next.
-    from .composition import validate_cases, validate_roles
 
     frozen = module.make_freeze(
         output / "collection-plan.json",
@@ -495,10 +497,12 @@ def freeze_collection(task, folder, *, output=None, progress=None):
         folder / "execution/ledger.json",
         output / "required-revision.json",
         RESOURCES / "protected-inventory.json",
-        validate_cases_fn=lambda rows: validate_cases(rows, profile),
-        validate_roles_fn=lambda rows, cases, protected: validate_roles(
-            rows, cases, protected, profile
+        validate_cases_fn=lambda rows: composition.validate_cases(
+            rows, profile
         ),
+        validate_roles_fn=lambda rows,
+        cases,
+        protected: composition.validate_roles(rows, cases, protected, profile),
         on_run=progress,
     )
     frozen["collection_profile"] = profile

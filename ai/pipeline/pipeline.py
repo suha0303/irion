@@ -13,7 +13,7 @@ from capstone_ai.dataset import feature_transform, target_transform
 from capstone_ai.detection_protocol import fit_calibration
 from capstone_ai.detection_replay import replay
 from capstone_ai.mapping import FEATURES, TARGETS
-from capstone_ai.training import Predictor, flat
+from capstone_ai.training import Predictor, fit_ridge
 
 from .control import (
     CONFIG,
@@ -208,25 +208,12 @@ def bundles(dataset, out, preprocess, budget, *, lstm_backend=None):
         elif name == "ridge_forecast":
             # Same predeclared dual-ridge solver and validation selection as
             # training.py, on CPU.
-            x, v = flat(train), flat(val)
-            y = train["Y"].reshape(len(x), -1)
-            best = float("inf")
-            for alpha in (1.0, 10.0, 100.0):
-                budget.check()
-                coefficients = x.T @ np.linalg.solve(
-                    x @ x.T + alpha * np.eye(len(x)), y
-                )
-                error = (
-                    (v @ coefficients).reshape(val["Y"].shape) - val["Y"]
-                ) ** 2
-                score = 0.5 * error[..., :3].mean() + 0.5 * error[..., 3].mean()
-                if not np.isfinite(score):
-                    raise ValueError("nonfinite ridge validation")
-                history.append(
-                    {"alpha": alpha, "validation_loss": float(score)}
-                )
-                if score < best:
-                    best, selected, chosen = score, coefficients, alpha
+            selected, chosen, history = fit_ridge(
+                train,
+                val,
+                check_budget=budget.check,
+                nonfinite_message="nonfinite ridge validation",
+            )
             np.savez(folder / "ridge.npz", coefficients=selected, alpha=chosen)
             result = {"history": history, "device": "cpu"}
         else:

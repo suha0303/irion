@@ -1150,6 +1150,8 @@ def bound(plan_path, manifest_path, approval_path, dry_run=False):
 
 
 def helper(root):
+    # The helper is bound to this source file, not the caller directory.
+    del root
     path = Path(__file__).resolve().with_name("collection_support.py")
     if sha(path) != HELPER_SHA:
         raise Stop("Frozen process cleanup helper mismatch")
@@ -1741,6 +1743,74 @@ def _execute_locked(plan, cases, process_helper):
             except Exception as exc:
                 stop_new(str(exc))
 
+    def attempt_checks(case, lane, folder, record, mission_progress):
+        """Bind callbacks to this attempt while sharing its live record."""
+        last_flight_progress = [0.0]
+
+        def flight_progress(force=False):
+            now = time.monotonic()
+            if (
+                record["status"] == "FLYING"
+                and "flight_started_monotonic" in record
+                and (force or now - last_flight_progress[0] >= 1)
+            ):
+                last_flight_progress[0] = now
+                atomic(
+                    folder / "flight-progress.json",
+                    {
+                        "case_id": case["case_id"],
+                        "scenario": case["scenario"],
+                        "instance": lane["instance"],
+                        "stage": "FLYING",
+                        "started_utc": record["flight_started_utc"],
+                        "started_monotonic": record["flight_started_monotonic"],
+                        "updated_utc": datetime.now(timezone.utc).isoformat(),
+                        "updated_monotonic": now,
+                        "wall_elapsed_s": now
+                        - record["flight_started_monotonic"],
+                        "target_mission_seconds": duration_for(plan, case),
+                        **mission_progress.sample(monotonic_now=now),
+                        "campaign_process_metrics": resources.copy(),
+                    },
+                )
+                if (
+                    plan.get("pretrain_cli_approval")
+                    and len(mission_progress.matches) == 1
+                ):
+                    from pretrain.socket_cleanup import claim
+
+                    run_path = runs / next(iter(mission_progress.matches))
+                    claim(
+                        run_path,
+                        lane["instance"],
+                        folder / "socket-claim.json",
+                    )
+
+        def active_check():
+            # Peer/source failures close admission; stage timeouts still use
+            # the owner-verified cleanup helper for the active command.
+            observe_limits()
+            flight_progress()
+            if memory_halt.is_set():
+                raise Stop(
+                    (
+                        "Memory budget exceeded: stop owned active "
+                        "commands; no retry"
+                    )
+                )
+            if halt.is_set() and plan.get("phase") == "benchmark":
+                raise Stop("Benchmark failure: stop all owned active commands")
+
+        def export_check():
+            active_check()
+            try:
+                space_check()
+            except Exception as exc:
+                stop_new(str(exc))
+                raise
+
+        return flight_progress, active_check, export_check
+
     def worker(lane):
         while True:
             with admission:
@@ -1805,7 +1875,6 @@ def _execute_locked(plan, cases, process_helper):
                     "previous_attempts": list(history),
                 }
                 write_record(case["case_id"], record)
-                last_flight_progress = [0.0]
                 mission_progress = MissionProgress(
                     root,
                     {p.name for p in runs.iterdir() if p.is_dir()},
@@ -1815,72 +1884,9 @@ def _execute_locked(plan, cases, process_helper):
                     runs_root=runs,
                 )
 
-                # These synchronous checks finish before the retry advances.
-                # Read the current attempt's mutable state, not a snapshot.
-                def flight_progress(force=False):
-                    now = time.monotonic()
-                    if (
-                        record["status"] == "FLYING"
-                        and "flight_started_monotonic" in record
-                        and (force or now - last_flight_progress[0] >= 1)
-                    ):
-                        last_flight_progress[0] = now
-                        atomic(
-                            folder / "flight-progress.json",
-                            {
-                                "case_id": case["case_id"],
-                                "scenario": case["scenario"],
-                                "instance": lane["instance"],
-                                "stage": "FLYING",
-                                "started_utc": record["flight_started_utc"],
-                                "started_monotonic": record[
-                                    "flight_started_monotonic"
-                                ],
-                                "updated_utc": datetime.now(
-                                    timezone.utc
-                                ).isoformat(),
-                                "updated_monotonic": now,
-                                "wall_elapsed_s": now
-                                - record["flight_started_monotonic"],
-                                "target_mission_seconds": duration_for(
-                                    plan, case
-                                ),
-                                **mission_progress.sample(monotonic_now=now),
-                                "campaign_process_metrics": resources.copy(),
-                            },
-                        )
-                        if (
-                            plan.get("pretrain_cli_approval")
-                            and len(mission_progress.matches) == 1
-                        ):
-                            from pretrain.socket_cleanup import claim
-
-                            run_path = runs / next(
-                                iter(mission_progress.matches)
-                            )
-                            claim(
-                                run_path,
-                                lane["instance"],
-                                folder / "socket-claim.json",
-                            )
-
-                def active_check():
-                    observe_limits()
-                    flight_progress()
-                    if memory_halt.is_set():
-                        raise Stop(
-                            (
-                                "Memory budget exceeded: stop owned active "
-                                "commands; no retry"
-                            )
-                        )
-                    if halt.is_set() and plan.get("phase") == "benchmark":
-                        raise Stop(
-                            "Benchmark failure: stop all owned active commands"
-                        )
-                    # Peer/source/admission failure only closes admission. Own
-                    # stage timeout
-                    # still invokes the existing owner-verified cleanup helper.
+                flight_progress, active_check, export_check = attempt_checks(
+                    case, lane, folder, record, mission_progress
+                )
 
                 try:
                     if halt.is_set():
@@ -2082,14 +2088,6 @@ def _execute_locked(plan, cases, process_helper):
                         )
                         record["archive_started_monotonic"] = time.monotonic()
                         write_record(case["case_id"], record)
-
-                        def export_check():
-                            active_check()
-                            try:
-                                space_check()
-                            except Exception as exc:
-                                stop_new(str(exc))
-                                raise
 
                         record["export"] = archive_run(
                             run,

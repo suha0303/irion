@@ -43,6 +43,8 @@ def binding(runtime, metadata, adaptation=None):
 
 
 def forecast_scores(observed, predicted, scaler):
+    # Targets are already normalized; retain the public scaler argument.
+    del scaler
     a = np.asarray(observed, dtype="f8")
     b = np.asarray(predicted, dtype="f8")
     if a.shape != b.shape or a.ndim != 2 or a.shape[1] != 4:

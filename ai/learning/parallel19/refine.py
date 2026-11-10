@@ -446,6 +446,8 @@ def next_attempt(root, job):
     """Keep interrupted evidence; only incomplete candidates get a fresh
     attempt.
     """
+    # The request owns the output directory, including resumed attempts.
+    del root
     request = read(job["request"])
     old = Path(request["output"])
     if (old / "result.json").exists():
@@ -484,6 +486,8 @@ def development_done(item, development):
 
 
 def enqueue_development(plan, root, models, pending, development):
+    # Completed candidate records carry the development configuration.
+    del plan
     for name, item in models.items():
         for folder, result in training_records(item).items():
             if folder in development:

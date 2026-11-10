@@ -5,6 +5,7 @@ import json
 import sys
 import time
 from collections import deque
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -103,7 +104,7 @@ class DirectoryTail:
         self.marks: deque[dict[str, Any]] = deque()
         self.ingested, self.closed, self.last_mark = 0, False, None
         self.chunk_bytes = chunk_bytes
-        self.trace = None
+        self.trace: Callable[[dict[str, Any]], None] | None = None
         self.frame_ready = {}
         self.mark_seen = {}
 

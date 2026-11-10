@@ -58,21 +58,23 @@ def create_app(data_dir=None):
         await adapter.close()
         await asyncio.to_thread(store.close)
 
-    app = FastAPI(title="ARION Dashboard", version="0.4.0", lifespan=lifespan)
+    application = FastAPI(
+        title="ARION Dashboard", version="0.4.0", lifespan=lifespan
+    )
     local_data = data_dir or os.environ.get("ARION_DATA_DIR")
     local_flight = attach_local_flight(
-        app, Path(local_data) / "local-ai" if local_data else None
+        application, Path(local_data) / "local-ai" if local_data else None
     )
-    app.state.sources = sources
-    local_live = attach_local_live(app, local_flight, store)
-    app.add_middleware(
+    application.state.sources = sources
+    local_live = attach_local_live(application, local_flight, store)
+    application.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver"],
     )
-    app.state.store, app.state.adapter = store, adapter
-    app.state.providers, app.state.sources = providers, sources
+    application.state.store, application.state.adapter = store, adapter
+    application.state.providers, application.state.sources = providers, sources
 
-    @app.exception_handler(KeyError)
+    @application.exception_handler(KeyError)
     async def missing_run(unused_request, unused_error):
         return JSONResponse(
             status_code=404, content={"detail": "해당 비행을 찾을 수 없습니다."}
@@ -162,7 +164,7 @@ def create_app(data_dir=None):
         )
         return frame
 
-    @app.get("/api/health")
+    @application.get("/api/health")
     def health():
         return {
             "status": "ok",
@@ -176,11 +178,11 @@ def create_app(data_dir=None):
             "live_available": True,
         }
 
-    @app.get("/api/runs")
+    @application.get("/api/runs")
     def runs():
         return store.list()
 
-    @app.post("/api/runs/import")
+    @application.post("/api/runs/import")
     async def import_run(file: UploadFile = File(...)):
         data = await file.read(MAX_UPLOAD + 1)
         if len(data) > MAX_UPLOAD:
@@ -193,11 +195,11 @@ def create_app(data_dir=None):
         except (ValueError, UnicodeError, zipfile.BadZipFile, OSError) as error:
             raise HTTPException(422, str(error)) from error
 
-    @app.get("/api/runs/{run_id}")
+    @application.get("/api/runs/{run_id}")
     def manifest(run_id: str):
         return store.get(run_id).manifest()
 
-    @app.get("/api/runs/{run_id}/series")
+    @application.get("/api/runs/{run_id}/series")
     def series(run_id: str, start_ms: float = 0, end_ms: float | None = None):
         if not math.isfinite(start_ms) or (
             end_ms is not None and not math.isfinite(end_ms)
@@ -210,11 +212,11 @@ def create_app(data_dir=None):
             else run.series()
         )
 
-    @app.get("/api/runs/{run_id}/npz/chunks")
+    @application.get("/api/runs/{run_id}/npz/chunks")
     def npz_chunks(run_id: str):
         return store.chunks(run_id)
 
-    @app.post("/api/runs/{run_id}/npz/retry")
+    @application.post("/api/runs/{run_id}/npz/retry")
     async def npz_retry(run_id: str):
         archive = store.archive_for(run_id)
         if not archive:
@@ -222,18 +224,18 @@ def create_app(data_dir=None):
         archive.retry()
         return archive.status()
 
-    @app.post("/api/runs/{run_id}/npz/export")
+    @application.post("/api/runs/{run_id}/npz/export")
     def npz_export(run_id: str):
         try:
             return store.request_export(run_id)
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
 
-    @app.get("/api/exports/{job_id}")
+    @application.get("/api/exports/{job_id}")
     def export_status(job_id: str):
         return store.export_status(job_id)
 
-    @app.get("/api/exports/{job_id}/download")
+    @application.get("/api/exports/{job_id}/download")
     def export_download(job_id: str):
         job = store.export_status(job_id)
         if job["state"] != "ready":
@@ -244,20 +246,20 @@ def create_app(data_dir=None):
             media_type="application/octet-stream",
         )
 
-    @app.get("/api/runs/{run_id}/frame")
+    @application.get("/api/runs/{run_id}/frame")
     def frame(run_id: str, t_ms: float = 0):
         if not math.isfinite(t_ms):
             raise HTTPException(422, "시각은 유한한 숫자여야 합니다.")
         return snapshot(store.get(run_id), t_ms)
 
-    @app.get("/api/runs/{run_id}/diagnostics")
+    @application.get("/api/runs/{run_id}/diagnostics")
     def diagnostics(run_id: str):
         return {
             "manifest": store.get(run_id).manifest(),
             "npz": store.npz_report(run_id),
         }
 
-    @app.post("/api/runs/{run_id}/npz")
+    @application.post("/api/runs/{run_id}/npz")
     async def npz(run_id: str, file: UploadFile = File(...)):
         store.get(run_id)
         data = await file.read(MAX_UPLOAD + 1)
@@ -276,7 +278,7 @@ def create_app(data_dir=None):
         ) as error:
             raise HTTPException(422, f"NPZ 검사 실패: {error}") from error
 
-    @app.get("/api/runs/{run_id}/inspection.json")
+    @application.get("/api/runs/{run_id}/inspection.json")
     def report(run_id: str):
         return JSONResponse(
             {
@@ -290,7 +292,7 @@ def create_app(data_dir=None):
             },
         )
 
-    @app.post("/api/runs/{run_id}/demo")
+    @application.post("/api/runs/{run_id}/demo")
     def toggle_demo(run_id: str, body: DemoRequest):
         run = store.get(run_id)
         if body.enabled:
@@ -303,7 +305,7 @@ def create_app(data_dir=None):
             "notice": "시험 이벤트는 실제 고장이나 AI 탐지가 아닙니다.",
         }
 
-    @app.post("/api/runs/{run_id}/ai/connect")
+    @application.post("/api/runs/{run_id}/ai/connect")
     async def connect_ai(run_id: str, body: AIConnection):
         store.get(run_id)
         try:
@@ -313,28 +315,28 @@ def create_app(data_dir=None):
         demo.discard(run_id)
         return adapter.state(run_id)
 
-    @app.post("/api/runs/{run_id}/ai/disconnect")
+    @application.post("/api/runs/{run_id}/ai/disconnect")
     async def disconnect_ai(run_id: str):
         store.get(run_id)
         await adapter.disconnect(run_id)
         return adapter.state(run_id)
 
-    @app.get("/api/profiles")
+    @application.get("/api/profiles")
     def profiles_list():
         return store.profiles()
 
-    @app.get("/api/contracts/processed-frame")
+    @application.get("/api/contracts/processed-frame")
     def processed_contract():
         return ProcessedFrame.model_json_schema()
 
-    @app.post("/api/profiles")
+    @application.post("/api/profiles")
     def profile_register(body: InputProfile):
         try:
             return store.register_profile(body)
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
 
-    @app.post("/api/sessions")
+    @application.post("/api/sessions")
     async def session_create(body: SourceConfig):
         try:
             run = store.create_session(body)
@@ -346,7 +348,7 @@ def create_app(data_dir=None):
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
 
-    @app.post("/api/sessions/{run_id}/connect")
+    @application.post("/api/sessions/{run_id}/connect")
     async def session_connect(run_id: str):
         try:
             run = store.get(run_id)
@@ -357,7 +359,7 @@ def create_app(data_dir=None):
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
 
-    @app.post("/api/sessions/{run_id}/disconnect")
+    @application.post("/api/sessions/{run_id}/disconnect")
     async def session_disconnect(run_id: str):
         run = store.get(run_id)
         if not isinstance(run, SessionRun):
@@ -365,14 +367,14 @@ def create_app(data_dir=None):
         await sources.disconnect(run)
         return run.manifest()
 
-    @app.post("/api/sessions/{run_id}/finish")
+    @application.post("/api/sessions/{run_id}/finish")
     async def session_finish(run_id: str):
         if run_id not in store.active:
             raise HTTPException(422, "활성 세션이 아닙니다.")
         finished = await local_live.finalize(run_id)
         return finished.manifest()
 
-    @app.post("/api/sessions/{run_id}/frames")
+    @application.post("/api/sessions/{run_id}/frames")
     async def session_frame(run_id: str, body: dict):
         run = store.get(run_id)
         if not isinstance(run, SessionRun):
@@ -387,7 +389,7 @@ def create_app(data_dir=None):
             run.error = "저널 기록 실패: " + str(e)
             raise HTTPException(503, run.error) from e
 
-    @app.get("/api/runs/{run_id}/input-segment")
+    @application.get("/api/runs/{run_id}/input-segment")
     def input_segment(run_id: str, start_sequence: int, end_sequence: int):
         run = store.get(run_id)
         if not isinstance(run, SessionRun):
@@ -414,11 +416,11 @@ def create_app(data_dir=None):
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
 
-    @app.get("/api/analysis/providers")
+    @application.get("/api/analysis/providers")
     def provider_list():
         return store.providers()
 
-    @app.post("/api/analysis/providers")
+    @application.post("/api/analysis/providers")
     async def provider_register(body: Provider):
         try:
             for rid, pid in list(providers.tasks):
@@ -428,7 +430,7 @@ def create_app(data_dir=None):
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
 
-    @app.post("/api/runs/{run_id}/analysis/{provider_id}/connect")
+    @application.post("/api/runs/{run_id}/analysis/{provider_id}/connect")
     async def provider_connect(
         run_id: str, provider_id: str, body: AIConnection
     ):
@@ -438,12 +440,12 @@ def create_app(data_dir=None):
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
 
-    @app.post("/api/runs/{run_id}/analysis/{provider_id}/disconnect")
+    @application.post("/api/runs/{run_id}/analysis/{provider_id}/disconnect")
     async def provider_disconnect(run_id: str, provider_id: str):
         await providers.disconnect(run_id, provider_id)
         return {"connected": False}
 
-    @app.post("/api/runs/{run_id}/analysis-demo")
+    @application.post("/api/runs/{run_id}/analysis-demo")
     async def provider_demo(run_id: str, body: DemoRequest):
         try:
             if body.enabled:
@@ -459,7 +461,7 @@ def create_app(data_dir=None):
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
 
-    @app.get("/api/metrics")
+    @application.get("/api/metrics")
     def latency_metrics():
         def stats(values):
             ordered = sorted(values)
@@ -483,7 +485,7 @@ def create_app(data_dir=None):
             ),
         }
 
-    @app.websocket("/api/ws/runs/{run_id}")
+    @application.websocket("/api/ws/runs/{run_id}")
     async def replay(ws: WebSocket, run_id: str):
         origin = ws.headers.get("origin")
         ui_port = int(os.environ.get("ARION_PORT", "8765"))
@@ -679,11 +681,11 @@ def create_app(data_dir=None):
 
     dist = ROOT / "frontend" / "dist"
     if (dist / "assets").exists():
-        app.mount(
+        application.mount(
             "/assets", StaticFiles(directory=dist / "assets"), name="assets"
         )
 
-    @app.get("/")
+    @application.get("/")
     def index():
         if (dist / "index.html").exists():
             return FileResponse(
@@ -694,7 +696,7 @@ def create_app(data_dir=None):
             status_code=503,
         )
 
-    return app
+    return application
 
 
 app = create_app()

@@ -13,6 +13,8 @@ from pathlib import Path
 
 import numpy as np
 
+from pretrain import common
+
 from .common import (
     ROOT,
     STORE,
@@ -739,11 +741,10 @@ def prepare(selection_path, output):
     c = collector()
     # The reused extractor imports the preserved contract registry, not its
     # engine.
-    from .common import package_imports
 
     # RAW_FILES registry imports are CPU-only. Keep the active AI engine in
     # sys.modules.
-    package_imports()
+    common.package_imports()
     from . import archive as archive_module
 
     records, engines, run_manifests = [], {}, {}

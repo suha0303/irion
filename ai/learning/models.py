@@ -6,8 +6,10 @@ from dataclasses import asdict, dataclass
 import torch
 from torch import nn
 
-from .legacy_models import ModelSpec as ModelSpec
+from . import legacy_models
 from .legacy_models import make_model as make_legacy_model
+
+ModelSpec = legacy_models.ModelSpec
 
 STUDY_REVISION = "interlayer_norm_no_dropout"
 NORM_EPS = 1e-5

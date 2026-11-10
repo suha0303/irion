@@ -5,6 +5,8 @@ dataset.
 import shutil
 from pathlib import Path
 
+import x500_storage
+
 from pretrain import common, composition
 
 from .common import (
@@ -55,11 +57,13 @@ def inputs(source):
             or p == str(ROOT / "Data/generation/pretrain/worker.py")
         }
     )
-    from x500_storage import guard, task_root
 
     config = read(source / "config.json")
-    root = guard(
-        task_root(config) / "processed/pretrain" / source.name / "prepared",
+    root = x500_storage.guard(
+        x500_storage.task_root(config)
+        / "processed/pretrain"
+        / source.name
+        / "prepared",
         config.get("storage_policy"),
     )
     frozen = read(root / "frozen-manifest.json")
@@ -134,9 +138,8 @@ def create_partial(source, name):
     args = cli.parser().parse_args(
         ["init", "--name", name, "--mode", "collect"]
     )
-    from x500_storage import task_root
 
-    args.storage_root = task_root(original)
+    args.storage_root = x500_storage.task_root(original)
     args.storage_profile = original.get("storage_profile", "standard")
     for key in (
         "workers",

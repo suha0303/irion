@@ -4,6 +4,8 @@ path.
 
 from pathlib import Path
 
+import x500_storage
+
 from .common import HOME, identity, read, sha, verify, write
 
 
@@ -72,9 +74,8 @@ def create_recovery(source, name):
     args = cli.parser().parse_args(
         ["init", "--name", name, "--mode", "collect"]
     )
-    from x500_storage import task_root
 
-    args.storage_root = task_root(original)
+    args.storage_root = x500_storage.task_root(original)
     args.storage_profile = original.get("storage_profile", "standard")
     for key in (
         "workers",

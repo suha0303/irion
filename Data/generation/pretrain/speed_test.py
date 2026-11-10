@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
+import x500_storage
 
 from pretrain import speed_metrics
 
@@ -330,10 +331,9 @@ def review(task, output):
         != (task / "config.sha256").read_text(encoding="utf-8").strip()
     ):
         raise ValueError("Original configuration changed")
-    from x500_storage import task_root
 
     old = (
-        task_root(read(task / "config.json"))
+        x500_storage.task_root(read(task / "config.json"))
         / "speed-tests"
         / task.name
         / "results.json"
