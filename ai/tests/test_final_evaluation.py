@@ -16,6 +16,7 @@ import pytest
 from test_reassessment import Progress, fixture_evaluation
 
 import capstone_ai.training as training
+from capstone_ai import detection_protocol
 from execution.common import read, sha, write
 from execution.evaluate import (
     default_protocol_manifest,
@@ -70,12 +71,11 @@ def test_final_scoring_matches_development_math_without_fitting(
     tmp_path, monkeypatch
 ):
     cfg, inference, expected, truth = final_fixture(tmp_path)
-    import capstone_ai.detection_protocol as protocol
 
     def forbidden(*unused_args, **unused_kwargs):
         pytest.fail("Final evaluator cannot load weights or fit calibration")
 
-    monkeypatch.setattr(protocol, "fit_calibration", forbidden)
+    monkeypatch.setattr(detection_protocol, "fit_calibration", forbidden)
     monkeypatch.setattr(training.Predictor, "__init__", forbidden)
     before = {str(p): sha(p) for p in inference.rglob("*") if p.is_file()}
     output = tmp_path / "final"

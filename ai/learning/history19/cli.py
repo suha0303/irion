@@ -5,6 +5,8 @@ import json
 import tempfile
 from pathlib import Path
 
+from learning.history19 import pilot, preprocessing, short_cycle
+
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
@@ -65,13 +67,9 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
     if args.command == "check-short-input":
-        from .short_cycle import main as check_short
-
-        return check_short(args.request, args.output)
+        return short_cycle.main(args.request, args.output)
     if args.command == "check-input":
-        from .pilot import main as check_input
-
-        return check_input(args.request, args.output)
+        return pilot.main(args.request, args.output)
     elif args.command == "inspect-run":
         from .data import inspect_run
 
@@ -127,11 +125,9 @@ def main(argv=None):
                 )
             )
     elif args.command == "preprocess":
-        from .preprocessing import replay as process
-
         print(
             json.dumps(
-                process(
+                preprocessing.replay(
                     args.run,
                     args.output,
                     json.loads(args.config.read_text(encoding="utf-8")),

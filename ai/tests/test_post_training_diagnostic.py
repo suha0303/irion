@@ -9,8 +9,11 @@ from types import SimpleNamespace
 
 import pytest
 from test_post_training import config, fresh_config
+from test_post_training import numeric_policy as policy
 
 import execution.engine
+import learning.telemetry
+import learning.training
 import pipeline.runtime
 from execution.common import read, sha, write
 from learning import operator
@@ -23,18 +26,6 @@ def diagnostic_config():
         numerical_diagnostic_only=True,
         calibration_authorized=False,
         evaluation_authorized=False,
-    )
-
-
-def policy():
-    return dict(
-        schema="drone-ai.numeric-policy/1",
-        batch_size=256,
-        windows=257,
-        rtol=1e-5,
-        atol=1e-5,
-        require_same_batch_exact=True,
-        max_absolute_difference=1e-4,
     )
 
 
@@ -145,9 +136,6 @@ def test_diagnostic_evaluator_stops_before_runtime_or_truth(
 def test_diagnostic_worker_only_checks_normal_validation_and_seals(
     tmp_path, monkeypatch
 ):
-    import learning.telemetry
-    import learning.training
-
     cfg = diagnostic_config()
     upstream = tmp_path / "upstream"
     cfg.update(

@@ -15,6 +15,11 @@ from contextlib import ExitStack
 from functools import partial
 from pathlib import Path
 
+from pretrain import final16 as pretrain_final16
+from pretrain import integration_reuse as pretrain_integration_reuse
+from pretrain import main_quality, socket_cleanup
+from pretrain import pilot_flow as pretrain_pilot_flow
+
 from . import ai19, pilot45, pilot_bridge
 from .common import (
     HOME,
@@ -70,9 +75,7 @@ def authorization():
 
 def validate_config(cfg):
     if cfg.get("final16"):
-        from .final16 import validate_config as validate_final16
-
-        return validate_final16(cfg)
+        return pretrain_final16.validate_config(cfg)
     value = (
         pilot45.short_authorization()
         if cfg.get("short_cycle")
@@ -346,7 +349,6 @@ def check_raw(raw):
 
 def create(name):
     """New immutable source capsule; old raw/NPZ/task/attempts stay in place."""
-    from . import integration_reuse, pilot_flow
 
     auth = authorization()
     previous = pilot45.task_path(auth["previous_pilot"])
@@ -377,7 +379,7 @@ def create(name):
     integration = Path(
         read(parent / "ledger.json")["phases"]["integration"]["task"]
     )
-    integration_reuse.historical_termination(integration)
+    pretrain_integration_reuse.historical_termination(integration)
     integration_changes = compatible_sources(
         integration, parent / "accepted-integration.json"
     )
@@ -541,7 +543,7 @@ def create(name):
         task / "operator/state.json",
         dict(status="READY_NOT_STARTED", task=task.name, updated_utc=now()),
     )
-    flow = pilot_flow.init(
+    flow = pretrain_pilot_flow.init(
         name,
         integration,
         previous,
@@ -595,9 +597,7 @@ class Coordinator:
         )
         validate_config(self.cfg)
         if self.cfg.get("final16"):
-            from .final16 import validate_ledger
-
-            validate_ledger(task)
+            pretrain_final16.validate_ledger(task)
         self.events = queue.SimpleQueue()
         self.active = {}
         self.errors = []
@@ -667,14 +667,12 @@ class Coordinator:
 
             corrected = allowed(self.cfg, case, prior)
         if self.cfg.get("mode") == "main19":
-            from .main_quality import allowed
+            allowed = main_quality.allowed
 
             corrected = allowed(self.cfg, case, prior)
         maximum = case["attempts_max"]
         if self.cfg.get("mode") == "main19":
-            from .main_quality import attempts_max
-
-            maximum = attempts_max(self.cfg, case)
+            maximum = main_quality.attempts_max(self.cfg, case)
         number = len(entry["attempts"]) + 1
         if number > maximum or (
             prior
@@ -783,12 +781,11 @@ class Coordinator:
             check_retry = pilot45.retryable
             if self.cfg.get("mode") == "main19":
                 from .main_collection import retryable as main_retryable
-                from .main_quality import attempts_max
 
                 check_retry = partial(
                     main_retryable,
                     binding=self.cfg["producer"],
-                    attempts_max=attempts_max(self.cfg, case),
+                    attempts_max=main_quality.attempts_max(self.cfg, case),
                 )
             attempt.update(
                 result=result,
@@ -824,11 +821,10 @@ class Coordinator:
             raise pilot45.Blocked("Ambiguous logical attempt record")
         found[0].update(attempt)
         self.save()
-        from .socket_cleanup import release
 
         claim = job["request"].parent / "socket-claim.json"
         if claim.exists():
-            release(read(claim), service_unit(self.task))
+            socket_cleanup.release(read(claim), service_unit(self.task))
         pilot45.collector().check_instance_socket(job["instance"])
         check_ports([job["instance"]])
         if success and failure is not None:
@@ -1193,9 +1189,7 @@ def cohort_audit(task):
     rows = read(task / "manifest.json")["cases"]
     final16 = read(task / "config.json").get("final16") is True
     if final16:
-        from .final16 import validate_ledger
-
-        validate_ledger(task, complete=True)
+        pretrain_final16.validate_ledger(task, complete=True)
     total = 16 if final16 else 45
     if len(rows) != total or set(ledger["cases"]) != {
         c["case_id"] for c in rows
@@ -1304,9 +1298,7 @@ def worker(task):
             coordinator.save()
             write(task / "operator/state.json", coordinator.state)
             if cfg.get("final16"):
-                from .final16 import quality as final16_quality
-
-                quality = final16_quality(
+                quality = pretrain_final16.quality(
                     task, coordinator.ledger, coordinator.state
                 )
             else:
@@ -1364,10 +1356,8 @@ def worker(task):
 
 
 def flow_worker(flow):
-    from .pilot_flow import execute, preflight
-
     cfg = read(flow / "config.json")
-    preflight(flow)
+    pretrain_pilot_flow.preflight(flow)
     state = dict(
         status="RUNNING",
         stage="final16" if cfg.get("final16") else "parallel45",
@@ -1384,7 +1374,9 @@ def flow_worker(flow):
             f.write(now())
         write(flow / "operator/state.json", state)
         try:
-            result = execute(flow, Path(cfg["pilot_task"]), state)
+            result = pretrain_pilot_flow.execute(
+                flow, Path(cfg["pilot_task"]), state
+            )
             released()
             result.update(
                 status="PILOT45_COMPLETED_AND_RESOURCES_RELEASED",

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import numpy as np
 
+from pretrain import speed_metrics
+
 from .common import (
     ROOT,
     STORE,
@@ -347,13 +349,12 @@ def review(task, output):
             "Review output must be separate from original evidence"
         )
     output.mkdir(parents=True, exist_ok=False)
-    from .speed_metrics import INTERVALS
 
     write(
         output / "protocol.json",
         dict(
             protocol=PROTOCOL,
-            comparison_intervals=INTERVALS,
+            comparison_intervals=speed_metrics.INTERVALS,
             rationale=(
                 "Fixed steady mission window;60s context entirely within "
                 "mission. Selected before review computation; no error "

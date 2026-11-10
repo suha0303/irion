@@ -8,6 +8,10 @@ import math
 from collections import Counter
 from pathlib import Path
 
+import numpy as numpy_module
+
+from localflight import bin_reader, flight_events, profile_from_log
+
 from .catalog import digest
 from .timing import ClockAudit
 
@@ -45,9 +49,7 @@ def _number(value):
 
 
 def scan_bin(path):
-    from .bin_reader import open_bin
-
-    reader = open_bin(path)
+    reader = bin_reader.open_bin(path)
     counts, fields, clocks, ranges, params = Counter(), {}, {}, {}, {}
     messages = []
     parameter_values, instances, unit_sets, selectors = {}, {}, {}, {}
@@ -190,7 +192,7 @@ def scan_bin(path):
 
 
 def scan_ulog(path):
-    import numpy as np
+    np = numpy_module
     from pyulog import ULog
 
     # Parse only the relevant topic set; a file-size limit also bounds this
@@ -331,11 +333,7 @@ def inspect_log(path):
         ),
     )
 
-    from .profile_from_log import suggest
-
-    audit["profile_suggestion"] = suggest(audit)
+    audit["profile_suggestion"] = profile_from_log.suggest(audit)
     if suffix == ".bin":
-        from .flight_events import summarize
-
-        audit["flight_events"] = summarize(audit)
+        audit["flight_events"] = flight_events.summarize(audit)
     return audit

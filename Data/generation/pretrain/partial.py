@@ -5,6 +5,8 @@ dataset.
 import shutil
 from pathlib import Path
 
+from pretrain import common, composition
+
 from .common import (
     HOME,
     PACKAGE,
@@ -181,13 +183,11 @@ def finish_partial(runner):
         or len(completed) != runner.config["reused_run_count"]
     ):
         raise ValueError("Partial recovery identity changed")
-    from .common import RESOURCES
-    from .composition import validate_roles
 
-    validate_roles(
+    composition.validate_roles(
         frozen["runs"],
         read(source / "cases.json")["cases"],
-        read(RESOURCES / "protected-inventory.json")["runs"],
+        read(common.RESOURCES / "protected-inventory.json")["runs"],
         frozen["collection_profile"],
         case_sets=frozen.get("collection_set_case_ids"),
     )

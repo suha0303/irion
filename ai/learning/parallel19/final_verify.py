@@ -11,6 +11,9 @@ from pathlib import Path
 
 import numpy as np
 
+from capstone_ai import detection_protocol
+from learning.run_health19 import data
+
 from .control import read, sha, write
 
 
@@ -144,25 +147,24 @@ def summarize(rows, expected_runs=729):
         result["normal_episodes_per_hour"] = (
             sum(r["episodes"] for r in normal) / hours
         )
-        from capstone_ai.detection_protocol import grouped_rate_interval
 
-        result["normal_episode_rate_interval"] = grouped_rate_interval(
-            [
-                {
-                    "group": r["group"],
-                    "episodes": r["episodes"],
-                    "hours": r["scored_seconds"] / 3600,
-                }
-                for r in normal
-            ]
+        result["normal_episode_rate_interval"] = (
+            detection_protocol.grouped_rate_interval(
+                [
+                    {
+                        "group": r["group"],
+                        "episodes": r["episodes"],
+                        "hours": r["scored_seconds"] / 3600,
+                    }
+                    for r in normal
+                ]
+            )
         )
     return result
 
 
 def predict(m, entry, root, rows, scaler, out, phase):
     import torch
-
-    from learning.run_health19.data import physical_features
 
     from .fit import progress
 
@@ -203,7 +205,7 @@ def predict(m, entry, root, rows, scaler, out, phase):
             else:
                 normalized = [
                     (
-                        (physical_features(a["values"]) - scaler["x_mean"])
+                        (data.physical_features(a["values"]) - scaler["x_mean"])
                         / scaler["x_scale"]
                     ).astype("f4")
                     for a in arrays
@@ -261,13 +263,6 @@ def run(args):
     import torch
     from safetensors.torch import load_file
 
-    from capstone_ai.detection_protocol import (
-        event_result,
-        fit_calibration,
-        point_metrics,
-        score_sequence,
-    )
-    from learning.run_health19.data import Run
     from learning.run_health19.scoring import Calibration
 
     from .fit import backend, model, runtime
@@ -342,7 +337,7 @@ def run(args):
             )
             scale = scaler["y_scale"].copy()
             scale[3] *= 4
-            calibrated = fit_calibration(
+            calibrated = detection_protocol.fit_calibration(
                 concat(validation, v, "residual"),
                 concat(calibration, c, "residual"),
                 ids,
@@ -357,7 +352,7 @@ def run(args):
                 result = []
                 for row in rows:
                     with np.load(root / row["path"], allow_pickle=False) as a:
-                        flight_run = Run(
+                        flight_run = data.Run(
                             row["run_id"],
                             row["role"],
                             tuple(row["lineage"]),
@@ -417,7 +412,7 @@ def run(args):
                 ],
                 axis=1,
             )
-            decisions = score_sequence(
+            decisions = detection_protocol.score_sequence(
                 scores,
                 np.repeat(row["run_id"], len(scores)),
                 r["segment_id"],
@@ -431,7 +426,7 @@ def run(args):
                 )
             truth = events(row)
             if truth:
-                record["event"] = event_result(
+                record["event"] = detection_protocol.event_result(
                     truth[0], decisions, row["mission_interval"]["start_us"]
                 )
             record.update(
@@ -443,7 +438,7 @@ def run(args):
                     - row["mission_interval"]["start_us"]
                 )
                 / 1e6,
-                point_metrics=point_metrics(
+                point_metrics=detection_protocol.point_metrics(
                     truth, decisions, row["mission_interval"]["start_us"]
                 ),
                 rmse_physical=np.sqrt(

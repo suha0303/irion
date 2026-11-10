@@ -7,6 +7,8 @@ import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
+from pretrain import collection, streaming
+
 from .common import write
 
 
@@ -38,9 +40,6 @@ def processing_runner(runner):
 
 
 def collect_overlapping(runner, pipeline, planned, groups):
-    from .collection import IncompleteCollection
-    from .streaming import fragment_freeze
-
     cpu = processing_runner(runner)
     pipeline.r = cpu
     stop = runner.task / "operator/processing-stop.json"
@@ -61,7 +60,7 @@ def collect_overlapping(runner, pipeline, planned, groups):
             )
         try:
             cpu.begin(label + "-freeze", total=count, workers=1)
-            output, rows = fragment_freeze(cpu, folder, approved)
+            output, rows = streaming.fragment_freeze(cpu, folder, approved)
             cpu.finish(
                 label + "-freeze",
                 dict(verified_runs=len(rows), whole_dataset_admitted=False),
@@ -121,7 +120,7 @@ def collect_overlapping(runner, pipeline, planned, groups):
                         cases,
                         label,
                     )
-                except IncompleteCollection:
+                except collection.IncompleteCollection:
                     pass
                 folder = runner.task / label
                 pending.append(

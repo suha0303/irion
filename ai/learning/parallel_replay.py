@@ -19,6 +19,10 @@ from concurrent.futures import (
 )
 from pathlib import Path
 
+import numpy as numpy_module
+
+from capstone_ai import source as capstone_ai_source
+from capstone_ai import training
 from capstone_ai.detection_replay import (
     prediction_stream,
     prepare_replay,
@@ -26,6 +30,8 @@ from capstone_ai.detection_replay import (
     replay_prepared,
 )
 from capstone_ai.source import read_json
+from execution import common
+from pipeline import pipeline
 
 
 def read_development(canonical, bundle):
@@ -59,9 +65,7 @@ def finish_development(
     CUDA.
     """
     if not prepared["airborne"]:
-        from pipeline.pipeline import seal_development
-
-        return seal_development(
+        return pipeline.seal_development(
             Path(canonical),
             Path(bundle),
             calibration,
@@ -354,7 +358,6 @@ def semantic_replay(path):
         for k, v in read_json(path / "summary.json").items()
         if "compute_seconds" not in k
     }
-    from capstone_ai.source import sha
 
     return dict(
         forecasts=hashlib.sha256(
@@ -365,7 +368,7 @@ def semantic_replay(path):
                 allow_nan=False,
             ).encode()
         ).hexdigest(),
-        decisions=sha(path / "decisions.jsonl"),
+        decisions=capstone_ai_source.sha(path / "decisions.jsonl"),
         summary=hashlib.sha256(
             json.dumps(
                 summary, sort_keys=True, separators=(",", ":"), allow_nan=False
@@ -386,12 +389,7 @@ def benchmark_workers(upstream, out, cfg, progress):
     evaluation.
     """
 
-    import numpy as np
-
-    from capstone_ai.source import sha
-    from capstone_ai.training import Predictor
-    from execution.common import write
-    from pipeline.pipeline import seal_development
+    np = numpy_module
 
     plan = cfg["parallel_replay_benchmark"]
     validate_benchmark_plan(plan)
@@ -415,7 +413,10 @@ def benchmark_workers(upstream, out, cfg, progress):
         progress.check()
         shutil.copyfile(source / name, template / name)
         key = "dataset/canonical/" + plan["run_id"] + "/" + name
-        if sha(template / name) != cfg["evaluation_input_files"][key]:
+        if (
+            capstone_ai_source.sha(template / name)
+            != cfg["evaluation_input_files"][key]
+        ):
             raise ValueError("Benchmark copied input hash differs")
     dataset = work / "dataset"
     rows = [{"run_id": f"normal-{i}"} for i in range(plan["measured_runs"])]
@@ -426,7 +427,7 @@ def benchmark_workers(upstream, out, cfg, progress):
             # Link only the new owned copies, never the preserved source files.
             os.link(template / name, target / name)
     bundle = Path(out) / "models" / plan["model"]
-    predictor = Predictor(bundle, device="cuda")
+    predictor = training.Predictor(bundle, device="cuda")
     calibration = dict(
         error_scale_physical=np.ones((10, 4)).tolist(), high=[1, 1]
     )
@@ -446,7 +447,7 @@ def benchmark_workers(upstream, out, cfg, progress):
             "performance."
         ),
     )
-    write(root / "summary.json", evidence)
+    common.write(root / "summary.json", evidence)
     reference = work / "serial"
     progress.update(
         stage="parallel_reference",
@@ -460,7 +461,7 @@ def benchmark_workers(upstream, out, cfg, progress):
     for index, row in enumerate(rows):
         progress.check()
         target = reference / row["run_id"]
-        seal_development(
+        pipeline.seal_development(
             dataset / "canonical" / row["run_id"],
             bundle,
             calibration,
@@ -526,7 +527,7 @@ def benchmark_workers(upstream, out, cfg, progress):
             passed=True,
         )
         evidence["candidates"].append(candidate)
-        write(root / "summary.json", evidence)
+        common.write(root / "summary.json", evidence)
     selected = min(evidence["candidates"], key=lambda c: c["mean_seconds"])[
         "workers"
     ]
@@ -538,11 +539,11 @@ def benchmark_workers(upstream, out, cfg, progress):
         fresh_full_calibration_started=False,
     )
     shutil.copytree(reference / rows[0]["run_id"], root / "reference-run")
-    write(root / "summary.json", evidence)
+    common.write(root / "summary.json", evidence)
     # Keep one complete reference plus all comparison digests and timings.
     # Failed runs never reach this success-only cleanup.
     shutil.rmtree(work)
-    write(Path(out) / "parallel-selection.json", evidence)
+    common.write(Path(out) / "parallel-selection.json", evidence)
     progress.update(
         stage="parallel_selection_complete",
         selected_cpu_workers=selected,

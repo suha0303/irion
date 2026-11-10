@@ -9,6 +9,8 @@ from pathlib import Path
 
 from x500_storage import capture
 
+from pretrain import final16, integration_reuse
+
 from . import native_flight, pilot45, pilot_bridge
 from .common import (
     HOME,
@@ -105,9 +107,7 @@ def preflight(task):
         raise ValueError("Owned finite flow required")
     verify(cfg["source_sha256"])
     if cfg.get("final16"):
-        from .final16 import validate_config
-
-        validate_config(cfg)
+        final16.validate_config(cfg)
     else:
         if cfg.get("short_cycle"):
             pilot45.short_authorization()
@@ -435,8 +435,6 @@ def worker(task):
             write(task / "ledger.json", ledger)
             acceptance = None
             if cfg.get("reuse_integration"):
-                from .integration_reuse import validate
-
                 acceptance = task / "accepted-integration.json"
                 if not acceptance.exists():
                     argv = [
@@ -460,7 +458,7 @@ def worker(task):
                             timeout=1800,
                             check=True,
                         )
-                proof = validate(integration, acceptance)
+                proof = integration_reuse.validate(integration, acceptance)
                 first = dict(
                     task=str(integration),
                     quality=proof["quality"],

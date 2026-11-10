@@ -8,6 +8,9 @@ import json
 import os
 from pathlib import Path
 
+from pretrain import pilot_bridge as pretrain_pilot_bridge
+from pretrain import pilot_parallel as pretrain_pilot_parallel
+
 from . import ai19, pilot19, pilot45
 from .common import HOME, ROOT, now, read, sha, verify, write
 
@@ -171,9 +174,8 @@ def context(previous, acceptance):
         )
     ledger = physical_projection(previous, value, recorded)
     pilot45.validate_manifest(manifest)
-    from .pilot_parallel import closed_previous
 
-    closed_previous(previous)
+    pretrain_pilot_parallel.closed_previous(previous)
     ai19.ai_modules()
     from learning.admission19 import check_producer
 
@@ -478,13 +480,12 @@ def prepare(name, previous, acceptance, handoff):
     """Build and statically seal a new task; no service/native/model
     invocation.
     """
-    from . import pilot_bridge, pilot_parallel
 
     if not pilot45.re.fullmatch(r"[A-Za-z0-9_-]{1,60}", name):
         raise pilot45.Blocked("Safe new continuation name required")
     previous = pilot45.task_path(previous)
     resume = context(previous, acceptance)
-    spec = pilot_bridge.dependencies(handoff)
+    spec = pretrain_pilot_bridge.dependencies(handoff)
     cfg, manifest, old = (
         read(previous / n)
         for n in ("config.json", "manifest.json", "ledger.json")
@@ -561,7 +562,7 @@ def prepare(name, previous, acceptance, handoff):
                     )
                 )
         elif cid in resume["accepted_cases"]:
-            pilot_parallel.check_raw(entry["run"])
+            pretrain_pilot_parallel.check_raw(entry["run"])
             verify(entry["files"])
             entry.setdefault("inherited_from", str(previous))
             entry.setdefault(
@@ -647,5 +648,5 @@ def prepare(name, previous, acceptance, handoff):
         task / "operator/state.json",
         dict(status="DRAFT_NOT_STARTED", task=task.name, updated_utc=now()),
     )
-    flow = pilot_parallel.prepare_short(task, handoff)
+    flow = pretrain_pilot_parallel.prepare_short(task, handoff)
     return flow, task

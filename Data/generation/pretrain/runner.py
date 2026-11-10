@@ -12,6 +12,13 @@ import time
 from collections import deque
 from pathlib import Path
 
+import pretrain.balanced as pretrain_balanced_module
+import pretrain.capsule_recovery as pretrain_capsule_recovery_module
+import pretrain.final_dataset as pretrain_final_dataset_module
+import pretrain.merge as pretrain_merge_module
+import pretrain.streaming as pretrain_streaming_module
+from pretrain import audit_recovery, collection, partial, recovery
+
 from .common import (
     ADMISSION,
     CPU_WORKER_BYTES,
@@ -264,7 +271,10 @@ class Runner:
                     if process.poll() is None:
                         process.kill()
             while len(active) < workers and not exhausted and not failure:
-                row = pending.popleft() if pending else None
+                if not pending:
+                    exhausted = True
+                    break
+                row = pending.popleft()
                 if row is None:
                     exhausted = True
                     break
@@ -822,7 +832,6 @@ class Runner:
             "recover_capsules",
         }:
             raise ValueError("Recollection forbidden in preprocessing recovery")
-        from .collection import plan, run
 
         self.begin(label, workers=count, total=len(rows))
         # Long-run16 admission uses actual attempt07 8-lane peak, not a
@@ -852,9 +861,11 @@ class Runner:
             if self.config["mode"] == "test"
             else self.config["export_workers"]
         )
-        folder = plan(self.task, phase, count, rows, label, exporters)
+        folder = collection.plan(
+            self.task, phase, count, rows, label, exporters
+        )
         self.update(collection_ledger=str(folder / "execution/ledger.json"))
-        result = run(folder)
+        result = collection.run(folder)
         intervals = {}
         for key in ("flight", "verification", "archive"):
             intervals[key] = overlap(
@@ -886,7 +897,6 @@ class Runner:
 
             run(self)
             return
-        from .collection import freeze_benchmark
 
         outcomes = []
         for count in self.config["levels"]:
@@ -906,7 +916,7 @@ class Runner:
                     for i in range(max(3, count))
                 ]
                 if self.config.get("collection_profile") == "diverse104":
-                    from .collection import cases
+                    cases = collection.cases
 
                     templates = [
                         c
@@ -924,7 +934,7 @@ class Runner:
                             row["scenario"], row["seed"]
                         )
                 elif self.config.get("collection_profile") == "balanced300":
-                    from .balanced import cases
+                    cases = pretrain_balanced_module.cases
 
                     templates = [
                         c
@@ -944,7 +954,7 @@ class Runner:
                 folder = self.flight(
                     "benchmark", count, rows, f"flight-test-{count}"
                 )
-                frozen = freeze_benchmark(folder)
+                frozen = collection.freeze_benchmark(folder)
                 root = self.prepare(frozen, f"test-{count}", count, full=False)
                 batches = [
                     r
@@ -1021,32 +1031,26 @@ class Runner:
         if self.config["mode"] == "test":
             self.benchmark()
         elif self.config["mode"] == "merge_prepared":
-            from .merge import run
+            run = pretrain_merge_module.run
 
             run(self)
         elif self.config["mode"] == "recover_capsules":
-            from .capsule_recovery import run
+            run = pretrain_capsule_recovery_module.run
 
             run(self)
         elif self.config["mode"] == "resume_preprocess":
-            from .recovery import validated_collections
-
-            folders = validated_collections(
+            folders = recovery.validated_collections(
                 Path(self.config["resume_source_task"])
             )
             if [str(p) for p in folders] != self.config["resume_collections"]:
                 raise ValueError("Recovery input collection list changed")
             self.prepare_collections(folders)
         elif self.config["mode"] == "finish_preprocess":
-            from .partial import finish_partial
-
-            finish_partial(self)
+            partial.finish_partial(self)
         elif self.config["mode"] == "finish_audit":
-            from .audit_recovery import finish_audit
-
-            finish_audit(self)
+            audit_recovery.finish_audit(self)
         elif self.config.get("collection_profile") == "final324":
-            from .final_dataset import run
+            run = pretrain_final_dataset_module.run
 
             run(self)
         else:
@@ -1093,7 +1097,7 @@ class Runner:
                         "endurance", count, rows, "optional-endurance-gate"
                     )
                 if self.config.get("storage_profile") == "stream_compact":
-                    from .streaming import run
+                    run = pretrain_streaming_module.run
 
                     run(self)
                 else:
@@ -1117,8 +1121,6 @@ class Runner:
         )
 
     def collection_sets(self):
-        from .collection import IncompleteCollection, cases
-
         sets = self.config.get("collection_sets", 1)
         folders = []
         incomplete = []
@@ -1136,7 +1138,7 @@ class Runner:
             rows = (
                 planned[index]
                 if planned is not None
-                else cases(
+                else collection.cases(
                     self.config["seed_base"]
                     + seed_stride(
                         self.config.get("collection_profile", "legacy50")
@@ -1149,7 +1151,7 @@ class Runner:
                 folder = self.flight(
                     "collection", self.config["flight_workers"], rows, label
                 )
-            except IncompleteCollection as exc:
+            except collection.IncompleteCollection as exc:
                 incomplete.append(str(exc))
                 self.update(incomplete_collections=incomplete)
                 continue
@@ -1175,8 +1177,6 @@ class Runner:
         self.prepare_collections(folders)
 
     def prepare_collections(self, folders):
-        from .collection import combine_frozen, freeze_collection
-
         parts = []
         sets = len(folders)
         for index, folder in enumerate(folders):
@@ -1191,7 +1191,7 @@ class Runner:
                 if self.config["mode"] == "resume_preprocess"
                 else folder / "freeze"
             )
-            frozen = freeze_collection(
+            frozen = collection.freeze_collection(
                 self.task,
                 folder,
                 output=output,
@@ -1200,7 +1200,7 @@ class Runner:
             self.finish(stage, dict(passed=True))
             parts.append((output, frozen))
         self.begin("combine", workers=1)
-        frozen = combine_frozen(self.task, parts)
+        frozen = collection.combine_frozen(self.task, parts)
         self.finish("combine", dict(passed=True, completed=len(frozen["runs"])))
         root = self.prepare(
             frozen,

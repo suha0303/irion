@@ -24,6 +24,47 @@ from learning.history19.training import Batches, backend, run_fit
 from learning.optimization import policy_for
 
 
+@pytest.mark.parametrize(
+    "module_name",
+    [
+        "learning.history19.pilot_connector",
+        "learning.history19.final16",
+        "learning.history19.short_cycle",
+        "learning.history19.cli",
+        "learning.run_health19.cli",
+    ],
+)
+def test_connectors_import_fresh_without_training_runtime(module_name):
+    """Pytest's shared module cache must not hide connector import cycles."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-B",
+            "-c",
+            "import importlib, sys; importlib.import_module(sys.argv[1]); "
+            "assert 'torch' not in sys.modules",
+            module_name,
+        ],
+        env={
+            **os.environ,
+            "PYTHONPATH": os.pathsep.join(
+                str(ROOT / path)
+                for path in (
+                    "ai",
+                    "ai/src",
+                    "Data/generation",
+                    "simulation/sim/src",
+                )
+            ),
+        },
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def fixture_dataset(path):
     path.mkdir()
     rng = np.random.default_rng(0)

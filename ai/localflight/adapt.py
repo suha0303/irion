@@ -10,6 +10,7 @@ import torch
 from safetensors.torch import load_file, save_file
 
 from capstone_ai.training import loss as objective
+from learning.run_health19 import models
 
 from .catalog import Catalog, digest
 from .prepared import distinct_flights, load, segment_ranges, windows
@@ -34,11 +35,9 @@ def health_segments(flight, scaler):
 
 
 def health_objective(model, x):
-    from learning.run_health19.models import normal_loss
-
     values = torch.from_numpy(x[None])
     lengths = torch.tensor([len(x)], dtype=torch.int64)
-    return normal_loss(model(values, lengths), values[:, :, 17], lengths)
+    return models.normal_loss(model(values, lengths), values[:, :, 17], lengths)
 
 
 def fit(

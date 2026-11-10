@@ -11,6 +11,8 @@ import numpy as np
 import torch
 from safetensors.torch import load_file, save_file
 
+from learning import models
+
 from .mapping import FEATURES, TARGETS
 from .models import device_for, make_model
 from .source import dump, read_json, sha
@@ -324,13 +326,10 @@ class Predictor:
                 "explicit_dropout_v1",
                 "interlayer_norm_no_dropout",
             }:
-                from learning.models import ModelSpec, StudySpec
-                from learning.models import make_model as make_next_model
-
                 spec_class = (
-                    ModelSpec
+                    models.ModelSpec
                     if revision == "explicit_dropout_v1"
-                    else StudySpec
+                    else models.StudySpec
                 )
                 spec = spec_class(
                     **read_json(self.folder / "model-spec.json")
@@ -340,7 +339,7 @@ class Predictor:
                     or spec.hidden != self.metadata["hidden"]
                 ):
                     raise ValueError("Versioned model metadata mismatch")
-                self.model = make_next_model(spec).to(self.device)
+                self.model = models.make_model(spec).to(self.device)
             elif revision is None:
                 self.model = make_model(self.name, self.metadata["hidden"]).to(
                     self.device

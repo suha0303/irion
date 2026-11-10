@@ -8,6 +8,8 @@ from collections import deque
 from pathlib import Path
 from typing import Any
 
+from capstone_ai import mapping as capstone_ai_mapping
+
 
 def read_json(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
@@ -231,8 +233,6 @@ class DirectoryTail:
 
 
 def resolve_profile(path):
-    from .mapping import BINDINGS
-
     profile = read_json(path)
     if (
         profile["schema"] != "drone.source.profile/2.0"
@@ -250,7 +250,10 @@ def resolve_profile(path):
         if profile[key] != value:
             raise ValueError("unsupported source option: " + key)
     mapping = read_json(profile["mapping_profile"])
-    expected = {k: {"topic": t, "units": u} for k, (t, u) in BINDINGS.items()}
+    expected = {
+        k: {"topic": t, "units": u}
+        for k, (t, u) in capstone_ai_mapping.BINDINGS.items()
+    }
     if mapping["roles"] != expected:
         raise ValueError("mapping profile differs from implemented PX4 mapping")
     return Path(profile["run_directory"]).resolve()

@@ -13,6 +13,9 @@ import tarfile
 import time
 from pathlib import Path
 
+import x500_storage
+from execution import prepare
+
 from .common import (
     HANDOFF,
     HOME,
@@ -441,9 +444,8 @@ def _worker_locked(task, action):
             raise ValueError("Task/plan binding changed")
         meta = read(task / "remote.json")
         output = Path(meta["output"])
-        from x500_storage import guard
 
-        guard(output)
+        x500_storage.guard(output)
         if action == "run":
             with (task / "started.claim").open("x", encoding="utf-8") as f:
                 f.write("No automatic resubmission\n")
@@ -457,9 +459,8 @@ def _worker_locked(task, action):
                 output.mkdir(parents=True, exist_ok=False)
             if shutil.disk_usage(output).free < 50_000_000_000:
                 raise ValueError("Selected output free disk below50GB")
-            from .prepare import admission, stage
 
-            admission(Path(cfg["handoff"]))
+            prepare.admission(Path(cfg["handoff"]))
             if meta.get("prepared"):
                 if read(output / "input/config.json") != cfg:
                     raise ValueError("Prepared configuration changed")
@@ -474,7 +475,7 @@ def _worker_locked(task, action):
                 if ready["inventory_sha256"] != meta["inventory_sha256"]:
                     raise ValueError("Remote prepared inventory changed")
             else:
-                stage(cfg, output / "input", progress)
+                prepare.stage(cfg, output / "input", progress)
                 upload(meta["root"], output / "input", progress)
             with (output / "execution.claim").open(
                 "x", encoding="utf-8"

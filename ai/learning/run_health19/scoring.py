@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from learning.run_health19 import data
+
 from .models import BLOCK
 
 
@@ -65,9 +67,8 @@ class Calibration:
     def fit(cls, validation, calibration, *, alpha=0.05):
         # Records include a Run for role/lineage checks; its metadata never
         # enters forward.
-        from .data import validate_splits
 
-        validate_splits([r for r, _ in [*validation, *calibration]])
+        data.validate_splits([r for r, _ in [*validation, *calibration]])
         if not validation or not calibration or not 0 < alpha < 1:
             raise ValueError(
                 "Independent normal validation and calibration required"

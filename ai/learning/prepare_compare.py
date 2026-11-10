@@ -11,6 +11,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from console import profile as console_profile
 from execution.common import (
     ROOT,
     Progress,
@@ -22,6 +23,7 @@ from execution.common import (
     verify,
     write,
 )
+from learning import operator
 
 from . import comparison
 
@@ -241,9 +243,7 @@ def reuse_failed_upstream(source, bundle, receipt, root, remote):
 
 
 def prepare(args):
-    from console.profile import load
-
-    profile = load(args.profile)
+    profile = console_profile.load(args.profile)
     training_only = getattr(args, "training_only", False)
     normalization_study = getattr(args, "normalization_study", False)
     if normalization_study and not training_only:
@@ -724,9 +724,7 @@ def main():
     elif args.action == "start":
         start(args.root.resolve())
     else:
-        from .operator import display
-
-        display(args.root.resolve(), args.once)
+        operator.display(args.root.resolve(), args.once)
 
 
 if __name__ == "__main__":

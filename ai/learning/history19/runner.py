@@ -9,12 +9,16 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import safetensors.torch as safetensors_torch_module
 import torch
 
+from execution import common, prepare
 from execution.common import ROOT, Progress, read, sha, write
+from learning import comparison
 from learning.diagnostic import same
 from learning.optimization import CANDIDATES, POLICY, policy_for
 from learning.study import PROBE
+from pipeline import runtime
 
 from .benchmark import measure
 from .data import load
@@ -321,29 +325,27 @@ def fit(manifest, out, *, approved=False):
         if os.environ.get("CUBLAS_WORKSPACE_CONFIG", ":4096:8") != ":4096:8":
             raise ValueError("Fixed CUBLAS workspace required")
         os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
-        from pipeline.runtime import check
 
-        check(ROOT / "ai", out, "fit", job_prefix="drone-ai-")
-        from execution.common import child, memory_snapshot
-        from execution.prepare import npz_headers
-        from learning.comparison import memory_plan
+        runtime.check(ROOT / "ai", out, "fit", job_prefix="drone-ai-")
 
         manifest_path = Path(manifest).absolute()
         membership = read(manifest_path)
         headers = {
-            role: npz_headers(
-                child(manifest_path.parent, membership["files"][role]["path"])
+            role: prepare.npz_headers(
+                common.child(
+                    manifest_path.parent, membership["files"][role]["path"]
+                )
             )
             for role in ("normal_train", "normal_validation")
         }
-        headers["scaler_frames"] = npz_headers(
-            child(
+        headers["scaler_frames"] = prepare.npz_headers(
+            common.child(
                 manifest_path.parent,
                 membership["files"]["normal_train_frames"]["path"],
             )
         )
-        plan = memory_plan(headers)
-        available = memory_snapshot()["available_bytes"]
+        plan = comparison.memory_plan(headers)
+        available = common.memory_snapshot()["available_bytes"]
         if plan["estimated_host_peak_bytes"] + 1024**3 > min(
             64 * 1024**3, available
         ):
@@ -421,7 +423,7 @@ def fit(manifest, out, *, approved=False):
                 != choice["initial_state_sha256"]
             ):
                 raise ValueError("Main model did not start fresh")
-            from safetensors.torch import load_file
+            load_file = safetensors_torch_module.load_file
 
             reference = make_model(spec(entry)).to("cuda").eval()
             exported = make_model(spec(entry)).to("cuda").eval()

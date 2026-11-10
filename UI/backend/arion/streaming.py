@@ -15,6 +15,8 @@ from pathlib import Path
 from statistics import median
 from threading import RLock
 
+from arion import npz_archive
+
 from .contracts import (
     InputProfile,
     NormalizedInput,
@@ -342,9 +344,7 @@ class SessionRun:
                 and self.last_external_sequence is not None
                 and p.sequence <= self.last_external_sequence
             ):
-                from .npz_archive import journal_items
-
-                for _, _, item in journal_items(self.path):
+                for _, _, item in npz_archive.journal_items(self.path):
                     if item.get("input_identity") == identity:
                         known = (
                             item["input_sha256"],

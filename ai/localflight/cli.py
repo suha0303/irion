@@ -7,6 +7,9 @@ import json
 import sys
 from pathlib import Path
 
+from localflight import prepare as localflight_prepare
+from localflight import prepared
+
 from .catalog import DEFAULT_BUNDLE, Catalog
 from .logs import inspect_log
 from .profiles import list_profiles, save_profile
@@ -17,7 +20,6 @@ def execute(request):
     bundle = request.get("bundle", str(DEFAULT_BUNDLE))
     if action.startswith("calibration_"):
         from . import calibration
-        from .prepared import load
         from .registry import active_folder
 
         root = request["data_root"]
@@ -28,7 +30,7 @@ def execute(request):
                 root, request["id"], request.get("enabled", True)
             )
         if action == "calibration_fit":
-            metadata = load(request["manifests"][0], normal=True)[0]
+            metadata = prepared.load(request["manifests"][0], normal=True)[0]
             adapted = (
                 active_folder(
                     root,
@@ -76,9 +78,7 @@ def execute(request):
 
         return benchmark(bundle, repeats=request.get("repeats", 5))
     if action in {"prepare", "timeline"}:
-        from .prepare import prepare
-
-        return prepare(
+        return localflight_prepare.prepare(
             request["path"],
             request["profile"],
             request.get("output"),

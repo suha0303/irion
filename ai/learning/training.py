@@ -19,7 +19,9 @@ import torch
 from safetensors.torch import save_file
 
 from capstone_ai.training import loss, seed_all
+from execution import remote
 from execution.common import write
+from pipeline import runtime
 
 from .models import STUDY_REVISION, make_model
 from .optimization import WarmupCosine, make_optimizer, validate
@@ -226,7 +228,6 @@ def _run_fit(
     if device == "cuda":
         if not gpu_authorized:
             raise ValueError("Separate explicit GPU training approval required")
-        from pipeline.runtime import check
 
         if (
             progress is None
@@ -240,7 +241,7 @@ def _run_fit(
             )
         if runtime_stage not in {"fit", "benchmark"}:
             raise ValueError("Unknown CUDA purpose")
-        verified = check(
+        verified = runtime.check(
             Path(__file__).resolve().parents[1],
             folder,
             runtime_stage,
@@ -549,9 +550,8 @@ def project_lock(device):
     if device != "cuda":
         yield
         return
-    from execution.remote import REMOTE_LOCK
 
-    with REMOTE_LOCK.open("a", encoding="utf-8") as lock:
+    with remote.REMOTE_LOCK.open("a", encoding="utf-8") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         yield
 

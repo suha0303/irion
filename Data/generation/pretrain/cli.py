@@ -28,6 +28,15 @@ if __name__ == "__main__" and len(sys.argv) == 3 and sys.argv[1] == "_worker":
     )
     os.environ.update(environment(worker_config))
 
+from . import (
+    audit_recovery,
+    capsule_recovery,
+    collection,
+    final_dataset,
+    partial,
+    recovery,
+    runner,
+)
 from .common import (
     ADMISSION,
     CHOICES,
@@ -120,14 +129,16 @@ def render(task, tick=0):
     finished = state.get("finished")
     elapsed = (finished or time.time()) - state.get("started", time.time())
     total, done = state.get("total", 0), state.get("done", 0)
-    collection = None
+    collection_state = None
     ledger = state.get("collection_ledger")
     if ledger:
         data = load("pretrain_data_view", ROOT / "ai/x500_data.py")
-        collection = data.snapshot(Path(ledger).parent.parent / "plan.json")
+        collection_state = data.snapshot(
+            Path(ledger).parent.parent / "plan.json"
+        )
         total, done = (
-            collection["total"],
-            collection["archived"] + collection.get("failed", 0),
+            collection_state["total"],
+            collection_state["archived"] + collection_state.get("failed", 0),
         )
     percent = 100 * done / total if total else None
     complete = state["status"] in {
@@ -420,22 +431,23 @@ def render(task, tick=0):
         lines.append(
             "한도 위반 순간 수치: 이전 버전에서 저장하지 않아 미확인. 마지막 자원 기록과 다릅니다."
         )
-    if collection:
+    if collection_state:
         lines.append(
             (
-                f"수집   보관 {collection['archived']} / 실패 "
-                f"{collection.get('failed', 0)} / 전체 {collection['total']} · "
-                f"잔여 예상 {duration(collection.get('eta', {}).get('seconds'))}"
+                f"수집   보관 {collection_state['archived']} / 실패 "
+                f"{collection_state.get('failed', 0)} / 전체 "
+                f"{collection_state['total']} · 잔여 예상 "
+                f"{duration(collection_state.get('eta', {}).get('seconds'))}"
             )
         )
         failures = [
             w
-            for w in collection["workers"]
+            for w in collection_state["workers"]
             if w["status"] == "FAILED_PRESERVED"
         ]
         active_workers = [
             w
-            for w in collection["workers"]
+            for w in collection_state["workers"]
             if w["status"] != "FAILED_PRESERVED"
         ]
         lines.extend(grid(flight_cards(active_workers + failures, duration)))
@@ -444,13 +456,17 @@ def render(task, tick=0):
                 f"실패 증거 {len(failures)}건 · 최근: "
                 + str(failures[-1].get("error"))
             )
-        for reason in collection.get("reason", []):
+        for reason in collection_state.get("reason", []):
             lines.append("수집 중지: " + str(reason))
     cpu_cards = []
     # During flights keep the 8+8 flight grid; once drained, show CPU worker
     # detail.
     active_cpu = state.get("active", [])
-    if not collection and processing and processing.get("status") == "RUNNING":
+    if (
+        not collection_state
+        and processing
+        and processing.get("status") == "RUNNING"
+    ):
         active_cpu = processing.get("active", [])
     for index, active in enumerate(active_cpu):
         path = Path(active["status_file"])
@@ -726,10 +742,8 @@ def create(args):
         ),
     )
     if args.mode == "collect":
-        from .collection import cases
-
         planned = [
-            cases(
+            collection.cases(
                 args.seed_base + seed_stride(args.collection_profile) * i,
                 args.collection_profile,
             )["cases"]
@@ -748,9 +762,7 @@ def create(args):
             task / "planned-cases.json"
         )
         if final:
-            from .final_dataset import configure
-
-            configure(task, config, planned[0])
+            final_dataset.configure(task, config, planned[0])
     write(task / "config.json", config)
     (task / "config.sha256").write_text(
         sha(task / "config.json") + "\n", encoding="utf-8"
@@ -1156,11 +1168,11 @@ def parser():
     )
     capsules.add_argument("source", type=Path)
     capsules.add_argument("--name", required=True)
-    partial = sub.add_parser(
+    partial_parser = sub.add_parser(
         "finish-preprocess", help="실패1개만 처리 후 기존 성공 결과와 집계·검산"
     )
-    partial.add_argument("source", type=Path)
-    partial.add_argument("--name", required=True)
+    partial_parser.add_argument("source", type=Path)
+    partial_parser.add_argument("--name", required=True)
     audit = sub.add_parser(
         "finish-audit", help="실패1개 검산 후 기존 결과와 전체 검산"
     )
@@ -1307,24 +1319,20 @@ def main(argv=None):
         )
         start(task)
     elif args.action == "resume-preprocess":
-        from .recovery import create_recovery
+        create_recovery = recovery.create_recovery
 
         task = create_recovery(args.source, args.name)
         start(task)
     elif args.action == "recover-capsules":
-        from .capsule_recovery import create_recovery
+        create_recovery = capsule_recovery.create_recovery
 
         task = create_recovery(args.source, args.name)
         start(task)
     elif args.action == "finish-preprocess":
-        from .partial import create_partial
-
-        task = create_partial(args.source, args.name)
+        task = partial.create_partial(args.source, args.name)
         start(task)
     elif args.action == "finish-audit":
-        from .audit_recovery import create_audit_recovery
-
-        task = create_audit_recovery(args.source, args.name)
+        task = audit_recovery.create_audit_recovery(args.source, args.name)
         start(task)
     else:
         task = args.task or Path(read(HOME / "latest.json")["task"])
@@ -1338,7 +1346,7 @@ def main(argv=None):
             elif read(task / "config.json").get("mode") == "pilot45":
                 from .pilot45 import worker
             else:
-                from .runner import worker
+                worker = runner.worker
 
             worker(task)
 

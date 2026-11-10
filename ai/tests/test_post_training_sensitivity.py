@@ -5,24 +5,14 @@ from types import SimpleNamespace
 
 import pytest
 from test_post_training import fresh_config
+from test_post_training import sensitivity_policy as policy
 
 import execution.engine
+import learning.telemetry
+import learning.training
 import pipeline.runtime
 from execution.common import read, sha, write
 from learning import post_training as post
-
-
-def policy():
-    return dict(
-        schema="drone-ai.sensitivity-policy/1",
-        batch_size=256,
-        require_same_batch_exact=True,
-        max_scaled_abs=1e-4,
-        physical_max=[1e-5, 1e-5, 1e-5, 1e-4],
-        max_score_delta_over_high=0.01,
-        max_ewma_delta_over_high=0.01,
-        max_changed_alarm_states=0,
-    )
 
 
 def config():
@@ -149,9 +139,6 @@ def test_file_and_config_cannot_diverge_even_with_new_inventory(
 def test_worker_passes_one_frozen_gate_and_seals_only_after_success(
     tmp_path, monkeypatch, failed
 ):
-    import learning.telemetry
-    import learning.training
-
     cfg = config()
     cfg.update(
         upstream=str(tmp_path / "upstream"),

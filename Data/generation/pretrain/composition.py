@@ -2,6 +2,9 @@
 
 from collections import Counter
 
+import pretrain.final_dataset as pretrain_final_dataset_module
+from pretrain import balanced
+
 from .common import package_imports
 
 SIZES = {
@@ -35,9 +38,7 @@ def validation_subsets(cases, profile):
     if profile == "legacy50":
         return [cases]
     if profile == "balanced300":
-        from .balanced import validate
-
-        validate(cases)
+        balanced.validate(cases)
         normal = [c for c in cases if c["mission_seconds"] in (180, 900)]
         groups = {
             (role, scenario): sorted(
@@ -114,7 +115,7 @@ def validation_subsets(cases, profile):
 
 def validate_cases(cases, profile):
     if profile == "final324":
-        from .final_dataset import validate
+        validate = pretrain_final_dataset_module.validate
 
         validate(cases)
         return

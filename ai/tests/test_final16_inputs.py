@@ -63,7 +63,7 @@ def fixture_final_request(tmp_path, monkeypatch):
     refs["paired_policy"] = dict(path=str(policy_path), sha256=sha(policy_path))
     manifest = final16.expected_plan("final16-unit", fixture_only=True)
     put("pilot_manifest", manifest)
-    case, _ = manifest["cases"][:2]
+    case = manifest["cases"][0]
     normal = Path(old["case_origin"]["run"]["path"]).parent
     anomaly = normal.parent / "synthetic-0-anomaly"
     source = next(

@@ -13,6 +13,8 @@ import sys
 import time
 from pathlib import Path
 
+from pipeline import runtime
+
 from .common import (
     GPU_LOCK,
     Progress,
@@ -264,12 +266,11 @@ def worker(root, inventory_sha):
         config_check(cfg)
         with REMOTE_LOCK.open("a", encoding="utf-8") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            from pipeline.runtime import check
 
             progress.update(stage="resource_admission")
             # Existing DIS01/owner/TRES/Python/Torch/CUDA/GPU checks; no
             # CUDA_VISIBLE_DEVICES writes.
-            environment = check(
+            environment = runtime.check(
                 root / "ai", out, "train", job_prefix="drone-ai-"
             )
             available = memory_available()

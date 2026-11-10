@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 
+import learning.history19.pilot_connector as connector
 import pytest
 from test_pilot45 import init_fixture
 
@@ -383,7 +384,6 @@ def test_data_pair_uses_ai_projector_for_status_passed_native_report(
     # The native report intentionally has no boolean passed/AI metric keys.
     # Actual native validation is owned/tested by AI; this checks Data
     # delegation.
-    import learning.history19.pilot_connector as connector
 
     task = tmp_path / "task"
     normal, anomaly = tmp_path / "normal", tmp_path / "anomaly"

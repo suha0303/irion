@@ -19,6 +19,8 @@ from capstone_ai.detection_protocol import fit_calibration
 from capstone_ai.mapping import FEATURES, TARGETS
 from capstone_ai.models import make_model
 from capstone_ai.training import Predictor, flat, loss, seed_all
+from learning import replay_validation
+from learning import sensitivity as learning_sensitivity
 from pipeline.backend import backend_scope, check_model, trace_batch
 from pipeline.fit import batch
 from pipeline.pipeline import normalized_role, seal_development
@@ -428,7 +430,6 @@ def preflight_models(
     numerical
     check is retained. No calibration fit or development input is accessed here.
     """
-    from learning import replay_validation
 
     names = tuple(model_names)
     if (
@@ -709,9 +710,8 @@ def calibrate(
                     "calibration"
                 )
             )
-        from learning.sensitivity import run_sensitivity_gate
 
-        run_sensitivity_gate(
+        learning_sensitivity.run_sensitivity_gate(
             root,
             out,
             progress,

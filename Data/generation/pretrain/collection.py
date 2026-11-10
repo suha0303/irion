@@ -6,6 +6,8 @@ import importlib.util
 import json
 import sys
 
+from pretrain import balanced, common, composition, final_dataset
+
 from .common import (
     ADMISSION,
     COLLECTION_WAIT_BUDGETS,
@@ -38,24 +40,18 @@ def lanes(count):
 
 def cases(seed_base, profile="legacy50"):
     if profile == "final324":
-        from .final_dataset import DESIGN_REVISION
-        from .final_dataset import cases as final_cases
-
         return dict(
             schema="x500.finite-cases/2",
             revision="COLLECTION",
-            cases=final_cases(seed_base),
-            design_revision=DESIGN_REVISION,
+            cases=final_dataset.cases(seed_base),
+            design_revision=final_dataset.DESIGN_REVISION,
             collection_profile=profile,
             data_pool_id="collection/x500",
             dataset_purpose="locked_final_test",
         )
     if profile == "balanced300":
-        from .balanced import cases as design
-        from .composition import validate_cases
-
-        rows = design(seed_base)
-        validate_cases(rows, profile)
+        rows = balanced.cases(seed_base)
+        composition.validate_cases(rows, profile)
         return dict(
             schema="x500.finite-cases/2",
             revision="COLLECTION",
@@ -98,9 +94,8 @@ def cases(seed_base, profile="legacy50"):
             }:
                 row["normal_variation"] = sample(row["scenario"], row["seed"])
         record["normal_variation_revision"] = "healthy-envelope-paths-v1"
-    from .composition import validate_cases
 
-    validate_cases(record["cases"], profile)
+    composition.validate_cases(record["cases"], profile)
     record["collection_profile"] = profile
     record["data_pool_id"] = "collection/x500"
     return record
@@ -302,9 +297,7 @@ def run(folder):
             "Collection/gate failed; evidence retained: " + str(folder)
         )
     if gate and len(rows) >= collection_plan["concurrency"]:
-        from .common import overlap
-
-        observed = overlap(
+        observed = common.overlap(
             [
                 dict(
                     started=r["flight_started_monotonic"],
@@ -516,7 +509,6 @@ def combine_frozen(task, parts):
     """Join independently admitted sets before fitting one global train
     scaler.
     """
-    from .composition import validate_roles
 
     config = read(task / "config.json")
     if len(parts) != config.get("collection_sets", 1) or not parts:
@@ -553,7 +545,7 @@ def combine_frozen(task, parts):
                 cases_sha256=sha(output / "cases.json"),
             )
         )
-    validate_roles(
+    composition.validate_roles(
         rows,
         case_specs,
         read(RESOURCES / "protected-inventory.json")["runs"],

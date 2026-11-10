@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
+from execution import prepare
 from execution.common import child, read, sha
 
 SCHEMA = "drone-ai.sensitivity-selection/1"
@@ -175,7 +176,6 @@ def verify_selection_layout(plan, dataset_path):
     expressly does not establish feature quality; the allocated worker must hash
     the frozen inputs and validate the real normalized values before prediction.
     """
-    from execution.prepare import npz_headers
 
     dataset_path = Path(dataset_path)
     validate_plan(plan, child(dataset_path, "manifest.json"))
@@ -196,7 +196,7 @@ def verify_selection_layout(plan, dataset_path):
     required = {*_ARRAY_SHAPES, "run_id", "segment", "origin_us"}
     for role in sorted(NORMAL_ROLES):
         path = child(dataset_path, role + ".npz")
-        headers = npz_headers(path)
+        headers = prepare.npz_headers(path)
         if not required <= set(headers):
             raise ValueError("Missing normal-role NPZ headers: " + role)
         identity_header = headers["run_id"]

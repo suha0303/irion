@@ -18,6 +18,8 @@ from pathlib import Path
 import numpy as np
 
 from capstone_ai.mapping import FEATURES
+from localflight import calibration as localflight_calibration
+from localflight import run_summary
 
 from .analysis import analyze, load_runtime
 from .catalog import DEFAULT_BUNDLE, Catalog, digest, read_json
@@ -294,7 +296,6 @@ def completed(events, journal, output, request, origin, *, end_us=None):
     """Archive retained segments in bounded packages; analyze each without
     gap bridging.
     """
-    from .run_summary import aggregate
 
     end_us = (
         end_us
@@ -316,7 +317,7 @@ def completed(events, journal, output, request, origin, *, end_us=None):
             status="insufficient_data",
             message="11초 이상의 완전한 입력 구간이 없습니다.",
             analyses=[],
-            run_summary=aggregate(
+            run_summary=run_summary.aggregate(
                 [],
                 context=context,
                 spans=[],
@@ -398,7 +399,7 @@ def completed(events, journal, output, request, origin, *, end_us=None):
         timing=timing,
         source_sha256=source_hash,
         health_verdict=None,
-        run_summary=aggregate(
+        run_summary=run_summary.aggregate(
             [r["analysis"] for r in reports],
             context=context,
             spans=[
@@ -431,7 +432,6 @@ def arrived_decision(
     """Score only an arrived exact target within the same uninterrupted
     segment.
     """
-    from .calibration import decide, forecast_scores
 
     future = [p for p in pending if p["due"] > int(times[-1])]
     decision = None
@@ -448,10 +448,13 @@ def arrived_decision(
         observed = values[index, [4, 5, 6, 17]].copy()
         observed[3] /= cells
         scaled = (observed - scaler["y_mean"]) / scaler["y_scale"]
-        score = forecast_scores(
+        score = localflight_calibration.forecast_scores(
             scaled[None], np.array(prior["scaled"])[None], scaler
         )
-        decision = dict(decide(calibration, score), time_us=prior["due"])
+        decision = dict(
+            localflight_calibration.decide(calibration, score),
+            time_us=prior["due"],
+        )
     return future, decision
 
 
@@ -505,7 +508,6 @@ def run(request):
         request["post_adapted"] = str(post_adapted)
         state["post_adapted_sha256"] = post_adaptation["model_sha256"]
     state["adapted_sha256"] = adaptation["model_sha256"] if adaptation else None
-    from .calibration import active, binding
 
     metadata["live_input"] = dict(
         imu_message=request["imu_message"], imu_id=request["imu_id"]
@@ -514,8 +516,9 @@ def run(request):
         clock="receipt_monotonic", fast_max_age_ms=200, battery_max_age_ms=350
     )
     try:
-        calibration = active(
-            request["data_root"], binding(runtime, metadata, adaptation)
+        calibration = localflight_calibration.active(
+            request["data_root"],
+            localflight_calibration.binding(runtime, metadata, adaptation),
         )
         calibration_error = None
     except (ValueError, KeyError, OSError) as error:
@@ -583,17 +586,17 @@ def run(request):
                         recent, start, mapper.last_us + 1
                     )
                     spans = report["candidate_segments"]
-                    last = spans[-1] if spans else None
                     state["missing_features"] = [
                         name
                         for name, value in zip(FEATURES, values[-1])
                         if not np.isfinite(value)
                     ]
                     if (
-                        last
-                        and last["end_index"] == len(times)
-                        and last["frames"] >= 100
+                        spans
+                        and spans[-1]["end_index"] == len(times)
+                        and spans[-1]["frames"] >= 100
                     ):
+                        last = spans[-1]
                         x = values[-100:].copy()
                         x[:, 17] /= request["profile"]["series_cells"]
                         x[:, 18] /= request["profile"]["capacity_ah"]

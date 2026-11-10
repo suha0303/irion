@@ -9,6 +9,7 @@ from collections import Counter, deque
 from pathlib import Path
 from typing import Any
 
+from capstone_ai import source
 from capstone_ai.mapping import FEATURES, RATES, mapped
 from capstone_ai.mapping import validate_metadata as validate_source
 
@@ -333,8 +334,6 @@ def replay(run, out, config):
     reader.
     """
 
-    from capstone_ai.source import DirectoryTail, read_json, sha
-
     run, out = Path(run), Path(out)
     if any(p.is_symlink() for p in (run, *run.parents, out, *out.parents)):
         raise ValueError("Replay symlink input/output forbidden")
@@ -345,8 +344,10 @@ def replay(run, out, config):
             "Replay output must be separate from read-only raw source"
         )
     out.mkdir(parents=True, exist_ok=False)
-    engine = Preprocessor(read_json(run / "observations/metadata.json"), config)
-    reader = DirectoryTail(run, engine)
+    engine = Preprocessor(
+        source.read_json(run / "observations/metadata.json"), config
+    )
+    reader = source.DirectoryTail(run, engine)
     started = time.monotonic()
     while not reader.closed:
         if time.monotonic() - started > 7200:
@@ -363,7 +364,7 @@ def replay(run, out, config):
         with path.open("x", encoding="utf-8") as stream:
             for row in rows:
                 stream.write(json.dumps(row, allow_nan=False) + "\n")
-        inventory[path.name] = sha(path)
+        inventory[path.name] = source.sha(path)
     report = dict(
         feature_profile="common19_ctx0",
         context_features=0,

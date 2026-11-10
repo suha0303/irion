@@ -8,6 +8,8 @@ from urllib.parse import urlparse
 
 import httpx
 
+from arion import ai
+
 from .contracts import AnalysisResponse, AnalysisResult
 from .streaming import SessionRun
 from .telemetry import LABELS
@@ -341,11 +343,10 @@ class ProviderRegistry:
     def fixtures(self, run):
         if isinstance(run, SessionRun) and run.live:
             raise ValueError("실시간 시험은 별도 시험 API를 사용하세요.")
-        from .ai import fixture_events
 
         rows = []
         for pid in ("lstm", "transformer"):
-            for e in fixture_events(run):
+            for e in ai.fixture_events(run):
                 e.pop("input_sha256")
                 e.update(
                     provider_id=pid,

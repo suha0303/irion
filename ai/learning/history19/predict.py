@@ -8,7 +8,9 @@ import numpy as np
 import torch
 from safetensors.torch import load_file
 
+from execution import common
 from execution.common import child, read, sha
+from learning.history19 import training
 
 from .models import ModelSpec, make_model
 
@@ -58,9 +60,8 @@ class Predictor:
             or not np.isfinite(x).all()
         ):
             raise ValueError("Finite history[N,100,19] required")
-        from .training import backend
 
-        with backend("cpu"), torch.no_grad():
+        with training.backend("cpu"), torch.no_grad():
             return self.model(torch.from_numpy(x)).numpy()
 
     def predict(self, history):
@@ -76,11 +77,9 @@ class Predictor:
 
 
 def seal_export(folder, scaler):
-    from execution.common import write
-
     folder = Path(folder)
     np.savez(folder / "scaler.npz", **scaler)
-    write(
+    common.write(
         folder / "input-contract.json",
         dict(
             feature_profile="common19_ctx0",
@@ -89,7 +88,7 @@ def seal_export(folder, scaler):
             optimizer="sgd",
         ),
     )
-    write(
+    common.write(
         folder / "integrity.json",
         {
             p.name: sha(p)

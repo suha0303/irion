@@ -10,6 +10,7 @@ from pathlib import Path
 
 import numpy as np
 import safetensors
+import safetensors.torch as safetensors_torch_module
 import torch
 from safetensors.torch import save_file
 
@@ -255,7 +256,7 @@ def fit_cpu(
 
 
 def restore(folder):
-    from safetensors.torch import load_file
+    load_file = safetensors_torch_module.load_file
 
     folder = Path(folder)
     if any(p.is_symlink() for p in (folder, *folder.parents)):

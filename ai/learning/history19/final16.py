@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from learning.admission19 import FINAL16, check_producer, check_protection
+from learning.history19 import joint_native, pilot_connector
 
 from .pilot import CRITICAL as CRITICAL
 from .pilot import ROOT, Evidence, Pending, Unavailable, json_file, regular, sha
@@ -173,11 +174,9 @@ def expected_plan(namespace, *, fixture_only=False):
 def prepare_policy(
     native_policy_path, producer_binding_path, output, *, fixture_only=False
 ):
-    from .joint_native import ORIGIN, WIND_CLOCK, check_policy
-
     auth = authorization(fixture_only=fixture_only)
     native = json_file(native_policy_path)
-    check_policy(native, duration_profile="short180")
+    joint_native.check_policy(native, duration_profile="short180")
     producer = json_file(producer_binding_path)
     check_producer(producer, producer)
     if (producer["source_manifest_sha256"], producer["runtime_sha256"]) != (
@@ -206,8 +205,8 @@ def prepare_policy(
         producer=producer,
         native_policy_sha256=sha(regular(native_policy_path)),
         native_receipt_schema="drone.joint-phase-native-receipt/1",
-        mission_source=ORIGIN,
-        wind_model_clock=WIND_CLOCK,
+        mission_source=joint_native.ORIGIN,
+        wind_model_clock=joint_native.WIND_CLOCK,
         fixture_only=fixture_only,
         limits=dict(
             origin_delta_us=0,
@@ -232,8 +231,6 @@ def _write(output, value):
 
 
 def prepare_request(bundle_path, output):
-    from .pilot_connector import CASE_REFS
-
     bundle_path = regular(bundle_path)
     bundle = json_file(bundle_path)
     if (
@@ -266,7 +263,10 @@ def prepare_request(bundle_path, output):
             },
         )
         request["refs"].update(
-            {key: ref(bundle["paths"][key]) for key in CASE_REFS}
+            {
+                key: ref(bundle["paths"][key])
+                for key in pilot_connector.CASE_REFS
+            }
         )
         request["refs"]["pair_receipt"] = ref(bundle["paths"]["pair_receipt"])
     if bundle["phase"] == "final":

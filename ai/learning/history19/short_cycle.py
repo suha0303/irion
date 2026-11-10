@@ -6,7 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
+from learning import admission19
 from learning.admission19 import SHORT, check_producer, check_protection
+from learning.history19 import joint_native, pilot_connector, quality_rejection
 
 from .duration_profiles import duration_us
 from .pilot import (
@@ -32,7 +34,6 @@ def prepare_policy(
     """Write a new AI projection only after explicit short auth and native180
     policy.
     """
-    from .joint_native import ORIGIN, WIND_CLOCK, check_policy
 
     auth = json_file(AUTH)
     if (
@@ -41,7 +42,7 @@ def prepare_policy(
     ):
         raise ValueError("Explicit short-cycle180 authorization required")
     native = json_file(native_policy_path)
-    check_policy(native, duration_profile="short180")
+    joint_native.check_policy(native, duration_profile="short180")
     producer = json_file(producer_binding_path)
     check_producer(producer, producer)
     value = dict(
@@ -60,8 +61,8 @@ def prepare_policy(
         producer=producer,
         native_policy_sha256=sha(regular(native_policy_path)),
         native_receipt_schema="drone.joint-phase-native-receipt/1",
-        mission_source=ORIGIN,
-        wind_model_clock=WIND_CLOCK,
+        mission_source=joint_native.ORIGIN,
+        wind_model_clock=joint_native.WIND_CLOCK,
         fixture_only=fixture_only,
         limits=dict(
             origin_delta_us=0,
@@ -83,7 +84,6 @@ def prepare_policy(
 
 def prepare_request(bundle_path, output):
     """Hash explicit short input paths, without any development6 dependency."""
-    from .pilot_connector import CASE_REFS
 
     bundle_path = regular(bundle_path)
     bundle = json_file(bundle_path)
@@ -128,7 +128,9 @@ def prepare_request(bundle_path, output):
                 for key in ("run", "execution", "origin")
             },
         )
-        request["refs"].update({key: ref(paths[key]) for key in CASE_REFS})
+        request["refs"].update(
+            {key: ref(paths[key]) for key in pilot_connector.CASE_REFS}
+        )
         if paths.get("pair_receipt") is not None:
             request["refs"]["pair_receipt"] = ref(paths["pair_receipt"])
     if bundle["phase"] == "final":
@@ -154,11 +156,10 @@ def consumer_inputs(
     """Shared generation/config verification; no campaign membership or count
     changes.
     """
-    from learning.admission19 import FINAL16
 
     if (scope_task, cohort, usage) not in {
         (TASK, SHORT, "short_cycle_input_check"),
-        ("FINAL16_20261107", FINAL16, "final16_input_check"),
+        ("FINAL16_20261107", admission19.FINAL16, "final16_input_check"),
     }:
         raise ValueError("Only the two explicit180s input scopes are supported")
     if any(
@@ -254,7 +255,6 @@ def prerequisites(ctx):
         )
     ctx.hashes["short_authorization"] = sha(AUTH)
     expected, policy, registry = consumer_inputs(ctx)
-    from .quality_rejection import verify_attempt
 
     cases, ledger, counts = plan_and_ledger(
         ctx,
@@ -262,7 +262,8 @@ def prerequisites(ctx):
         task_id=TASK,
         cohort=SHORT,
         usage="short_cycle_input_check",
-        quality_rejection_check=lambda case, attempt: verify_attempt(
+        quality_rejection_check=lambda case,
+        attempt: quality_rejection.verify_attempt(
             ctx,
             case,
             attempt,

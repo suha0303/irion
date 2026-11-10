@@ -8,6 +8,8 @@ import sys
 import time
 from pathlib import Path
 
+from console import profile as console_profile
+
 MODELS = ("persistence", "ridge_forecast", "lstm", "transformer")
 COUNTS = dict(
     normal_train=63,
@@ -45,9 +47,7 @@ def runtime_profile(root=None, *, required=False):
         candidates.append(Path(selected))
     for candidate in candidates:
         if candidate.is_file():
-            from console.profile import load
-
-            return load(candidate)
+            return console_profile.load(candidate)
     if required:
         raise ValueError(
             "An explicit server profile is required; set DRONE_AI_PROFILE"

@@ -8,6 +8,8 @@ import shutil
 import stat
 from pathlib import Path
 
+from pretrain import collection, composition
+
 from .common import (
     ADMISSION,
     PACKAGE,
@@ -109,7 +111,6 @@ def fragment_freeze(runner, folder, approved):
     """Reuse source/identity/physical guards, defer full split admission
     until all groups finish.
     """
-    from .collection import source_revision
 
     package_imports()
     from preprocessing_core.control import lineage
@@ -155,7 +156,7 @@ def fragment_freeze(runner, folder, approved):
     plan["storage_root"] = str(STORE)
     plan["cases_sha256"] = sha(out / "cases.json")
     write(out / "collection-plan.json", plan)
-    write(out / "required-revision.json", source_revision())
+    write(out / "required-revision.json", collection.source_revision())
     module = load("pretrain_admission_fragment", ADMISSION / "freeze.py")
 
     def check_cases(cases):
@@ -542,9 +543,6 @@ class Pipeline:
 
 
 def run(runner):
-    from .collection import IncompleteCollection, combine_frozen
-    from .composition import validate_roles
-
     pipeline = Pipeline(runner)
     planned = read(runner.config["planned_cases"])["sets"]
     width = runner.config["flight_workers"]
@@ -575,7 +573,7 @@ def run(runner):
             else:
                 try:
                     runner.flight("collection", width, chunk_cases, label)
-                except IncompleteCollection:
+                except collection.IncompleteCollection:
                     # Completed originals still receive verified per-run
                     # handling.
                     pass
@@ -602,7 +600,7 @@ def run(runner):
         if any(c["case_id"] not in by_case for c in cases):
             continue
         rows = [by_case[c["case_id"]] for c in cases]
-        validate_roles(
+        composition.validate_roles(
             rows,
             cases,
             read(RESOURCES / "protected-inventory.json")["runs"],
@@ -634,7 +632,7 @@ def run(runner):
             + ", ".join(missing)
         )
     runner.begin("combine", workers=1)
-    frozen = combine_frozen(runner.task, parts)
+    frozen = collection.combine_frozen(runner.task, parts)
     runner.finish("combine", dict(passed=True, runs=len(frozen["runs"])))
     prepared = external(
         STORE / "processed/pretrain" / runner.task.name / "prepared"

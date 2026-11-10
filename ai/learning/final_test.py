@@ -20,6 +20,7 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from console import profile as console_profile
 from execution.common import (
     SUBMIT_LOCK,
     Progress,
@@ -32,6 +33,8 @@ from execution.common import (
     verify,
     write,
 )
+from learning import telemetry as learning_telemetry
+from pipeline import runtime as pipeline_runtime
 
 from . import operator, study
 
@@ -146,9 +149,7 @@ def config_check(cfg):
 
 
 def checked(root, *, full=False):
-    from console.profile import absolute_path
-
-    root = absolute_path(root)
+    root = console_profile.absolute_path(root)
     cfg = read(root / "input/config.json")
     config_check(cfg)
     auth = read(root / "authorization.json")
@@ -211,12 +212,13 @@ def checked(root, *, full=False):
 
 
 def prepare(args):
-    from console.profile import absolute_path, load
     from execution.evaluate import final_protocol, protocol_hash
 
     if not args.approve_final_test:
         raise ValueError("Explicit final-test approval required")
-    root, source, data = map(absolute_path, (args.root, args.source, args.data))
+    root, source, data = map(
+        console_profile.absolute_path, (args.root, args.source, args.data)
+    )
     if root.exists() or any(
         root == p or root in p.parents or p in root.parents
         for p in (source, data)
@@ -275,7 +277,7 @@ def prepare(args):
             raise ValueError(
                 "Final data overlap the frozen train/development inventory"
             )
-    profile = load(args.profile)
+    profile = console_profile.load(args.profile)
     if (
         Path(profile["output_root"]) != root
         or Path(profile["dataset_root"]) != root / "input/dataset"
@@ -710,8 +712,6 @@ def start(root):
 
 
 def worker(root, phase):
-    from pipeline.runtime import check
-
     from .diagnostic import stop_signal
     from .training import backend, project_lock
 
@@ -736,7 +736,7 @@ def worker(root, phase):
             "compute/runtime" if phase == "infer" else "evaluation-runtime"
         )
         runtime_out.mkdir(exist_ok=False)
-        environment = check(
+        environment = pipeline_runtime.check(
             root / "input/ai", runtime_out, phase, job_prefix="drone-ai-final-"
         )
         memory = memory_snapshot()
@@ -756,9 +756,8 @@ def worker(root, phase):
             from capstone_ai.training import Predictor
 
             from .parallel_replay import ParallelDevelopment
-            from .telemetry import Telemetry
 
-            telemetry = Telemetry(root / "compute")
+            telemetry = learning_telemetry.Telemetry(root / "compute")
             telemetry.start()
             rows = read(Path(cfg["dataset"]) / "manifest.json")["runs"]
             with (

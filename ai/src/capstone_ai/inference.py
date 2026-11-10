@@ -8,6 +8,8 @@ import json
 
 import numpy as np
 
+from capstone_ai import source
+
 
 class Alarm:
     """Apply EWMA scores with separate alarm-entry and alarm-exit
@@ -180,9 +182,7 @@ class PendingForecasts:
 
 
 def save_pending(store, path):
-    from .source import dump
-
-    dump(
+    source.dump(
         path,
         {
             "error_scale": store.error_scale.tolist(),
@@ -204,9 +204,7 @@ def save_pending(store, path):
 
 
 def load_pending(path):
-    from .source import read_json
-
-    state = read_json(path)
+    state = source.read_json(path)
     store = PendingForecasts(state["error_scale"], state["threshold"])
     store.forecasts = state["forecasts"]
     store.decisions = state["decisions"]

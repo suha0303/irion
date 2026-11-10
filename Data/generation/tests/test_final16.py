@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from types import SimpleNamespace
 
+import learning.history19.final16 as learning_history19_final16_module
 import pytest
 
 from pretrain import common, final16, pilot45, pilot_bridge, pilot_parallel
@@ -78,7 +79,7 @@ def test_actual_original_eight_pairs_match_coordinator_projection(tmp_path):
     assert plan["schema"] == "drone-ai.final16.manifest/1"
     assert plan["cohort"] == plan["purpose"] == final16.COHORT
     assert plan["no_fit"] is True and len(plan["cases"]) == 16
-    from learning.history19.final16 import expected_plan
+    expected_plan = learning_history19_final16_module.expected_plan
 
     assert plan == expected_plan("final16-isolated")
     with pytest.raises(ValueError, match="45"):
@@ -228,7 +229,7 @@ def test_native_revision_must_be_v2_even_if_both_wrong_values_match(
     spec = common.read(
         common.ROOT / "ai/reports/final16-20261107/attempt-01/data-handoff.json"
     )
-    from learning.history19.final16 import CRITICAL
+    critical_sources = learning_history19_final16_module.CRITICAL
 
     # This negative field test uses a synthetic current-code freeze, not old
     # release READY.
@@ -238,7 +239,7 @@ def test_native_revision_must_be_v2_even_if_both_wrong_values_match(
         dict(
             task_id=final16.TASK,
             code_frozen=True,
-            files={p: common.sha(common.ROOT / p) for p in CRITICAL},
+            files={p: common.sha(common.ROOT / p) for p in critical_sources},
         ),
     )
     spec["source_freeze"] = dict(path=str(freeze), sha256=common.sha(freeze))

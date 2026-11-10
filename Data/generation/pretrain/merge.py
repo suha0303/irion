@@ -9,6 +9,10 @@ import time
 from collections import Counter
 from pathlib import Path
 
+import pretrain.storage as pretrain_storage_module
+import pretrain.streaming as pretrain_streaming_module
+from pretrain import composition
+
 from .common import HOME, RESOURCES, STORE, Budget, external, read, sha, write
 
 ROLES = {
@@ -28,8 +32,6 @@ COMMON = (
 
 
 def merge_records(parts):
-    from .composition import validate_roles
-
     if len(parts) < 2:
         raise ValueError("At least two verified source datasets required")
     first = parts[0]["frozen"]
@@ -60,7 +62,7 @@ def merge_records(parts):
         rows.extend(copy.deepcopy(frozen["runs"]))
         cases.extend(copy.deepcopy(part["cases"]))
         groups.extend(copy.deepcopy(frozen["collection_set_case_ids"]))
-    validate_roles(
+    composition.validate_roles(
         rows,
         cases,
         read(RESOURCES / "protected-inventory.json")["runs"],
@@ -247,8 +249,10 @@ def create(bundles, name):
 
 
 def run(runner):
-    from .storage import restore, verify_bundle
-    from .streaming import retire_owned, tree_stamp
+    restore = pretrain_storage_module.restore
+    verify_bundle = pretrain_storage_module.verify_bundle
+    retire_owned = pretrain_streaming_module.retire_owned
+    tree_stamp = pretrain_streaming_module.tree_stamp
 
     runner.update(planned_stage_count=7)
     runner.begin("merge-inputs", workers=1)

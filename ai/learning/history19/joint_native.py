@@ -10,6 +10,7 @@ import math
 from pathlib import Path
 
 from learning.admission19 import check_producer
+from learning.history19 import native_audit
 
 from .duration_profiles import NATIVE_ADAPTERS, duration_us
 from .pilot import Pending, json_file, regular, required, sha
@@ -179,9 +180,7 @@ def origin(run_path, policy, *, fixture=False, external_audit=None):
     if external_audit is None:
         checked = documents[CHECK]
     else:
-        from .native_audit import verified_check
-
-        checked, external_provenance = verified_check(
+        checked, external_provenance = native_audit.verified_check(
             run_path,
             external_audit,
             generation=policy["producer"],

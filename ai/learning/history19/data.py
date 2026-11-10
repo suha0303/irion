@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from capstone_ai import dataset
 from capstone_ai.mapping import FEATURES, TARGETS
 from execution.common import child, read, sha
 from execution.prepare import npz_headers
@@ -498,7 +499,6 @@ def arrived_samples(engine, mission=None):
     """Join future targets after issuing history-only windows; preserve
     exclusions.
     """
-    from capstone_ai.dataset import feature_transform, target_transform
 
     lookup = {
         (f["run_id"], f["clock_id"], f["segment_id"], f["time_us"]): f
@@ -561,8 +561,8 @@ def arrived_samples(engine, mission=None):
         )
     windows, targets = zip(*selected)
     arrays = dict(
-        X=feature_transform([w["X"] for w in windows], engine.config),
-        Y=target_transform(targets),
+        X=dataset.feature_transform([w["X"] for w in windows], engine.config),
+        Y=dataset.target_transform(targets),
     )
     for key in ("run_id", "clock_id", "segment_id", "origin_us"):
         arrays[key] = np.asarray([w[key] for w in windows])

@@ -10,6 +10,9 @@ from typing import Any
 import numpy as np
 from safetensors.torch import load_file
 
+from learning.run_health19 import scoring as learning_run_health19_scoring
+from localflight import calibration, registry, run_summary
+
 from .catalog import Catalog, digest, read_json
 from .prepared import load, segment_ranges, windows
 from .registry import fingerprint
@@ -82,7 +85,6 @@ def load_runtime(
 
 def _forecast_results(runtime, metadata, values, times, ranges):
     """Return forecast metrics, calibrated scores, and per-segment series."""
-    from .calibration import forecast_scores
 
     s = runtime.scaler
     segment_results = []
@@ -131,14 +133,16 @@ def _forecast_results(runtime, metadata, values, times, ranges):
                         np.mean(baseline_errors[mask] ** 2, axis=(0, 1))
                     ).tolist(),
                 ),
-                scores=forecast_scores(
+                scores=calibration.forecast_scores(
                     y[mask, -1], predicted[mask, -1], s
                 ).tolist(),
                 series=[series[-1]],
             )
         )
     scoring = dict(
-        scores=forecast_scores(y[:, -1], predicted[:, -1], s).tolist(),
+        scores=calibration.forecast_scores(
+            y[:, -1], predicted[:, -1], s
+        ).tolist(),
         time_us=(origins + 1000000).tolist(),
         unit="one_second_max_abs_standardized_residual",
     )
@@ -161,7 +165,6 @@ def _health_results(runtime, metadata, values, times, ranges):
     """Return completed-segment health scores without inventing a run
     verdict.
     """
-    from .calibration import health_score
 
     s = runtime.scaler
     segment_results = []
@@ -169,7 +172,6 @@ def _health_results(runtime, metadata, values, times, ranges):
     physical[:, 17] /= metadata["profile"]["series_cells"]
     physical[:, 18] /= metadata["profile"]["capacity_ah"]
     x = ((physical - s["x_mean"]) / s["x_scale"]).astype("f4")
-    from learning.run_health19.scoring import components
 
     segments = []
     for a, b in ranges:
@@ -181,7 +183,7 @@ def _health_results(runtime, metadata, values, times, ranges):
                 start_us=int(times[a]),
                 end_us=int(times[b - 1]) + 100000,
                 frames=b - a,
-                components=components(
+                components=learning_run_health19_scoring.components(
                     predicted,
                     x[a:b, 17],
                     cell_voltage_scale=float(s["x_scale"][17]),
@@ -190,7 +192,7 @@ def _health_results(runtime, metadata, values, times, ranges):
         )
     scoring = dict(
         scores=[
-            health_score(row["components"], float(s["x_scale"][17]))
+            calibration.health_score(row["components"], float(s["x_scale"][17]))
             for row in segments
         ],
         time_us=[row["end_us"] for row in segments],
@@ -254,8 +256,6 @@ def _analyze_loaded(runtime, adaptation, loaded, data_root, started):
     """Analyze data already validated for this job; never reload mutable
     files.
     """
-    from .calibration import annotate, binding
-    from .run_summary import evidence
 
     metadata, values, times = loaded
     ranges = segment_ranges(metadata, len(values))
@@ -268,9 +268,9 @@ def _analyze_loaded(runtime, adaptation, loaded, data_root, started):
         runtime, metadata, values, times, ranges
     )
     output = dict(
-        run_evidence=evidence(metadata, times, ranges),
+        run_evidence=run_summary.evidence(metadata, times, ranges),
         segment_results=segment_results,
-        calibration_binding=binding(runtime, metadata, adaptation),
+        calibration_binding=calibration.binding(runtime, metadata, adaptation),
         scoring=scoring,
         model_id=runtime.entry["id"],
         adapted=adaptation is not None,
@@ -293,7 +293,7 @@ def _analyze_loaded(runtime, adaptation, loaded, data_root, started):
     )
 
     if data_root:
-        return annotate(output, metadata, data_root)
+        return calibration.annotate(output, metadata, data_root)
     for row in segment_results:
         row["decision"] = dict(
             status="unavailable", reason="기체별 보정값 없음"
@@ -332,8 +332,6 @@ def analyze_run(
     Raises:
         ValueError: Selection, flight identity, timing or model bindings fail.
     """
-    from .registry import active_folder
-    from .run_summary import aggregate
 
     if not models or len(set(models)) != len(models):
         raise ValueError("Select distinct models")
@@ -372,7 +370,7 @@ def analyze_run(
             started = perf_counter()
             metadata = package[0]
             adapted = (
-                active_folder(
+                registry.active_folder(
                     data_root, metadata["profile"], model_id, bundle=bundle
                 )
                 if use_active
@@ -399,7 +397,7 @@ def analyze_run(
                 )
             )
     analyses = [result for package in by_package for result in package]
-    return dict(analyses=analyses, run_summary=aggregate(analyses))
+    return dict(analyses=analyses, run_summary=run_summary.aggregate(analyses))
 
 
 def compare(

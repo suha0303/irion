@@ -10,6 +10,9 @@ from pathlib import Path
 
 import numpy as np
 
+from capstone_ai import detection as capstone_ai_detection
+from capstone_ai import detection_protocol, detection_replay
+from capstone_ai import inference as capstone_ai_inference
 from capstone_ai.detection_protocol import (
     event_result,
     grouped_rate_interval,
@@ -77,10 +80,6 @@ def default_protocol_manifest():
     """Record the existing implementation; this does not change detector
     settings.
     """
-    import capstone_ai.detection as detection
-    import capstone_ai.detection_protocol as protocol
-    import capstone_ai.detection_replay as replay
-    import capstone_ai.inference as inference
 
     return {
         "schema": "drone.evaluation-protocol/1",
@@ -88,7 +87,7 @@ def default_protocol_manifest():
         "normal_validation_scale": (
             "q95 squared scaled residual per lead/target, floor1e-8"
         ),
-        "normal_calibration_quantiles": protocol.QUANTILES,
+        "normal_calibration_quantiles": detection_protocol.QUANTILES,
         "normal_calibration_union_target_per_hour": 1.0,
         "detector": {
             "ewma_alpha": 0.3,
@@ -110,7 +109,12 @@ def default_protocol_manifest():
         "implementation_sha256": {
             **{
                 m.__name__: sha(m.__file__)
-                for m in (detection, protocol, replay, inference)
+                for m in (
+                    capstone_ai_detection,
+                    detection_protocol,
+                    detection_replay,
+                    capstone_ai_inference,
+                )
             },
             "execution.evaluate": sha(__file__),
         },

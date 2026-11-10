@@ -9,6 +9,8 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from pretrain import common
+
 from .common import (
     ADMISSION,
     HOME,
@@ -57,9 +59,7 @@ def normal_scenario(motion, environment):
 def operating_conditions(motion, environment, seed, stratum):
     """Freeze path and environment independently of fault/health parameters."""
 
-    from .common import SIMULATION
-
-    simulation_source = str(SIMULATION / "sim/src")
+    simulation_source = str(common.SIMULATION / "sim/src")
     if simulation_source not in sys.path:
         sys.path.insert(0, simulation_source)
     from capstone_sim.normal_variation import sample

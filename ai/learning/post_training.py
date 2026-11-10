@@ -21,6 +21,8 @@ from collections import Counter
 from contextlib import nullcontext
 from pathlib import Path
 
+from console import profile as console_profile
+from execution import prepare as execution_prepare
 from execution.common import (
     ROOT,
     SUBMIT_LOCK,
@@ -34,6 +36,9 @@ from execution.common import (
     verify,
     write,
 )
+from learning import replay_validation, sensitivity_data, sensitivity_metrics
+from learning import telemetry as learning_telemetry
+from pipeline import runtime
 
 from . import comparison, operator
 from .prepare_compare import external_root, inventory, remote_path
@@ -77,9 +82,8 @@ def config_check(cfg):
         # node.
         # Preparation admits the original storage; checked() verifies frozen
         # hashes.
-        from console.profile import absolute_path
 
-        absolute_path(baseline["source"])
+        console_profile.absolute_path(baseline["source"])
         expected_models.extend(BASELINES)
     diagnostic = cfg.get("numerical_diagnostic_only", False)
     if type(diagnostic) is not bool:
@@ -116,9 +120,7 @@ def config_check(cfg):
             "Diagnostic-only requires fresh inputs without an acceptance policy"
         )
     if "numerical_policy" in cfg:
-        from .replay_validation import _validate_policy
-
-        _validate_policy(cfg["numerical_policy"])
+        replay_validation.validate_policy(cfg["numerical_policy"])
         if (
             cfg.get("all_model_calibration_fresh") is not True
             or cfg["numerical_policy"]["batch_size"]
@@ -132,9 +134,7 @@ def config_check(cfg):
                 )
             )
     if "sensitivity_policy" in cfg or "sensitivity_plan" in cfg:
-        from .sensitivity_metrics import validate_policy
-
-        validate_policy(cfg.get("sensitivity_policy"))
+        sensitivity_metrics.validate_policy(cfg.get("sensitivity_policy"))
         if (
             diagnostic
             or "numerical_policy" in cfg
@@ -648,7 +648,6 @@ def prepare(args):
     """Server-side preparation only; explicit approval does not submit any
     job.
     """
-    from console.profile import load
 
     if not args.approve_post_training:
         raise ValueError("Explicit --approve-post-training required")
@@ -680,13 +679,13 @@ def prepare(args):
     # Validate file inputs before copying any model or creating an attempt
     # directory.
     if policy_path is not None:
-        from .replay_validation import _validate_policy
-
-        numerical_policy = read_policy_file(policy_path, _validate_policy)
+        numerical_policy = read_policy_file(
+            policy_path, replay_validation.validate_policy
+        )
     if sensitivity_path is not None:
-        from .sensitivity_metrics import validate_policy
-
-        sensitivity_policy = read_policy_file(sensitivity_path, validate_policy)
+        sensitivity_policy = read_policy_file(
+            sensitivity_path, sensitivity_metrics.validate_policy
+        )
     source, root = (
         external_root(args.source),
         remote_path(external_root(args.root)),
@@ -698,7 +697,7 @@ def prepare(args):
         raise FileExistsError(
             "New output required; existing evidence is never overwritten"
         )
-    profile = load(args.profile)
+    profile = console_profile.load(args.profile)
     profile_check(profile)
     source_cfg, source_seal, source_files = source_proof(source)
     baseline_source = getattr(args, "baseline_source", None)
@@ -748,12 +747,11 @@ def prepare(args):
         )
     receipt = read(bundle / "receipt.json")
     needed_inputs = dataset_binding(upstream, source_cfg, receipt)
-    from execution.prepare import npz_headers
 
     raw_bytes = sum(
         value["bytes"]
         for role in ("normal_validation", "normal_calibration")
-        for value in npz_headers(
+        for value in execution_prepare.npz_headers(
             upstream / "dataset" / (role + ".npz")
         ).values()
     )
@@ -913,15 +911,13 @@ def prepare(args):
                 inputs / "numerical-policy.json"
             )
         if sensitivity_path is not None:
-            from .sensitivity_data import build_plan, verify_selection_layout
-
             cfg["sensitivity_policy"] = sensitivity_policy
-            cfg["sensitivity_plan"] = build_plan(
+            cfg["sensitivity_plan"] = sensitivity_data.build_plan(
                 upstream / "dataset/manifest.json"
             )
             write(
                 inputs / "sensitivity-layout.json",
-                verify_selection_layout(
+                sensitivity_data.verify_selection_layout(
                     cfg["sensitivity_plan"], upstream / "dataset"
                 ),
             )
@@ -1446,10 +1442,8 @@ def require_fresh_calibration_inputs(root, cfg):
 
 def calibrate_worker(root, *, diagnostic_only=False):
     from execution.engine import calibrate, preflight_models
-    from pipeline.runtime import check
 
     from .diagnostic import stop_signal
-    from .telemetry import Telemetry
     from .training import backend, project_lock
 
     root, cfg = checked(root)
@@ -1468,7 +1462,7 @@ def calibrate_worker(root, *, diagnostic_only=False):
     try:
         require_fresh_calibration_inputs(root, cfg)
         progress.update(stage="resource_admission", round=cfg["revision"])
-        environment = check(
+        environment = runtime.check(
             root / "input/ai", out, phase, job_prefix="drone-ai-"
         )
         if (
@@ -1516,7 +1510,7 @@ def calibrate_worker(root, *, diagnostic_only=False):
                 }
             },
         )
-        telemetry = Telemetry(out)
+        telemetry = learning_telemetry.Telemetry(out)
         telemetry.start()
         development_context = nullcontext(None)
         if cfg.get("parallel_replay_workers"):
@@ -1682,7 +1676,6 @@ def extract_truth(root, cfg, progress):
 
 def evaluate_worker(root):
     from execution.evaluate import evaluate
-    from pipeline.runtime import check
 
     from .diagnostic import stop_signal
     from .training import project_lock
@@ -1701,7 +1694,7 @@ def evaluate_worker(root):
         verify(root / "compute", seal["files"])
         runtime_out = root / "evaluation-runtime"
         runtime_out.mkdir(exist_ok=False)
-        check(
+        runtime.check(
             root / "input/ai", runtime_out, "evaluate", job_prefix="drone-ai-"
         )
         extract_truth(root, cfg, progress)

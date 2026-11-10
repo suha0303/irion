@@ -8,6 +8,8 @@ from contextlib import contextmanager
 import numpy as np
 import torch
 
+from pipeline import control
+
 SCHEMA = "round001-r1p1-checkpoint-v1"
 
 
@@ -120,7 +122,6 @@ def trace_batch(folder, phase, device, training, enabled):
     if not enabled:
         yield
         return
-    from .control import write
 
     # CPU dispatcher events include CUDA ATen calls; no CUPTI installation is
     # needed.
@@ -129,7 +130,7 @@ def trace_batch(folder, phase, device, training, enabled):
     ) as profile:
         yield
     operators = {event.key: event.count for event in profile.key_averages()}
-    write(
+    control.write(
         folder / ("backend-" + phase + ".json"),
         {
             "scope": (

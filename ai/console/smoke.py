@@ -18,8 +18,11 @@ from pathlib import Path
 
 import numpy as np
 
+from console import profile as console_profile
 from execution.common import Progress, child, read, sha, write
 from execution.prepare import npz_headers
+from learning import telemetry as learning_telemetry
+from pipeline import runtime
 
 MODELS = ("lstm", "transformer")
 PHASES = ("full", "partial", "resume")
@@ -443,10 +446,9 @@ def _source_hashes():
 
 def _verify_runtime(profile, output):
     # Allocation validation precedes the training module and any CUDA operation.
-    from pipeline.runtime import check
 
     os.environ["DRONE_AI_PROFILE"] = str(Path(profile).absolute())
-    return check(
+    return runtime.check(
         Path(__file__).resolve().parents[1],
         output,
         "benchmark",
@@ -642,10 +644,9 @@ def run(profile, root):
     """CUDA worker; controller alone declares final success after Slurm
     release.
     """
-    from console.profile import load
 
     profile = Path(profile).expanduser().absolute()
-    settings = load(profile)
+    settings = console_profile.load(profile)
     root = Path(root).expanduser().absolute()
     if any(p.is_symlink() for p in (root, *root.parents)) or ".." in root.parts:
         raise ValueError("A new real output directory is required")
@@ -707,9 +708,8 @@ def run(profile, root):
             ),
         )
         write(root / "smoke.json", cfg)
-        from learning.telemetry import Telemetry
 
-        telemetry = Telemetry(root)
+        telemetry = learning_telemetry.Telemetry(root)
         # Allocation was checked before this PID creates any CUDA context.
         telemetry.start()
         try:

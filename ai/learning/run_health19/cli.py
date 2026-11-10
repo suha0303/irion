@@ -6,6 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
+from learning.history19 import pilot, short_cycle
+from learning.run_health19 import fixtures
+
 from .data import iter_manifests
 
 
@@ -59,13 +62,9 @@ def main(argv=None):
     smoke.add_argument("--stop-after-epoch", type=int)
     args = parser.parse_args(argv)
     if args.command == "check-short-input":
-        from learning.history19.short_cycle import main as check_short
-
-        return check_short(args.request, args.output)
+        return short_cycle.main(args.request, args.output)
     if args.command == "check-input":
-        from learning.history19.pilot import main as check_input
-
-        return check_input(args.request, args.output)
+        return pilot.main(args.request, args.output)
     if args.command == "validate":
         expected = (
             json.loads(args.producer_binding.read_text(encoding="utf-8"))
@@ -100,14 +99,13 @@ def main(argv=None):
             )
         )
         return 0
-    from .fixtures import normal_runs
     from .models import ModelSpec
     from .training import fit_cpu, restore
 
     result = fit_cpu(
         ModelSpec(args.model, args.hidden, args.layers),
-        normal_runs("normal_train", 4),
-        normal_runs("normal_validation", 2, seed=1),
+        fixtures.normal_runs("normal_train", 4),
+        fixtures.normal_runs("normal_validation", 2, seed=1),
         args.output,
         resume=args.resume,
         stop_after_epoch=args.stop_after_epoch,

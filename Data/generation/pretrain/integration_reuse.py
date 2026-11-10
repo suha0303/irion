@@ -6,6 +6,8 @@ import argparse
 import json
 from pathlib import Path
 
+from pretrain import pilot45
+
 from . import ai19
 from .common import ROOT, identity, now, read, sha, verify, write
 from .pilot19 import audit_one
@@ -108,10 +110,8 @@ def historical_termination(task):
 
 
 def accept(task, output):
-    from .pilot45 import recovery_authorization, task_path
-
-    recovery_authorization()
-    task = task_path(task)
+    pilot45.recovery_authorization()
+    task = pilot45.task_path(task)
     verify(
         {
             str(task / "config.json"): (task / "config.sha256")

@@ -8,7 +8,11 @@ from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
 
+import learning as learning_module
+import learning.history19 as learning_history19_module
 import pytest
+import test_pilot45 as test_pilot45_module
+import test_pilot_parallel as test_pilot_parallel_module
 
 from pretrain import (
     ai19,
@@ -212,7 +216,7 @@ def test_clean_cycle_input_gate_requires_all45_first_attempts_and_two_readers(
 def test_short_bridge_uses_public_ai_connector_for_each_phase(
     monkeypatch, tmp_path, phase
 ):
-    from learning.history19 import short_cycle
+    short_cycle = learning_history19_module.short_cycle
 
     task = tmp_path / "task"
     common.write(
@@ -325,7 +329,7 @@ def test_short_global_registry_excludes_old_raw_without_blocking_own_new_cases(
 def test_short_draft_has_its_own_parallel_namespace_without_old_scope_authority(
     monkeypatch, tmp_path
 ):
-    from test_pilot45 import init_fixture
+    init_fixture = test_pilot45_module.init_fixture
 
     init_fixture(monkeypatch, tmp_path)
     monkeypatch.setattr(pilot45, "short_authorization", lambda: {})
@@ -351,7 +355,7 @@ def test_short_draft_has_its_own_parallel_namespace_without_old_scope_authority(
 def test_short_handoff_separates_static180_binding_from_old_ready(
     monkeypatch, tmp_path, change
 ):
-    from learning import admission19
+    admission19 = learning_module.admission19
 
     producer = {k: "a" * 64 for k in admission19.PRODUCER_FIELDS}
     producer.update(
@@ -477,7 +481,7 @@ def test_short_handoff_separates_static180_binding_from_old_ready(
 def test_short_repair_preserves_failure_and_binds_second_attempt(
     monkeypatch, tmp_path
 ):
-    from test_pilot_parallel import fixture
+    fixture = test_pilot_parallel_module.fixture
 
     task, _ = fixture(monkeypatch, tmp_path)
     cases = pilot45.build_cases(98765, duration=180, case_prefix="s180")
@@ -610,7 +614,7 @@ def test_current_cycle_and_cumulative_failure_denominators_stay_separate(
 def test_explicit_stop_first_preserves_failure_instead_of_spending_next_attempt(
     monkeypatch, tmp_path, stop_first
 ):
-    from test_pilot_parallel import fixture
+    fixture = test_pilot_parallel_module.fixture
 
     task, cases = fixture(monkeypatch, tmp_path)
     cfg = common.read(task / "config.json")

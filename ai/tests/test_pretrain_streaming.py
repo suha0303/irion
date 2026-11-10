@@ -12,6 +12,8 @@ from types import SimpleNamespace
 
 import pytest
 
+import pretrain as pretrain_module
+import pretrain.collection as collection_module
 from pretrain import common, storage, streaming
 
 
@@ -383,8 +385,6 @@ def test_replacement_and_symlink_cleanup_targets_are_preserved(tmp_path):
 
 
 def test_missing_runs_never_reach_global_assembly(tmp_path, monkeypatch):
-    import pretrain.collection as collection
-
     fake = SimpleNamespace(
         task=tmp_path,
         config=dict(flight_workers=2, collection_profile="diverse104"),
@@ -410,7 +410,7 @@ def test_missing_runs_never_reach_global_assembly(tmp_path, monkeypatch):
     monkeypatch.setattr(streaming, "Pipeline", Pipeline)
     monkeypatch.setattr(streaming, "fragment_freeze", lambda *a: (None, []))
     monkeypatch.setattr(
-        collection,
+        collection_module,
         "combine_frozen",
         lambda *a: pytest.fail("incomplete dataset admitted"),
     )
@@ -422,7 +422,7 @@ def test_missing_runs_never_reach_global_assembly(tmp_path, monkeypatch):
 def test_fragment_freeze_checks_real_identity_but_never_admits_partial_split(
     tmp_path, monkeypatch
 ):
-    from pretrain import collection
+    collection = pretrain_module.collection
 
     common.package_imports()
     from preprocessing_tools import control

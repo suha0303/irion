@@ -6,6 +6,8 @@ from collections import deque
 
 from pymavlink.dialects.v20 import common
 
+from arion import local_flight
+
 MESSAGES = [
     (0, "HEARTBEAT", 2),
     (30, "ATTITUDE", 20),
@@ -253,10 +255,8 @@ class MessageRates:
         except (ValueError, OSError, KeyError) as error:
             session.update(state="error", error=str(error))
         finally:
-            from .local_flight import write
-
             try:
-                write(
+                local_flight.write(
                     run.path.with_suffix(".rates.json"), self.status(run.run_id)
                 )
             finally:

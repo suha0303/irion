@@ -251,7 +251,8 @@ def diagnose_prediction_batch(
     return report
 
 
-def _validate_policy(policy):
+def validate_policy(policy):
+    """Validate the frozen diagnostic policy before reading predictions."""
     required = {
         "schema",
         "batch_size",
@@ -318,7 +319,7 @@ def assess_diagnostic(report_path, policy, output=None):
     Callers must freeze and reuse this exact policy across every compared model.
     No model-specific policy keys, fitted tolerances or automatic retries exist.
     """
-    _validate_policy(policy)
+    validate_policy(policy)
     report_path = Path(report_path)
     output = _fresh(output) if output is not None else None
     report = read(report_path)

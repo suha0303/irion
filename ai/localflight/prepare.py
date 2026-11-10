@@ -18,8 +18,10 @@ from pathlib import Path
 
 import numpy as np
 
+from capstone_ai import mapping
 from capstone_ai.mapping import FEATURES, RATES
 from learning.history19.preprocessing import LowPass
+from localflight import bin_reader, run_summary
 
 from .catalog import digest
 from .logs import PX4_REQUIRED, inspect_log
@@ -96,14 +98,12 @@ def bin_values(message, profile):
 
 
 def bin_events(path, profile, maps=None):
-    from .bin_reader import open_bin
-
     warnings = io.StringIO()
     with (
         contextlib.redirect_stdout(warnings),
         contextlib.redirect_stderr(warnings),
     ):
-        reader = open_bin(path)
+        reader = bin_reader.open_bin(path)
     if warnings.getvalue():
         reader.close()
         raise ValueError(
@@ -186,8 +186,6 @@ def bin_events(path, profile, maps=None):
 def px4_events(path, profile, maps=None):
     from pyulog import ULog
 
-    from capstone_ai.mapping import mapped
-
     ulog = ULog(str(path), message_name_filter_list=list(PX4_REQUIRED))
     streams = {}
     count = 0
@@ -245,7 +243,7 @@ def px4_events(path, profile, maps=None):
                         for k, a in fields.items()
                         if np.issubdtype(a.dtype, np.number)
                     }
-                output = mapped(
+                output = mapping.mapped(
                     dict(
                         topic=topic,
                         fields=raw,
@@ -648,9 +646,8 @@ def prepare(
         ),
         file=dict(path="frames.npz", sha256=digest(out / "frames.npz")),
     )
-    from .run_summary import source_context
 
-    record["run_context"] = source_context(audit, start_us, end_us)
+    record["run_context"] = run_summary.source_context(audit, start_us, end_us)
     (out / "manifest.json").write_text(
         json.dumps(record, indent=2, ensure_ascii=False, allow_nan=False)
         + "\n",

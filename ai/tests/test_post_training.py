@@ -18,6 +18,31 @@ from learning import post_training as post
 from learning.study import configure
 
 
+def numeric_policy():
+    return dict(
+        schema="drone-ai.numeric-policy/1",
+        batch_size=256,
+        windows=257,
+        rtol=1e-5,
+        atol=1e-5,
+        require_same_batch_exact=True,
+        max_absolute_difference=1e-4,
+    )
+
+
+def sensitivity_policy():
+    return dict(
+        schema="drone-ai.sensitivity-policy/1",
+        batch_size=256,
+        require_same_batch_exact=True,
+        max_scaled_abs=1e-4,
+        physical_max=[1e-5, 1e-5, 1e-5, 1e-4],
+        max_score_delta_over_high=0.01,
+        max_ewma_delta_over_high=0.01,
+        max_changed_alarm_states=0,
+    )
+
+
 def config():
     return dict(
         schema=post.SCHEMA,
@@ -528,7 +553,7 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
     policy_options = {}
     if policy_kind is not None:
         if policy_kind == "sensitivity":
-            from test_post_training_sensitivity import policy
+            policy = sensitivity_policy
 
             monkeypatch.setattr(
                 learning.sensitivity_data,
@@ -541,7 +566,7 @@ def test_prepare_preserves_source_and_frozen_runtime_is_self_contained(
                 lambda *a: {"status": "FIXTURE_LAYOUT_ONLY"},
             )
         else:
-            from test_post_training_diagnostic import policy
+            policy = numeric_policy
 
         policy_path = tmp_path / "policies" / (policy_kind + ".json")
         write(policy_path, policy())
@@ -694,9 +719,9 @@ def test_prepare_rejects_invalid_policy_before_creating_output(
     folder.mkdir()
     path = folder / "policy.json"
     if policy_kind == "sensitivity":
-        from test_post_training_sensitivity import policy
+        policy = sensitivity_policy
     else:
-        from test_post_training_diagnostic import policy
+        policy = numeric_policy
 
     if invalid_path == "directory":
         path.mkdir()

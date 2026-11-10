@@ -8,6 +8,8 @@ from pathlib import Path
 
 import numpy as np
 
+from pretrain import common
+
 from .common import ROOT, read, runs_root
 
 PROTOCOL = "information-v2"
@@ -76,9 +78,7 @@ def topic_metrics(path, expected, run_id, topics, start, end):
 
 
 def metrics(canonical, record):
-    from .common import package_imports
-
-    package_imports()
+    common.package_imports()
     from capstone_ai.mapping import TARGETS
 
     canonical = Path(canonical)

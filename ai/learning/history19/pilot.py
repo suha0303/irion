@@ -9,6 +9,7 @@ import json
 import math
 from pathlib import Path
 
+from learning import admission19
 from learning.admission19 import (
     MISSION_POLICY,
     PILOT,
@@ -515,11 +516,9 @@ def plan_and_ledger(
     quality_rejection_check=None,
 ):
     if quality_rejection_check is not None:
-        from learning.admission19 import SHORT
-
         if (
             task_id != "SHORT_CYCLE_20261107"
-            or cohort != SHORT
+            or cohort != admission19.SHORT
             or usage != "short_cycle_input_check"
         ):
             raise ValueError(

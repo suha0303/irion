@@ -20,6 +20,8 @@ from learning.admission19 import (
     check_protection,
     validate_lineages,
 )
+from learning.collection19 import recovery as learning_collection19_recovery
+from learning.collection19 import rejection
 from learning.history19.data import ARRAYS
 from learning.history19.pilot import ROOT, json_file, regular, sha
 from learning.run_health19.data import Scaler, iter_manifests
@@ -133,9 +135,11 @@ def _ledger(ref, case, producer, all_raw_ids, policy_bundle):
     maximum, recovery_rejected = 3, set()
     recovery = value.get("recovery_authorization")
     if recovery is not None:
-        from .recovery import ledger_permission
-
-        maximum, recovery_rejected = ledger_permission(recovery, case, attempts)
+        maximum, recovery_rejected = (
+            learning_collection19_recovery.ledger_permission(
+                recovery, case, attempts
+            )
+        )
     if (
         value.get("schema") != "drone-ai.collection19.case-ledger/1"
         or case_key(value.get("case_id")) != case["case_id"]
@@ -196,13 +200,11 @@ def _ledger(ref, case, producer, all_raw_ids, policy_bundle):
             raise ValueError("Physical failure must retain its reason")
         quality = a.get("quality_rejection")
         if a["status"] == "quality_rejected" or quality is not None:
-            from .rejection import verify_quality_rejection
-
             if not isinstance(quality, dict):
                 raise ValueError(
                     "Explicit independent quality rejection receipt required"
                 )
-            verify_quality_rejection(
+            rejection.verify_quality_rejection(
                 quality, a, producer, policy_bundle, case_id=case["case_id"]
             )
             if (

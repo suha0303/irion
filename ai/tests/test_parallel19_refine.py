@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 import torch
 
+import learning.parallel19 as learning_parallel19_module
 from learning.parallel19.control import read, sha, write
 from learning.parallel19.final_verify import events, predict
 from learning.parallel19.fit import model
@@ -172,7 +173,7 @@ def test_final_predict_uses_only_numeric_features_and_saves_predictions(
 def test_scheduler_fills_five_idle_slots_before_other_four_baselines_finish(
     tmp_path, monkeypatch
 ):
-    from learning.parallel19 import refine as r
+    r = learning_parallel19_module.refine
 
     entries = [
         {

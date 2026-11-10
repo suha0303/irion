@@ -16,6 +16,7 @@ import torch
 
 from capstone_ai.mapping import FEATURES, TARGETS
 from capstone_ai.training import Predictor
+from execution import evaluate as execution_evaluate
 from execution.common import (
     MODELS,
     Progress,
@@ -26,6 +27,7 @@ from execution.common import (
     write,
 )
 from execution.engine import calibrate, ridge_fit
+from learning import study
 from pipeline.pipeline import normalized_role
 from pipeline.runtime import check
 
@@ -89,9 +91,7 @@ def spec_for(cfg, name):
     if comparison.is_comparison(cfg):
         entry = next(v for v in cfg["variants"] if v["id"] == name)
         if cfg["model_revision"] != "explicit_dropout_v1":
-            from .study import spec_for as study_spec
-
-            return study_spec(entry)
+            return study.spec_for(entry)
         return ModelSpec(
             entry["name"], entry["hidden"], entry["layers"], entry["heads"]
         )
@@ -104,9 +104,8 @@ def fit_settings(root, cfg, name):
         == "explicit_dropout_v1"
     ):
         return dict(learning_rate=cfg["learning_rate"])
-    from .study import selected_settings
 
-    return selected_settings(cfg, name, root / "compute")
+    return study.selected_settings(cfg, name, root / "compute")
 
 
 def gate_child(root, name, phase):
@@ -148,9 +147,7 @@ def gates(root, cfg, out, train, val, progress):
     folder = out / "gates"
     folder.mkdir()
     if cfg.get("model_revision") == "interlayer_norm_no_dropout":
-        from .study import select_rates
-
-        select_rates(cfg, out, train, val, progress)
+        study.select_rates(cfg, out, train, val, progress)
     n = cfg["gate_windows"]
     np.savez(
         folder / "inputs.npz",
@@ -332,9 +329,7 @@ def make_bundles(cfg, upstream, out, train, val, progress, *, device="cuda"):
         if name in neural_ids(cfg):
             selection = None
             if cfg.get("model_revision") == "interlayer_norm_no_dropout":
-                from .study import validated_selection
-
-                selection = validated_selection(cfg, name, out)
+                selection = study.validated_selection(cfg, name, out)
                 settings = {
                     key: selection[key]
                     for key in ("learning_rate", "optimization")
@@ -623,7 +618,6 @@ def evaluate_worker(root):
     try:
         verify(root / "input", read(root / "input/inventory.json"))
         check(root / "input/ai", root, "evaluate", job_prefix="drone-ai-")
-        from execution.evaluate import evaluate
 
         if comparison.is_comparison(cfg):
             result = read(out / "result-seal.json")
@@ -657,7 +651,7 @@ def evaluate_worker(root):
 
         eval_cfg = {**cfg, "dataset": str(upstream / "dataset")}
         with project_lock("cuda"):
-            evaluate(
+            execution_evaluate.evaluate(
                 eval_cfg,
                 out,
                 root / "evaluation",

@@ -14,6 +14,9 @@ from pathlib import Path
 import numpy as np
 import torch
 
+import capstone_ai.file_wait as capstone_ai_file_wait_module
+from capstone_ai import resume_state
+
 from .cli import live_evidence_verified, output
 from .clock_probe import ClockProbe, deadline_bounds
 from .dataset import feature_transform
@@ -129,7 +132,7 @@ def live_forecast(
             if sha(out / name) != expected:
                 raise ValueError("live checkpoint journal mismatch")
         if runtime_config.get("warm_shadow"):
-            from .resume_state import adopt_shadow
+            adopt_shadow = resume_state.adopt_shadow
 
             if prepared_tail is None:
                 raise ValueError("live shadow is required for this handover")
@@ -149,7 +152,7 @@ def live_forecast(
             ] != checkpoint["consumed_frame"]:
                 raise ValueError("shadow consumed-frame prefix differs")
         elif runtime_config.get("fast_resume"):
-            from .resume_state import restore_runtime
+            restore_runtime = resume_state.restore_runtime
 
             engine, tail = restore_runtime(
                 run,
@@ -196,7 +199,7 @@ def live_forecast(
         probe.socket.settimeout(probe.timeout)
     waiter = None
     if runtime_config.get("wake_on_write"):
-        from .file_wait import FileWaiter
+        FileWaiter = capstone_ai_file_wait_module.FileWaiter
 
         waiter = FileWaiter(run)
     started = time.monotonic()
@@ -228,17 +231,15 @@ def live_forecast(
         state_hash = None
         handover_hash = None
         if paused and runtime_config.get("warm_shadow"):
-            from .resume_state import save_handover_state
-
-            handover_hash = save_handover_state(
+            handover_hash = resume_state.save_handover_state(
                 tail, out / "handover-state.bin"
             )
         if runtime_config.get("fast_resume") and not (
             paused and runtime_config.get("warm_shadow")
         ):
-            from .resume_state import save_runtime
-
-            state_hash = save_runtime(tail, out / "runtime-state.bin")
+            state_hash = resume_state.save_runtime(
+                tail, out / "runtime-state.bin"
+            )
         runtime_done = time.monotonic_ns()
         source_checkpoint = tail.checkpoint()
         source_done = time.monotonic_ns()

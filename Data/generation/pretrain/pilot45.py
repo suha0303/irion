@@ -15,8 +15,12 @@ import time
 from collections import Counter
 from contextlib import ExitStack
 from pathlib import Path
+from typing import NoReturn
 
 from x500_storage import capture
+
+from pretrain import pilot_bridge as pretrain_pilot_bridge
+from pretrain import socket_cleanup
 
 from . import ai19, native_flight
 from .common import (
@@ -1128,14 +1132,12 @@ def init(
         write(task / "expected-producer.json", expected)
         extra = [Path(p) for p in recovery["files"]] if recovery else []
         if dependency_handoff:
-            from . import pilot_bridge
-
-            spec = pilot_bridge.dependencies(dependency_handoff)
+            spec = pretrain_pilot_bridge.dependencies(dependency_handoff)
             snapshot = task / "dependency-handoff.json"
             write(snapshot, spec)
             config.update(
                 dependency_handoff=str(snapshot),
-                policy_bundle=pilot_bridge.policy_bundle(spec),
+                policy_bundle=pretrain_pilot_bridge.policy_bundle(spec),
                 paired_cli_options=spec["paired_cli_options"],
             )
             extra += [snapshot, *(Path(p) for p in spec["paths"].values())]
@@ -1215,7 +1217,7 @@ def init(
     return task
 
 
-def seal(task, sim_receipt, ai_receipt):
+def seal(task, sim_receipt, ai_receipt) -> NoReturn:
     """Current native gate failed; no fabricated PASSED summary can unlock45."""
     task = task_path(task)
     if read(task / "config.json").get("single_integration"):
@@ -1245,10 +1247,9 @@ def prepare_pilot(
     """Create a new sealed task; the old draft and all failed tasks stay
     unchanged.
     """
-    from . import pilot_bridge
 
     recovery_authorization()
-    spec = pilot_bridge.dependencies(handoff)
+    spec = pretrain_pilot_bridge.dependencies(handoff)
     draft, integration = task_path(draft), task_path(integration)
     old = read(draft / "manifest.json")
     verify(
@@ -1314,9 +1315,12 @@ def prepare_pilot(
             if k not in {"source_hashes", "vehicle_profile_revision"}
         },
     )
-    write(task / "ai-manifest.json", pilot_bridge.plan(task))
-    write(task / "consumer-capsule.json", pilot_bridge.capsule(task, spec))
-    checked = pilot_bridge.check(task, spec)
+    write(task / "ai-manifest.json", pretrain_pilot_bridge.plan(task))
+    write(
+        task / "consumer-capsule.json",
+        pretrain_pilot_bridge.capsule(task, spec),
+    )
+    checked = pretrain_pilot_bridge.check(task, spec)
     if checked["result"].get("ai_prerequisites_passed") is not True:
         raise Blocked("AI actual prerequisites are not passed")
     extra = [
@@ -1345,7 +1349,7 @@ def prepare_pilot(
         source_sha256=sources,
         ai_ready=checked,
         dependency_handoff=str(snapshot),
-        policy_bundle=pilot_bridge.policy_bundle(spec),
+        policy_bundle=pretrain_pilot_bridge.policy_bundle(spec),
         paired_cli_options=spec["paired_cli_options"],
         validated_flight_workers=1,
         authorization=dict(path=str(RECOVERY_AUTH), sha256=sha(RECOVERY_AUTH)),
@@ -1493,11 +1497,9 @@ def preflight(task):
     ) or cfg.get("planned_cases") != len(manifest["cases"]):
         raise Blocked("Frozen task scope mismatch")
     if not cfg.get("single_integration"):
-        from .pilot_bridge import dependencies
-
         if not cfg.get("short_cycle") and not cfg.get("final16"):
             recovery_authorization()
-        dependencies(cfg["dependency_handoff"])
+        pretrain_pilot_bridge.dependencies(cfg["dependency_handoff"])
         checked = cfg.get("ai_ready", {})
         if (
             not checked
@@ -2061,9 +2063,7 @@ def physical(task, case, entry, ledger, folder, denied):
             resources()
             claim = folder / "socket-claim.json"
             if claim.exists() and os.path.lexists("/tmp/px4-sock-0"):
-                from .socket_cleanup import release
-
-                release(read(claim), service_unit(task))
+                socket_cleanup.release(read(claim), service_unit(task))
             collector().check_instance_socket(0)
 
 
@@ -2183,8 +2183,6 @@ def child(task, request, log, *, on_progress=None, resource_snapshot=None):
                 )
                 view = progress.sample() if progress is not None else {}
                 if progress is not None and len(progress.matches) == 1:
-                    from .socket_cleanup import claim
-
                     raw = (
                         ROOT / "simulation/runs" / next(iter(progress.matches))
                     )
@@ -2202,7 +2200,7 @@ def child(task, request, log, *, on_progress=None, resource_snapshot=None):
                                 "to this lane"
                             )
                         )
-                    claim(
+                    socket_cleanup.claim(
                         raw,
                         instance,
                         Path(request).parent / "socket-claim.json",
@@ -2343,13 +2341,11 @@ def run_case(request):
 
         write(value["receipt"], cohort_audit(task))
     elif value["action"] in {"pair", "ai_case", "ai_final"}:
-        from . import pilot_bridge
-
-        spec = pilot_bridge.dependencies(cfg["dependency_handoff"])
+        spec = pretrain_pilot_bridge.dependencies(cfg["dependency_handoff"])
         if value["action"] == "pair":
             result = dict(
                 pair_receipt=str(
-                    pilot_bridge.pair(
+                    pretrain_pilot_bridge.pair(
                         task, spec, value["normal_id"], value["anomaly_id"]
                     )
                 )
@@ -2359,9 +2355,9 @@ def run_case(request):
                 raise ValueError(
                     "Explicit short45 or FINAL16 final gate required"
                 )
-            result = pilot_bridge.check(task, spec, phase="final")
+            result = pretrain_pilot_bridge.check(task, spec, phase="final")
         else:
-            result = pilot_bridge.check(
+            result = pretrain_pilot_bridge.check(
                 task,
                 spec,
                 case_id=case["case_id"],
@@ -2922,7 +2918,7 @@ def main(argv=None, *, single_scope=False):
                 ),
             )
         elif args.action == "seal":
-            result = seal(args.task, args.sim_receipt, args.ai_receipt)
+            return seal(args.task, args.sim_receipt, args.ai_receipt)
         elif args.action == "status":
             task = task_path(args.task)
             result = dict(

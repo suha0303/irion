@@ -6,7 +6,9 @@ import argparse
 import json
 from pathlib import Path
 
+from learning import admission19
 from learning.admission19 import MISSION_POLICY, PILOT
+from learning.history19 import duration_profiles, joint_native
 
 from .duration_profiles import NATIVE_ADAPTERS
 from .pilot import (
@@ -55,7 +57,6 @@ def project_pair_receipt(
     """Data calls this after the official native verifier; no Data field
     mapping.
     """
-    from .joint_native import pair
 
     policy = json_file(policy_path)
     if (
@@ -63,7 +64,7 @@ def project_pair_receipt(
         or policy.get("status") != "FROZEN"
     ):
         raise ValueError("Reviewed frozen joint-native adapter required")
-    return pair(
+    return joint_native.pair(
         report_path,
         policy,
         fixture=policy.get("fixture_only") is True,
@@ -95,9 +96,8 @@ def native_mission_interval(
         json_file(native_policy_path),
         json_file(run_path),
     )
-    from .duration_profiles import duration_us
 
-    duration = duration_us(policy)
+    duration = duration_profiles.duration_us(policy)
     short = (
         policy.get("scope_task") == "SHORT_CYCLE_20261107"
         and policy.get("approved_for_short_cycle") is True
@@ -109,20 +109,19 @@ def native_mission_interval(
     final16 = False
     collection = False
     if policy.get("scope_task") == "MAIN_COLLECTION_CONNECTION_20261107":
-        from learning.collection19.contract import validate_policy
+        # collection19.__init__ imports cases, which imports this connector.
+        from learning.collection19 import contract
 
-        validate_policy(policy, native_policy_path)
+        contract.validate_policy(policy, native_policy_path)
         collection = True
     if policy.get("scope_task") == "FINAL16_20261107":
-        from learning.admission19 import FINAL16
-
         from .final16 import AUTH_SHA256, authorization
 
         authorization(fixture_only=policy.get("fixture_only") is True)
         final16 = (
             policy.get("approved_for_final16") is True
             and policy.get("authorization_sha256") == AUTH_SHA256
-            and policy.get("purpose") == FINAL16
+            and policy.get("purpose") == admission19.FINAL16
             and policy.get("duration_profile") == "short180"
         )
     if (
@@ -149,13 +148,11 @@ def native_mission_interval(
             "Native boundary source must be the exact frozen raw member"
         )
     if policy.get("native_adapter") in NATIVE_ADAPTERS:
-        from .joint_native import check_policy, origin
-
-        check_policy(
+        joint_native.check_policy(
             native_policy,
             duration_profile=policy.get("duration_profile", "standard480"),
         )
-        projected = origin(
+        projected = joint_native.origin(
             run_path,
             policy,
             fixture=policy.get("fixture_only") is True,

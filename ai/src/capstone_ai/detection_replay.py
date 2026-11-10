@@ -9,6 +9,8 @@ from pathlib import Path
 
 import numpy as np
 
+from capstone_ai import detection_protocol
+
 from .dataset import feature_transform
 from .detection import DetectionLedger
 from .detection_protocol import evaluation_metrics, point_metrics
@@ -305,8 +307,6 @@ def require_new_holdout(rows, prior_rows):
 
 
 def evaluate_sealed(replay_folder, events_path, observation_start):
-    from .detection_protocol import event_result
-
     folder = Path(replay_folder)
     seal = read_json(folder / "seal.json")
     for name, value in seal["files"].items():
@@ -316,7 +316,10 @@ def evaluate_sealed(replay_folder, events_path, observation_start):
             )
     decisions = records(folder / "decisions.jsonl")
     truth = records(events_path)
-    events = [event_result(e, decisions, observation_start) for e in truth]
+    events = [
+        detection_protocol.event_result(e, decisions, observation_start)
+        for e in truth
+    ]
     summary = read_json(folder / "summary.json")
     return {
         "events": events,

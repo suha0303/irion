@@ -5,6 +5,11 @@ import shutil
 import time
 from pathlib import Path
 
+import pretrain.collection as pretrain_collection_module
+import pretrain.storage as pretrain_storage_module
+import pretrain.streaming as pretrain_streaming_module
+from pretrain import composition, flow
+
 from .common import (
     HOME,
     PACKAGE,
@@ -159,9 +164,6 @@ def inputs(source):
     """
     from x500_storage import guard, task_root
 
-    from .composition import validate_roles
-    from .flow import homogeneous_batches
-
     source = Path(source).absolute()
     regular(source / "config.json")
     if source.parent != HOME / "tasks":
@@ -233,7 +235,7 @@ def inputs(source):
     for set_index, cases in enumerate(planned):
         rows, refs, template = [], [], None
         for index, batch in enumerate(
-            homogeneous_batches(cases, config["flight_workers"])
+            flow.homogeneous_batches(cases, config["flight_workers"])
         ):
             label = f"stream-{set_index + 1:03}-{index + 1:03}"
             folder = source / label
@@ -326,7 +328,9 @@ def inputs(source):
             refs.append(dict(path=str(paths[2]), sha256=pins[str(paths[2])]))
         lookup = {row["case_id"]: row for row in rows}
         rows = [lookup[case["case_id"]] for case in cases]
-        validate_roles(rows, cases, protected, config["collection_profile"])
+        composition.validate_roles(
+            rows, cases, protected, config["collection_profile"]
+        )
         parts.append(
             dict(
                 cases=cases,
@@ -341,7 +345,7 @@ def inputs(source):
         )
         all_rows.extend(rows)
     groups = [[case["case_id"] for case in cases] for cases in planned]
-    validate_roles(
+    composition.validate_roles(
         all_rows,
         [case for cases in planned for case in cases],
         protected,
@@ -443,9 +447,11 @@ def create_recovery(source, name):
 
 
 def run(runner):
-    from .collection import combine_frozen
-    from .storage import verify_bundle
-    from .streaming import restore_capsules, retire_owned, tree_stamp
+    combine_frozen = pretrain_collection_module.combine_frozen
+    verify_bundle = pretrain_storage_module.verify_bundle
+    restore_capsules = pretrain_streaming_module.restore_capsules
+    retire_owned = pretrain_streaming_module.retire_owned
+    tree_stamp = pretrain_streaming_module.tree_stamp
 
     runner.update(planned_stage_count=8)
     runner.begin("capsule-admission", workers=1)

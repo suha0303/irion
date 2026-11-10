@@ -12,6 +12,7 @@ import torch
 
 from capstone_ai.training import loss, seed_all
 from execution.common import write
+from pipeline import runtime
 
 from .models import make_model
 from .optimization import WarmupCosine, make_optimizer
@@ -236,11 +237,10 @@ def _measure(
             )
         if os.environ.get("CUBLAS_WORKSPACE_CONFIG") != ":4096:8":
             raise ValueError("Fixed CUDA workspace policy required")
-        from pipeline.runtime import check
 
         if runtime_stage not in {"benchmark", "fit"}:
             raise ValueError("Unknown benchmark allocation purpose")
-        check(
+        runtime.check(
             Path(__file__).resolve().parents[1],
             folder,
             runtime_stage,

@@ -24,6 +24,8 @@ from zoneinfo import ZoneInfo
 
 from x500_storage import capture, guard
 
+from pretrain import display, main_quality, main_views
+
 from . import (
     ai19,
     main_storage,
@@ -1065,11 +1067,9 @@ class Campaign(pilot_parallel.Coordinator):
         self.cfg, self.manifest = validate(self.task)
         self.flight_limits = {}
         if self.cfg.get("recovery_authorization"):
-            from .main_quality import attempts_max
-
             approved = read(self.cfg["recovery_authorization"]["path"])["cases"]
             self.flight_limits = {
-                c["case_id"]: attempts_max(self.cfg, c)
+                c["case_id"]: main_quality.attempts_max(self.cfg, c)
                 for c in self.manifest["cases"]
                 if c["case_id"] in approved
             }
@@ -1438,9 +1438,8 @@ class Campaign(pilot_parallel.Coordinator):
         ):
             e["processing_attempts"] = 0
             e.pop("status", None)
-        from .main_quality import recovery_entry
 
-        recovery = recovery_entry(self.cfg, case)
+        recovery = main_quality.recovery_entry(self.cfg, case)
         if recovery and recovery["mode"] == "reflight":
             e["processing_attempts"] = 0
             e.pop("status", None)
@@ -2384,9 +2383,7 @@ def execute_case(request):
     )  # Full source/runtime validation already ran in service preflight.
     action = job["action"]
     if action == "prepare":
-        from .main_views import prepare
-
-        result = prepare(
+        result = main_views.prepare(
             job["selection"],
             job["output"],
             task / "expected-producer.json",
@@ -2546,11 +2543,9 @@ def case_entry(request):
     try:
         execute_case(request)
     except BaseException as exc:
-        from .main_quality import QualityRejected
-
         scope = (
             "quality_rejection"
-            if isinstance(exc, QualityRejected)
+            if isinstance(exc, main_quality.QualityRejected)
             else "unit"
             if run_local_assessment_failure(exc)
             else "shared"
@@ -2579,7 +2574,7 @@ def case_entry(request):
             errno=getattr(exc, "errno", None),
             failure_reason=str(exc),
         )
-        if isinstance(exc, QualityRejected):
+        if isinstance(exc, main_quality.QualityRejected):
             failure["quality_rejection"] = exc.ref
         main_storage.durable(
             Path(request).with_suffix(".failure.json"), failure
@@ -3043,7 +3038,6 @@ def reconcile_termination(task):
 
 def render(task, tick=0):
     from .cli import duration
-    from .display import grid
 
     task = Path(task).absolute()
     cfg = read(task / "config.json")
@@ -3211,7 +3205,7 @@ def render(task, tick=0):
             f"마지막 자원  가용 RAM {gb('available_bytes')} · RSS "
             f"{gb('owned_tree_rss_bytes')} · 저장 여유 {gb('disk_free_bytes')}"
         ),
-        *grid(cards),
+        *display.grid(cards),
         *[
             (
                 f"합산/검산 {p.get('dataset_scope', '-')} · {p.get('stage', '-')} "
