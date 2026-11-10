@@ -6,4 +6,4 @@ if [[ ! -x "$dashboard_dir/.venv/bin/python" || ! -f "$dashboard_dir/frontend/di
   exit 1
 fi
 cd "$dashboard_dir/backend"
-exec ../.venv/bin/python -m uvicorn arion.main:app --host 127.0.0.1 --port 8765
+exec ../.venv/bin/python -m uvicorn arion.main:app --host 127.0.0.1 --port "${ARION_PORT:-8765}"

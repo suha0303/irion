@@ -84,8 +84,9 @@ export default function App() {
   const [providerDefs, setProviderDefs] = useState<ProviderState[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const run = runs.find((r) => r.run_id === runId);
+  const availableRunId = run?.run_id ?? '';
   const isLive = run?.source_kind === 'live';
-  const { frame, playback, connection, command } = useReplay(run?.run_id ?? '', isLive);
+  const { frame, playback, connection, command } = useReplay(availableRunId, isLive);
   useEffect(() => {
     if (runId) {
       try {
@@ -141,11 +142,12 @@ export default function App() {
     };
   }, [server.status, reload]);
   useEffect(() => {
-    if (!runId) return;
+    // A remembered selection may belong to a different local data directory.
+    if (!availableRunId) return;
     let stale = false;
     setPoints([]);
     setSelected(null);
-    api<{ points: Point[] }>(`/runs/${runId}/series`)
+    api<{ points: Point[] }>(`/runs/${availableRunId}/series`)
       .then((series) => {
         if (!stale) setPoints(series.points);
       })
@@ -155,7 +157,7 @@ export default function App() {
     return () => {
       stale = true;
     };
-  }, [runId, isLive]);
+  }, [availableRunId, isLive]);
 
   useEffect(() => {
     if (frame?.live_series) setPoints(frame.live_series);
