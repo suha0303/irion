@@ -68,9 +68,10 @@ irion-upload/UI/.venv/bin/python -B -m pytest -q irion-upload/UI/backend/tests
 남긴다. 전체 실행과 수정 후 부분 재검사의 중복 제거 합계는 한 번의 전체
 통과와 구분해 보고한다. 신규 GPU 학습이나 실제 비행을 시험 명령에 넣지 않는다.
 
-봉인된 시뮬레이션 Python 시험의 알려진 22개 실패와 모델 소스·전처리
-보존 조건은 [검수 결과](CODE_REVIEW_RESULTS.md)에 있다. 이 파일들을 단순히
-skip하거나 봉인 값을 새로 써서 현재 통과로 처리하지 않는다.
+M13에서 확인한 봉인 시험 22개 실패와 모델 소스·전처리 보존 조건은
+[검수 결과](CODE_REVIEW_RESULTS.md)에 있다. M14에서는 봉인된 원문을
+유지하면서 시험 의존성을 해당 버전에 맞춰 연결했다. verifier 교체나
+skip/xfail·봉인 재작성은 하지 않았다. [원인과 수정](CODE_REVIEW_M14.md).
 
 ## M13에서 사용한 시뮬레이션 검사 환경
 
@@ -87,6 +88,12 @@ simulation/.venv/bin/python -B -c \
   -q simulation/sim/tests simulation/audit/native_consumption_v2
 ```
 
-최종 결과는 233 통과·기존 22 실패다. AI Python 3.10은 이 시험의
+M13 결과는 233 통과·22 실패였다. M14에서 같은 명령으로 **261개 통과**를
+확인했다(기존 255개와 새 경계 검사 6개). `simulation/conftest.py`가 원래
+시험의 API/역사 정책을 명시적으로 연결하므로 표준 pytest 실행을 사용한다.
+AI Python 3.10은 이 시험의
 `datetime.UTC` 요구와 맞지 않으므로 대신 사용하지 않는다. 최신 소스의
 전체 검사 결과와 실행 명령은 [M13 최종 검증](CODE_REVIEW_M13.md)에 있다.
+
+전압 오차 재현과 입력군별 민감도 진단은 [M15](CODE_REVIEW_M15.md)에 있다.
+진단은 고정 모델과 준비된 입력을 읽으며 출력은 반드시 새 파일에 저장한다.
