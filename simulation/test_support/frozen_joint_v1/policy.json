@@ -1,0 +1,49 @@
+{
+  "schema": "drone.joint-phase-policy/1",
+  "revision": "joint-native-consumption-c2-v1",
+  "frozen_utc": "2026-11-07T04:19:51.808441+00:00",
+  "authorization": "/home/sa/CapstoneV3/ai/reports/p27-pilot45-20261107/recovery-01/authorization.json",
+  "scope": "Explicit new mission/weather phase policy; legacy absolute wind remains unchanged and archived runs are never relabeled.",
+  "origin": "Actual first PositionControl::setInputSetpoint consumption under shared PX4-clock mutex. Native receipt written AFTER that call, before clock can advance.",
+  "minimum_start_us": 60000000,
+  "ready_deadline_us": 59000000,
+  "ready_stable_us": 1000000,
+  "readiness": "Native armed/OFFBOARD/flying and distance fromNED[0,0,-3]<=0.5m continuously before deadline; late/missing readiness fails rather than shifting request.",
+  "duration_us": 480000000,
+  "reference_period_us": 100000,
+  "reference": "4801 preloaded analytic path samples, native sample-and-hold by floor(relative_phase/100ms), finite float32 controller reference. Every actual consumption records phase/index/effective position/velocity/acceleration/yaw after setInputSetpoint. Full table identity plus every native consumption checked; native controller query clocks may differ and are reported, not resampled or interpolated.",
+  "clock": "Gazebo/PX4 boot source clocks integer microseconds; shared PX4 mutex prevents clock advancement between reference calculation and actual consumption. Per-run absolute origin may differ; common relative phase is the new declared policy.",
+  "weather": "F(max(0,u-1s)) where F is unchanged bounded native kernel, u=(physical_source_time-native_actual_origin); before known origin useF(0). F has zero first/second derivatives at0, so initial constant and post-start curve joinC2. No reset or rewind of latent state.",
+  "weather_initial_plateau_us": 1000000,
+  "maximum_origin_notice_delay_us": 500000,
+  "weather_coverage": "Every1ms applied physics force logs native source time/weather argument/vector. Full[origin,origin+480s] checked without interpolation. Earlier prefix samples remain and are checked against actual native origin after it becomes known.",
+  "landing": "Request LAND after full480s; actual landing boundary is first native PositionControl consumption inAUTO_LAND, recorded separately. Retain complete actual mission interval, including terminal-reference hold pending landing activation; no crop to requested480s.",
+  "maximum_landing_activation_delay_us": 100000,
+  "acceptance": {
+    "wind_max_mps": 2e-09,
+    "wind_rms_mps": 2e-09,
+    "position_m": 1e-08,
+    "velocity_mps": 1e-08,
+    "circular_yaw_rad": 1e-08,
+    "expected_reference_rows": 4801,
+    "missing_reference_rows": 0,
+    "expected_weather_ticks": 480001,
+    "missing_weather_ticks": 0,
+    "native_consumption_max_gap_us": 40000
+  },
+  "input_interval": "actual native reference consumption start inclusive through actual nativeAUTO_LAND consumption exclusive; actual tail retained and reported. No metadata boundary substitution.",
+  "unchanged": [
+    "physical/model/voltage/SOC/duty/tracking gates",
+    "battery/propulsion endpoints",
+    "raw/C9 andneural19inputs",
+    "legacy absolute40 and all prior success/failure"
+  ],
+  "phase_comparison": "Paired equality on declared full480s function and allactual consumption consistency; no interpolation, DTW, time-shifted actual vectors or intersection-only pass. Different actual vehicle feedback/response is allowed.",
+  "tests": [
+    "84/180ms pre-start transport/preparation delays do not change relative function",
+    "late readiness andlate origin notice reject",
+    "pre/post value andfirst/second derivative continuity",
+    "legacyabsolute regressions andprotected coefficients",
+    "three independent normal/abnormal pairs480s strong/random"
+  ]
+}
