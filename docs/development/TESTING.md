@@ -71,3 +71,22 @@ irion-upload/UI/.venv/bin/python -B -m pytest -q irion-upload/UI/backend/tests
 봉인된 시뮬레이션 Python 시험의 알려진 22개 실패와 모델 소스·전처리
 보존 조건은 [검수 결과](CODE_REVIEW_RESULTS.md)에 있다. 이 파일들을 단순히
 skip하거나 봉인 값을 새로 써서 현재 통과로 처리하지 않는다.
+
+## M13에서 사용한 시뮬레이션 검사 환경
+
+현재 개발 PC의 시뮬레이션 환경은 Python 3.12이며 pytest가 없다. 의존성을
+바꾸지 않고 Data 환경에 이미 설치된 시험 도구 경로를 **뒤에 추가**했다.
+시뮬레이션의 NumPy/Gazebo 등 기존 의존성 선택은 앞 순서를 유지한다.
+이 방법은 같은 Python 3.12를 쓰는 현재 개발 PC용이다.
+
+```bash
+cd /home/sa/CapstoneV3
+PYTHONPATH=simulation/sim/src OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
+simulation/.venv/bin/python -B -c \
+'import sys, runpy; sys.path.append("/home/sa/CapstoneV3/Data/generation/.venv/lib/python3.12/site-packages"); runpy.run_module("pytest", run_name="__main__")' \
+  -q simulation/sim/tests simulation/audit/native_consumption_v2
+```
+
+최종 결과는 233 통과·기존 22 실패다. AI Python 3.10은 이 시험의
+`datetime.UTC` 요구와 맞지 않으므로 대신 사용하지 않는다. 최신 소스의
+전체 검사 결과와 실행 명령은 [M13 최종 검증](CODE_REVIEW_M13.md)에 있다.

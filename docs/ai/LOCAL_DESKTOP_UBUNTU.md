@@ -5,6 +5,26 @@ Ubuntu 24.04 x86_64용이며 Python 3.10.22, PyTorch 2.1.2+cpu, UI 의존성,
 최신 forecast 8종/run_health 8종 모델, 빌드된 UI를 포함한다.
 원격 GPU·시스템 Python 변경·실행 시 패키지 다운로드가 필요하지 않다.
 
+## 현재 개발 PC에서 검수한 최신 소스 실행
+
+M13 최종 검수는 RC12보다 뒤의 소스에 적용했다. 기존 RC12 압축 파일은
+갱신하지 않았다. `/home/sa/CapstoneV3`의 설치된 환경·모델·빌드된 UI를
+사용하려면 다음 명령으로 실행한다.
+
+```bash
+cd /home/sa/CapstoneV3
+ARION_AI_ROOT="$PWD" \
+ARION_DATA_DIR="$PWD/ai/.local/current-ui" \
+ARION_PORT=8879 \
+./irion-upload/UI/start.sh
+```
+
+`http://127.0.0.1:8879`로 접속하고 실행 터미널에서 `Ctrl+C`로 종료한다.
+같은 데이터 경로를 지정하면 저장한 기록을 다시 읽는다. 새 폴더에는 기존
+앱의 기록을 자동 복사하지 않는다. 모델 목록 확인은 `./ai/drone-ai local catalog`다.
+이 진입점의 실제 기동·종료·16종 CPU 실행을 확인했다.
+[최종 검증과 남은 항목](../development/CODE_REVIEW_M13.md)을 참고한다.
+
 ## 설치와 실행
 
 압축 파일을 원하는 폴더에 풀고, 풀린 폴더에서 실행한다.
