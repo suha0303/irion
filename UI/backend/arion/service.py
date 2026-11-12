@@ -3,6 +3,7 @@ binding.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import signal
@@ -14,11 +15,26 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+from .data_lock import directory_id
+
 ROOT = Path(__file__).resolve().parents[2]
 DATA = Path(os.environ.get("ARION_DATA_DIR", ROOT / ".data"))
 PORT = int(os.environ.get("ARION_PORT", "8765"))
 STATE = DATA / f"server-{PORT}.json"
 URL = f"http://127.0.0.1:{PORT}"
+
+
+def installation_id():
+    identity = [str(ROOT.absolute()), str(Path(sys.executable).absolute())]
+    return hashlib.sha256(json.dumps(identity).encode()).hexdigest()
+
+
+def matches_installation(result):
+    return (
+        is_arion(result)
+        and result.get("installation_id") == installation_id()
+        and result.get("data_directory_id") == directory_id(DATA)
+    )
 
 
 def health():
@@ -45,6 +61,13 @@ def is_arion(result):
 def start():
     running = health()
     if is_arion(running):
+        if not matches_installation(running):
+            print(
+                f"{URL}에는 다른 설치본 또는 데이터 폴더의 앱이 실행 중입니다. "
+                "기존 앱을 종료하거나 다른 ARION_PORT를 지정하세요.",
+                file=sys.stderr,
+            )
+            return 1
         print(f"이미 실행 중입니다: {URL}")
         return 0
     if running:
@@ -145,10 +168,12 @@ def main():
     result = health()
     print(
         f"실행 중: {URL}"
+        if matches_installation(result)
+        else f"다른 설치본 또는 데이터 폴더의 앱 실행 중: {URL}"
         if is_arion(result)
         else "대시보드 서버가 실행 중이 아닙니다."
     )
-    return 0 if is_arion(result) else 1
+    return 0 if matches_installation(result) else 1
 
 
 if __name__ == "__main__":

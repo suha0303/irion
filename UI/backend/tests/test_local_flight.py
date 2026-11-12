@@ -11,6 +11,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from arion.data_transfer import inventory, migrate
+from arion.file_io import atomic_json
 from arion.local_flight import LocalFlight
 from arion.main import create_app
 
@@ -295,6 +297,96 @@ print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.i
         assert not client.get("/api/local-ai/calibrations").json()[
             "calibrations"
         ][0]["active"]
+
+    # Model/calibration/manifest hashes must survive a data-directory move.
+    # Pause a real two-epoch fit after its first completed epoch, then compare
+    # relocation/resume against the uninterrupted two-epoch control.
+    pause_code = """
+import json, sys
+from pathlib import Path
+from localflight.adapt import fit
+from localflight.catalog import DEFAULT_BUNDLE
+root, flight = Path(sys.argv[1]), sys.argv[2]
+folder = root / 'local-ai/adapted/interrupted-fixture'
+args = ('forecast_lstm_h64_l2', [flight], [])
+paused = fit(*args, folder, bundle=DEFAULT_BUNDLE, epochs=2, stop_after_epoch=1)
+control = fit(*args, root / 'uninterrupted-control', bundle=DEFAULT_BUNDLE, epochs=2)
+print(json.dumps(dict(paused=paused, expected_sha256=control['model_sha256'])))
+"""
+    paused = json.loads(
+        subprocess.run(
+            [
+                str(project / "ai/.venv/bin/python"),
+                "-c",
+                pause_code,
+                str(tmp_path),
+                fixtures["adaptation"],
+            ],
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    interrupted_id = "f" * 32
+    atomic_json(
+        tmp_path / "local-ai/jobs" / (interrupted_id + ".json"),
+        dict(
+            id=interrupted_id,
+            status="interrupted",
+            action="adapt",
+            created_at=0,
+            request=dict(
+                action="adapt",
+                model_id="forecast_lstm_h64_l2",
+                adaptation=[fixtures["adaptation"]],
+                development=[],
+                epochs=2,
+                output=paused["paused"]["output"],
+            ),
+        ),
+    )
+    before = inventory(tmp_path)
+    moved = tmp_path.with_name(tmp_path.name + "-moved")
+    migrate(tmp_path, moved)
+    assert inventory(tmp_path) == before
+    hidden = tmp_path.with_name(tmp_path.name + "-preserved")
+    tmp_path.rename(hidden)
+    try:
+        with TestClient(create_app(moved)) as client:
+            assert (
+                client.get("/api/local-ai/models").json()["models"][0]["id"]
+                == model_id
+            )
+            assert (
+                client.get(
+                    "/api/local-ai/model-exports/" + exported["id"]
+                ).content
+                == download.content
+            )
+            complete(
+                "calibrations/select", dict(id=calibration_id, enabled=True)
+            )
+            moved_analysis = complete(
+                "analyze",
+                dict(
+                    prepared_job=ids["evaluation"],
+                    models=["forecast_lstm_h64_l2"],
+                ),
+            )
+            # Wall-clock duration is not part of the numerical result.
+            assert {
+                k: v
+                for k, v in moved_analysis["result"]["analyses"][0].items()
+                if k != "elapsed_seconds"
+            } == {k: v for k, v in result.items() if k != "elapsed_seconds"}
+            resumed = complete("jobs/" + interrupted_id + "/resume", {})
+            assert (
+                resumed["result"]["model_sha256"] == paused["expected_sha256"]
+            )
+            assert resumed["result"]["binding"] == paused["paused"]["binding"]
+    finally:
+        hidden.rename(tmp_path)
 
 
 def test_record_only_profile_fields_optional_and_legacy_log_reinspection(

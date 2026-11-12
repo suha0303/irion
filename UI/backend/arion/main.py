@@ -25,11 +25,14 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from .ai import AIAdapter, fixture_events
 from .contracts import InputProfile, ProcessedFrame, Provider, SourceConfig
+from .data_lock import data_lock, directory_id
+from .data_transfer import legacy_servers_stopped
 from .local_flight import attach as attach_local_flight
 from .local_live import attach as attach_local_live
 from .npz_replay import NpzReplay
 from .providers import ProviderRegistry, contract_for
 from .schemas import AIConnection, DemoRequest
+from .service import installation_id
 from .store_v2 import StoreV2 as Store
 from .streaming import LiveSources, SessionRun
 
@@ -37,7 +40,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MAX_UPLOAD = 64 * 1024 * 1024
 
 
-def create_app(data_dir=None):
+def _create_app(data_dir=None):
     store = Store(
         Path(data_dir or os.environ.get("ARION_DATA_DIR", ROOT / ".data"))
     )
@@ -50,13 +53,17 @@ def create_app(data_dir=None):
 
     @asynccontextmanager
     async def lifespan(unused_app):
-        yield
-        await local_live.close()
-        await local_flight.close()
-        await providers.close()
-        await sources.close()
-        await adapter.close()
-        await asyncio.to_thread(store.close)
+        with data_lock(store.root):
+            legacy_servers_stopped(store.root)
+            try:
+                yield
+            finally:
+                await local_live.close()
+                await local_flight.close()
+                await providers.close()
+                await sources.close()
+                await adapter.close()
+                await asyncio.to_thread(store.close)
 
     application = FastAPI(
         title="ARION Dashboard", version="0.4.0", lifespan=lifespan
@@ -171,6 +178,8 @@ def create_app(data_dir=None):
             "version": "0.4.0",
             "storage": "files",
             "application": "arion-dashboard",
+            "installation_id": installation_id(),
+            "data_directory_id": directory_id(store.root),
             "instance_id": os.environ.get(
                 "ARION_SERVER_INSTANCE", "foreground"
             ),
@@ -697,6 +706,14 @@ def create_app(data_dir=None):
         )
 
     return application
+
+
+def create_app(data_dir=None):
+    root = Path(data_dir or os.environ.get("ARION_DATA_DIR", ROOT / ".data"))
+    # Initialization writes recovery state, so it also needs exclusive access.
+    with data_lock(root):
+        legacy_servers_stopped(root)
+        return _create_app(data_dir)
 
 
 app = create_app()

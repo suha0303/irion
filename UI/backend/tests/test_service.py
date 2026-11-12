@@ -75,7 +75,12 @@ def test_start_preserves_existing_arion(state, monkeypatch):
     monkeypatch.setattr(
         service,
         "health",
-        lambda: {"status": "ok", "application": "arion-dashboard"},
+        lambda: {
+            "status": "ok",
+            "application": "arion-dashboard",
+            "installation_id": service.installation_id(),
+            "data_directory_id": service.directory_id(service.DATA),
+        },
     )
     monkeypatch.setattr(
         service.subprocess,
@@ -83,6 +88,32 @@ def test_start_preserves_existing_arion(state, monkeypatch):
         lambda *args, **kwargs: pytest.fail("중복 서버를 시작하면 안 됩니다."),
     )
     assert service.start() == 0
+    assert not state.exists()
+
+
+@pytest.mark.parametrize("mismatch", ["old_version", "installation", "data"])
+def test_start_reports_another_installation_without_replacing_it(
+    state, monkeypatch, mismatch
+):
+    reply = dict(
+        status="ok",
+        application="arion-dashboard",
+        installation_id=service.installation_id(),
+        data_directory_id=service.directory_id(service.DATA),
+    )
+    if mismatch == "old_version":
+        reply.pop("installation_id")
+    elif mismatch == "installation":
+        reply["installation_id"] = "another-package"
+    else:
+        reply["data_directory_id"] = "another-folder"
+    monkeypatch.setattr(service, "health", lambda: reply)
+    monkeypatch.setattr(
+        service.subprocess,
+        "Popen",
+        lambda *a, **kw: pytest.fail("must not start"),
+    )
+    assert service.start() == 1
     assert not state.exists()
 
 
