@@ -143,6 +143,11 @@ ULog 복수 부팅 자동 복구, 전체 사용자 데이터 경로 이관이다
 RC12 아카이브는 이번 수정으로 재배포하지 않았다. 최신 소스 실행은
 [Ubuntu 실행 안내](../ai/LOCAL_DESKTOP_UBUNTU.md)를 따른다.
 
+소스 `a882343`, 보고/체크리스트 `11220da`를 승인된 공개 main에 올렸다.
+[해당 커밋의 CI](https://github.com/suha0303/irion/actions/runs/43665504521)는
+`cpu-data`와 `frontend` 모두 통과했다. 공개 CI는 위 로컬 AI 전체 검사와
+검사 범위가 다르며 실기체 검증을 포함하지 않는다.
+
 프로젝트 지정 네 지침은 기존 원문 캐시
 `ai/reports/code-review-20261115/guidelines/`에서 재확인했다.
 확인한 오류만 수정하고 최초 실패·범위·검증 한계를 기록했다.
