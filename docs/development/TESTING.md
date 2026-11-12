@@ -64,6 +64,18 @@ irion-upload/UI/.venv/bin/python -B -m pytest -q irion-upload/UI/backend/tests
 
 ## 실패 증거와 보존 경계
 
+PX4/ArduPilot 단위 및 실기체 어댑터의 M16 검사:
+
+```bash
+PYTHONPATH=ai:ai/src:Data/generation:simulation/sim/src \
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
+ai/.venv/bin/python -B -m pytest -q \
+  ai/tests/test_localflight*.py ai/tests/test_voltage_diagnostics.py
+```
+
+29개 단위 교차 시험은 실제 DataFlash 디코더와 합성 바이너리 ULog를 쓴다.
+실제 PX4 비행 자료 검증을 대체하지 않는다. [M16 결과](CODE_REVIEW_M16.md).
+
 로그·JUnit XML·사용한 환경·최초 실패를 `ai/reports/`의 회차별 디렉터리에
 남긴다. 전체 실행과 수정 후 부분 재검사의 중복 제거 합계는 한 번의 전체
 통과와 구분해 보고한다. 신규 GPU 학습이나 실제 비행을 시험 명령에 넣지 않는다.
