@@ -218,14 +218,31 @@ def px4_events(path, profile, maps=None):
             raw = {}
             if topic == "actuator_outputs":
                 out = {}
+                counts = fields.get("noutputs")
                 for pos, channel in profile["motor_channels"].items():
                     key = f"output[{channel - 1}]"
                     if key not in fields:
                         raise ValueError(f"Missing motor channel {key}")
                     raw_value = float(fields[key][i])
+                    # Array padding is not an active output channel.
                     out["motor_request_" + pos] = (
-                        raw_value - profile["output_min"]
-                    ) / (profile["output_max"] - profile["output_min"])
+                        (raw_value - profile["output_min"])
+                        / (profile["output_max"] - profile["output_min"])
+                        if counts is not None and channel <= counts[i] <= 16
+                        else None
+                    )
+            elif topic == "vehicle_local_position":
+                # Real uORB marks altitude and vertical velocity separately.
+                # Keep the frozen simulation mapper's contract unchanged.
+                velocity = _finite(fields["vz"][i])
+                valid = fields.get("v_z_valid")
+                out = dict(
+                    climb_rate=-velocity
+                    if velocity is not None
+                    and valid is not None
+                    and valid[i] == 1
+                    else None
+                )
             else:
                 arrays = {
                     "vehicle_attitude": ("q", 4),
@@ -255,6 +272,9 @@ def px4_events(path, profile, maps=None):
                     k: v if q == "valid" else None
                     for k, (v, q) in output.items()
                 }
+                if topic == "battery_status" and out["pack_current"] == -1:
+                    # uORB's documented unknown sentinel, not charging current.
+                    out["pack_current"] = None
             if out:
                 streams.setdefault(f"{topic}:{data.multi_id}", []).append(
                     (int(stamp), int(sample), out)
@@ -279,7 +299,10 @@ def px4_events(path, profile, maps=None):
         events.append((end, end, {"__reset__": True}))
         events = [e for e in events if not int(dropout.timestamp) < e[0] < end]
     return sorted(events, key=lambda e: e[0]), dict(
-        streams=report, dropouts=len(ulog.dropouts)
+        streams=report,
+        dropouts=len(ulog.dropouts),
+        adapter_revision="px4-common19-units-v2",
+        vertical_velocity_validity="vehicle_local_position.v_z_valid",
     )
 
 

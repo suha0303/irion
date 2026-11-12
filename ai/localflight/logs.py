@@ -18,6 +18,7 @@ from .timing import ClockAudit
 PX4_REQUIRED = {
     "actuator_outputs": [
         "timestamp",
+        "noutputs",
         "output[0]",
         "output[1]",
         "output[2]",
@@ -27,7 +28,7 @@ PX4_REQUIRED = {
     "vehicle_rates_setpoint": ["timestamp", "roll", "pitch", "yaw"],
     "vehicle_attitude": ["timestamp", "q[0]", "q[1]", "q[2]", "q[3]"],
     "vehicle_acceleration": ["timestamp", "xyz[0]", "xyz[1]", "xyz[2]"],
-    "vehicle_local_position": ["timestamp", "vz"],
+    "vehicle_local_position": ["timestamp", "vz", "v_z_valid"],
     "vehicle_local_position_setpoint": ["timestamp", "vz"],
     "battery_status": ["timestamp", "voltage_v", "current_a"],
     "vehicle_status": ["timestamp", "arming_state", "nav_state"],
