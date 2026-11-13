@@ -109,3 +109,22 @@ AI Python 3.10은 이 시험의
 
 전압 오차 재현과 입력군별 민감도 진단은 [M15](CODE_REVIEW_M15.md)에 있다.
 진단은 고정 모델과 준비된 입력을 읽으며 출력은 반드시 새 파일에 저장한다.
+
+
+## RC13 배포 경계 검사
+
+`docs/development/CODE_REVIEW_M17_M18.md`의 후보 실패와 수정 후 결과를 함께 유지한다.
+배포 워커는 개발용 `console` 모듈 없이 실행되어야 한다. `doctor`가 모델 16종뿐
+아니라 워커·이관 모듈도 가져오는지 검사한다. 회귀 단위는 AI 관련 101개,
+UI 백엔드 106개, 프런트엔드 26개다. 전체 소스의 이전 마일스톤 검사와 구분한다.
+
+```bash
+cd /home/sa/CapstoneV3/ai/releases/drone-local-ubuntu24-20261115-rc13
+./drone-local doctor
+ARION_PORT=8879 ARION_DATA_DIR=/home/sa/CapstoneV3/ai/.local/rc13-ui ./drone-local start
+ARION_PORT=8879 ARION_DATA_DIR=/home/sa/CapstoneV3/ai/.local/rc13-ui ./drone-local status
+ARION_PORT=8879 ARION_DATA_DIR=/home/sa/CapstoneV3/ai/.local/rc13-ui ./drone-local stop
+```
+
+실제 비행 로그·모델·기존 RC12와 실패 증거는 보존한다. 테스트마다 학습/보정을
+다시 실행하지 않으며 코드나 검증 경계가 바뀐 범위만 추가 검사한다.
