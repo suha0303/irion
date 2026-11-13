@@ -8,8 +8,6 @@ import sys
 import time
 from pathlib import Path
 
-from console import profile as console_profile
-
 MODELS = ("persistence", "ridge_forecast", "lstm", "transformer")
 COUNTS = dict(
     normal_train=63,
@@ -47,6 +45,10 @@ def runtime_profile(root=None, *, required=False):
         candidates.append(Path(selected))
     for candidate in candidates:
         if candidate.is_file():
+            # Remote profiles are optional in the standalone CPU app. Import
+            # their validator only when a remote profile is explicitly used.
+            from console import profile as console_profile
+
             return console_profile.load(candidate)
     if required:
         raise ValueError(

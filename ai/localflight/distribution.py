@@ -26,7 +26,8 @@ case "${1:-start}" in
   start|stop|status) exec "$ARION_AI_PYTHON" -m arion.service "${1:-start}" ;;
   doctor) exec "$ARION_AI_PYTHON" -m localflight.distribution doctor ;;
   worker) exec "$ARION_AI_PYTHON" -m localflight.cli worker ;;
-  *) echo 'Usage: ./drone-local [start|stop|status|doctor|worker]' >&2; exit 2 ;;
+  migrate-data) shift; exec "$ARION_AI_PYTHON" -m arion.data_transfer "$@" ;;
+  *) echo 'Usage: ./drone-local [start|stop|status|doctor|worker|migrate-data]' >&2; exit 2 ;;
 esac
 """
 
@@ -179,6 +180,17 @@ def build(output, ui_packages):
         ui_root / "frontend/dist",
         output / "irion-upload/UI/frontend/dist",
     )
+    for name in (
+        "LOCAL_DESKTOP_UBUNTU.md",
+        "REAL_AIRCRAFT_CONNECTION_GUIDE.md",
+        "LOCAL_REAL_FLIGHT_TIME_HANDLING.md",
+        "LOCAL_REAL_FLIGHT_CHECKLIST.md",
+    ):
+        copy_regular(ROOT / "docs/ai" / name, output / "docs/ai" / name)
+    copy_regular(
+        ROOT / "docs/development/CODE_REVIEW_M17_M18.md",
+        output / "docs/development/CODE_REVIEW_M17_M18.md",
+    )
     frozen = catalog.root.relative_to(ROOT)
     required_model_files = set()
     for model in catalog.manifest["models"]:
@@ -246,6 +258,11 @@ def build(output, ui_packages):
         "~/.local/share}/drone-local\n"
         "ARION_PORT and ARION_DATA_DIR may select a different local "
         "port/data folder.\n"
+        "Stop the old app before upgrading. Another installation on the "
+        "same port is not accepted as this release.\n"
+        "Offline data copy: ./drone-local migrate-data --source /old/data "
+        "--destination /new/data (new destination only; original retained).\n"
+        "Instructions/checklist: docs/ai/LOCAL_DESKTOP_UBUNTU.md\n"
         "Keep the folder intact; rename/move it freely. Do not copy "
         "raw flight logs into it.\n"
         "Empirical aircraft/model thresholds supported; real-"
@@ -260,6 +277,7 @@ def build(output, ui_packages):
     manifest = dict(
         schema="drone.local-app/1",
         platform="Ubuntu 24.04 x86_64",
+        release=output.name,
         python=sys.version,
         models=16,
         device="cpu",
@@ -309,6 +327,8 @@ def doctor():
         "pymavlink",
         "pyulog",
         "arion.file_io",
+        "arion.data_transfer",
+        "localflight.cli",
     ):
         importlib.import_module(module)
 

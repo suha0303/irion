@@ -1,5 +1,9 @@
 """Check portable source packaging and installed application discovery."""
 
+import os
+import subprocess
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -7,10 +11,35 @@ import pytest
 from localflight.distribution import (
     build,
     copy_regular,
+    copy_tree,
     prune_overlay_metadata,
     ui_source,
 )
 from localflight.logs import inspect_log
+
+
+def test_cpu_worker_imports_without_development_only_packages(tmp_path):
+    """Exercise the copied app layout without console, pipeline or source fallback."""
+    root = Path(__file__).resolve().parents[2]
+    for name in ("localflight", "learning", "execution", "src"):
+        copy_tree(root / "ai" / name, tmp_path / "ai" / name, python_only=True)
+    env = dict(
+        os.environ,
+        PYTHONPATH=os.pathsep.join(
+            (str(tmp_path / "ai"), str(tmp_path / "ai/src"))
+        ),
+    )
+    env.pop("DRONE_AI_PROFILE", None)
+    result = subprocess.run(
+        [sys.executable, "-B", "-c", "import localflight.cli"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_distribution_does_not_overwrite_or_follow_symlinks(tmp_path):
