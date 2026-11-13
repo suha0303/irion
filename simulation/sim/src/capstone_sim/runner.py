@@ -9,6 +9,7 @@ import sys
 import time
 import uuid
 import xml.etree.ElementTree as ET
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,23 @@ PX4 = ROOT / "vendor/PX4-Autopilot"
 BINARY = PX4 / "build/px4_sitl_default/bin/px4"
 MODEL = PX4 / "Tools/simulation/gz/models"
 COLLECTION_PHASE_WAIT_S = {"streaming": 300, "takeoff": 180, "landing": 300}
+
+
+@contextmanager
+def termination_guard():
+    """Unwind owned-process cleanup on SIGTERM; restore the caller's handler."""
+    previous = signal.getsignal(signal.SIGTERM)
+
+    def terminate(number, unused_frame):
+        # A second TERM must not interrupt the bounded child cleanup.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        raise RuntimeError(f"Runner received SIGTERM ({number})")
+
+    signal.signal(signal.SIGTERM, terminate)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous)
 
 
 def gazebo_seed_transport(seed):
@@ -339,6 +357,7 @@ def custom_scenario_parameters(scenario, fault_at_s, vehicle, pack):
     return scenario_parameters(scenario, fault_at_s)
 
 
+@termination_guard()
 def run_flight(
     scenario,
     seed=17,
@@ -888,6 +907,7 @@ def run_flight(
                 [
                     str(BINARY),
                     str(px4_etc),
+                    "-d",
                     "-i",
                     str(instance),
                     "-w",
@@ -903,7 +923,7 @@ def run_flight(
                     args,
                     cwd=cwd,
                     env=env,
-                    stdin=subprocess.PIPE,
+                    stdin=subprocess.DEVNULL,
                     stdout=log,
                     stderr=subprocess.STDOUT,
                     start_new_session=True,
@@ -1298,6 +1318,7 @@ def run_flight(
             joint_phase.check(run)
         state["termination_reason"] = "mission_landed_disarmed"
     except (RuntimeError, TimeoutError, OSError, ValueError, KeyboardInterrupt) as exc:
+        success = False
         state["termination_reason"] = str(exc)
         state["primary_failure"] = dict(
             stage=phase if "phase" in locals() else "startup", reason=str(exc)
