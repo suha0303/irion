@@ -507,7 +507,7 @@ def _create_app(data_dir=None):
             await ws.close(code=1008)
             return
         try:
-            run = store.get(run_id)
+            run = await asyncio.to_thread(store.get, run_id)
         except KeyError:
             await ws.close(code=1008)
             return
@@ -596,7 +596,7 @@ def _create_app(data_dir=None):
         try:
             while not receiver.done():
                 started = time.perf_counter()
-                run = store.get(run_id)
+                run = await asyncio.to_thread(store.get, run_id)
                 if getattr(run, "live", False) and state["following"]:
                     state["cursor"] = run.now_ms
                 if state["playing"]:

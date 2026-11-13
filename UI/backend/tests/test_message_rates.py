@@ -14,9 +14,11 @@ from arion.store_v2 import StoreV2
 from arion.streaming import LiveSources
 
 
-@pytest.mark.parametrize("transport", ["udp", "serial"])
+@pytest.mark.parametrize(
+    "transport, startup_delay", [("udp", 10.3), ("serial", 0)]
+)
 def test_interval_protocol_ack_readback_observation_and_disconnect(
-    tmp_path, transport
+    tmp_path, transport, startup_delay
 ):
     async def check():
         store = StoreV2(tmp_path)
@@ -55,6 +57,7 @@ def test_interval_protocol_ack_readback_observation_and_disconnect(
             encoder.seq = (encoder.seq + 1) % 256
 
         async def aircraft():
+            await asyncio.sleep(startup_delay)
             stamp = 0
             while True:
                 await emit(encoder.heartbeat_encode(2, 12, 0, 0, 3))
@@ -101,10 +104,13 @@ def test_interval_protocol_ack_readback_observation_and_disconnect(
             sources.rates.start(run, request)
             with pytest.raises(ValueError, match="이미"):
                 sources.rates.start(run, request)
-            await asyncio.wait_for(sources.rates.tasks[run.run_id], 15)
+            await asyncio.wait_for(sources.rates.tasks[run.run_id], 30)
             status = sources.rates.status(run.run_id)
-            assert status["state"] == "complete" and status["sent"] == 16
-            assert len(commands) == 16
+            assert status["state"] == "complete" and status["sent"] == 18
+            assert len(commands) == 18
+            esc = next(r for r in status["rows"] if r["name"] == "ESC_STATUS")
+            assert esc["required"] is False and esc["verified"] is False
+            assert intervals[291] == 50_000
             journal = [
                 json.loads(line)
                 for line in run.path.read_text(encoding="utf-8").splitlines()

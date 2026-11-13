@@ -628,7 +628,11 @@ export default function App() {
                         모터 1–4 · RPM
                       </span>
                       <strong>{motorRange}</strong>
-                      <em>슬롯 번호 · 물리 위치 미지정</em>
+                      <em>
+                        {motorRange === '—'
+                          ? 'ESC RPM 미수신 · 회전수를 추정하지 않음'
+                          : '슬롯 번호 · 물리 위치 미지정'}
+                      </em>
                     </div>
                   </section>
                   {extraProviders.length > 0 && (

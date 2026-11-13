@@ -9,13 +9,14 @@ from pymavlink.dialects.v20 import common
 from arion import local_flight
 
 MESSAGES = [
-    (0, "HEARTBEAT", 2),
+    (0, "HEARTBEAT", 1),
     (30, "ATTITUDE", 20),
     (83, "ATTITUDE_TARGET", 20),
     (32, "LOCAL_POSITION_NED", 20),
     (85, "POSITION_TARGET_LOCAL_NED", 20),
     (36, "SERVO_OUTPUT_RAW", 20),
     (147, "BATTERY_STATUS", 5),
+    (291, "ESC_STATUS", 20),
 ]
 IMUS = {
     "HIGHRES_IMU": 105,
@@ -121,7 +122,13 @@ class MessageRates:
             raise ValueError("수신 필터와 AI 대상 ID가 다릅니다.")
         rows = [
             dict(
-                id=i, name=n, hz=h, ack=None, readback_us=None, status="pending"
+                id=i,
+                name=n,
+                hz=h,
+                ack=None,
+                readback_us=None,
+                status="pending",
+                required=n != "ESC_STATUS",
             )
             for i, n, h in MESSAGES
         ]
@@ -134,6 +141,7 @@ class MessageRates:
                 ack=None,
                 readback_us=None,
                 status="pending",
+                required=True,
             ),
         )
         session = dict(
@@ -203,8 +211,9 @@ class MessageRates:
 
     async def _configure(self, run, session):
         try:
-            deadline = time.monotonic() + 10
-            while time.monotonic() < deadline:
+            # Starting AI before the FC is normal. Wait until this explicitly
+            # selected connection ends; never send to an unobserved peer.
+            while run.live:
                 hb = self.heartbeats.get(run.run_id, {}).get(session["target"])
                 if hb and time.monotonic() - hb["at"] < 3:
                     expected = (
@@ -220,9 +229,7 @@ class MessageRates:
                     break
                 await asyncio.sleep(0.1)
             else:
-                raise ValueError(
-                    "대상 HEARTBEAT 없음: 주기 설정 명령을 보내지 않았습니다."
-                )
+                return
             session["state"] = "configuring"
             for row in session["rows"]:
                 row["status"] = "requesting"
@@ -256,8 +263,10 @@ class MessageRates:
             session.update(state="error", error=str(error))
         finally:
             try:
-                local_flight.write(
-                    run.path.with_suffix(".rates.json"), self.status(run.run_id)
+                await asyncio.to_thread(
+                    local_flight.write,
+                    run.path.with_suffix(".rates.json"),
+                    self.status(run.run_id),
                 )
             finally:
                 self.tasks.pop(run.run_id, None)
@@ -300,9 +309,9 @@ class MessageRates:
             error=session.get("error"),
             rows=rows,
             sent=session["sent"],
-            all_verified=all(r["verified"] for r in rows),
+            all_verified=all(r["verified"] for r in rows if r["required"]),
             target=list(session["target"]),
-            note="주기 ACK·설정 조회·실제 수신률 확인. 신호 값의 유효성/AI 입력 적격성은 별도.",
+            note="대상 HEARTBEAT까지 대기. ESC_STATUS는 선택 신호이며 FC/ESC 미지원 시 RPM을 추정하지 않습니다. ACK·조회·수신률과 AI 입력 적격성은 별도.",
         )
 
     async def disconnect(self, run_id):

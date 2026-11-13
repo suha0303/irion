@@ -306,9 +306,15 @@ export default function LocalLive({
       <DecisionResult decision={state.decision} />
       {state.rates && (
         <details>
-          <summary>메시지 주기 설정 · {state.rates.state}</summary>
+          <summary>
+            메시지 주기 설정 ·{' '}
+            {state.rates.state === 'waiting_heartbeat'
+              ? '기체 연결 대기 · 연결되면 자동 요청'
+              : state.rates.state}
+          </summary>
           {state.rates.error && <p role="alert">{state.rates.error}</p>}
           <p>ACK·설정 조회·실수신률을 함께 확인합니다. 신호 값의 유효성은 별도입니다.</p>
+          <p>ESC_STATUS는 선택 항목입니다. FC가 전송하지 않으면 RPM은 미수신으로 표시합니다.</p>
           <table>
             <thead>
               <tr>

@@ -6,6 +6,7 @@ import json
 import math
 import os
 import socket
+import sys
 import time
 import uuid
 from bisect import bisect_right
@@ -24,6 +25,7 @@ from .contracts import (
     SourceConfig,
 )
 from .file_io import hash_file
+from .live_journal import LiveJournal
 from .npz_archive import NpzArchive
 from .telemetry import TelemetryRun
 
@@ -107,6 +109,8 @@ class SessionRun:
             )
             self.writer.flush()
             os.fsync(self.writer.fileno())
+            if config.kind != "normalized":
+                self.writer = LiveJournal(self.writer)
             if config.kind == "normalized":
                 self.archive = NpzArchive(
                     self.path.parent / self.run_id / "npz",
@@ -243,8 +247,9 @@ class SessionRun:
 
     def _write(self, item):
         self.writer.write(encode(item) + b"\n")
-        self.writer.flush()
-        os.fsync(self.writer.fileno())
+        if not isinstance(self.writer, LiveJournal):
+            self.writer.flush()
+            os.fsync(self.writer.fileno())
 
     def record_message_rate_request(
         self, target, command, message_id, interval_us
@@ -676,6 +681,9 @@ class SessionRun:
             "recording": self.live,
             "last_sequence": self.accepted,
             "dropped_sequences": self.dropped_sequences,
+            "journal": self.writer.status()
+            if self.live and isinstance(self.writer, LiveJournal)
+            else None,
             "config": self.config.model_dump(),
         }
 
@@ -753,6 +761,8 @@ class LiveSources:
         self.store = store
         self.tasks = {}
         self.handles = {}
+        self.receivers = {}
+        self.stopping = set()
         self.rates = MessageRates(self)
 
     async def connect(self, run):
@@ -785,12 +795,31 @@ class LiveSources:
                     exclusive=True,
                 )
             self.handles[run.run_id] = handle
+            # A small process owns receipt timestamps even when the dashboard
+            # pauses for GC. Only this existing session descriptor is inherited.
+            receiver = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-m",
+                "arion.transport_reader",
+                str(handle.fileno()),
+                c.kind,
+                str(os.getpid()),
+                pass_fds=(handle.fileno(),),
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                limit=262144,
+            )
+            self.receivers[run.run_id] = receiver
             self.tasks[run.run_id] = asyncio.create_task(
-                self._read(run, handle)
+                self._read(run, handle, receiver)
             )
             run.state = "waiting"
             run.error = ""
         except (OSError, ValueError) as e:
+            handle = self.handles.pop(run.run_id, None)
+            if handle:
+                handle.close()
             run.state = "error"
             run.error = str(e)
             raise ValueError(str(e)) from e
@@ -798,60 +827,96 @@ class LiveSources:
     async def disconnect(self, run):
         await self.rates.disconnect(run.run_id)
         task = self.tasks.pop(run.run_id, None)
+        receiver = self.receivers.pop(run.run_id, None)
+        self.stopping.add(run.run_id)
+        if receiver and receiver.returncode is None:
+            receiver.terminate()
         if task:
-            task.cancel()
             try:
-                await task
-            except asyncio.CancelledError:
-                pass
+                await asyncio.wait_for(asyncio.shield(task), 5)
+            except asyncio.TimeoutError:
+                if receiver and receiver.returncode is None:
+                    receiver.kill()
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+                run.state = "error"
+                run.error = "수신 프로세스 종료 시간 초과 · 기록을 확인하세요."
+        if receiver:
+            await receiver.wait()
+        self.stopping.discard(run.run_id)
         handle = self.handles.pop(run.run_id, None)
         if handle:
             handle.close()
+        if run.live and isinstance(run.writer, LiveJournal):
+            await asyncio.to_thread(run.writer.flush)
         run.force_boundary = bool(run.entries)
-        if run.live:
+        if run.live and run.state != "error":
             run.state = "disconnected"
 
-    async def _read(self, run, handle):
+    async def _read(self, run, handle, receiver):
         from pymavlink.dialects.v20 import common
 
+        from .esc_status import MAVLink_esc_status_message
+
+        # Extend only the missing message; keep pymavlink framing/CRC checks.
+        common.mavlink_map.setdefault(291, MAVLink_esc_status_message)
         decoder = common.MAVLink(None)
         decoder.robust_parsing = True
         try:
             while True:
-                if run.config.kind == "udp":
-                    try:
-                        data, peer = handle.recvfrom(65535)
-                    except BlockingIOError:
-                        await asyncio.sleep(0.005)
-                        continue
-                else:
-                    peer = None
-                    data = handle.read(65535)
-                    if not data:
-                        await asyncio.sleep(0.01)
-                        continue
+                run.writer.check_error()
+                try:
+                    header = await asyncio.wait_for(
+                        receiver.stdout.readline(), 0.2
+                    )
+                except asyncio.TimeoutError:
+                    continue
+                if not header:
+                    code = await receiver.wait()
+                    if run.run_id not in self.stopping:
+                        detail = (await receiver.stderr.read()).decode(
+                            errors="replace"
+                        )
+                        raise OSError(
+                            f"수신 프로세스 종료 ({code}): {detail[-500:]}"
+                        )
+                    break
+                packet = json.loads(header)
+                data = await receiver.stdout.readexactly(packet["size"])
+                peer = tuple(packet["peer"]) if packet["peer"] else None
+                monotonic_ns = packet["receive_monotonic_ns"]
+                utc_ns = packet["receive_utc_ns"]
                 for msg in decoder.parse_buffer(data) or []:
                     if msg.get_type() == "BAD_DATA":
-                        run.issue("MAVLink 프레임 해석 실패")
+                        run.issue("MAVLink 프레임 해석 실패", msg.to_dict())
                         continue
                     self.rates.observe(run, msg, peer)
                     fields = msg.to_dict()
                     fields.pop("mavpackettype", None)
                     run.append_raw(
                         {
-                            "receive_monotonic_ns": time.monotonic_ns(),
-                            "receive_utc_ns": time.time_ns(),
+                            "receive_monotonic_ns": monotonic_ns,
+                            "receive_utc_ns": utc_ns,
                             "source_system": msg.get_srcSystem(),
                             "source_component": msg.get_srcComponent(),
                             "message_name": msg.get_type(),
                             "fields": fields,
                         }
                     )
+                # Busy sockets must still yield to HTTP, websocket and rate tasks.
+                await asyncio.sleep(0)
         except Exception as e:
             run.state = "error"
             run.error = f"{type(e).__name__}: {e}"[:300]
         finally:
             handle.close()
+            if receiver.returncode is None:
+                receiver.terminate()
+                try:
+                    await asyncio.wait_for(receiver.wait(), 3)
+                except asyncio.TimeoutError:
+                    receiver.kill()
+                    await receiver.wait()
 
     async def close(self):
         for run in list(self.store.active.values()):
