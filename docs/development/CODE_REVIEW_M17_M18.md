@@ -85,3 +85,6 @@ RC13은 검증한 후보2와 같은 실행 코드·모델·런타임을 사용�
 
 최종 해시/증거는 압축 외부의 `.sha256`·`.release.json`에도 제공한다. 패키지 내부
 문서는 패키징 시점의 후보 검사 기록이며 위 압축 후 기록으로 기존 번들을 덮어쓰지 않는다.
+
+공개 main `c17ddfb`의 [CI](https://github.com/suha0303/irion/actions/runs/43668224557)에서 데이터 이식성·Python 스타일·UI 시험/빌드가 통과했다.
+CI의 GitHub Actions Node 런타임 경고는 시험 실패와 구분한다.
