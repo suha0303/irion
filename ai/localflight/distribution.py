@@ -191,6 +191,10 @@ def build(output, ui_packages):
         ROOT / "docs/development/CODE_REVIEW_M17_M18.md",
         output / "docs/development/CODE_REVIEW_M17_M18.md",
     )
+    copy_regular(
+        ROOT / "docs/development/CODE_REVIEW_M19_M21.md",
+        output / "docs/development/CODE_REVIEW_M19_M21.md",
+    )
     frozen = catalog.root.relative_to(ROOT)
     required_model_files = set()
     for model in catalog.manifest["models"]:

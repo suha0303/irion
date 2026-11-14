@@ -1,14 +1,14 @@
 # Ubuntu 로컬 실기체 분석 프로그램
 
-2026-11-15 배포 후보: `ai/releases/drone-local-ubuntu24-20261115-rc13.tar.gz`.
+2026-11-15 배포 후보: `ai/releases/drone-local-ubuntu24-20261115-rc14.tar.gz`.
 Ubuntu 24.04 x86_64용이며 Python 3.10.22, PyTorch 2.1.2+cpu, UI 의존성,
 최신 forecast 8종/run_health 8종 모델, 빌드된 UI를 포함한다.
 원격 GPU·시스템 Python 변경·실행 시 패키지 다운로드가 필요하지 않다.
 
 ## 현재 개발 PC에서 검수한 최신 소스 실행
 
-RC13은 M13–M17의 최신 코드와 PX4 단위/유효성 수정, 데이터 복사 이관을 포함한다.
-기존 RC12·모델·원자료·검증 증거는 보존했다. `/home/sa/CapstoneV3`의 설치된 환경·모델·빌드된 UI를
+RC14는 RC13의 단위/유효성·이관 기능에 지속 수신 기록, 늦은 기체 연결 대기, ESC_STATUS 해석 수정을 더했다.
+기존 RC12·RC13·모델·원자료·검증 증거는 보존했다. `/home/sa/CapstoneV3`의 설치된 환경·모델·빌드된 UI를
 사용하려면 다음 명령으로 실행한다.
 
 ```bash
@@ -23,20 +23,20 @@ ARION_PORT=8879 \
 같은 데이터 경로를 지정하면 저장한 기록을 다시 읽는다. 새 폴더에는 기존
 앱의 기록을 자동 복사하지 않는다. 모델 목록 확인은 `./ai/drone-ai local catalog`다.
 이 진입점의 실제 기동·종료·16종 CPU 실행을 확인했다.
-[최신 배포 검증과 남은 항목](../development/CODE_REVIEW_M17_M18.md)을 참고한다.
+[최신 배포 검증과 남은 항목](../development/CODE_REVIEW_M19_M21.md)을 참고한다.
 
 ## 설치와 실행
 
 압축 파일을 원하는 폴더에 풀고, 풀린 폴더에서 실행한다.
 
 ```bash
-tar -xzf drone-local-ubuntu24-20261115-rc13.tar.gz
-cd drone-local-ubuntu24-20261115-rc13
+tar -xzf drone-local-ubuntu24-20261115-rc14.tar.gz
+cd drone-local-ubuntu24-20261115-rc14
 ./drone-local doctor
 ./drone-local start
 ```
 
-다른 버전의 앱이 같은 포트에서 실행 중이면 RC13은 성공으로 처리하지 않는다.
+다른 버전의 앱이 같은 포트에서 실행 중이면 새 배포는 성공으로 처리하지 않는다.
 기존 앱의 `stop`으로 먼저 종료하거나 아래처럼 다른 포트·별도 데이터 폴더를 사용한다.
 기존 데이터를 계속 쓰려면 기존 앱 종료 후 같은 `ARION_DATA_DIR`를 지정한다.
 
@@ -256,3 +256,26 @@ RC11은 AI 54개·UI 23개·배포 백엔드 90개 시험 및 격리 doctor 16�
 
 RC12 최종 검증: AI 63개·UI 26개·배포 백엔드 90개, 격리 doctor 16종 통과.
 RC12 SHA-256: `72be97499f8d3ee29cc9bbc0ca0da7ac9c13c22995bc26c6dfa7a6256379a8df`.
+
+
+## 이번 PC의 시연 데이터로 실행
+
+시연에 사용한 BIN 분석·기체 프로파일·PX4 수신 기록은 같은 데이터 폴더에 유지한다.
+다른 버전이 이 포트에서 실행 중이면 해당 버전의 `stop`을 먼저 사용한다.
+
+```bash
+cd /home/sa/CapstoneV3
+ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
+  ./ai/releases/drone-local-ubuntu24-20261115-rc14/drone-local start
+```
+
+브라우저 주소: `http://127.0.0.1:8879`. 종료도 같은 환경과 경로의 `stop`을 사용한다.
+
+RPM은 FC가 보낸 ESC_STATUS에 포함된 실제 값을 표시한다. 현재 수집용 PX4/Gazebo는
+ESC 피드백을 전송하지 않으므로 `ESC RPM 미수신`으로 표시한다. 원시 정답의
+모터 각속도나 PWM을 RPM 관측값으로 대입하지 않는다. RPM은 공통 19개 AI 입력에
+포함되지 않으며 필수 입력이 유효하면 RPM 없이도 추론할 수 있다.
+
+실시간 원본 기록은 최대 100 ms/1 MiB 묶음으로 별도 저장한다. 종료 시 fsync까지
+확인한다. 전원 차단 시 미동기화 묶음은 유실될 수 있으며, 저장 지연으로 16 MiB
+버퍼를 초과하거나 디스크 오류가 발생하면 수집 오류를 표시한다.
