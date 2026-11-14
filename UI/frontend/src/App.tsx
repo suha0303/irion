@@ -352,13 +352,6 @@ export default function App() {
             <div className="heading-actions">
               <button
                 className="button"
-                onClick={() => openLocal()}
-                disabled={server.status !== 'online'}
-              >
-                로컬 AI · 기체 관리
-              </button>
-              <button
-                className="button"
                 onClick={() => setSourceModal(true)}
                 disabled={server.status !== 'online' || busy}
               >

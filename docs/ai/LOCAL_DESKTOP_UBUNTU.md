@@ -5,6 +5,19 @@ Ubuntu 24.04 x86_64용이며 Python 3.10.22, PyTorch 2.1.2+cpu, UI 의존성,
 최신 forecast 8종/run_health 8종 모델, 빌드된 UI를 포함한다.
 원격 GPU·시스템 Python 변경·실행 시 패키지 다운로드가 필요하지 않다.
 
+## 현재 PC의 UI 수정본 실행
+
+페이지 제목 옆 중복 관리 버튼을 제거한 `rc15-ui1`을 현재 8879에서 사용한다.
+기존 RC15 압축 파일은 보존하며, 아래는 압축 전 로컬 수정본의 실행 명령이다.
+
+```bash
+cd /home/sa/CapstoneV3
+ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
+  ./ai/releases/drone-local-ubuntu24-20261115-rc15-ui1/drone-local start
+```
+
+확인은 `start` 대신 `status`, 종료는 `stop`을 사용한다.
+
 ## 현재 개발 PC에서 검수한 최신 소스 실행
 
 RC15는 실제 로컬 모델 상태와 이상 구간을 주 화면에 연결하고, 기체 관리를 상위 탭과 여섯 작업 메뉴로 나눴다. RC14의 수신·단위·이관 기능을 유지한다.
