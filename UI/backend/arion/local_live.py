@@ -9,6 +9,7 @@ import time
 from fastapi import HTTPException
 
 from .local_flight import write
+from .local_insights import insights
 from .streaming import SessionRun
 
 
@@ -239,6 +240,7 @@ def attach(app, service, store):
     @app.get("/api/sessions/{run_id}/local-ai")
     def state(run_id: str):
         result = live.state(run_id)
+        result["insights"] = insights(service.root, run_id, result)
         result["rates"] = app.state.sources.rates.status(run_id)
         saved = store.get(run_id).path.with_suffix(".rates.json")
         if result["rates"]["state"] == "not_requested" and saved.exists():

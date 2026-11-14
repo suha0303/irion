@@ -8,11 +8,10 @@ import time
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
-from starlette.websockets import WebSocketDisconnect
-
 from arion.contracts import SourceConfig
 from arion.main import create_app
+from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
 
 def test_udp_bind_address_accepts_lan_not_arbitrary_hostname():
@@ -145,6 +144,11 @@ def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
         assert state["decision"]["status"] == "unavailable"
         assert "분석 중" not in state["decision"]["reason"]
         assert state["result"]["status"] == "complete"
+        assert state["insights"]["history_available"]
+        assert state["insights"]["report_source"] == "flight_completion"
+        assert {
+            row["model_id"] for row in state["insights"]["report"]["analyses"]
+        } == {request["forecast_model"], request["post_model"]}
         summary = state["result"]["run_summary"]
         assert summary["status"] == "unavailable"
         assert summary["analyzed_us"] > 0

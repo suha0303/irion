@@ -334,6 +334,7 @@ def completed(events, journal, output, request, origin, *, end_us=None):
     if digest(output / "source.jsonl") != source_hash:
         raise ValueError("종료된 원본 저널이 변경되었습니다.")
     reports = []
+    forecast_reports = []
     for i, segment in enumerate(segments):
         a, b = segment["start_index"], segment["end_index"]
         # Balanced chunks avoid discarding a short final remainder.
@@ -393,14 +394,29 @@ def completed(events, journal, output, request, origin, *, end_us=None):
             reports.append(
                 dict(manifest=str(folder / "manifest.json"), analysis=result)
             )
+            if request.get("forecast_model"):
+                forecast_result = analyze(
+                    request["forecast_model"],
+                    folder / "manifest.json",
+                    bundle=request.get("bundle", DEFAULT_BUNDLE),
+                    adapted=request.get("forecast_adapted"),
+                    data_root=request.get("data_root"),
+                )
+                forecast_reports.append(
+                    dict(
+                        manifest=str(folder / "manifest.json"),
+                        analysis=forecast_result,
+                    )
+                )
     return dict(
         status="complete" if reports else "insufficient_data",
         analyses=reports,
+        forecast_analyses=forecast_reports,
         timing=timing,
         source_sha256=source_hash,
         health_verdict=None,
         run_summary=run_summary.aggregate(
-            [r["analysis"] for r in reports],
+            [r["analysis"] for r in [*forecast_reports, *reports]],
             context=context,
             spans=[
                 s
@@ -454,6 +470,7 @@ def arrived_decision(
         decision = dict(
             localflight_calibration.decide(calibration, score),
             time_us=prior["due"],
+            target_scores=np.abs(scaled - np.array(prior["scaled"])).tolist(),
         )
     return future, decision
 
@@ -489,6 +506,7 @@ def run(request):
     runtime, adaptation = load_runtime(
         request["forecast_model"], metadata, bundle=bundle, adapted=adapted
     )
+    request["forecast_adapted"] = str(adapted) if adapted else None
     post_adapted = (
         active_folder(
             request["data_root"],
@@ -524,6 +542,9 @@ def run(request):
     except (ValueError, KeyError, OSError) as error:
         calibration, calibration_error = None, str(error)
     pending_predictions = []
+    alarm_path = folder / "alarms.jsonl"
+    alarm_path.touch(exist_ok=False)
+    last_alarm_time = -1
     mapper = Mapper(request)
     events = []
     last_publish, last_data = 0.0, time.monotonic()
@@ -618,6 +639,30 @@ def run(request):
                         )
                         if decision is not None:
                             state["decision"] = decision
+                            if (
+                                decision["status"] == "suspect"
+                                and decision["time_us"] > last_alarm_time
+                            ):
+                                with alarm_path.open(
+                                    "a", encoding="utf-8"
+                                ) as alarm_log:
+                                    alarm_log.write(
+                                        json.dumps(
+                                            dict(
+                                                model_id=request[
+                                                    "forecast_model"
+                                                ],
+                                                adapted_sha256=state[
+                                                    "adapted_sha256"
+                                                ],
+                                                decision=decision,
+                                                recorded_at=time.time(),
+                                            ),
+                                            allow_nan=False,
+                                        )
+                                        + "\n"
+                                    )
+                                last_alarm_time = decision["time_us"]
                         pending_predictions.append(
                             dict(
                                 origin=int(times[-1]),

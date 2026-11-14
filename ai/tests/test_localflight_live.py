@@ -3,10 +3,12 @@ completion.
 """
 
 import json
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
+from localflight import live
 from localflight.calibration import admit_completed
 from localflight.live import DisarmGuard, Mapper, completed, decode, validate
 from localflight.prepare import causal_frames
@@ -115,6 +117,69 @@ def samples(seconds=13, start_ns=1000000000):
             )
 
 
+def test_live_alarm_history_survives_completion(tmp_path, monkeypatch):
+    """Replay a deterministic clock through the real CPU worker and recorder."""
+    clock = dict(now=1.0)
+    accept = live.Mapper.accept
+
+    def advance(mapper, item):
+        clock["now"] = item["raw"]["receive_monotonic_ns"] / 1e9
+        return accept(mapper, item)
+
+    monkeypatch.setattr(live.Mapper, "accept", advance)
+    monkeypatch.setattr(
+        live,
+        "time",
+        SimpleNamespace(
+            monotonic=lambda: clock["now"],
+            monotonic_ns=lambda: int(clock["now"] * 1e9),
+            time=lambda: clock["now"],
+        ),
+    )
+    # A test-only threshold exercises the alarm path; no production calibration
+    # or model artifact is changed and this is not detection-performance proof.
+    monkeypatch.setattr(
+        live.localflight_calibration,
+        "active",
+        lambda *_: dict(
+            id="synthetic-test",
+            source_sha256=[],
+            threshold=0,
+            unit="fixture",
+            validation_status="synthetic_test",
+        ),
+    )
+    journal = tmp_path / "journal.jsonl"
+    journal.write_text("".join(json.dumps(row) + "\n" for row in samples(16)))
+    output = tmp_path / "live"
+    output.mkdir()
+    (output / "finish").touch()
+    live.run(
+        dict(
+            request(),
+            journal=str(journal),
+            output=str(output),
+            data_root=str(tmp_path),
+        )
+    )
+    rows = [
+        json.loads(line)
+        for line in (output / "alarms.jsonl").read_text().splitlines()
+    ]
+    assert rows
+    times = [row["decision"]["time_us"] for row in rows]
+    assert times == sorted(set(times))
+    for row in rows:
+        assert row["model_id"] == request()["forecast_model"]
+        assert row["decision"]["status"] == "suspect"
+        assert max(row["decision"]["target_scores"]) == pytest.approx(
+            row["decision"]["scores"][0]
+        )
+    final = json.loads((output / "state.json").read_text())
+    assert final["status"] == "finished"
+    assert final["result"]["forecast_analyses"]
+
+
 def test_units_masks_instances_and_unknowns():
     r = request()
     p = r["profile"]
@@ -203,6 +268,14 @@ def test_end_report_runs_real_cpu_without_health_claim(tmp_path):
         events, journal, tmp_path / "out", r, "synthetic_unit_fixture"
     )
     assert result["status"] == "complete" and result["health_verdict"] is None
+    assert (
+        result["forecast_analyses"][0]["analysis"]["model_id"]
+        == r["forecast_model"]
+    )
+    assert {item["model_id"] for item in result["run_summary"]["models"]} == {
+        r["forecast_model"],
+        r["post_model"],
+    }
     analysis = result["analyses"][0]["analysis"]
     assert analysis["metrics"]["frames"] >= 110
     assert not analysis["real_aircraft_validated"]
