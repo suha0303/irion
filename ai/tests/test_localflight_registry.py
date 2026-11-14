@@ -6,11 +6,13 @@ import zipfile
 import numpy as np
 import pytest
 from test_localflight_adapt import flight
+from test_localflight_calibration import make_flight
 
 from localflight import registry
 from localflight.adapt import fit
+from localflight.adapt_review import review
 from localflight.analysis import analyze, compare
-from localflight.catalog import DEFAULT_BUNDLE
+from localflight.catalog import DEFAULT_BUNDLE, digest
 
 
 @pytest.mark.parametrize(
@@ -20,7 +22,15 @@ def test_model_backup_restore_select_and_rollback(tmp_path, model_id):
     train = flight(tmp_path, "train", "adaptation")
     evaluation = flight(tmp_path, "evaluation", "evaluation")
     fitted = tmp_path / "fitted"
-    fit(model_id, [train], [], fitted, bundle=DEFAULT_BUNDLE, epochs=1)
+    fit(
+        model_id,
+        [train],
+        [],
+        fitted,
+        bundle=DEFAULT_BUNDLE,
+        epochs=1,
+        learning_rate=1e-12,
+    )
     model = registry.register(
         tmp_path / "registry", fitted, bundle=DEFAULT_BUNDLE
     )
@@ -50,6 +60,34 @@ def test_model_backup_restore_select_and_rollback(tmp_path, model_id):
         registry.select_model(
             tmp_path / "restored", model["id"], {}, bundle=DEFAULT_BUNDLE
         )
+    with pytest.raises(ValueError, match="퇴행"):
+        registry.select_model(
+            tmp_path / "restored", model["id"], receipt, bundle=DEFAULT_BUNDLE
+        )
+    calibrations = [
+        make_flight(tmp_path, f"cal{i}", "calibration") for i in range(2)
+    ]
+    abnormal = flight(tmp_path, "fault", "evaluation", "abnormal")
+    meta = json.loads(abnormal.read_text())
+    fault_archive = abnormal.parent / "frames.npz"
+    with np.load(fault_archive) as data:
+        values, times = data["values"].copy(), data["time_us"].copy()
+    values[150:, 17] -= 8
+    values[150:, 4] += 10
+    np.savez(fault_archive, values=values, time_us=times)
+    meta["file"]["sha256"] = digest(fault_archive)
+    abnormal.write_text(json.dumps(meta))
+    receipt = review(
+        folder,
+        calibrations,
+        [evaluation, abnormal],
+        tmp_path / "review",
+        bundle=DEFAULT_BUNDLE,
+        events={
+            meta["source_sha256"]: [dict(start_us=15000000, end_us=25000000)]
+        },
+    )
+    assert receipt["promotion_check"]["status"] == "passed"
     event = registry.select_model(
         tmp_path / "restored", model["id"], receipt, bundle=DEFAULT_BUNDLE
     )

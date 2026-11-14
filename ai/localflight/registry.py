@@ -18,6 +18,7 @@ from safetensors.torch import load_file
 from execution.prepare import npz_headers
 
 from .adapt import write
+from .adapt_support import parameter_names
 from .catalog import Catalog, digest, read_json
 from .runtime import Runtime
 
@@ -62,9 +63,7 @@ def validate(folder, bundle):
         result["status"] != "experimental_adaptation_complete"
         or result["calibration_status"] != "not_calibrated"
     ):
-        raise ValueError(
-            "Only complete uncalibrated head adaptations are supported"
-        )
+        raise ValueError("Only complete uncalibrated adaptations are supported")
     runtime = Runtime(result["base_model_id"], catalog=Catalog(bundle))
     if result["binding"]["base_sha256"] != runtime.entry["weight_sha256"]:
         raise ValueError("Adapted model base mismatch")
@@ -83,6 +82,12 @@ def validate(folder, bundle):
             raise ValueError("Frozen scaler mismatch")
     weights = load_file(str(folder / "model.safetensors"), device="cpu")
     original = runtime.model.state_dict()
+    permitted = parameter_names(
+        runtime.model, result["binding"].get("trainable", "head")
+    )
+    declared = result["binding"].get("trainable_names")
+    if declared is not None and set(declared) != permitted:
+        raise ValueError("Adaptation parameter scope mismatch")
     if set(weights) != set(original):
         raise ValueError("Model tensor names mismatch")
     for key, tensor in weights.items():
@@ -92,9 +97,7 @@ def validate(folder, bundle):
             or not torch.isfinite(tensor).all()
         ):
             raise ValueError("Invalid model tensor")
-        if not key.startswith("head.") and not torch.equal(
-            tensor, original[key]
-        ):
+        if key not in permitted and not torch.equal(tensor, original[key]):
             raise ValueError("Frozen model encoder changed")
     runtime.model.load_state_dict(weights, strict=True)
     if runtime.entry["task"] == "forecast":
@@ -251,6 +254,17 @@ def select_model(root, model_id, comparison, *, bundle):
                 "required"
             )
         )
+    result = read_json(model_path(root, model_id) / "result.json")
+    if result["binding"].get("promotion_policy"):
+        review = comparison.get("promotion_check", {})
+        if (
+            review.get("status") != "passed"
+            or review.get("model_sha256") != descriptor["model_sha256"]
+            or review.get("policy") != result["binding"]["promotion_policy"]
+        ):
+            raise ValueError(
+                "정상·이상 퇴행 검증을 통과해야 새 모델을 선택할 수 있습니다."
+            )
     return change_selection(
         root,
         descriptor["profile"],

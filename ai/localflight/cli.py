@@ -1,6 +1,4 @@
-"""Local worker protocol. All operations execute on CPU without server
-access.
-"""
+"""Local worker protocol; optional CUDA training, CPU analysis, no server."""
 
 import argparse
 import json
@@ -18,6 +16,45 @@ from .profiles import list_profiles, save_profile
 def execute(request):
     action = request["action"]
     bundle = request.get("bundle", str(DEFAULT_BUNDLE))
+    if action == "device_info":
+        from .adapt_support import device_details
+
+        return device_details(request.get("device", "cpu"))
+    if action == "tune":
+        from .tune import run
+
+        return run(request, bundle=bundle)
+    if action == "verify_adapted":
+        import torch
+
+        from .registry import validate
+
+        result = validate(request["source"], bundle)
+        return dict(
+            status="cpu_restore_passed",
+            torch=str(torch.__version__),
+            model_sha256=result["model_sha256"],
+        )
+    if action == "tune_select":
+        from .tune import select_reviewed
+
+        return select_reviewed(
+            request["data_root"],
+            request["model_id"],
+            request["comparison"],
+            bundle=bundle,
+        )
+    if action == "adapt_review":
+        from .adapt_review import review
+
+        return review(
+            request["adapted"],
+            request["calibrations"],
+            request["evaluations"],
+            request["output"],
+            bundle=bundle,
+            events=request.get("events"),
+        )
     if action.startswith("calibration_"):
         from . import calibration
         from .registry import active_folder
@@ -134,6 +171,9 @@ def execute(request):
             bundle=bundle,
             epochs=request.get("epochs", 5),
             resume=request.get("resume"),
+            device=request.get("device", "cpu"),
+            strategy=request.get("strategy", "head"),
+            time_limit_seconds=request.get("time_limit_seconds", 1800),
             progress=lambda row: write(output / "progress.json", row),
         )
     if action == "compare":
@@ -173,7 +213,7 @@ def main(argv=None):
                 f.write(encoded)
         print(encoded, end="")
         return 0
-    except (ValueError, KeyError, OSError) as error:
+    except (ValueError, KeyError, OSError, RuntimeError) as error:
         print(
             json.dumps({"error": str(error)}, ensure_ascii=False),
             file=sys.stderr,
