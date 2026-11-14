@@ -92,8 +92,12 @@ export type Decision = {
   calibration_id?: string;
   observations?: number;
   exceedances?: number;
+  scores?: number[];
+  time_us?: number;
+  target_scores?: number[];
 };
 export type Analysis = {
+  scoring?: { scores: number[]; time_us: number[]; unit: string };
   segment_results?: SegmentAnalysis[];
   decision?: Decision;
   normal_alarm_rate?: number | null;

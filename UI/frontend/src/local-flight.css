@@ -197,3 +197,139 @@
 .local-run-summary h4 {
   overflow-wrap: anywhere;
 }
+
+[hidden] {
+  display: none !important;
+}
+.local-management-page .local-flight {
+  max-width: none;
+  padding: 0;
+  background: transparent;
+}
+.local-task-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  background: #e8eef4;
+  border-radius: 12px;
+  margin: 8px 0 24px;
+}
+.local-task-nav button {
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 12px 18px;
+  color: #44576b;
+  font-weight: 600;
+  cursor: pointer;
+}
+.local-task-nav button.active {
+  background: white;
+  color: #107b72;
+  box-shadow: 0 2px 5px #20344716;
+}
+.local-task-intro {
+  margin: 12px 0 20px;
+}
+.local-task-intro h2 {
+  margin-bottom: 8px;
+}
+.local-flight-grid[data-page='profile'],
+.local-flight-grid[data-page='models'],
+.local-flight-grid[data-page='results'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.local-flight-grid[data-page='profile'] {
+  max-width: 980px;
+}
+.local-flight-grid[data-page='analysis'],
+.local-flight-grid[data-page='training'],
+.local-flight-grid[data-page='logs'] {
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.4fr);
+}
+.local-flight-grid[data-page='training'] > div:last-of-type:not([hidden]) {
+  grid-column: 1 / -1;
+}
+.local-job-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 4px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: #243d50;
+}
+.local-job-toggle span {
+  white-space: nowrap;
+  color: #107b72;
+}
+.local-job-body {
+  padding: 12px 4px;
+}
+.local-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  margin-top: 20px;
+}
+.local-insight-filters {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 12px 0 20px;
+}
+.local-insight-filters label {
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+  flex: 1;
+}
+.local-insights {
+  display: grid;
+  gap: 20px;
+}
+.local-insight-panel {
+  padding: 24px;
+}
+.local-insight-panel p {
+  line-height: 1.65;
+}
+.local-insight-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.local-insight-panel td,
+.local-insight-panel th {
+  text-align: left;
+  padding: 12px 8px;
+  border-bottom: 1px solid #dce5ef;
+  font-size: 13px;
+}
+.local-model-name {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.local-alarm-detail {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #e5b37c;
+  background: #fffaf3;
+  border-radius: 12px;
+}
+@media (max-width: 900px) {
+  .local-flight-grid[data-page] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .local-task-nav button {
+    padding: 10px;
+  }
+  .local-insight-panel {
+    padding: 16px;
+  }
+}

@@ -1,5 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import LocalLive from './LocalLive';
+import LocalInsights, { LocalModelCards } from './LocalInsights';
+import { useLocalAI } from './useLocalAI';
+import { localAlarms } from './local-insights';
 import {
   Activity,
   ArrowDownToLine,
@@ -45,9 +48,13 @@ import './extension.css';
 const LocalFlight = lazy(() => import('./LocalFlight'));
 const Flight3D = lazy(() => import('./Flight3D').then((module) => ({ default: module.Flight3D })));
 
-type Tab = 'monitor' | 'events' | 'diagnostics';
+type Tab = 'monitor' | 'events' | 'diagnostics' | 'local';
 const titles = {
-  monitor: ['비행 모니터링', '관측과 두 모델의 판단을 같은 시점에서 확인하세요.'],
+  monitor: ['비행 모니터링', '관측과 선택한 모델의 판단을 확인하세요.'],
+  local: [
+    '로컬 AI · 기체 관리',
+    '기체 정보부터 로그 준비, 분석과 파인튜닝까지 단계별로 진행하세요.',
+  ],
   events: ['이상 구간 분석', '판정 시점과 관측 데이터를 나란히 살펴보세요.'],
   diagnostics: ['데이터 진단', '좋은 판단은 신뢰할 수 있는 입력에서 시작됩니다.'],
 };
@@ -80,11 +87,19 @@ export default function App() {
   const [providerId, setProviderId] = useState('lstm');
   const [providerFilter, setProviderFilter] = useState('all');
   const [sourceModal, setSourceModal] = useState(false);
-  const [localModal, setLocalModal] = useState(false);
+  const [localVisited, setLocalVisited] = useState(false);
+  const localModal = tab === 'local';
+  const openLocal = () => {
+    setLocalVisited(true);
+    setTab('local');
+  };
   const [providerDefs, setProviderDefs] = useState<ProviderState[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
   const run = runs.find((r) => r.run_id === runId);
   const availableRunId = run?.run_id ?? '';
+  const local = useLocalAI(availableRunId);
+  const hasLocal = availableRunId.startsWith('live-');
+  const localRows = localAlarms(local.state);
   const isLive = run?.source_kind === 'live';
   const { frame, playback, connection, command } = useReplay(availableRunId, isLive);
   useEffect(() => {
@@ -209,7 +224,7 @@ export default function App() {
       if (e.code === 'Escape') {
         setAiModal(false);
         setSourceModal(false);
-        setLocalModal(false);
+        setTab('monitor');
       }
     };
     document.addEventListener('keydown', keypress);
@@ -302,16 +317,18 @@ export default function App() {
             ARION<small>FLIGHT INSIGHTS</small>
           </a>
           <nav aria-label="주요 화면">
-            {(['monitor', 'events', 'diagnostics'] as Tab[]).map((key) => (
+            {(['monitor', 'events', 'local', 'diagnostics'] as Tab[]).map((key) => (
               <button
                 key={key}
                 className={tab === key ? 'active' : ''}
-                onClick={() => setTab(key)}
+                onClick={() => (key === 'local' ? openLocal() : setTab(key))}
                 aria-current={tab === key ? 'page' : undefined}
               >
                 {titles[key][0]}
-                {key === 'events' && events.length > 0 && (
-                  <span className="nav-event-count">{events.length}</span>
+                {key === 'events' && (hasLocal ? localRows.length : events.length) > 0 && (
+                  <span className="nav-event-count">
+                    {hasLocal ? localRows.length : events.length}
+                  </span>
                 )}
               </button>
             ))}
@@ -335,7 +352,7 @@ export default function App() {
             <div className="heading-actions">
               <button
                 className="button"
-                onClick={() => setLocalModal(true)}
+                onClick={() => openLocal()}
                 disabled={server.status !== 'online'}
               >
                 로컬 AI · 기체 관리
@@ -424,7 +441,14 @@ export default function App() {
               </button>
             </div>
           )}
-          {!run ? (
+          {localVisited && (
+            <div hidden={tab !== 'local'} className="local-management-page">
+              <Suspense fallback={<div role="status">기체 관리 화면을 불러오는 중…</div>}>
+                <LocalFlight active={tab === 'local'} />
+              </Suspense>
+            </div>
+          )}
+          {tab === 'local' ? null : !run ? (
             <div className="panel welcome">
               <div className="welcome-icon">
                 <Wind size={40} />
@@ -545,7 +569,13 @@ export default function App() {
               {tab === 'monitor' && (
                 <>
                   {run.run_id.startsWith('live-') && (
-                    <LocalLive runId={runId} live={!!isLive} manage={() => setLocalModal(true)} />
+                    <LocalLive
+                      runId={runId}
+                      live={!!isLive}
+                      manage={openLocal}
+                      state={local.state}
+                      onState={local.setState}
+                    />
                   )}
                   <ArchivePanel run={run} frame={frame} />
                   <div className="monitor-hero">
@@ -558,23 +588,36 @@ export default function App() {
                     >
                       <Flight3D frame={frame} points={points} connected={connected} />
                     </Suspense>
-                    <aside className="model-comparison" aria-label="LSTM과 Transformer 비교">
+                    <aside
+                      className="model-comparison"
+                      aria-label={hasLocal ? '선택한 로컬 모델 상태' : '외부 모델 비교'}
+                    >
                       <div className="comparison-heading">
                         <h2>모델 비교</h2>
                         <span>관측과 별도 판정</span>
                       </div>
-                      <ProviderCards
-                        frame={frame}
-                        connected={connected}
-                        configure={configure}
-                        providerIds={['lstm', 'transformer']}
-                        choose={chooseEvent}
-                        offline={server.status === 'offline'}
-                      />
-                      <div className={`comparison-summary ${comparison.state}`}>
-                        <Info size={15} />
-                        <span>{comparison.label}</span>
-                      </div>
+                      {hasLocal ? (
+                        <LocalModelCards
+                          state={local.state}
+                          error={local.error}
+                          showEvents={() => setTab('events')}
+                        />
+                      ) : (
+                        <>
+                          <ProviderCards
+                            frame={frame}
+                            connected={connected}
+                            configure={configure}
+                            providerIds={['lstm', 'transformer']}
+                            choose={chooseEvent}
+                            offline={server.status === 'offline'}
+                          />
+                          <div className={`comparison-summary ${comparison.state}`}>
+                            <Info size={15} />
+                            <span>{comparison.label}</span>
+                          </div>
+                        </>
+                      )}
                     </aside>
                   </div>
                   <section className="observation-strip" aria-label="현재 비행 관측">
@@ -783,31 +826,57 @@ export default function App() {
                       </div>
                       <PathChart points={points} cursor={cursor} />
                     </section>
-                    <section className="panel event-summary">
-                      <div className="panel-heading">
-                        <div>
-                          <span className="eyebrow">DETECTION TIMELINE</span>
-                          <h2>
-                            판정 이력 <span className="heading-note">{events.length}건</span>
-                          </h2>
+                    {hasLocal ? (
+                      <section className="panel event-summary">
+                        <div className="panel-heading">
+                          <h2>로컬 AI 판정 이력</h2>
+                          <button className="text-button" onClick={() => setTab('events')}>
+                            전체 보기
+                          </button>
                         </div>
-                        <button className="text-button" onClick={() => setTab('events')}>
-                          전체 보기
-                          <ArrowUpRightIcon />
-                        </button>
-                      </div>
-                      <EventList events={events} selected={selected} choose={chooseEvent} />
-                      <div className="event-summary-foot">
-                        <Info size={14} />
-                        {frame?.fixture_mode
-                          ? '시험용 응답의 판정 시각을 따라 표시합니다.'
-                          : '이상 점수는 고장 확률이나 건강도 %가 아닙니다.'}
-                      </div>
-                    </section>
+                        <div className="inner">
+                          <p>
+                            {local.state.insights?.history_available
+                              ? `실시간 기록 경보 ${local.state.insights.alarm_count}건`
+                              : '실시간 경보 이력 없음'}
+                          </p>
+                          <p>
+                            저장 로그 기준 초과{' '}
+                            {localRows.filter((row) => row.source === 'log').length}시점
+                          </p>
+                          <p>예측과 종료 후 모델의 결과를 이상 구간 분석에서 확인하세요.</p>
+                        </div>
+                      </section>
+                    ) : (
+                      <section className="panel event-summary">
+                        <div className="panel-heading">
+                          <div>
+                            <span className="eyebrow">DETECTION TIMELINE</span>
+                            <h2>
+                              판정 이력 <span className="heading-note">{events.length}건</span>
+                            </h2>
+                          </div>
+                          <button className="text-button" onClick={() => setTab('events')}>
+                            전체 보기
+                            <ArrowUpRightIcon />
+                          </button>
+                        </div>
+                        <EventList events={events} selected={selected} choose={chooseEvent} />
+                        <div className="event-summary-foot">
+                          <Info size={14} />
+                          {frame?.fixture_mode
+                            ? '시험용 응답의 판정 시각을 따라 표시합니다.'
+                            : '이상 점수는 고장 확률이나 건강도 %가 아닙니다.'}
+                        </div>
+                      </section>
+                    )}
                   </div>
                 </>
               )}
-              {tab === 'events' && (
+              {tab === 'events' && hasLocal && (
+                <LocalInsights key={runId} state={local.state} error={local.error} />
+              )}
+              {tab === 'events' && !hasLocal && (
                 <>
                   <div className="event-tools">
                     <div>
@@ -881,7 +950,7 @@ export default function App() {
             </>
           )}
         </main>
-        {run && (
+        {run && tab !== 'local' && (
           <footer className="playback-dock">
             <div className="playback-top">
               <div className="playback-title">
@@ -1008,11 +1077,6 @@ export default function App() {
           providers={providerDefs}
           close={() => setAiModal(false)}
         />
-      )}
-      {localModal && (
-        <Suspense fallback={<div role="status">기체 관리 화면을 불러오는 중…</div>}>
-          <LocalFlight close={() => setLocalModal(false)} />
-        </Suspense>
       )}
       {sourceModal && (
         <SourceDialog

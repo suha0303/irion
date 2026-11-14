@@ -63,7 +63,7 @@ export default function LocalModels({
   );
   return (
     <section className="panel">
-      <h2>6. 적응 모델 보관·선택·원복</h2>
+      <h2>적응 모델 보관·선택·원복</h2>
       <p>
         기체 프로파일 버전과 원본 모델별로 선택합니다. 비교 결과가 있어야 적응 모델을 선택할 수
         있습니다. 선택해도 건강 판정 임계값은 자동 적용되지 않습니다.
@@ -170,7 +170,7 @@ export default function LocalModels({
         이 기체의 분석 모델로 선택
       </button>
       <p>
-        5번 분석 화면에서 ‘선택한 적응 모델 사용’을 켜면 적용됩니다. 원본 A/B 분석도 계속 사용할 수
+        ‘로그 분석’ 탭에서 ‘선택한 적응 모델 사용’을 켜면 적용됩니다. 원본 A/B 분석도 계속 사용할 수
         있습니다.
       </p>
       {latest.map((e) => (

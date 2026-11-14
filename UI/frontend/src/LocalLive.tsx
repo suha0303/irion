@@ -1,64 +1,26 @@
 import LocalRunResult from './LocalRunResult';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import type { LocalState as State } from './useLocalAI';
+import { localStatus as statusNames } from './local-insights';
 import { api, post } from './api';
-import type { Analysis, Decision, Profile, RunSummary } from './local-flight-types';
+import type { Profile } from './local-flight-types';
 import { DecisionResult } from './LocalPreparation';
 import './local-flight.css';
 
 type Model = { id: string; task: string; label: string };
-type Rates = {
-  state: string;
-  error?: string;
-  rows: {
-    name: string;
-    hz: number;
-    observed_hz: number;
-    ack: number | null;
-    readback_us: number | null;
-    verified: boolean;
-    state: string;
-  }[];
-};
-type State = {
-  finish_reason?: string;
-  decision?: Decision;
-  rates?: Rates;
-  status: string;
-  message?: string;
-  scope?: string;
-  forecast_model?: string;
-  adapted_sha256?: string;
-  missing_features?: string[];
-  prediction?: { origin_us: number; values: number[]; units: string[] } | null;
-  result?: {
-    run_summary?: RunSummary;
-    message: string;
-    analyses: { manifest: string; analysis: Analysis }[];
-  };
-};
-const statusNames: Record<string, string> = {
-  unconfigured: '설정 대기',
-  starting: '모델 준비',
-  warming_up: '이력 수집',
-  waiting: '연결 확인',
-  predicting: '실시간 예측 중',
-  stale: '수신·처리 지연',
-  analyzing: '비행 후 분석 중',
-  finished: '비행 후 결과',
-  interrupted: '중단됨',
-  error: '오류',
-};
-
 export default function LocalLive({
   runId,
   live,
   manage,
+  state,
+  onState,
 }: {
   runId: string;
   live: boolean;
   manage: () => void;
+  state: State;
+  onState: (state: State) => void;
 }) {
-  const [state, setState] = useState<State>({ status: 'unconfigured' });
   const [models, setModels] = useState<Model[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [version, setVersion] = useState('');
@@ -86,31 +48,11 @@ export default function LocalLive({
     setModels(c.models);
     setProfiles(p.profiles);
   };
-  useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout>;
-    setState({ status: 'unconfigured' });
-    setError('');
-    const poll = async () => {
-      try {
-        const next = await api<State>(`/sessions/${runId}/local-ai`);
-        if (!cancelled) setState(next);
-      } catch (e) {
-        if (!cancelled) setError(String(e));
-      }
-      if (!cancelled) timer = setTimeout(poll, 1000);
-    };
-    void poll();
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [runId]);
   async function start() {
     setBusy(true);
     setError('');
     try {
-      setState(
+      onState(
         await post<State>(`/sessions/${runId}/local-ai`, {
           profile_version: version,
           forecast_model: forecast,
@@ -303,7 +245,9 @@ export default function LocalLive({
           {state.adapted_sha256 ? `파인튜닝 ${state.adapted_sha256.slice(0, 8)}` : '원본 모델'}
         </p>
       )}
-      <DecisionResult decision={state.decision} />
+      {state.status !== 'finished' && state.status !== 'analyzing' && (
+        <DecisionResult decision={state.decision} />
+      )}
       {state.rates && (
         <details>
           <summary>
@@ -375,8 +319,10 @@ export default function LocalLive({
           <h3>비행 후 분석 결과</h3>
           <p>{state.result.message}</p>
           <LocalRunResult
-            summary={state.result.run_summary}
-            analyses={state.result.analyses.map((r) => r.analysis)}
+            summary={state.insights?.report?.run_summary ?? state.result.run_summary}
+            analyses={
+              state.insights?.report?.analyses ?? state.result.analyses.map((r) => r.analysis)
+            }
           />
           {state.result.analyses.map((r, i) => (
             <div key={r.manifest}>

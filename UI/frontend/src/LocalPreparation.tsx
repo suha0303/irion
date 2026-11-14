@@ -235,6 +235,7 @@ export function AnalysisResult({ result }: { result: Analysis }) {
 }
 
 type Props = {
+  page?: 'prepare' | 'analysis' | 'adapt' | 'hidden';
   jobs: Job[];
   profiles: Profile[];
   selectedModels: string[];
@@ -242,6 +243,7 @@ type Props = {
   submit: (path: string, body: unknown) => Promise<void>;
 };
 export default function LocalPreparation({
+  page,
   jobs,
   profiles,
   selectedModels,
@@ -296,8 +298,8 @@ export default function LocalPreparation({
     );
   return (
     <>
-      <section className="panel">
-        <h2>4. 보존 구간과 시간축 조정</h2>
+      <section className="panel" hidden={page !== undefined && page !== 'prepare'}>
+        <h2>보존 구간과 시간축 조정</h2>
         <p>
           공백 전후를 분리하고 11초 이상 보존된 구간을 찾습니다. 검사 범위는 최대 2시간, 저장할 보존
           구간은 합계 1000초입니다. 시각은 로그의 부팅 후 초 단위입니다. 기록이 유지됐다는
@@ -630,8 +632,11 @@ export default function LocalPreparation({
           선택 구간 저장
         </button>
       </section>
-      <section className="panel">
-        <h2>5. 예측·적응·독립 비교</h2>
+      <section
+        className="panel"
+        hidden={page !== undefined && page !== 'analysis' && page !== 'adapt'}
+      >
+        <h2>{page === 'adapt' ? '파인튜닝 및 독립 비교' : '준비된 비행 분석'}</h2>
         <p>
           같은 비행의 여러 구간은 하나의 비행으로 취급합니다. 공백을 넘어 입력·정답 창을 만들지
           않습니다.
@@ -654,143 +659,150 @@ export default function LocalPreparation({
             ))}
           </select>
         </label>
-        {preparedId && (
-          <details>
-            <summary>같은 원본의 다른 준비 구간 함께 분석</summary>
-            <p>
-              전체 런에 포함할 구간을 추가하세요. 겹치는 구간은 중복 합산하지 않고 선택을 다시
-              요청합니다. 선택하지 않은 부분은 미분석으로 표시합니다.
-            </p>
-            {ready('prepare')
-              .filter(
-                (j) =>
-                  j.id !== preparedId &&
-                  j.result?.source_sha256 &&
-                  j.result.source_sha256 ===
-                    jobs.find((v) => v.id === preparedId)?.result?.source_sha256,
-              )
-              .map((j) => (
-                <label className="local-segment" key={j.id}>
-                  <input
-                    type="checkbox"
-                    checked={additionalPrepared.includes(j.id)}
-                    onChange={() => setAdditionalPrepared((v) => toggle(v, j.id))}
-                  />
-                  {jobLabel(j)}
-                </label>
-              ))}
-          </details>
-        )}
-        <label className="local-segment">
-          <input
-            type="checkbox"
-            checked={useActive}
-            onChange={(e) => setUseActive(e.target.checked)}
-          />
-          선택한 적응 모델 사용 (등록된 기체·원본 모델이 일치할 때 적용)
-        </label>
-        <button
-          className="button primary"
-          disabled={disabled || !preparedId || !selectedModels.length}
-          onClick={() =>
-            submit('/local-ai/analyze', {
-              prepared_jobs: [preparedId, ...additionalPrepared],
-              models: [...new Set(selectedModels)],
-              use_active: useActive,
-            })
-          }
-        >
-          선택 모델 A/B로 분석
-        </button>
-        <h3>CPU 적응 학습</h3>
-        <p>
-          선택한 모델 A의 출력층을 적응합니다. 정상 확인 비행 1–3개를 선택하세요. 원본 모델과
-          scaler는 보존합니다.
-        </p>
-        {ready('prepare')
-          .filter((j) => j.result?.role === 'adaptation' && j.result?.health === 'confirmed_normal')
-          .map((j) => (
-            <label className="local-segment" key={j.id}>
-              <input
-                type="checkbox"
-                checked={train.includes(j.id)}
-                onChange={() => setTrain((t) => toggle(t, j.id))}
-              />
-              {jobLabel(j)}
-            </label>
-          ))}
-        <label className="form-label">
-          모델 선택용 별도 비행 (선택)
-          <select
-            className="text-input"
-            value={development}
-            onChange={(e) => setDevelopment(e.target.value)}
+        <div hidden={page === 'adapt'}>
+          {preparedId && (
+            <details>
+              <summary>같은 원본의 다른 준비 구간 함께 분석</summary>
+              <p>
+                전체 런에 포함할 구간을 추가하세요. 겹치는 구간은 중복 합산하지 않고 선택을 다시
+                요청합니다. 선택하지 않은 부분은 미분석으로 표시합니다.
+              </p>
+              {ready('prepare')
+                .filter(
+                  (j) =>
+                    j.id !== preparedId &&
+                    j.result?.source_sha256 &&
+                    j.result.source_sha256 ===
+                      jobs.find((v) => v.id === preparedId)?.result?.source_sha256,
+                )
+                .map((j) => (
+                  <label className="local-segment" key={j.id}>
+                    <input
+                      type="checkbox"
+                      checked={additionalPrepared.includes(j.id)}
+                      onChange={() => setAdditionalPrepared((v) => toggle(v, j.id))}
+                    />
+                    {jobLabel(j)}
+                  </label>
+                ))}
+            </details>
+          )}
+          <label className="local-segment">
+            <input
+              type="checkbox"
+              checked={useActive}
+              onChange={(e) => setUseActive(e.target.checked)}
+            />
+            선택한 적응 모델 사용 (등록된 기체·원본 모델이 일치할 때 적용)
+          </label>
+          <button
+            className="button primary"
+            disabled={disabled || !preparedId || !selectedModels.length}
+            onClick={() =>
+              submit('/local-ai/analyze', {
+                prepared_jobs: [preparedId, ...additionalPrepared],
+                models: [...new Set(selectedModels)],
+                use_active: useActive,
+              })
+            }
           >
-            <option value="">없음 · 마지막 epoch 사용</option>
-            {ready('prepare')
-              .filter(
-                (j) => j.result?.role === 'development' && j.result?.health === 'confirmed_normal',
-              )
-              .map((j) => (
+            선택 모델 A/B로 분석
+          </button>
+        </div>
+        <div hidden={page === 'analysis'}>
+          <h3>CPU 적응 학습</h3>
+          <p>
+            선택한 모델 A의 출력층을 적응합니다. 정상 확인 비행 1–3개를 선택하세요. 원본 모델과
+            scaler는 보존합니다.
+          </p>
+          {ready('prepare')
+            .filter(
+              (j) => j.result?.role === 'adaptation' && j.result?.health === 'confirmed_normal',
+            )
+            .map((j) => (
+              <label className="local-segment" key={j.id}>
+                <input
+                  type="checkbox"
+                  checked={train.includes(j.id)}
+                  onChange={() => setTrain((t) => toggle(t, j.id))}
+                />
+                {jobLabel(j)}
+              </label>
+            ))}
+          <label className="form-label">
+            모델 선택용 별도 비행 (선택)
+            <select
+              className="text-input"
+              value={development}
+              onChange={(e) => setDevelopment(e.target.value)}
+            >
+              <option value="">없음 · 마지막 epoch 사용</option>
+              {ready('prepare')
+                .filter(
+                  (j) =>
+                    j.result?.role === 'development' && j.result?.health === 'confirmed_normal',
+                )
+                .map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {jobLabel(j)}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="form-label">
+            학습 반복 횟수
+            <input
+              className="text-input"
+              type="number"
+              min="1"
+              max="20"
+              value={epochs}
+              onChange={(e) => setEpochs(Number(e.target.value))}
+            />
+          </label>
+          <button
+            className="button primary"
+            disabled={disabled || train.length < 1 || train.length > 3 || !selectedModels[0]}
+            onClick={() =>
+              submit('/local-ai/adapt', {
+                model_id: selectedModels[0],
+                adaptation_jobs: train,
+                development_jobs: development ? [development] : [],
+                epochs,
+              })
+            }
+          >
+            새 적응 모델 만들기
+          </button>
+          <label className="form-label">
+            비교할 적응 모델
+            <select
+              className="text-input"
+              value={adaptedId}
+              onChange={(e) => setAdaptedId(e.target.value)}
+            >
+              <option value="">선택</option>
+              {ready('adapt').map((j) => (
                 <option key={j.id} value={j.id}>
                   {jobLabel(j)}
                 </option>
               ))}
-          </select>
-        </label>
-        <label className="form-label">
-          학습 반복 횟수
-          <input
-            className="text-input"
-            type="number"
-            min="1"
-            max="20"
-            value={epochs}
-            onChange={(e) => setEpochs(Number(e.target.value))}
-          />
-        </label>
-        <button
-          className="button primary"
-          disabled={disabled || train.length < 1 || train.length > 3 || !selectedModels[0]}
-          onClick={() =>
-            submit('/local-ai/adapt', {
-              model_id: selectedModels[0],
-              adaptation_jobs: train,
-              development_jobs: development ? [development] : [],
-              epochs,
-            })
-          }
-        >
-          새 적응 모델 만들기
-        </button>
-        <label className="form-label">
-          비교할 적응 모델
-          <select
-            className="text-input"
-            value={adaptedId}
-            onChange={(e) => setAdaptedId(e.target.value)}
+            </select>
+          </label>
+          <button
+            className="button"
+            disabled={disabled || !adaptedId || !preparedId}
+            onClick={() =>
+              submit('/local-ai/compare', { adapted_job: adaptedId, prepared_job: preparedId })
+            }
           >
-            <option value="">선택</option>
-            {ready('adapt').map((j) => (
-              <option key={j.id} value={j.id}>
-                {jobLabel(j)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          className="button"
-          disabled={disabled || !adaptedId || !preparedId}
-          onClick={() =>
-            submit('/local-ai/compare', { adapted_job: adaptedId, prepared_job: preparedId })
-          }
-        >
-          선택한 독립 비행에서 원본과 비교
-        </button>
-        <p>
-          비행 종료 후 모델도 출력층을 적응할 수 있습니다. 1–3회 학습의 성능은 독립 비행에서
-          비교해야 하며, 기존 경보 임계값은 자동 적용하지 않습니다.
-        </p>
+            선택한 독립 비행에서 원본과 비교
+          </button>
+          <p>
+            비행 종료 후 모델도 출력층을 적응할 수 있습니다. 1–3회 학습의 성능은 독립 비행에서
+            비교해야 하며, 기존 경보 임계값은 자동 적용하지 않습니다.
+          </p>
+        </div>
       </section>
     </>
   );
