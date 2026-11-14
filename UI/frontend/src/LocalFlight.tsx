@@ -129,7 +129,7 @@ export default function LocalFlight({ active }: { active: boolean }) {
       <section className="local-flight" aria-label="로컬 AI 관리 작업">
         <header>
           <div>
-            <span className="eyebrow">ON DEVICE · CPU</span>
+            <span className="eyebrow">CPU 추론 · GPU 선택 학습</span>
             <p>
               {catalogLoading
                 ? '모델 목록 확인 중…'
@@ -454,12 +454,12 @@ export default function LocalFlight({ active }: { active: boolean }) {
                         <AnalysisResult result={job.result.adapted} />
                       </>
                     )}
-                    {job.progress && (
+                    {job.progress?.epoch !== undefined && job.progress.train_loss !== undefined && (
                       <p>
                         {job.progress.epoch} epoch · loss {job.progress.train_loss.toFixed(5)}
                       </p>
                     )}
-                    {job.action === 'adapt' &&
+                    {['adapt', 'tune'].includes(job.action) &&
                       ['cancelled', 'interrupted', 'failed'].includes(job.status) && (
                         <button
                           className="button"

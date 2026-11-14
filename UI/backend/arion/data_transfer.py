@@ -27,6 +27,8 @@ PATH_KEYS = {
     "resume",
     "adaptation",
     "development",
+    "calibrations",
+    "evaluations",
     "forecast_adapted",
     "post_adapted",
 }
@@ -93,6 +95,10 @@ def operational(relative):
             p.parts[:2] == ("local-ai", "live")
             and len(p.parts) == 4
             and p.name in {"request.json", "state.json", "result.json"}
+        )
+        or (
+            p.parts[:2] == ("local-ai", "tuning")
+            and p.name in {"plan.json", "result.json"}
         )
     )
 

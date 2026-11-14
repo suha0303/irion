@@ -121,8 +121,22 @@ export type Job = {
   action: string;
   status: string;
   error?: string;
-  progress?: { epoch: number; train_loss: number };
+  progress?: { epoch?: number; train_loss?: number; stage?: string; elapsed_seconds?: number };
   result?: {
+    elapsed_seconds?: number;
+    within_budget?: boolean;
+    tuned_models?: {
+      model_id: string;
+      review_status?: string;
+      review?: {
+        promotion_check: {
+          status: string;
+          reasons: string[];
+          missing: string[];
+          flights?: { health: string; error_before?: number[]; error_after?: number[] }[];
+        };
+      };
+    }[];
     run_summary?: RunSummary;
     source_sha256?: string;
     profile_suggestion?: ProfileSuggestion;

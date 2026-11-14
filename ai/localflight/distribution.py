@@ -172,6 +172,10 @@ def build(output, ui_packages):
         "ai/src",
     ):
         copy_tree(ROOT / directory, output / directory, python_only=True)
+    copy_regular(
+        ROOT / "ai/localflight/requirements-gpu.lock",
+        output / "ai/localflight/requirements-gpu.lock",
+    )
     copy_tree(
         ui_root / "backend/arion",
         output / "irion-upload/UI/backend/arion",
@@ -192,6 +196,7 @@ def build(output, ui_packages):
         "CODE_REVIEW_M19_M21.md",
         "CODE_REVIEW_M22_M24.md",
         "CODE_REVIEW_M26_M29.md",
+        "LOCAL_GPU_G1_G3.md",
     ):
         copy_regular(
             ROOT / "docs/development" / name,

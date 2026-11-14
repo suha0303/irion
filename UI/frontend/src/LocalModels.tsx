@@ -37,7 +37,11 @@ export default function LocalModels({
   const [comparison, setComparison] = useState('');
   const input = useRef<HTMLInputElement>(null);
   const revision = jobs
-    .filter((j) => j.action.startsWith('model_') && j.status === 'complete')
+    .filter(
+      (j) =>
+        (j.action.startsWith('model_') || ['tune', 'tune_select'].includes(j.action)) &&
+        j.status === 'complete',
+    )
     .map((j) => j.id)
     .join(',');
   const ready = (action: string) =>

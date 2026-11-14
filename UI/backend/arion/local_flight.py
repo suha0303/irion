@@ -1,4 +1,4 @@
-"""Local CPU worker bridge. The UI interpreter never imports PyTorch."""
+"""Local worker bridge. The UI interpreter never imports PyTorch."""
 
 import asyncio
 import hashlib
@@ -54,6 +54,13 @@ class LocalFlight:
             else None
         )
         self.active = None
+        self.gpu_python = (
+            Path(os.environ["ARION_GPU_PYTHON"])
+            if os.environ.get("ARION_GPU_PYTHON")
+            else self.project / "ai/.local/gpu-runtime/bin/python"
+            if self.project
+            else None
+        )
         self.live_busy = False
         self.process = None
         self.task = None
@@ -80,8 +87,26 @@ class LocalFlight:
             str(self.project / p) for p in ("ai", "ai/src", "Data/generation")
         )
         env["PYTHONDONTWRITEBYTECODE"] = "1"
+        python = self.python
+        if request.get("device") == "cuda":
+            if request["action"] not in {"adapt", "tune", "device_info"}:
+                raise ValueError("GPU is available for local training only")
+            if self.gpu_python is None or not self.gpu_python.is_file():
+                raise ValueError(
+                    "GPU 학습 환경이 없습니다. ARION_GPU_PYTHON을 설정하세요."
+                )
+            python = self.gpu_python
+            # A bundled CPU PYTHONHOME would hide the GPU venv's packages.
+            env.pop("PYTHONHOME", None)
+        if request["action"] == "tune":
+            # The server owns this path; clients cannot choose an executable.
+            request = {
+                **request,
+                "cpu_python": str(self.python),
+                "cpu_python_home": os.environ.get("PYTHONHOME"),
+            }
         process = await asyncio.create_subprocess_exec(
-            str(self.python),
+            str(python),
             "-B",
             "-m",
             "localflight.cli",
@@ -97,7 +122,11 @@ class LocalFlight:
         try:
             out, err = await asyncio.wait_for(
                 process.communicate(json.dumps(request).encode()),
-                timeout=1800 if job else 30,
+                timeout=3610
+                if job and request["action"] in {"adapt", "tune"}
+                else 1800
+                if job
+                else 30,
             )
             if process.returncode:
                 raise ValueError(
@@ -198,6 +227,13 @@ def attach(app, root=None):
             )
         except ValueError as error:
             raise HTTPException(422, str(error)) from error
+
+    @app.get("/api/local-ai/gpu")
+    async def gpu():
+        try:
+            return await service.call(dict(action="device_info", device="cuda"))
+        except (ValueError, OSError, asyncio.TimeoutError) as error:
+            return dict(device="cuda", available=False, reason=str(error))
 
     @app.post("/api/local-ai/profiles")
     async def save_profile(profile: dict):
@@ -508,7 +544,71 @@ def attach(app, root=None):
                     adaptation=train,
                     development=dev,
                     epochs=request.get("epochs", 5),
+                    device=request.get("device", "cpu"),
+                    strategy=request.get("strategy", "head"),
+                    time_limit_seconds=request.get("time_limit_seconds", 1800),
                     output=str(service.root / "adapted" / uuid.uuid4().hex),
+                )
+            )
+        except (KeyError, ValueError) as error:
+            raise HTTPException(422, str(error)) from error
+
+    @app.post("/api/local-ai/tune")
+    async def tune_pair(request: dict):
+        try:
+            manifests = {}
+            for key in (
+                "adaptation",
+                "development",
+                "calibrations",
+                "evaluations",
+            ):
+                ids = request.get(key + "_jobs", [])
+                if (
+                    not isinstance(ids, list)
+                    or len(ids) > 20
+                    or len(set(ids)) != len(ids)
+                ):
+                    raise ValueError("서로 다른 준비 비행을 선택하세요.")
+                manifests[key] = [
+                    completed(i, "prepare")["result"]["manifest"] for i in ids
+                ]
+            return service.create_job(
+                dict(
+                    action="tune",
+                    models=request["models"],
+                    **manifests,
+                    device=request.get("device", "cuda"),
+                    epochs=request.get("epochs", 30),
+                    budget_seconds=request.get("budget_seconds", 3600),
+                    events=request.get("events", {}),
+                    data_root=str(service.root),
+                    output=str(service.root / "tuning" / uuid.uuid4().hex),
+                )
+            )
+        except (KeyError, TypeError, ValueError) as error:
+            raise HTTPException(422, str(error)) from error
+
+    @app.post("/api/local-ai/tune/{job_id}/select/{model_index}")
+    async def select_tuned(job_id: str, model_index: int):
+        try:
+            pair = completed(job_id, "tune")["result"]
+            if not 0 <= model_index < len(pair["tuned_models"]):
+                raise ValueError("모델 결과를 선택하세요.")
+            row = pair["tuned_models"][model_index]
+            if (
+                row.get("review_status") != "passed"
+                or not pair["within_budget"]
+            ):
+                raise ValueError(
+                    "시간 예산과 정상·이상 퇴행 검증을 통과해야 선택할 수 있습니다."
+                )
+            return service.create_job(
+                dict(
+                    action="tune_select",
+                    data_root=str(service.root),
+                    model_id=row["registered"]["id"],
+                    comparison=row["review"],
                 )
             )
         except (KeyError, ValueError) as error:
@@ -535,20 +635,36 @@ def attach(app, root=None):
             previous = json.loads(
                 service.job_path(job_id).read_text(encoding="utf-8")
             )
-            if previous["action"] != "adapt" or previous["status"] not in {
+            if previous["action"] not in {"adapt", "tune"} or previous[
+                "status"
+            ] not in {
                 "cancelled",
                 "interrupted",
                 "failed",
             }:
                 raise ValueError("Only interrupted adaptation jobs may resume")
             request = previous["request"]
-            if not (Path(request["output"]) / "checkpoint.json").is_file():
+            folder = Path(request["output"])
+            checkpoint = (
+                (folder / "checkpoint.json").is_file()
+                if previous["action"] == "adapt"
+                else any(folder.glob("*/checkpoint.json"))
+            )
+            if not checkpoint:
                 raise ValueError("No completed epoch checkpoint to resume")
             return service.create_job(
                 {
                     **request,
                     "resume": request["output"],
-                    "output": str(service.root / "adapted" / uuid.uuid4().hex),
+                    "output": str(
+                        service.root
+                        / (
+                            "tuning"
+                            if previous["action"] == "tune"
+                            else "adapted"
+                        )
+                        / uuid.uuid4().hex
+                    ),
                 }
             )
         except (OSError, KeyError, ValueError) as error:
@@ -676,7 +792,10 @@ def attach(app, root=None):
             for p in (service.root / "jobs").glob("*.json")
         ]
         for row in rows:
-            if row["status"] == "running" and row["action"] == "adapt":
+            if row["status"] == "running" and row["action"] in {
+                "adapt",
+                "tune",
+            }:
                 p = Path(row["request"]["output"]) / "progress.json"
                 if p.is_file():
                     row["progress"] = json.loads(p.read_text(encoding="utf-8"))

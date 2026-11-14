@@ -178,7 +178,7 @@ print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.i
                 encoding="utf-8",
             )
 
-        def complete(endpoint, body):
+        def complete(endpoint, body, expected_status="complete"):
             response = client.post("/api/local-ai/" + endpoint, json=body)
             assert response.status_code == 200, response.text
             job_id = response.json()["id"]
@@ -190,7 +190,7 @@ print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.i
                     if j["id"] == job_id
                 )
                 if row["status"] not in {"queued", "running"}:
-                    assert row["status"] == "complete", row
+                    assert row["status"] == expected_status, row
                     return row
                 time.sleep(0.05)
             pytest.fail("CPU worker timeout")
@@ -237,7 +237,9 @@ print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.i
         selected = complete(
             "models/" + model_id + "/select",
             dict(comparison_job=comparison["id"]),
+            expected_status="failed",
         )
+        assert "퇴행" in selected["error"]
         active = complete(
             "analyze",
             dict(
@@ -246,8 +248,7 @@ print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.i
                 use_active=True,
             ),
         )
-        assert active["result"]["analyses"][0]["adapted"] is True
-        complete("models/rollback", dict(event_id=selected["result"]["id"]))
+        assert active["result"]["analyses"][0]["adapted"] is False
         original = complete(
             "analyze",
             dict(
