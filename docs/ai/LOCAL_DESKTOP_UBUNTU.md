@@ -1,14 +1,14 @@
 # Ubuntu 로컬 실기체 분석 프로그램
 
-2026-11-15 배포 후보: `ai/releases/drone-local-ubuntu24-20261115-rc14.tar.gz`.
+2026-11-15 배포 후보: `ai/releases/drone-local-ubuntu24-20261115-rc15.tar.gz`.
 Ubuntu 24.04 x86_64용이며 Python 3.10.22, PyTorch 2.1.2+cpu, UI 의존성,
 최신 forecast 8종/run_health 8종 모델, 빌드된 UI를 포함한다.
 원격 GPU·시스템 Python 변경·실행 시 패키지 다운로드가 필요하지 않다.
 
 ## 현재 개발 PC에서 검수한 최신 소스 실행
 
-RC14는 RC13의 단위/유효성·이관 기능에 지속 수신 기록, 늦은 기체 연결 대기, ESC_STATUS 해석 수정을 더했다.
-기존 RC12·RC13·모델·원자료·검증 증거는 보존했다. `/home/sa/CapstoneV3`의 설치된 환경·모델·빌드된 UI를
+RC15는 실제 로컬 모델 상태와 이상 구간을 주 화면에 연결하고, 기체 관리를 상위 탭과 여섯 작업 메뉴로 나눴다. RC14의 수신·단위·이관 기능을 유지한다.
+기존 RC12·RC13·RC14·모델·원자료·검증 증거는 보존했다. `/home/sa/CapstoneV3`의 설치된 환경·모델·빌드된 UI를
 사용하려면 다음 명령으로 실행한다.
 
 ```bash
@@ -23,15 +23,15 @@ ARION_PORT=8879 \
 같은 데이터 경로를 지정하면 저장한 기록을 다시 읽는다. 새 폴더에는 기존
 앱의 기록을 자동 복사하지 않는다. 모델 목록 확인은 `./ai/drone-ai local catalog`다.
 이 진입점의 실제 기동·종료·16종 CPU 실행을 확인했다.
-[최신 배포 검증과 남은 항목](../development/CODE_REVIEW_M19_M21.md)을 참고한다.
+[최신 배포 검증과 남은 항목](../development/CODE_REVIEW_M26_M29.md)을 참고한다.
 
 ## 설치와 실행
 
 압축 파일을 원하는 폴더에 풀고, 풀린 폴더에서 실행한다.
 
 ```bash
-tar -xzf drone-local-ubuntu24-20261115-rc14.tar.gz
-cd drone-local-ubuntu24-20261115-rc14
+tar -xzf drone-local-ubuntu24-20261115-rc15.tar.gz
+cd drone-local-ubuntu24-20261115-rc15
 ./drone-local doctor
 ./drone-local start
 ```
@@ -47,10 +47,11 @@ cd drone-local-ubuntu24-20261115-rc14
 ./drone-local stop
 ```
 
-‘로컬 AI · 기체 관리’에 모델 선택, 프로파일, BIN/ULog 검사, 보존 구간 선택,
-CPU 분석/적응, 모델 보관함이 있다. forecast/run_health 모두 출력층 적응을 제공한다.
+상위 ‘로컬 AI · 기체 관리’ 탭 안에서 기체 프로파일 → 로그 준비 → 로그 분석 →
+파인튜닝·보정 → 모델 보관함 → 작업 결과를 선택한다. 탭 이동 시 입력 중인 값을 유지하며,
+작업 결과는 검색·종류 필터 후 하나씩 펼쳐 본다. forecast/run_health 모두 출력층 적응을 제공한다.
 메인 화면의 ‘실시간 연결 → 기체별 로컬 AI’에서 기체·예측/종료 후 모델을 선택한다.
-‘비행 종료 · 결과 분석’으로 종료 후 결과를 표시한다. 선택 사항인 ‘시동 해제 확인 시 수집 종료’를 켜면 시동 관측 이후 해제 HEARTBEAT 3개가 2초 이상 이어질 때 자동으로 수집을 닫고 결과를 만든다. 초기 disarmed 상태나 통신 단절만으로 종료하지 않는다. 연결 설정은
+‘비행 종료 · 결과 분석’으로 예측·종료 후 모델의 전체 런 결과를 표시한다. ‘이상 구간 분석’에서 기준 초과 시점과 구간별 상세, 사용하지 못한 구간을 확인한다. 실시간 기록 경보와 사후 로그 재분석은 구분해 표시하며, 이전 버전이 저장하지 않은 실시간 이력을 만들어 채우지 않는다. 선택 사항인 ‘시동 해제 확인 시 수집 종료’를 켜면 시동 관측 이후 해제 HEARTBEAT 3개가 2초 이상 이어질 때 자동으로 수집을 닫고 결과를 만든다. 초기 disarmed 상태나 통신 단절만으로 종료하지 않는다. 연결 설정은
 `docs/ai/REAL_AIRCRAFT_CONNECTION_GUIDE.md`를 따른다. 자세한 로그 처리 순서는
 `docs/ai/LOCAL_REAL_FLIGHT_TIME_HANDLING.md`를 따른다.
 
@@ -69,8 +70,8 @@ ARION_PORT=8878 ARION_DATA_DIR=/your/data/folder ./drone-local stop
 
 ## 로그에서 프로파일 만들기
 
-1. ‘로컬 AI · 기체 관리 → ULog / BIN 가져오기’로 로그를 먼저 검사한다.
-   빈 초안에는 명시된 설정을 자동 입력한다. 기존 입력이 있으면 보존하며,
+1. ‘로컬 AI · 기체 관리 → 로그 준비 → ULog / BIN 가져오기’로 로그를 먼저 검사한다.
+   ‘기체 프로파일’로 이동하면 빈 초안에는 명시된 설정을 자동 입력한다. 기존 입력이 있으면 보존하며,
    ‘이 로그로 새 프로파일 초안 열기’로 따로 연다. 과거 검사에는 ‘기존 로그 다시 검사’를 사용한다.
 2. ‘분석에 필요한 정보’에는 아직 확인되지 않은 필수 항목과 항상 수정 가능한 셀 수 칸을 표시한다.
    채워진 값은 접힌 수정 화면에서 바꿀 수 있고, 자동 입력에는 로그 파라미터·인스턴스와
@@ -266,7 +267,7 @@ RC12 SHA-256: `72be97499f8d3ee29cc9bbc0ca0da7ac9c13c22995bc26c6dfa7a6256379a8df`
 ```bash
 cd /home/sa/CapstoneV3
 ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
-  ./ai/releases/drone-local-ubuntu24-20261115-rc14/drone-local start
+  ./ai/releases/drone-local-ubuntu24-20261115-rc15/drone-local start
 ```
 
 브라우저 주소: `http://127.0.0.1:8879`. 종료도 같은 환경과 경로의 `stop`을 사용한다.

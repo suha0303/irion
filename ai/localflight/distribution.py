@@ -187,14 +187,16 @@ def build(output, ui_packages):
         "LOCAL_REAL_FLIGHT_CHECKLIST.md",
     ):
         copy_regular(ROOT / "docs/ai" / name, output / "docs/ai" / name)
-    copy_regular(
-        ROOT / "docs/development/CODE_REVIEW_M17_M18.md",
-        output / "docs/development/CODE_REVIEW_M17_M18.md",
-    )
-    copy_regular(
-        ROOT / "docs/development/CODE_REVIEW_M19_M21.md",
-        output / "docs/development/CODE_REVIEW_M19_M21.md",
-    )
+    for name in (
+        "CODE_REVIEW_M17_M18.md",
+        "CODE_REVIEW_M19_M21.md",
+        "CODE_REVIEW_M22_M24.md",
+        "CODE_REVIEW_M26_M29.md",
+    ):
+        copy_regular(
+            ROOT / "docs/development" / name,
+            output / "docs/development" / name,
+        )
     frozen = catalog.root.relative_to(ROOT)
     required_model_files = set()
     for model in catalog.manifest["models"]:
