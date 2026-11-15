@@ -62,7 +62,7 @@ def test_interval_protocol_ack_readback_observation_and_disconnect(
             while True:
                 await emit(encoder.heartbeat_encode(2, 12, 0, 0, 3))
                 await emit(encoder.attitude_encode(stamp, 0, 0, 0, 0, 0, 0))
-                stamp += 30
+                stamp += 8
                 try:
                     data = (
                         fc.recvfrom(65535)[0]
@@ -88,7 +88,7 @@ def test_interval_protocol_ack_readback_observation_and_disconnect(
                         await emit(
                             encoder.message_interval_encode(mid, intervals[mid])
                         )
-                await asyncio.sleep(0.03)
+                await asyncio.sleep(0.008)
 
         task = asyncio.create_task(aircraft())
         try:
@@ -106,8 +106,15 @@ def test_interval_protocol_ack_readback_observation_and_disconnect(
                 sources.rates.start(run, request)
             await asyncio.wait_for(sources.rates.tasks[run.run_id], 30)
             status = sources.rates.status(run.run_id)
-            assert status["state"] == "complete" and status["sent"] == 18
-            assert len(commands) == 18
+            assert status["state"] == "complete" and status["sent"] == 20
+            assert len(commands) == 20
+            fast_interval = 10_000 if transport == "udp" else 50_000
+            assert all(
+                intervals[mid] == fast_interval
+                for mid in (30, 83, 32, 85, 36, 105)
+            )
+            assert intervals[245] == 200_000
+            assert intervals[147] == 200_000
             esc = next(r for r in status["rows"] if r["name"] == "ESC_STATUS")
             assert esc["required"] is False and esc["verified"] is False
             assert intervals[291] == 50_000

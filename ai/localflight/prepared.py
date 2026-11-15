@@ -4,6 +4,7 @@ This does not accept legacy simulator manifests or reinterpret onboard logs.
 Unknown health is sufficient for prediction but never for normal adaptation.
 """
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -182,3 +183,6 @@ def distinct_flights(records):
         raise ValueError(
             "Do not mix different flight-state preparation policies"
         )
+    inputs = {json.dumps(m.get("live_input"), sort_keys=True) for m in records}
+    if len(inputs) > 1:
+        raise ValueError("Do not mix different telemetry acquisition settings")

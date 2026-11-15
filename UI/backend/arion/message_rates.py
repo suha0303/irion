@@ -10,6 +10,7 @@ from arion import local_flight
 
 MESSAGES = [
     (0, "HEARTBEAT", 1),
+    (245, "EXTENDED_SYS_STATE", 5),
     (30, "ATTITUDE", 20),
     (83, "ATTITUDE_TARGET", 20),
     (32, "LOCAL_POSITION_NED", 20),
@@ -24,6 +25,31 @@ IMUS = {
     "SCALED_IMU2": 116,
     "SCALED_IMU3": 129,
 }
+
+
+def input_policy(run, request):
+    """Pin requested acquisition rates without assuming the FC delivers them.
+
+    UDP can carry the 100 Hz fast streams used by the native training capture.
+    Serial keeps its existing bounded rates: increasing these without knowing
+    the shared link budget can cause more packet loss. Neither is a detection
+    performance guarantee; ACK, readback and observed rates remain separate.
+    """
+    fast_hz = 100 if run.config.kind == "udp" else 20
+    fast = {
+        "ATTITUDE",
+        "ATTITUDE_TARGET",
+        "LOCAL_POSITION_NED",
+        "POSITION_TARGET_LOCAL_NED",
+        "SERVO_OUTPUT_RAW",
+    }
+    rates = {name: fast_hz if name in fast else hz for _, name, hz in MESSAGES}
+    rates[request["imu_message"]] = fast_hz
+    return dict(
+        schema="mavlink-acquisition/1",
+        transport=run.config.kind,
+        rates_hz=rates,
+    )
 
 
 class MessageRates:
@@ -120,24 +146,29 @@ class MessageRates:
             )
         ):
             raise ValueError("수신 필터와 AI 대상 ID가 다릅니다.")
+        policy = input_policy(run, request)
+        if request.get("telemetry_policy", policy) != policy:
+            raise ValueError(
+                "메시지 주기 설정과 고정된 AI 입력 설정이 다릅니다."
+            )
         rows = [
             dict(
                 id=i,
                 name=n,
-                hz=h,
+                hz=policy["rates_hz"][n],
                 ack=None,
                 readback_us=None,
                 status="pending",
                 required=n != "ESC_STATUS",
             )
-            for i, n, h in MESSAGES
+            for i, n, _ in MESSAGES
         ]
         rows.insert(
             3,
             dict(
                 id=IMUS[request["imu_message"]],
                 name=request["imu_message"],
-                hz=20,
+                hz=policy["rates_hz"][request["imu_message"]],
                 ack=None,
                 readback_us=None,
                 status="pending",
@@ -148,6 +179,7 @@ class MessageRates:
             target=target,
             peer=None,
             request=request,
+            policy=policy,
             rows=rows,
             state="waiting_heartbeat",
             samples={r["id"]: deque(maxlen=512) for r in rows},
@@ -311,6 +343,7 @@ class MessageRates:
             sent=session["sent"],
             all_verified=all(r["verified"] for r in rows if r["required"]),
             target=list(session["target"]),
+            policy=session["policy"],
             note="대상 HEARTBEAT까지 대기. ESC_STATUS는 선택 신호이며 FC/ESC 미지원 시 RPM을 추정하지 않습니다. ACK·조회·수신률과 AI 입력 적격성은 별도.",
         )
 

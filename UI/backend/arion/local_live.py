@@ -10,6 +10,7 @@ from fastapi import HTTPException
 
 from .local_flight import write
 from .local_insights import insights
+from .message_rates import input_policy
 from .streaming import SessionRun
 
 
@@ -106,6 +107,16 @@ class LocalLive:
             )
         }
         request["auto_finish_disarm"] = body.get("auto_finish_disarm", False)
+        request["telemetry_policy"] = (
+            input_policy(run, request)
+            if request.get("auto_rates") is True
+            else dict(
+                schema="mavlink-acquisition/1",
+                transport=run.config.kind,
+                rates_hz={},
+                automatic=False,
+            )
+        )
         request.update(
             profile=p,
             journal=str(run.path),

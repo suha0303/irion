@@ -66,6 +66,14 @@ def load_runtime(
             )
         if adaptation["binding"]["origin"] != metadata["origin"]:
             raise ValueError("Adapted model and input flight origins differ")
+        live_input = metadata.get("live_input")
+        if (
+            "live_input" in adaptation["binding"]
+            or (live_input or {}).get("telemetry_policy") is not None
+        ) and adaptation["binding"].get("live_input") != live_input:
+            raise ValueError(
+                "Adapted model and telemetry acquisition settings differ"
+            )
         if (
             adaptation["binding"]["base_sha256"]
             != runtime.entry["weight_sha256"]

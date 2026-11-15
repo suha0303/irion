@@ -95,6 +95,14 @@ def number(value):
     )
 
 
+def input_binding(request):
+    """Keep acquisition settings with saved data and calibration identity."""
+    binding = dict(imu_message=request["imu_message"], imu_id=request["imu_id"])
+    if "telemetry_policy" in request:
+        binding["telemetry_policy"] = request["telemetry_policy"]
+    return binding
+
+
 def decode(name, f, p, request):
     """common.xml SI/FRD/NED semantics, explicit channels/instances and
     masks.
@@ -368,9 +376,7 @@ def completed(events, journal, output, request, origin, *, end_us=None):
                 units="physical_pack_V_A",
                 profile=request["profile"],
                 origin=origin,
-                live_input=dict(
-                    imu_message=request["imu_message"], imu_id=request["imu_id"]
-                ),
+                live_input=input_binding(request),
                 role="evaluation",
                 health="unknown",
                 health_evidence="",
@@ -530,7 +536,11 @@ def run(request):
         notice="전송 지연 자동 보정 없음 · 보정 기준 판정은 실기체 성능 검증과 구분",
     )
     write(path, state)
-    metadata = dict(profile=request["profile"], origin=admitted["origin"])
+    metadata = dict(
+        profile=request["profile"],
+        origin=admitted["origin"],
+        live_input=input_binding(request),
+    )
     bundle = request.get("bundle", DEFAULT_BUNDLE)
     adapted = (
         active_folder(
@@ -566,9 +576,6 @@ def run(request):
         state["post_adapted_sha256"] = post_adaptation["model_sha256"]
     state["adapted_sha256"] = adaptation["model_sha256"] if adaptation else None
 
-    metadata["live_input"] = dict(
-        imu_message=request["imu_message"], imu_id=request["imu_id"]
-    )
     metadata["timing"] = dict(
         clock="receipt_monotonic",
         fast_max_age_ms=200,

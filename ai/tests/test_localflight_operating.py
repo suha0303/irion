@@ -154,3 +154,40 @@ def test_airborne_large_residual_inputs_are_retained():
     row = values[np.searchsorted(times, 20_000_000)]
     assert row[FEATURES.index("pack_voltage")] < 11
     assert row[FEATURES.index("body_rate_p")] > 3.9
+
+
+def test_telemetry_policy_separates_calibration_and_training_inputs(tmp_path):
+    from localflight.live import input_binding
+
+    scaler = tmp_path / "scaler.npz"
+    scaler.write_bytes(b"fixture")
+    runtime = SimpleNamespace(
+        entry=dict(
+            id="fixture", weight_sha256="a" * 64, files={"scaler.npz": scaler}
+        )
+    )
+    request = dict(imu_message="HIGHRES_IMU", imu_id=0)
+    old = dict(
+        profile={},
+        origin="synthetic_unit_fixture",
+        source_sha256="a" * 64,
+        live_input=input_binding(request),
+    )
+    request["telemetry_policy"] = dict(
+        schema="mavlink-acquisition/1",
+        transport="udp",
+        rates_hz={"ATTITUDE": 100},
+    )
+    new = dict(old, source_sha256="b" * 64, live_input=input_binding(request))
+    assert calibration.binding(runtime, old) != calibration.binding(
+        runtime, new
+    )
+    with pytest.raises(ValueError, match="telemetry acquisition"):
+        distinct_flights([old, new])
+    # Equivalent JSON object ordering is not a different acquisition setup.
+    same = dict(
+        new,
+        source_sha256="c" * 64,
+        live_input=dict(reversed(list(new["live_input"].items()))),
+    )
+    distinct_flights([new, same])

@@ -140,6 +140,7 @@ def fit(
         source_sha256=[m["source_sha256"] for m in metadata],
         profile=metadata[0]["profile"],
         origin=metadata[0]["origin"],
+        live_input=metadata[0].get("live_input"),
         operating_policy=metadata[0].get("timing", {}).get("operating_policy"),
         epochs=epochs,
         learning_rate=learning_rate,

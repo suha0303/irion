@@ -139,6 +139,16 @@ def test_head_only_fit_restore_and_independent_comparison(tmp_path, model_id):
     else:
         assert len(r["adapted"]["metrics"]["segments"]) == 1
         assert not r["adapted"]["metrics"]["whole_flight_verdict"]
+    from localflight.analysis import load_runtime
+
+    meta = json.loads(evaluation.read_text(encoding="utf-8"))
+    changed = dict(
+        meta, live_input={"telemetry_policy": {"rates_hz": {"ATTITUDE": 100}}}
+    )
+    with pytest.raises(ValueError, match="telemetry acquisition"):
+        load_runtime(
+            model_id, changed, bundle=DEFAULT_BUNDLE, adapted=tmp_path / "full"
+        )
     m = json.loads(evaluation.read_text(encoding="utf-8"))
     m["source_sha256"] = json.loads(train.read_text(encoding="utf-8"))[
         "source_sha256"
