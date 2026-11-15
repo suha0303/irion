@@ -8,7 +8,7 @@ from time import perf_counter
 
 from .adapt import fit, write
 from .adapt_review import review
-from .catalog import Catalog, read_json
+from .catalog import Catalog, digest, read_json
 from .registry import register
 
 
@@ -190,6 +190,7 @@ def run(request, *, bundle):
                 out / (row["model_id"] + "-review"),
                 bundle=bundle,
                 events=request.get("events"),
+                normal_references=request["development"],
                 deadline=started + budget,
             )
         except TimeoutError:
@@ -197,6 +198,9 @@ def run(request, *, bundle):
             continue
         row["review_status"] = report["promotion_check"]["status"]
         row["review"] = report
+        review_path = out / (row["model_id"] + "-review") / "review.json"
+        row["review_file"] = str(review_path)
+        row["review_sha256"] = digest(review_path)
         # Registration preserves a candidate; activation always needs a
         # separate reviewed choice. Rejected candidates remain inspectable.
         if request.get("data_root"):

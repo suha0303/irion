@@ -23,7 +23,7 @@ from localflight import run_summary
 
 from .analysis import analyze, load_runtime
 from .catalog import DEFAULT_BUNDLE, Catalog, digest, read_json
-from .prepare import causal_frames
+from .prepare import CausalSampler, causal_frames
 from .prepared import REVISION
 from .profiles import eligibility
 from .registry import active_folder
@@ -443,7 +443,15 @@ def completed(events, journal, output, request, origin, *, end_us=None):
 
 
 def arrived_decision(
-    pending, values, times, segment_start, reset, cells, scaler, calibration
+    pending,
+    values,
+    times,
+    segment_start,
+    reset,
+    cells,
+    scaler,
+    calibration,
+    detector_state=None,
 ):
     """Score only an arrived exact target within the same uninterrupted
     segment.
@@ -461,16 +469,36 @@ def arrived_decision(
         index = np.searchsorted(times, prior["due"])
         if index >= len(times) or int(times[index]) != prior["due"]:
             continue
+        if detector_state is not None:
+            target_times = prior["origin"] + np.arange(1, 11) * 100000
+            indices = np.searchsorted(times, target_times)
+            if np.any(indices >= len(times)) or not np.array_equal(
+                times[indices], target_times
+            ):
+                continue
+            observed = values[indices][:, [4, 5, 6, 17]].copy()
+            observed[:, 3] /= cells
+            residual = (
+                (observed - scaler["y_mean"]) / scaler["y_scale"]
+            ).astype("f4") - np.asarray(prior["scaled"], dtype="f4")
+            decision = dict(
+                detector_state.update(residual, prior["origin"], reset),
+                time_us=prior["due"],
+            )
+            continue
         observed = values[index, [4, 5, 6, 17]].copy()
         observed[3] /= cells
         scaled = (observed - scaler["y_mean"]) / scaler["y_scale"]
+        predicted = np.asarray(prior["scaled"])
+        if predicted.ndim == 2:
+            predicted = predicted[-1]
         score = localflight_calibration.forecast_scores(
-            scaled[None], np.array(prior["scaled"])[None], scaler
+            scaled[None], predicted[None], scaler
         )
         decision = dict(
             localflight_calibration.decide(calibration, score),
             time_us=prior["due"],
-            target_scores=np.abs(scaled - np.array(prior["scaled"])).tolist(),
+            target_scores=np.abs(scaled - predicted).tolist(),
         )
     return future, decision
 
@@ -542,10 +570,21 @@ def run(request):
     except (ValueError, KeyError, OSError) as error:
         calibration, calibration_error = None, str(error)
     pending_predictions = []
+    from .detector import POLICY as DETECTOR_POLICY
+    from .detector import LiveDetector
+
+    detector_state = (
+        LiveDetector(calibration)
+        if calibration and calibration.get("schema") == DETECTOR_POLICY
+        else None
+    )
+    last_issued_origin = -1
     alarm_path = folder / "alarms.jsonl"
     alarm_path.touch(exist_ok=False)
     last_alarm_time = -1
     mapper = Mapper(request)
+    sampler = CausalSampler()
+    sampled_values, sampled_times = [], []
     events = []
     last_publish, last_data = 0.0, time.monotonic()
     journal = Path(request["journal"])
@@ -601,24 +640,33 @@ def run(request):
                         status="stale", message="수신 중단 · 예측 보류"
                     )
                 elif mapper.last_us >= 11_000_000:
-                    start = max(0, mapper.last_us - 14_000_000)
-                    recent = [e for e in events if e[0] >= start]
-                    values, times, report = causal_frames(
-                        recent, start, mapper.last_us + 1
+                    chunk, stamps, _, _ = sampler.sample(
+                        events, sampler.next_us or 0, mapper.last_us
                     )
-                    spans = report["candidate_segments"]
+                    sampled_values = (sampled_values + chunk)[-150:]
+                    sampled_times = (sampled_times + stamps)[-150:]
+                    values, times = (
+                        np.asarray(sampled_values),
+                        np.asarray(sampled_times),
+                    )
+                    segment_start = sampler.segment_start_us
+                    phase = (segment_start or 0) + 9_900_000
+                    origin_us = (
+                        phase + (int(times[-1]) - phase) // 1000000 * 1000000
+                    )
+                    origin_index = int(np.searchsorted(times, origin_us))
                     state["missing_features"] = [
                         name
                         for name, value in zip(FEATURES, values[-1])
                         if not np.isfinite(value)
                     ]
                     if (
-                        spans
-                        and spans[-1]["end_index"] == len(times)
-                        and spans[-1]["frames"] >= 100
+                        segment_start is not None
+                        and origin_us >= phase
+                        and origin_index >= 99
+                        and origin_us > last_issued_origin
                     ):
-                        last = spans[-1]
-                        x = values[-100:].copy()
+                        x = values[origin_index - 99 : origin_index + 1].copy()
                         x[:, 17] /= request["profile"]["series_cells"]
                         x[:, 18] /= request["profile"]["capacity_ah"]
                         s = runtime.scaler
@@ -631,11 +679,12 @@ def run(request):
                             pending_predictions,
                             values,
                             times,
-                            last["start_us"],
-                            mapper.resets,
+                            segment_start,
+                            (mapper.resets, segment_start),
                             request["profile"]["series_cells"],
                             s,
                             calibration,
+                            detector_state,
                         )
                         if decision is not None:
                             state["decision"] = decision
@@ -665,13 +714,14 @@ def run(request):
                                 last_alarm_time = decision["time_us"]
                         pending_predictions.append(
                             dict(
-                                origin=int(times[-1]),
-                                due=int(times[-1]) + 1000000,
-                                scaled=y[-1].tolist(),
-                                reset=mapper.resets,
+                                origin=origin_us,
+                                due=origin_us + 1000000,
+                                scaled=y.tolist(),
+                                reset=(mapper.resets, segment_start),
                             )
                         )
                         pending_predictions = pending_predictions[-4:]
+                        last_issued_origin = origin_us
                         y = y * s["y_scale"] + s["y_mean"]
                         y[:, 3] *= request["profile"]["series_cells"]
                         state.update(
@@ -679,7 +729,7 @@ def run(request):
                             message="CPU 예측 중 · 실측 도착 후 보정 기준 판정",
                             missing_features=[],
                             prediction=dict(
-                                origin_us=int(times[-1]),
+                                origin_us=origin_us,
                                 horizon_us=1000000,
                                 targets=[
                                     "body_rate_p",

@@ -92,9 +92,9 @@ def fit(
         or not 0 <= anchor_weight <= 100
     ):
         raise ValueError("Invalid time budget, patience or anchor weight")
-    if not 1 <= len(adaptation) <= 3 or len(development) > 1:
+    if not 1 <= len(adaptation) <= 3 or len(development) > 20:
         raise ValueError(
-            "Use 1..3 adaptation flights and at most one development flight"
+            "Use 1..3 adaptation flights and at most 20 development flights"
         )
     runtime = Runtime(model_id, catalog=Catalog(bundle))
     permitted = parameter_names(runtime.model, strategy)
@@ -286,37 +286,42 @@ def fit(
         model.eval()
         if validation:
             with torch.inference_mode():
-                if health_task:
-                    segments = validation[0]
-                    validation_loss = 0.0
-                    for x in segments:
-                        if perf_counter() - started >= time_limit_seconds:
-                            stop_reason = "time_budget"
-                            break
-                        validation_loss += float(
-                            health_objective(model, x)
-                        ) / len(segments)
-                else:
-                    vx, vy = validation[0][:2]
-                    validation_loss = 0.0
-                    for i in range(0, len(vx), 16):
-                        if perf_counter() - started >= time_limit_seconds:
-                            stop_reason = "time_budget"
-                            break
-                        validation_loss += (
-                            float(
-                                objective(
-                                    model(
-                                        torch.from_numpy(vx[i : i + 16]).to(
+                validation_loss = 0.0
+                for validation_flight in validation:
+                    flight_loss = 0.0
+                    if health_task:
+                        for x in validation_flight:
+                            if perf_counter() - started >= time_limit_seconds:
+                                stop_reason = "time_budget"
+                                break
+                            flight_loss += float(
+                                health_objective(model, x)
+                            ) / len(validation_flight)
+                    else:
+                        vx, vy = validation_flight[:2]
+                        for i in range(0, len(vx), 16):
+                            if perf_counter() - started >= time_limit_seconds:
+                                stop_reason = "time_budget"
+                                break
+                            flight_loss += (
+                                float(
+                                    objective(
+                                        model(
+                                            torch.from_numpy(vx[i : i + 16]).to(
+                                                device
+                                            )
+                                        ),
+                                        torch.from_numpy(vy[i : i + 16]).to(
                                             device
-                                        )
-                                    ),
-                                    torch.from_numpy(vy[i : i + 16]).to(device),
+                                        ),
+                                    )
                                 )
+                                * len(vx[i : i + 16])
+                                / len(vx)
                             )
-                            * len(vx[i : i + 16])
-                            / len(vx)
-                        )
+                    validation_loss += flight_loss / len(validation)
+                    if stop_reason == "time_budget":
+                        break
             if stop_reason == "time_budget":
                 break
             if not np.isfinite(validation_loss):

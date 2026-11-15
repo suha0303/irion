@@ -9,7 +9,7 @@ from time import perf_counter
 
 import numpy as np
 
-from . import calibration
+from . import calibration, detector
 from .adapt import write
 from .analysis import analyze
 from .catalog import Catalog, read_json
@@ -39,12 +39,49 @@ def _event_detection(result, record, event, voltage_scale):
         type(start) is not int
         or type(end) is not int
         or not 0 <= start < end
-        or target not in {"any", "pack_voltage"}
+        or target not in {"any", "pack_voltage", "propulsion"}
     ):
         raise ValueError(
             "Anomaly event needs integer start/end and known target"
         )
     times = np.asarray(result["scoring"]["time_us"])
+    if record.get("schema") == detector.POLICY:
+        decision = detector.decide(
+            record["task"], result["scoring"], record["parameters"]
+        )
+        if record["task"] == "forecast":
+            domain = {
+                "pack_voltage": "battery",
+                "propulsion": "propulsion",
+            }.get(target)
+            flags = (
+                decision["domain_episode_starts"][domain]
+                if domain
+                else decision["episode_starts"]
+            )
+        else:
+            flags = decision["alarms"]
+            # Post-flight voltage health cannot certify a propulsion event.
+            if target == "propulsion":
+                return dict(
+                    covered=False,
+                    detected=False,
+                    first_alarm_us=None,
+                    delay_seconds=None,
+                    target=target,
+                    reason="voltage_health_task_only",
+                )
+        covered = (times >= start) & (times <= end)
+        alarms = times[covered & np.asarray(flags)]
+        return dict(
+            covered=bool(covered.any()),
+            detected=bool(len(alarms)),
+            first_alarm_us=int(alarms[0]) if len(alarms) else None,
+            delay_seconds=float((alarms[0] - start) / 1e6)
+            if len(alarms)
+            else None,
+            target=target,
+        )
     scores = np.asarray(result["scoring"]["scores"])
     if target == "pack_voltage" and result["model_id"].startswith("forecast_"):
         scores = np.concatenate(
@@ -73,6 +110,7 @@ def review(
     bundle,
     events=None,
     deadline=None,
+    normal_references=None,
 ):
     """Freeze normal-only thresholds, then check held-out regression flights.
 
@@ -117,8 +155,19 @@ def review(
     records = {}
     for name, candidate in [("original", None), ("adapted", adapted)]:
         check_budget()
-        records[name] = calibration.fit(
-            out, model_id, calibrations, bundle=bundle, adapted=candidate
+        records[name] = (
+            calibration.fit_protocol(
+                out,
+                model_id,
+                normal_references,
+                calibrations,
+                bundle=bundle,
+                adapted=candidate,
+            )
+            if normal_references
+            else calibration.fit(
+                out, model_id, calibrations, bundle=bundle, adapted=candidate
+            )
         )
     entry = Catalog(bundle).entry(model_id)
     with np.load(entry["files"]["scaler.npz"], allow_pickle=False) as scaler:
@@ -140,7 +189,13 @@ def review(
             first_original, first_adapted = pair["original"], pair["adapted"]
         decisions = {}
         for name, analysis in pair.items():
-            if analysis["calibration_binding"] != records[name]["binding"]:
+            if (
+                dict(
+                    analysis["calibration_binding"],
+                    policy=records[name]["binding"]["policy"],
+                )
+                != records[name]["binding"]
+            ):
                 raise ValueError(
                     "Evaluation clock/input policy differs from calibration"
                 )
@@ -148,6 +203,7 @@ def review(
                 records[name],
                 analysis["scoring"]["scores"],
                 source_sha256=meta["source_sha256"],
+                evidence=analysis["scoring"],
             )
         row = dict(
             source_sha256=meta["source_sha256"],
@@ -173,8 +229,18 @@ def review(
             ):
                 reasons.append("normal_false_alarm_regression")
         elif meta["health"] == "abnormal" and meta.get("health_evidence"):
-            anomaly_count += 1
             annotated = events.get(meta["source_sha256"], [])
+            if entry["task"] == "run_health":
+                row["not_applicable_events"] = [
+                    e for e in annotated if e.get("target") == "propulsion"
+                ]
+                annotated = [
+                    e for e in annotated if e.get("target") != "propulsion"
+                ]
+                if not annotated and row["not_applicable_events"]:
+                    rows.append(row)
+                    continue
+            anomaly_count += 1
             if not annotated:
                 missing.append("anomaly_event_timing_or_target_missing")
             row["events"] = []
@@ -219,9 +285,21 @@ def review(
         flights=rows,
         scope="Known-case regression only; not independent final sensitivity",
     )
+
+    def receipt(analysis):
+        return {
+            key: analysis[key]
+            for key in (
+                "model_id",
+                "profile_version",
+                "adapted_sha256",
+                "source_sha256",
+            )
+        }
+
     report = dict(
-        original=first_original,
-        adapted=first_adapted,
+        original=receipt(first_original),
+        adapted=receipt(first_adapted),
         independent=True,
         detection_performance_verified=False,
         promotion_check=check,

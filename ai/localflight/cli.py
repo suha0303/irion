@@ -8,14 +8,28 @@ from pathlib import Path
 from localflight import prepare as localflight_prepare
 from localflight import prepared
 
-from .catalog import DEFAULT_BUNDLE, Catalog
+from .catalog import DEFAULT_BUNDLE, Catalog, digest, read_json
 from .logs import inspect_log
 from .profiles import list_profiles, save_profile
+
+
+def comparison_evidence(request):
+    if not request.get("comparison_file"):
+        return request["comparison"]
+    path = Path(request["comparison_file"])
+    if digest(path) != request["comparison_sha256"]:
+        raise ValueError("Review evidence changed")
+    value = read_json(path)
+    return value["result"] if request.get("comparison_is_job") else value
 
 
 def execute(request):
     action = request["action"]
     bundle = request.get("bundle", str(DEFAULT_BUNDLE))
+    if action == "normal_plan":
+        from .normal_plan import create
+
+        return create(request["manifests"], request["output"])
     if action == "device_info":
         from .adapt_support import device_details
 
@@ -41,7 +55,7 @@ def execute(request):
         return select_reviewed(
             request["data_root"],
             request["model_id"],
-            request["comparison"],
+            comparison_evidence(request),
             bundle=bundle,
         )
     if action == "adapt_review":
@@ -54,6 +68,7 @@ def execute(request):
             request["output"],
             bundle=bundle,
             events=request.get("events"),
+            normal_references=request.get("normal_references"),
         )
     if action.startswith("calibration_"):
         from . import calibration
@@ -78,6 +93,15 @@ def execute(request):
                 if request.get("use_active")
                 else None
             )
+            if request.get("normal_references"):
+                return calibration.fit_protocol(
+                    root,
+                    request["model_id"],
+                    request["normal_references"],
+                    request["manifests"],
+                    bundle=bundle,
+                    adapted=adapted,
+                )
             return calibration.fit(
                 root,
                 request["model_id"],
@@ -155,7 +179,10 @@ def execute(request):
             )
         if action == "model_select":
             return registry.select_model(
-                root, request["model_id"], request["comparison"], bundle=bundle
+                root,
+                request["model_id"],
+                comparison_evidence(request),
+                bundle=bundle,
             )
         if action == "model_rollback":
             return registry.rollback(root, request["event_id"], bundle=bundle)

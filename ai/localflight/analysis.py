@@ -99,8 +99,10 @@ def _forecast_results(runtime, metadata, values, times, ranges):
     predicted_physical[:, :, 3] *= metadata["profile"]["series_cells"]
     observed_physical[:, :, 3] *= metadata["profile"]["series_cells"]
     series = []
+    segment_ids = np.zeros(len(origins), dtype="i8")
     for index, (a, b) in enumerate(ranges):
         mask = (origins >= times[a]) & (origins <= times[b - 1])
+        segment_ids[mask] = index
         series.append(
             dict(
                 segment=index,
@@ -137,9 +139,17 @@ def _forecast_results(runtime, metadata, values, times, ranges):
                     y[mask, -1], predicted[mask, -1], s
                 ).tolist(),
                 series=[series[-1]],
+                scoring=dict(
+                    residual_scaled=(y[mask] - predicted[mask]).tolist(),
+                    origin_us=origins[mask].tolist(),
+                    segment_id=[index] * int(mask.sum()),
+                ),
             )
         )
     scoring = dict(
+        residual_scaled=(y - predicted).tolist(),
+        origin_us=origins.tolist(),
+        segment_id=segment_ids.tolist(),
         scores=calibration.forecast_scores(
             y[:, -1], predicted[:, -1], s
         ).tolist(),
@@ -191,6 +201,7 @@ def _health_results(runtime, metadata, values, times, ranges):
             )
         )
     scoring = dict(
+        components=[row["components"] for row in segments],
         scores=[
             calibration.health_score(row["components"], float(s["x_scale"][17]))
             for row in segments
@@ -216,6 +227,7 @@ def _health_results(runtime, metadata, values, times, ranges):
                     ),
                 ),
                 scores=[score],
+                scoring=dict(components=[c]),
             )
         )
     return result, scoring, segment_results

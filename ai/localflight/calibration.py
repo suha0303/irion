@@ -14,6 +14,7 @@ from pathlib import Path
 
 import numpy as np
 
+from . import detector
 from .catalog import digest, read_json
 from .prepared import REVISION, distinct_flights, load
 from .registry import fingerprint, write
@@ -79,7 +80,10 @@ def read(root, calibration_id):
     if any(p.is_symlink() for p in (path, *path.parents)):
         raise ValueError("Symlink calibration not admitted")
     record = read_json(path)
-    if fingerprint(record) != calibration_id or record.get("schema") != POLICY:
+    if fingerprint(record) != calibration_id or record.get("schema") not in {
+        POLICY,
+        detector.POLICY,
+    }:
         raise ValueError("Calibration integrity mismatch")
     threshold = record.get("threshold")
     if (
@@ -88,6 +92,8 @@ def read(root, calibration_id):
         or threshold < 0
     ):
         raise ValueError("Invalid calibration threshold")
+    if record["schema"] == detector.POLICY:
+        detector.validate_parameters(record["task"], record["parameters"])
     return record
 
 
@@ -114,6 +120,9 @@ def select(root, calibration_id, enabled=True):
     index = read_json(path) if path.exists() else {}
     key = fingerprint(record["binding"])
     if enabled:
+        # An explicit switch also switches scoring policy; old evidence stays on disk.
+        for policy in (POLICY, detector.POLICY):
+            index.pop(fingerprint(dict(record["binding"], policy=policy)), None)
         index[key] = calibration_id
     else:
         if index.get(key) != calibration_id:
@@ -129,7 +138,14 @@ def active(root, expected):
     path = Path(root) / "calibration-selection.json"
     if not path.exists():
         return None
-    calibration_id = read_json(path).get(fingerprint(expected))
+    index = read_json(path)
+    revised = dict(expected, policy=detector.POLICY)
+    calibration_id = index.get(fingerprint(revised))
+    if calibration_id:
+        expected = revised
+    else:
+        expected = dict(expected, policy=POLICY)
+        calibration_id = index.get(fingerprint(expected))
     if not calibration_id:
         return None
     record = read(root, calibration_id)
@@ -221,7 +237,86 @@ def fit(root, model_id, manifests, *, bundle, adapted=None, quantile=0.99):
     return dict(record, id=calibration_id, active=False)
 
 
-def decide(record, scores, *, source_sha256=None):
+def fit_protocol(
+    root, model_id, references, manifests, *, bundle, adapted=None
+):
+    """Use normal reference flights and separate normal threshold flights.
+
+    The forecast score and temporal postprocessing are the frozen v7 kernels.
+    Small post-flight calibration sets use an explicitly provisional maximum
+    instead of claiming a finite-sample 95% rank that cannot be estimated.
+    """
+    from .analysis import analyze
+    from .catalog import Catalog
+
+    if not 1 <= len(references) <= 20 or not 1 <= len(manifests) <= 20:
+        raise ValueError("Use 1..20 normal reference and calibration flights")
+    meta = [load(p, normal=True)[0] for p in [*references, *manifests]]
+    distinct_flights(meta)
+    if any(m["role"] != "development" for m in meta[: len(references)]) or any(
+        m["role"] != "calibration" for m in meta[len(references) :]
+    ):
+        raise ValueError(
+            "Reference/development and calibration roles must be separate"
+        )
+    fitted = read_json(Path(adapted) / "result.json") if adapted else None
+    used = fitted["binding"]["source_sha256"] if fitted else []
+    if set(used) & {m["source_sha256"] for m in meta[len(references) :]}:
+        raise ValueError(
+            "Training/development flight cannot calibrate thresholds"
+        )
+    results = [
+        analyze(model_id, p, bundle=bundle, adapted=adapted)
+        for p in [*references, *manifests]
+    ]
+    bindings = [r["calibration_binding"] for r in results]
+    if any(b != bindings[0] for b in bindings):
+        raise ValueError(
+            "Normal reference/calibration input policies must match"
+        )
+    entry = Catalog(bundle).entry(model_id)
+    with np.load(entry["files"]["scaler.npz"], allow_pickle=False) as scaler:
+        physical_scale = scaler["y_scale"].copy()
+    physical_scale[3] *= meta[0]["profile"]["series_cells"]
+    parameters = detector.fit_parameters(
+        entry["task"],
+        results[: len(references)],
+        results[len(references) :],
+        physical_scale,
+    )
+    record = dict(
+        schema=detector.POLICY,
+        binding=dict(bindings[0], policy=detector.POLICY),
+        model_id=model_id,
+        task=entry["task"],
+        profile_id=meta[0]["profile"]["id"],
+        created_at=time.time(),
+        threshold=1.0,
+        parameters=parameters,
+        source_sha256=[m["source_sha256"] for m in meta[len(references) :]],
+        reference_source_sha256=[
+            m["source_sha256"] for m in meta[: len(references)]
+        ],
+        training_source_sha256=used,
+        normal_flights=len(manifests),
+        reference_flights=len(references),
+        manifests_sha256=[digest(p) for p in [*references, *manifests]],
+        unit="ratio_to_domain_threshold_after_frozen_postprocessing",
+        validation_status="experimental_normal_only",
+        real_aircraft_validated=False,
+        false_alarm_guarantee=False,
+        quantile=None,
+        method="frozen_score_and_postprocess_with_aircraft_normal_reference",
+    )
+    calibration_id = fingerprint(record)
+    path = _path(root, calibration_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("x", encoding="utf-8") as stream:
+        json.dump(record, stream, indent=2, allow_nan=False)
+    return dict(record, id=calibration_id, active=False)
+
+
+def decide(record, scores, *, source_sha256=None, evidence=None):
     a = np.asarray(scores, dtype="f8")
     if record is None:
         return dict(
@@ -229,12 +324,24 @@ def decide(record, scores, *, source_sha256=None):
             reason="일치하는 기체·모델·입력 방식의 보정값 없음",
         )
     if source_sha256 in record["source_sha256"] + record.get(
-        "training_source_sha256", []
-    ):
+        "reference_source_sha256", []
+    ) + record.get("training_source_sha256", []):
         return dict(
             status="unavailable",
             reason="학습·보정에 사용한 비행: 독립 판정에서 제외",
             calibration_id=record["id"],
+        )
+    if record.get("schema") == detector.POLICY:
+        if evidence is None:
+            return dict(
+                status="unavailable", reason="전체 예측 구간·판정 근거 없음"
+            )
+        result = detector.decide(record["task"], evidence, record["parameters"])
+        return dict(
+            result,
+            calibration_id=record["id"],
+            validation_status=record["validation_status"],
+            scope="retained_scored_observations_only",
         )
     if a.ndim != 1 or len(a) == 0 or not np.isfinite(a).all() or np.any(a < 0):
         return dict(status="unavailable", reason="유효한 예측/실측 쌍 없음")
@@ -262,11 +369,23 @@ def annotate(result, metadata, root):
             record,
             result["scoring"]["scores"],
             source_sha256=metadata["source_sha256"],
+            evidence=result["scoring"],
         )
+        if record is not None:
+            result["calibration_binding"] = record["binding"]
+        if decision.get("detector_policy") == detector.POLICY:
+            result["scoring"].update(
+                scores=decision["scores"], unit=decision["score_unit"]
+            )
         for row in result.get("segment_results", []):
             row["decision"] = decide(
-                record, row["scores"], source_sha256=metadata["source_sha256"]
+                record,
+                row["scores"],
+                source_sha256=metadata["source_sha256"],
+                evidence=row.get("scoring"),
             )
+            if row["decision"].get("detector_policy") == detector.POLICY:
+                row["scores"] = row["decision"]["scores"]
     except (ValueError, OSError, KeyError) as error:
         decision = dict(
             status="unavailable", reason="보정값 검사 실패: " + str(error)

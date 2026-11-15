@@ -306,6 +306,156 @@ def px4_events(path, profile, maps=None):
     )
 
 
+class CausalSampler:
+    """Retain causal filter state across chunks, using the offline frame kernel."""
+
+    def __init__(self, fast_max_age_ms=200, battery_max_age_ms=350):
+        self.fast_max_age_ms = fast_max_age_ms
+        self.battery_max_age_ms = battery_max_age_ms
+        self.latest, self.filters, self.previous_sample = {}, {}, {}
+        self.position = 0
+        self.next_us = None
+        self.segment_start_us = None
+
+    def sample(self, events, start_us, end_us):
+        fast_max_age_ms, battery_max_age_ms = (
+            self.fast_max_age_ms,
+            self.battery_max_age_ms,
+        )
+        latest, filters, previous_sample = (
+            self.latest,
+            self.filters,
+            self.previous_sample,
+        )
+        position = self.position
+        if self.next_us is not None and start_us != self.next_us:
+            raise ValueError(
+                "Causal sampling chunks must continue without rewinding"
+            )
+        values, times, invalid, boundaries = [], [], [], set()
+        for t in range(((start_us + 99999) // 100000) * 100000, end_us, 100000):
+            while position < len(events) and events[position][0] <= t:
+                available, sample, updates = events[position]
+                if "__reset__" in updates:
+                    latest.clear()
+                    filters.clear()
+                    previous_sample.clear()
+                    boundaries.add(len(values))
+                    position += 1
+                    continue
+                if sample > available or sample < 0:
+                    raise ValueError("Invalid source clock")
+                if any(
+                    name in latest
+                    and sample - latest[name][1]
+                    > (
+                        battery_max_age_ms
+                        if name.startswith("pack_")
+                        else fast_max_age_ms
+                    )
+                    * 1000
+                    for name in updates
+                ):
+                    latest.clear()
+                    filters.clear()
+                    boundaries.add(len(values))
+                for name, raw in updates.items():
+                    if (
+                        name in previous_sample
+                        and sample < previous_sample[name]
+                    ):
+                        raise ValueError(
+                            "Source clock reversal; split the log first"
+                        )
+                    previous_sample[name] = sample
+                    value = _finite(raw)
+                    if (
+                        name.startswith("motor_request")
+                        and value is not None
+                        and not 0 <= value <= 1
+                    ):
+                        value = None
+                    if (
+                        name == "pack_voltage"
+                        and value is not None
+                        and value <= 0
+                    ):
+                        value = None
+                    continuous = (
+                        name in RATES
+                        or name.startswith("specific_force_")
+                        or name
+                        in {"climb_rate", "pack_voltage", "pack_current"}
+                    )
+                    limit = (
+                        battery_max_age_ms
+                        if name.startswith("pack_")
+                        else fast_max_age_ms
+                    ) * 1000
+                    old = latest.get(name)
+                    if old is not None and sample - old[1] > limit:
+                        boundaries.add(len(values))
+                    if continuous and value is not None:
+                        if (
+                            name not in filters
+                            or old is None
+                            or old[0] is None
+                            or sample - old[1] > limit
+                        ):
+                            filters[name] = LowPass(available, value, 0.08)
+                        else:
+                            filters[name].update(available, value)
+                    latest[name] = (value, sample)
+                position += 1
+
+            def at(name, frame_time=t):
+                if name not in latest:
+                    return None
+                v, sample = latest[name]
+                limit = (
+                    battery_max_age_ms
+                    if name.startswith("pack_")
+                    else fast_max_age_ms
+                ) * 1000
+                if v is None or frame_time - sample > limit:
+                    return None
+                return filters[name].at(frame_time)[1] if name in filters else v
+
+            row = []
+            for name in FEATURES:
+                if "error" in name:
+                    measured = (
+                        "climb_rate"
+                        if name == "climb_rate_error"
+                        else "body_rate_" + name[-1]
+                    )
+                    target = (
+                        "climb_target"
+                        if name == "climb_rate_error"
+                        else "rate_target_" + name[-1]
+                    )
+                    a, b = at(measured), at(target)
+                    value = None if a is None or b is None else b - a
+                else:
+                    value = at(name)
+                row.append(value)
+            missing = [
+                name
+                for name, v in zip(FEATURES, row)
+                if v is None or not math.isfinite(v)
+            ]
+            invalid.append(missing)
+            values.append([np.nan if v is None else v for v in row])
+            times.append(t)
+            if missing:
+                self.segment_start_us = None
+            elif self.segment_start_us is None or len(values) - 1 in boundaries:
+                self.segment_start_us = t
+        self.position = position
+        self.next_us = ((end_us + 99999) // 100000) * 100000
+        return values, times, invalid, boundaries
+
+
 def causal_frames(
     events, start_us, end_us, *, fast_max_age_ms=200, battery_max_age_ms=350
 ):
@@ -321,115 +471,9 @@ def causal_frames(
     for age in (fast_max_age_ms, battery_max_age_ms):
         if type(age) is not int or not 20 <= age <= 2000:
             raise ValueError("Sample hold limits must be integer 20..2000 ms")
-    latest, filters, previous_sample = {}, {}, {}
-    position = 0
-    values, times, invalid, boundaries = [], [], [], set()
-    for t in range(((start_us + 99999) // 100000) * 100000, end_us, 100000):
-        while position < len(events) and events[position][0] <= t:
-            available, sample, updates = events[position]
-            if "__reset__" in updates:
-                latest.clear()
-                filters.clear()
-                previous_sample.clear()
-                boundaries.add(len(values))
-                position += 1
-                continue
-            if sample > available or sample < 0:
-                raise ValueError("Invalid source clock")
-            if any(
-                name in latest
-                and sample - latest[name][1]
-                > (
-                    battery_max_age_ms
-                    if name.startswith("pack_")
-                    else fast_max_age_ms
-                )
-                * 1000
-                for name in updates
-            ):
-                latest.clear()
-                filters.clear()
-                boundaries.add(len(values))
-            for name, raw in updates.items():
-                if name in previous_sample and sample < previous_sample[name]:
-                    raise ValueError(
-                        "Source clock reversal; split the log first"
-                    )
-                previous_sample[name] = sample
-                value = _finite(raw)
-                if (
-                    name.startswith("motor_request")
-                    and value is not None
-                    and not 0 <= value <= 1
-                ):
-                    value = None
-                if name == "pack_voltage" and value is not None and value <= 0:
-                    value = None
-                continuous = (
-                    name in RATES
-                    or name.startswith("specific_force_")
-                    or name in {"climb_rate", "pack_voltage", "pack_current"}
-                )
-                limit = (
-                    battery_max_age_ms
-                    if name.startswith("pack_")
-                    else fast_max_age_ms
-                ) * 1000
-                old = latest.get(name)
-                if old is not None and sample - old[1] > limit:
-                    boundaries.add(len(values))
-                if continuous and value is not None:
-                    if (
-                        name not in filters
-                        or old is None
-                        or old[0] is None
-                        or sample - old[1] > limit
-                    ):
-                        filters[name] = LowPass(available, value, 0.08)
-                    else:
-                        filters[name].update(available, value)
-                latest[name] = (value, sample)
-            position += 1
-
-        def at(name, frame_time=t):
-            if name not in latest:
-                return None
-            v, sample = latest[name]
-            limit = (
-                battery_max_age_ms
-                if name.startswith("pack_")
-                else fast_max_age_ms
-            ) * 1000
-            if v is None or frame_time - sample > limit:
-                return None
-            return filters[name].at(frame_time)[1] if name in filters else v
-
-        row = []
-        for name in FEATURES:
-            if "error" in name:
-                measured = (
-                    "climb_rate"
-                    if name == "climb_rate_error"
-                    else "body_rate_" + name[-1]
-                )
-                target = (
-                    "climb_target"
-                    if name == "climb_rate_error"
-                    else "rate_target_" + name[-1]
-                )
-                a, b = at(measured), at(target)
-                value = None if a is None or b is None else b - a
-            else:
-                value = at(name)
-            row.append(value)
-        missing = [
-            name
-            for name, v in zip(FEATURES, row)
-            if v is None or not math.isfinite(v)
-        ]
-        invalid.append(missing)
-        values.append([np.nan if v is None else v for v in row])
-        times.append(t)
+    values, times, invalid, boundaries = CausalSampler(
+        fast_max_age_ms, battery_max_age_ms
+    ).sample(events, start_us, end_us)
     spans, start = [], None
     for i in range(len(times) + 1):
         valid = i < len(times) and not invalid[i]
