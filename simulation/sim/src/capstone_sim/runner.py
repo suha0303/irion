@@ -46,6 +46,26 @@ def termination_guard():
         signal.signal(signal.SIGTERM, previous)
 
 
+def native_land_requested(run, phase_policy):
+    """Allow the expected mode transition after native LAND publication.
+
+    HEARTBEAT can announce AUTO before an older LOCAL_POSITION_NED timestamp
+    reaches the mission end. Publication permits waiting for activation; it
+    does not replace the required landing-consumption receipt or final checks.
+    """
+    if phase_policy is None:
+        return False
+    from . import joint_phase
+
+    request = joint_phase.receipt(run, "land-request")
+    return bool(
+        request is not None
+        and request.get("kind") == "native_land_publication_not_activation"
+        and request["actual_time_us"]
+        >= request["actual_start_us"] + request["duration_us"]
+    )
+
+
 def gazebo_seed_transport(seed):
     """Gazebo8 Ruby FFI is int32; native nonzero int converts to uint32 intact.
 
@@ -1204,7 +1224,7 @@ def run_flight(
 
                     fault_request = MissionFaultRequest(reached_t, fault_after_mission_s, env)
             if phase == "flying" and reached_t and now - reached_t > 2:
-                if mode != 6 and not (phase_policy is not None and now - reached_t >= duration):
+                if mode != 6 and not native_land_requested(run, phase_policy):
                     raise RuntimeError(f"mission mode left OFFBOARD: {mode}")
                 if not mission_started:
                     transition(
