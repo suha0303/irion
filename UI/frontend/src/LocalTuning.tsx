@@ -303,103 +303,114 @@ export default function LocalTuning({
       >
         두 모델 파인튜닝 시작
       </button>
-      {jobs.flatMap((job) =>
-        job.action === 'tune'
-          ? [
-              <div key={job.id}>
-                <h4>
-                  파인튜닝 {job.id.slice(0, 8)} ·{' '}
-                  {job.status === 'running'
-                    ? '진행 중'
-                    : job.status === 'complete'
-                      ? '작업 종료'
-                      : job.status}
-                </h4>
-                {job.progress && (
-                  <p>
-                    {job.progress.stage === 'review'
-                      ? '정상·이상 비교 중'
-                      : job.progress.stage === 'finished'
-                        ? '작업 종료'
-                        : '학습 중'}{' '}
-                    · {((job.progress.elapsed_seconds ?? 0) / 60).toFixed(1)}분
-                  </p>
-                )}
-                {job.error && <p role="alert">{job.error}</p>}
-                {job.result?.note && <p>{job.result.note}</p>}
-                {job.result?.elapsed_seconds !== undefined && (
-                  <p>
-                    전체 처리 {job.result.elapsed_seconds.toFixed(1)}초 ·{' '}
-                    {job.result.within_budget ? '시간 예산 이내' : '시간 예산 초과 · 적용 보류'}
-                  </p>
-                )}
-                {job.result?.tuned_models?.map((row, index) => (
-                  <div key={row.model_id}>
-                    <strong>
-                      {row.model_id} ·{' '}
-                      {row.review_status === 'passed'
-                        ? '퇴행 검사 통과'
-                        : row.review_status === 'rejected'
-                          ? '적용 보류 · 성능 문제'
-                          : '검증 대기'}
-                    </strong>
-                    {row.review?.promotion_check &&
-                      [
-                        ...row.review.promotion_check.reasons,
-                        ...row.review.promotion_check.missing,
-                      ].map((reason) => <p key={reason}>{reasons[reason] ?? reason}</p>)}
-                    <ReviewTotals flights={row.review?.promotion_check.flights} />
-                    <details>
-                      <summary>비행별 예측 오차 상세</summary>
-                      {row.review?.promotion_check.flights
-                        ?.filter((f) => f.error_before && f.error_after)
-                        .map((flight, flightIndex) => (
-                          <table key={flightIndex}>
-                            <caption>별도 정상 비행 {flightIndex + 1} · 예측 오차 비교</caption>
-                            <thead>
-                              <tr>
-                                <th>신호</th>
-                                <th>원본</th>
-                                <th>파인튜닝</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {flight.error_before?.map((before, i) => (
-                                <tr key={i}>
-                                  <td>
-                                    {row.model_id.startsWith('forecast')
-                                      ? [
-                                          'Roll (rad/s)',
-                                          'Pitch (rad/s)',
-                                          'Yaw (rad/s)',
-                                          '팩 전압 (V)',
-                                        ][i]
-                                      : `구간 ${i + 1} · 셀 전압 복합 오차 (V)`}
-                                  </td>
-                                  <td>{before.toFixed(5)}</td>
-                                  <td>{flight.error_after?.[i].toFixed(5)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        ))}
-                    </details>
-                    <button
-                      className="button"
-                      disabled={
-                        disabled || row.review_status !== 'passed' || !job.result?.within_budget
-                      }
-                      onClick={() => submit(`/local-ai/tune/${job.id}/select/${index}`, {})}
-                    >
-                      검증된 모델과 판정 기준 적용
-                    </button>
-                  </div>
-                ))}
-              </div>,
-            ]
-          : [],
-      )}
+      {jobs
+        .filter((job) => job.action === 'tune')
+        .map((job) => (
+          <TuningJobResult key={job.id} job={job} disabled={disabled} submit={submit} />
+        ))}
     </section>
+  );
+}
+
+export function TuningJobResult({
+  job,
+  disabled,
+  submit,
+}: {
+  job: Job;
+  disabled: boolean;
+  submit: (path: string, body: unknown) => Promise<void>;
+}) {
+  return (
+    <div>
+      <h4>
+        파인튜닝 {job.id.slice(0, 8)} ·{' '}
+        {job.status === 'running'
+          ? '진행 중'
+          : job.status === 'complete'
+            ? '작업 종료'
+            : job.status}
+      </h4>
+      {job.progress && (
+        <p>
+          {job.progress.stage === 'review'
+            ? '정상·이상 비교 중'
+            : job.progress.stage === 'finished'
+              ? '작업 종료'
+              : '학습 중'}{' '}
+          · {((job.progress.elapsed_seconds ?? 0) / 60).toFixed(1)}분
+        </p>
+      )}
+      {job.error && <p role="alert">{job.error}</p>}
+      {job.result?.note && <p>{job.result.note}</p>}
+      {job.result?.elapsed_seconds !== undefined && (
+        <p>
+          전체 처리 {job.result.elapsed_seconds.toFixed(1)}초 ·{' '}
+          {job.result.within_budget ? '시간 예산 이내' : '시간 예산 초과 · 적용 보류'}
+        </p>
+      )}
+      {job.result?.tuned_models && (
+        <p className="muted">
+          원본은 학습 전 가중치를 뜻합니다. 이 비교에서는 원본과 파인튜닝 모델을 각각 새 정상
+          비행으로 보정합니다. 과거 최종 평가의 판정 기준과 탐지율을 그대로 사용하는 결과가
+          아닙니다.
+        </p>
+      )}
+      {job.result?.tuned_models?.map((row, index) => (
+        <div key={row.model_id}>
+          <strong>
+            {row.model_id} ·{' '}
+            {row.review_status === 'passed'
+              ? '퇴행 검사 통과'
+              : row.review_status === 'rejected'
+                ? '적용 보류 · 성능 문제'
+                : '검증 대기'}
+          </strong>
+          {row.review?.promotion_check &&
+            [...row.review.promotion_check.reasons, ...row.review.promotion_check.missing].map(
+              (reason) => <p key={reason}>{reasons[reason] ?? reason}</p>,
+            )}
+          <ReviewTotals flights={row.review?.promotion_check.flights} />
+          <details>
+            <summary>비행별 예측 오차 상세</summary>
+            {row.review?.promotion_check.flights
+              ?.filter((f) => f.error_before && f.error_after)
+              .map((flight, flightIndex) => (
+                <table key={flightIndex}>
+                  <caption>별도 정상 비행 {flightIndex + 1} · 예측 오차 비교</caption>
+                  <thead>
+                    <tr>
+                      <th>신호</th>
+                      <th>원본</th>
+                      <th>파인튜닝</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {flight.error_before?.map((before, i) => (
+                      <tr key={i}>
+                        <td>
+                          {row.model_id.startsWith('forecast')
+                            ? ['Roll (rad/s)', 'Pitch (rad/s)', 'Yaw (rad/s)', '팩 전압 (V)'][i]
+                            : `구간 ${i + 1} · 셀 전압 복합 오차 (V)`}
+                        </td>
+                        <td>{before.toFixed(5)}</td>
+                        <td>{flight.error_after?.[i].toFixed(5)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ))}
+          </details>
+          <button
+            className="button"
+            disabled={disabled || row.review_status !== 'passed' || !job.result?.within_budget}
+            onClick={() => submit(`/local-ai/tune/${job.id}/select/${index}`, {})}
+          >
+            검증된 모델과 판정 기준 적용
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -418,6 +429,9 @@ function ReviewTotals({ flights }: { flights: ReviewFlights }) {
       ),
   );
   const events = flights.flatMap((f) => f.events ?? []);
+  const currentMetric =
+    events.length > 0 && events.every((e) => e.original.metric && e.adapted.metric);
+  const domains = events.filter((e) => e.original.response_domain && e.adapted.response_domain);
   return (
     <table>
       <caption>별도 평가 결과 · 정상 오경보 / 알려진 이상 검출</caption>
@@ -440,7 +454,7 @@ function ReviewTotals({ flights }: { flights: ReviewFlights }) {
           ))}
         </tr>
         <tr>
-          <th>이상 검출</th>
+          <th>{currentMetric ? '이상 발생 검출' : '이상 검출 · 이전 평가 기준'}</th>
           {(['original', 'adapted'] as const).map((variant) => {
             const covered = events.filter((e) => e[variant].covered);
             return (
@@ -452,6 +466,20 @@ function ReviewTotals({ flights }: { flights: ReviewFlights }) {
             );
           })}
         </tr>
+        {domains.length > 0 && (
+          <tr>
+            <th>주석된 신호 영역의 경보 · 고장 원인 확정 아님</th>
+            {(['original', 'adapted'] as const).map((variant) => {
+              const covered = domains.filter((e) => e[variant].covered);
+              return (
+                <td key={variant}>
+                  {covered.filter((e) => e[variant].response_domain_detected).length} /{' '}
+                  {covered.length}건
+                </td>
+              );
+            })}
+          </tr>
+        )}
       </tbody>
     </table>
   );

@@ -56,6 +56,7 @@ export type Timing = {
   retained_frames?: number;
   coverage?: number;
   missing_or_stale_frames?: number;
+  operating_excluded_frames?: number;
   clock_corrections?: Record<
     string,
     { drift_ppm: number; offset_us: number; residual_max_us: number }
@@ -119,6 +120,14 @@ export type Analysis = {
   elapsed_seconds?: number;
   coverage?: number;
 };
+export type EventDetection = {
+  covered: boolean;
+  detected: boolean;
+  metric?: 'any_domain_new_episode' | 'completed_voltage_health';
+  response_domain?: 'battery' | 'propulsion';
+  response_domain_detected?: boolean;
+};
+
 export type Job = {
   id: string;
   action: string;
@@ -145,8 +154,8 @@ export type Job = {
             error_after?: number[];
             decisions?: { original: Decision; adapted: Decision };
             events?: {
-              original: { covered: boolean; detected: boolean };
-              adapted: { covered: boolean; detected: boolean };
+              original: EventDetection;
+              adapted: EventDetection;
             }[];
           }[];
         };

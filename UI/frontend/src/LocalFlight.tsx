@@ -1,3 +1,4 @@
+import { TuningJobResult } from './LocalTuning';
 import LocalRunResult from './LocalRunResult';
 import { useEffect, useRef, useState } from 'react';
 import { api, post, upload } from './api';
@@ -398,6 +399,18 @@ export default function LocalFlight({ active }: { active: boolean }) {
                       </button>
                     )}
                     {job.error && <p role="alert">{job.error}</p>}
+                    {job.action === 'tune' && (
+                      <TuningJobResult
+                        job={job}
+                        disabled={busy || running}
+                        submit={(path, body) =>
+                          perform(async () => {
+                            const row = await post<Job>(path, body);
+                            setJobs((items) => [row, ...items]);
+                          })
+                        }
+                      />
+                    )}
                     {job.result && job.action === 'inspect' && (
                       <>
                         <p>

@@ -63,6 +63,9 @@ export function TimingResult({ timing }: { timing: Timing }) {
       {timing.missing_or_stale_frames !== undefined && (
         <p>결측·오래된 관측 제외: {timing.missing_or_stale_frames}개 시점</p>
       )}
+      {!!timing.operating_excluded_frames && (
+        <p>지상·이착륙·비행 상태 미확인 제외: {timing.operating_excluded_frames}개 시점</p>
+      )}
       {timing.recorded_intersections && (
         <>
           <p>공통 기록 구간입니다. 비행 중 여부·정상 여부·모델 입력 적격성은 별도로 확인합니다.</p>

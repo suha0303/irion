@@ -8,6 +8,9 @@ const reasons: Record<string, string> = {
   not_selected: '사용 가능하지만 선택하지 않음',
   too_short: '연속 11초 미만',
   missing_or_stale: '필수 입력 누락·오래됨·무효 값',
+  flight_state_unknown: '비행 상태 누락·오래됨 · 미분석',
+  not_airborne: '지상·비무장 상태 · 미분석',
+  takeoff_or_landing: '이륙·착륙 상태 · 미분석',
   unclassified: '이전 자료 · 위치별 제외 사유 미기록',
 };
 const statuses = {

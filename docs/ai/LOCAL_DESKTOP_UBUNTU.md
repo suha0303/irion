@@ -1,21 +1,21 @@
 # Ubuntu 로컬 실기체 분석 프로그램
 
-2026-11-15 최신 로컬 배포: `ai/releases/drone-local-ubuntu24-20261115-rc17/`.
+2026-11-15 최신 로컬 배포: `ai/releases/drone-local-ubuntu24-20261115-rc20/`.
 Ubuntu 24.04 x86_64용이며 Python 3.10.22, PyTorch 2.1.2+cpu, UI 의존성,
 최신 forecast 8종/run_health 8종 모델, 빌드된 UI를 포함한다.
 원격 GPU·시스템 Python 변경·실행 시 패키지 다운로드가 필요하지 않다.
 
 ## 현재 PC에서 로컬 GPU 파인튜닝 실행
 
-RC17은 CPU 분석, 선택형 GPU 파인튜닝, 정상 비행 역할 배치와 공통 판정 계산을 제공한다.
-기존 RC16과 데이터는 보존한다.
+RC20은 CPU 분석, 선택형 GPU 파인튜닝, 비행 상태에 따른 입력 구간 분리와
+과거 평가와 같은 전체 새 경보 검출 조건을 제공한다. 기존 배포와 데이터는 보존한다.
 이 노트북의 승인된 GPU 환경을 지정하는 명령은 다음과 같다.
 
 ```bash
 cd /home/sa/CapstoneV3
 ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
 ARION_GPU_PYTHON="$PWD/ai/.local/gpu-runtime/bin/python" \
-  ./ai/releases/drone-local-ubuntu24-20261115-rc17/drone-local start
+  ./ai/releases/drone-local-ubuntu24-20261115-rc20/drone-local start
 ```
 
 확인은 `start` 대신 `status`, 종료는 `stop`을 사용한다.
@@ -33,10 +33,17 @@ forecast/run_health 각 1종, GPU/CPU, 최대 30/60분을 선택한다. 기본�
 20회 예시는 3·3·8·6회다. 생성한 배치를 선택하고 별도 이상 평가를 추가한다.
 수동 ‘기체별 임계값 보정’도 개발용 정상 기준과 별도 보정 비행을 사용한다.
 
-이번 새 PX4 정상 20회·이상 4회 시험에서 정상 오경보는 원본/후보 모두 0/6회였지만,
-고장 후 해당 영역의 새 검출은 forecast 0/4건, 종료 후 배터리 검출은 0/2건이었다.
-새 모델은 활성화하지 않았다. 작업 완료와 성능 통과를 구분하며
-[실측·미탐 원인·다음 작업](../development/LOCAL_NORMAL_REFERENCE_G4_G6.md)을 참고한다.
+G7 새 PX4 정상 20회·이상 4회에서는 초기 3예측 전압 오차가 20.5% 줄었지만,
+원본/후보 모두 독립 정상 오경보 3/6회, 고장 후 검출 forecast 0/4건·종료 후 배터리
+0/2건으로 적용을 거절했다. 이어진 G8의 과거 조건 대조 8쌍에서는 내부 입력/원본
+판정 기준으로 정상 오경보 0/8·이상 검출 8/8을 재현했다. 같은 비행의 MAVLink 전체
+입력은 원본 기준에서 8/8·7/8, G7 정상 기반 기준에서 0/8·1/8로 성능 미통과다.
+
+UI의 ‘원본’은 원본 가중치이며 새 정상 자료로 보정한 결과다. 과거 최종 평가의
+판정 기준을 유지한 결과와 구분한다. RC20은 고장 주석 영역만 인정하던 평가 오류를
+고쳤으며 이전 결과에는 ‘이전 평가 기준’을 표시한다. 작업 완료는 성능 통과가 아니다.
+새 모델/판정값은 자동 활성화하지 않았다.
+[평가 차이·새 16회 대조·남은 문제](../development/LOCAL_ORIGINAL_DETECTION_G8.md)를 참고한다.
 학습 1~3회는 학습 입력 수이며, 신뢰할 수 있는 판정을 확인하려면 별도 검증 자료가 필요하다.
 
 GPU 환경은 배포에 포함하지 않는다. 다른 Ubuntu PC에서는 별도 사용자 환경에
@@ -69,8 +76,8 @@ ARION_PORT=8879 \
 압축 파일을 원하는 폴더에 풀고, 풀린 폴더에서 실행한다.
 
 ```bash
-tar -xzf drone-local-ubuntu24-20261115-rc15.tar.gz
-cd drone-local-ubuntu24-20261115-rc15
+tar -xzf drone-local-ubuntu24-20261115-rc20.tar.gz
+cd drone-local-ubuntu24-20261115-rc20
 ./drone-local doctor
 ./drone-local start
 ```
@@ -225,7 +232,7 @@ RC3부터 순차 SHA-256 구현 및 uvloop 0.23.0을 포함한다. 기존 Python
 
 RC5에는 기체별 실시간 CPU 추론·명시적 종료 후 분석·run_health 출력층 적응이 포함된다.
 RC4에서 발견한 사용자 지정 포트 WebSocket Origin 오류를 수정했다. 이전 릴리스 경로로 실행하면
-최신 기능이 나타나지 않으므로 기존 앱을 종료하고 최신 RC13을 실행한다. 사용자 데이터는 같은 기본 폴더를 사용한다.
+최신 기능이 나타나지 않으므로 기존 앱을 종료하고 최신 RC20을 실행한다. 사용자 데이터는 같은 기본 폴더를 사용한다.
 
 
 ## RC8 기체별 보정과 판정
@@ -306,7 +313,7 @@ RC12 SHA-256: `72be97499f8d3ee29cc9bbc0ca0da7ac9c13c22995bc26c6dfa7a6256379a8df`
 ```bash
 cd /home/sa/CapstoneV3
 ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
-  ./ai/releases/drone-local-ubuntu24-20261115-rc15/drone-local start
+  ./ai/releases/drone-local-ubuntu24-20261115-rc20/drone-local start
 ```
 
 브라우저 주소: `http://127.0.0.1:8879`. 종료도 같은 환경과 경로의 `stop`을 사용한다.
