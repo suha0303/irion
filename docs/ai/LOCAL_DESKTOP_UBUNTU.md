@@ -1,13 +1,13 @@
 # Ubuntu 로컬 실기체 분석 프로그램
 
-2026-11-15 최신 로컬 배포: `ai/releases/drone-local-ubuntu24-20261115-rc20/`.
+2026-11-15 최신 로컬 배포: `ai/releases/drone-local-ubuntu24-20261115-rc21/`.
 Ubuntu 24.04 x86_64용이며 Python 3.10.22, PyTorch 2.1.2+cpu, UI 의존성,
 최신 forecast 8종/run_health 8종 모델, 빌드된 UI를 포함한다.
 원격 GPU·시스템 Python 변경·실행 시 패키지 다운로드가 필요하지 않다.
 
 ## 현재 PC에서 로컬 GPU 파인튜닝 실행
 
-RC20은 CPU 분석, 선택형 GPU 파인튜닝, 비행 상태에 따른 입력 구간 분리와
+RC21은 CPU 분석, 선택형 GPU 파인튜닝, 비행 상태에 따른 입력 구간 분리와
 과거 평가와 같은 전체 새 경보 검출 조건을 제공한다. 기존 배포와 데이터는 보존한다.
 이 노트북의 승인된 GPU 환경을 지정하는 명령은 다음과 같다.
 
@@ -15,7 +15,7 @@ RC20은 CPU 분석, 선택형 GPU 파인튜닝, 비행 상태에 따른 입력 �
 cd /home/sa/CapstoneV3
 ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
 ARION_GPU_PYTHON="$PWD/ai/.local/gpu-runtime/bin/python" \
-  ./ai/releases/drone-local-ubuntu24-20261115-rc20/drone-local start
+  ./ai/releases/drone-local-ubuntu24-20261115-rc21/drone-local start
 ```
 
 확인은 `start` 대신 `status`, 종료는 `stop`을 사용한다.
@@ -45,6 +45,15 @@ UI의 ‘원본’은 원본 가중치이며 새 정상 자료로 보정한 결�
 새 모델/판정값은 자동 활성화하지 않았다.
 [평가 차이·새 16회 대조·남은 문제](../development/LOCAL_ORIGINAL_DETECTION_G8.md)를 참고한다.
 학습 1~3회는 학습 입력 수이며, 신뢰할 수 있는 판정을 확인하려면 별도 검증 자료가 필요하다.
+
+RC21은 UDP의 빠른 메시지 100 Hz, 비행 상태 5 Hz를 요청하고 수집 설정이
+다른 자료/적응 모델/보정 기준의 혼합을 막는다. 직렬 연결은 빠른 메시지 20 Hz를
+유지한다. 기존 정상 자료와 후보는 보존되며 새 설정에서는 별도 준비·검증이 필요하다.
+새 16회에서 원본 내부 입력은 정상 경보 0/8·이상 8/8, MAVLink 전체는 8/8·8/8로
+오경보 문제가 남았다. **실시간 이상 탐지 성능은 아직 통과하지 못했다.**
+수집 주기 변경을 탐지 복구로 해석하지 않는다. 기존 메시지 500,000개/2시간 중
+먼저 도달하는 AI 한도를 유지하므로, 고주기 장시간 연결은 별도 검증이 필요하다.
+[입력 차이·시점 민감도·새 16회 결과](../development/LOCAL_MAVLINK_INPUT_G9.md)를 참고한다.
 
 GPU 환경은 배포에 포함하지 않는다. 다른 Ubuntu PC에서는 별도 사용자 환경에
 `ai/localflight/requirements-gpu.lock`의 조합을 설치하고 `ARION_GPU_PYTHON`으로
@@ -76,8 +85,8 @@ ARION_PORT=8879 \
 압축 파일을 원하는 폴더에 풀고, 풀린 폴더에서 실행한다.
 
 ```bash
-tar -xzf drone-local-ubuntu24-20261115-rc20.tar.gz
-cd drone-local-ubuntu24-20261115-rc20
+tar -xzf drone-local-ubuntu24-20261115-rc21.tar.gz
+cd drone-local-ubuntu24-20261115-rc21
 ./drone-local doctor
 ./drone-local start
 ```
@@ -313,7 +322,7 @@ RC12 SHA-256: `72be97499f8d3ee29cc9bbc0ca0da7ac9c13c22995bc26c6dfa7a6256379a8df`
 ```bash
 cd /home/sa/CapstoneV3
 ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
-  ./ai/releases/drone-local-ubuntu24-20261115-rc20/drone-local start
+  ./ai/releases/drone-local-ubuntu24-20261115-rc21/drone-local start
 ```
 
 브라우저 주소: `http://127.0.0.1:8879`. 종료도 같은 환경과 경로의 `stop`을 사용한다.

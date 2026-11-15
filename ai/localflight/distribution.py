@@ -198,6 +198,9 @@ def build(output, ui_packages):
         "CODE_REVIEW_M26_M29.md",
         "LOCAL_GPU_G1_G3.md",
         "LOCAL_NORMAL_REFERENCE_G4_G6.md",
+        "LOCAL_STARTUP_INPUT_G7.md",
+        "LOCAL_ORIGINAL_DETECTION_G8.md",
+        "LOCAL_MAVLINK_INPUT_G9.md",
     ):
         copy_regular(
             ROOT / "docs/development" / name,
