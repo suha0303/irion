@@ -1,20 +1,21 @@
 # Ubuntu 로컬 실기체 분석 프로그램
 
-2026-11-15 최신 로컬 배포: `ai/releases/drone-local-ubuntu24-20261115-rc16/`.
+2026-11-15 최신 로컬 배포: `ai/releases/drone-local-ubuntu24-20261115-rc17/`.
 Ubuntu 24.04 x86_64용이며 Python 3.10.22, PyTorch 2.1.2+cpu, UI 의존성,
 최신 forecast 8종/run_health 8종 모델, 빌드된 UI를 포함한다.
 원격 GPU·시스템 Python 변경·실행 시 패키지 다운로드가 필요하지 않다.
 
 ## 현재 PC에서 로컬 GPU 파인튜닝 실행
 
-RC16은 CPU 분석과 선택형 GPU 파인튜닝을 제공한다. 기존 RC15와 데이터는 보존한다.
+RC17은 CPU 분석, 선택형 GPU 파인튜닝, 정상 비행 역할 배치와 공통 판정 계산을 제공한다.
+기존 RC16과 데이터는 보존한다.
 이 노트북의 승인된 GPU 환경을 지정하는 명령은 다음과 같다.
 
 ```bash
 cd /home/sa/CapstoneV3
 ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
 ARION_GPU_PYTHON="$PWD/ai/.local/gpu-runtime/bin/python" \
-  ./ai/releases/drone-local-ubuntu24-20261115-rc16/drone-local start
+  ./ai/releases/drone-local-ubuntu24-20261115-rc17/drone-local start
 ```
 
 확인은 `start` 대신 `status`, 종료는 `stop`을 사용한다.
@@ -23,13 +24,19 @@ ARION_GPU_PYTHON="$PWD/ai/.local/gpu-runtime/bin/python" \
 ‘로컬 AI · 기체 관리 → 파인튜닝 · 보정 → 기체별 파인튜닝 · 두 모델 함께’에서
 forecast/run_health 각 1종, GPU/CPU, 최대 30/60분을 선택한다. 기본은 기존 X500
 평가에서 선정한 Transformer h64/l4와 h64/l2다. 전체 16종을 한꺼번에 학습하지 않는다.
-준비된 정상 학습 1~3회, 정상 개발 1회, 별도 정상 보정 2회 이상, 정상·이상 평가를
+준비된 정상 학습 1~3회, 정상 개발 1~20회, 별도 정상 보정 2회 이상, 정상·이상 평가를
 선택한다. 이상 발생 구간과 대상 신호는 확인된 경우에만 입력한다.
 알려진 이상을 놓치거나 정상 오차·오경보·검출 지연이 증가하면 적용을 막고,
 자료가 부족하면 검증 대기로 남긴다. 성공 후보도 사용자가 명시적으로 적용해야 한다.
 
-현재 노트북에서 기능은 통과했지만 저장된 배터리 이상은 원본과 후보 모두 미탐이다.
-새 모델은 활성화하지 않았다. [실측·비교·남은 작업](../development/LOCAL_GPU_G1_G3.md)을 참고한다.
+‘정상 비행 자동 배치’를 펼치면 여러 정상 로그를 학습·개발·보정·평가에 분리할 수 있다.
+20회 예시는 3·3·8·6회다. 생성한 배치를 선택하고 별도 이상 평가를 추가한다.
+수동 ‘기체별 임계값 보정’도 개발용 정상 기준과 별도 보정 비행을 사용한다.
+
+이번 새 PX4 정상 20회·이상 4회 시험에서 정상 오경보는 원본/후보 모두 0/6회였지만,
+고장 후 해당 영역의 새 검출은 forecast 0/4건, 종료 후 배터리 검출은 0/2건이었다.
+새 모델은 활성화하지 않았다. 작업 완료와 성능 통과를 구분하며
+[실측·미탐 원인·다음 작업](../development/LOCAL_NORMAL_REFERENCE_G4_G6.md)을 참고한다.
 학습 1~3회는 학습 입력 수이며, 신뢰할 수 있는 판정을 확인하려면 별도 검증 자료가 필요하다.
 
 GPU 환경은 배포에 포함하지 않는다. 다른 Ubuntu PC에서는 별도 사용자 환경에

@@ -86,3 +86,9 @@ run_health 원본의 이상 점수 0.7085는 보정 기준 0.9309보다 작고, 
 증거는 `ai/reports/local-gpu-20261115/`의 `model-selection.json`, `gpu-smoke.json`,
 `request.json`, `attempt-01/`, `method-comparison.json`, `regression-audit.json`,
 `gpu-runtime-freeze.txt`, `g3-*.log`다. 실행은 `docs/ai/LOCAL_DESKTOP_UBUNTU.md`를 따른다.
+# 후속 판정 방식 감사
+
+G1–G3의 ‘원본’ 비교는 원본 가중치에 당시 로컬 단일 점수 판정을 적용한 결과다.
+과거 최종 평가와 점수·후처리가 달랐음을 확인하여 G4–G6에서 공통 계산으로 수정했다.
+아래 기존 측정과 실패 증거는 보존한다. 새 정상 20회·이상 4회 결과와 미탐 진단은
+[정상 자료 활용 G4–G6](LOCAL_NORMAL_REFERENCE_G4_G6.md)을 따른다.
