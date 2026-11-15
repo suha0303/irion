@@ -129,7 +129,9 @@ def test_new_jobs_require_completed_sources_and_reject_unknown_resume(tmp_path):
 def test_real_cpu_worker_analyzes_adapts_and_compares_synthetic_segments(
     tmp_path,
 ):
-    project = Path(__file__).resolve().parents[4]
+    project = Path(
+        os.environ.get("ARION_AI_ROOT", Path(__file__).resolve().parents[4])
+    )
     # Generate explicit synthetic fixtures in the AI environment; no real log is
     # asserted healthy, and the UI interpreter never imports PyTorch.
     code = """
@@ -137,7 +139,7 @@ import json, sys
 from pathlib import Path
 from test_localflight_calibration import make_flight
 root=Path(sys.argv[1])
-roles = {'adaptation':'adaptation','evaluation':'evaluation','cal-a':'calibration','cal-b':'calibration'}
+roles = {'adaptation':'adaptation','development':'development','evaluation':'evaluation','cal-a':'calibration','cal-b':'calibration'}
 print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.items()}))
 """
 
@@ -298,6 +300,21 @@ print(json.dumps({name:str(make_flight(root,name,role)) for name,role in roles.i
         assert not client.get("/api/local-ai/calibrations").json()[
             "calibrations"
         ][0]["active"]
+
+        revised = complete(
+            "calibrations",
+            dict(
+                prepared_jobs=[ids["cal-a"], ids["cal-b"]],
+                reference_jobs=[ids["development"]],
+                model_id="forecast_lstm_h64_l2",
+            ),
+        )
+        assert revised["result"]["schema"] == "aircraft-final-protocol/1"
+        plan = complete("normal-plan", dict(prepared_jobs=list(ids.values())))
+        assert plan["result"]["counts"] == dict(
+            adaptation=1, development=1, calibration=2, evaluation=1
+        )
+        assert not plan["result"]["independent_false_alarm_guarantee"]
 
     # Model/calibration/manifest hashes must survive a data-directory move.
     # Pause a real two-epoch fit after its first completed epoch, then compare

@@ -4,10 +4,11 @@ import type { Job } from './local-flight-types';
 
 type Calibration = {
   id: string;
+  schema: string;
   model_id: string;
   profile_id: string;
   threshold: number;
-  quantile: number;
+  quantile: number | null;
   normal_flights: number;
   active: boolean;
   binding: { weight_sha256: string; clock: string };
@@ -24,7 +25,7 @@ export default function LocalCalibration({
   submit: (path: string, body: unknown) => Promise<void>;
 }) {
   const [selected, setSelected] = useState<string[]>([]),
-    [quantile, setQuantile] = useState(0.99),
+    [references, setReferences] = useState<string[]>([]),
     [adapted, setAdapted] = useState(true);
   const [records, setRecords] = useState<Calibration[]>([]),
     [error, setError] = useState('');
@@ -45,13 +46,42 @@ export default function LocalCalibration({
   return (
     <section className="panel">
       <h2>기체별 임계값 보정</h2>
-      <p>
-        학습·모델 선택·평가와 다른 정상 비행 2~20개를 사용합니다. 선택 모델 A: {model || '미선택'}
+      <p className="local-note">
+        두 모델 파인튜닝에는 보정·비교가 포함됩니다. 이곳에서는 단일 모델의 판정 기준을 별도로
+        만들거나 저장된 기준을 관리합니다.
       </p>
       <p>
-        예측 모델은 비행별 20개 이상의 1초 앞 예측/실측 쌍이 필요합니다. 경험적 기준이며 지정
-        백분위가 실제 오경보율을 보장하지 않습니다.
+        정상 기준용 개발 비행 1~20개와, 학습·개발·평가에 사용하지 않은 보정 비행 2~20개를
+        사용합니다. 선택 모델 A: {model || '미선택'}
       </p>
+      <p>
+        기존 최종 평가의 점수·경보 후처리로 계산합니다. 기준값은 선택한 기체의 정상 자료에서
+        생성하며 실제 오경보율을 보장하지 않습니다.
+      </p>
+      <h3>정상 오차 기준용 개발 비행</h3>
+      {jobs
+        .filter(
+          (j) =>
+            j.status === 'complete' &&
+            j.action === 'prepare' &&
+            j.result?.role === 'development' &&
+            j.result?.health === 'confirmed_normal',
+        )
+        .map((j) => (
+          <label className="local-segment" key={j.id}>
+            <input
+              type="checkbox"
+              checked={references.includes(j.id)}
+              onChange={() =>
+                setReferences((old) =>
+                  old.includes(j.id) ? old.filter((id) => id !== j.id) : [...old, j.id],
+                )
+              }
+            />
+            {j.id.slice(0, 8)} · {j.result?.frames}시점
+          </label>
+        ))}
+      <h3>임계값 보정용 비행</h3>
       {jobs
         .filter(
           (j) =>
@@ -74,30 +104,25 @@ export default function LocalCalibration({
             {j.id.slice(0, 8)} · {j.result?.frames}시점
           </label>
         ))}
-      <label className="form-label">
-        경험적 기준 백분위
-        <select
-          className="text-input"
-          value={quantile}
-          onChange={(e) => setQuantile(Number(e.target.value))}
-        >
-          <option value={0.95}>95%</option>
-          <option value={0.99}>99%</option>
-          <option value={0.999}>99.9%</option>
-        </select>
-      </label>
-      <label>
+      <label className="local-segment">
         <input type="checkbox" checked={adapted} onChange={(e) => setAdapted(e.target.checked)} />{' '}
         이 기체에서 채택한 파인튜닝 모델 보정 · 없으면 원본
       </label>
       <button
         className="button primary"
-        disabled={disabled || !model || selected.length < 2 || selected.length > 20}
+        disabled={
+          disabled ||
+          !model ||
+          selected.length < 2 ||
+          selected.length > 20 ||
+          references.length < 1 ||
+          references.length > 20
+        }
         onClick={() =>
           submit('/local-ai/calibrations', {
             model_id: model,
             prepared_jobs: selected,
-            quantile,
+            reference_jobs: references,
             use_active: adapted,
           })
         }
@@ -120,6 +145,10 @@ export default function LocalCalibration({
             <br />
             정상 {c.normal_flights}회 · 기준 {c.threshold.toFixed(5)} ·{' '}
             {c.active ? '판정에 사용 중' : '미선택'}
+            <br />
+            {c.schema === 'aircraft-final-protocol/1'
+              ? '공통 점수·후처리 적용'
+              : '이전 단일 점수 방식 · 새 보정 권장'}
           </p>
           <button
             className="button small"

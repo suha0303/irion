@@ -420,12 +420,19 @@ def attach(app, root=None):
             manifests = [
                 completed(i, "prepare")["result"]["manifest"] for i in ids
             ]
+            references = request.get("reference_jobs", [])
+            if not isinstance(references, list) or len(references) > 20:
+                raise ValueError("정상 기준용 비행은 최대 20개입니다.")
             return service.create_job(
                 dict(
                     action="calibration_fit",
                     data_root=str(service.root),
                     model_id=request["model_id"],
                     manifests=manifests,
+                    normal_references=[
+                        completed(i, "prepare")["result"]["manifest"]
+                        for i in references
+                    ],
                     quantile=request.get("quantile", 0.99),
                     use_active=request.get("use_active") is True,
                 )
@@ -523,11 +530,11 @@ def attach(app, root=None):
                 not isinstance(train_ids, list)
                 or not isinstance(dev_ids, list)
                 or not 1 <= len(train_ids) <= 3
-                or len(dev_ids) > 1
+                or len(dev_ids) > 20
             ):
                 raise ValueError(
                     (
-                        "Use 1..3 adaptation flights and at most one "
+                        "Use 1..3 adaptation flights and at most 20 "
                         "development flight"
                     )
                 )
@@ -553,6 +560,31 @@ def attach(app, root=None):
         except (KeyError, ValueError) as error:
             raise HTTPException(422, str(error)) from error
 
+    @app.post("/api/local-ai/normal-plan")
+    async def normal_plan(request: dict):
+        try:
+            ids = request["prepared_jobs"]
+            if (
+                not isinstance(ids, list)
+                or not 1 <= len(ids) <= 50
+                or len(set(ids)) != len(ids)
+            ):
+                raise ValueError("정상 확인 비행 1~50개를 선택하세요.")
+            return service.create_job(
+                dict(
+                    action="normal_plan",
+                    manifests=[
+                        completed(i, "prepare")["result"]["manifest"]
+                        for i in ids
+                    ],
+                    output=str(
+                        service.root / "normal-plans" / uuid.uuid4().hex
+                    ),
+                )
+            )
+        except (KeyError, ValueError, TypeError) as error:
+            raise HTTPException(422, str(error)) from error
+
     @app.post("/api/local-ai/tune")
     async def tune_pair(request: dict):
         try:
@@ -573,6 +605,24 @@ def attach(app, root=None):
                 manifests[key] = [
                     completed(i, "prepare")["result"]["manifest"] for i in ids
                 ]
+            if request.get("normal_plan_job"):
+                plan = completed(request["normal_plan_job"], "normal_plan")[
+                    "result"
+                ]
+                for key, role in [
+                    ("adaptation", "adaptation"),
+                    ("development", "development"),
+                    ("calibrations", "calibration"),
+                    ("evaluations", "evaluation"),
+                ]:
+                    selected = [
+                        r["manifest"]
+                        for r in plan["flights"]
+                        if r["role"] == role
+                    ]
+                    manifests[key] = selected + (
+                        manifests[key] if key == "evaluations" else []
+                    )
             return service.create_job(
                 dict(
                     action="tune",
@@ -603,12 +653,20 @@ def attach(app, root=None):
                 raise ValueError(
                     "시간 예산과 정상·이상 퇴행 검증을 통과해야 선택할 수 있습니다."
                 )
+            evidence = (
+                dict(
+                    comparison_file=row["review_file"],
+                    comparison_sha256=row["review_sha256"],
+                )
+                if row.get("review_file")
+                else dict(comparison=row["review"])
+            )
             return service.create_job(
                 dict(
                     action="tune_select",
                     data_root=str(service.root),
                     model_id=row["registered"]["id"],
-                    comparison=row["review"],
+                    **evidence,
                 )
             )
         except (KeyError, ValueError) as error:
@@ -771,7 +829,11 @@ def attach(app, root=None):
                 action="model_select",
                 data_root=str(service.root),
                 model_id=model_id,
-                comparison=comparison["result"],
+                comparison_file=str(service.job_path(comparison["id"])),
+                comparison_sha256=hashlib.sha256(
+                    service.job_path(comparison["id"]).read_bytes()
+                ).hexdigest(),
+                comparison_is_job=True,
             )
         )
 

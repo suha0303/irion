@@ -221,7 +221,8 @@ export default function LocalInsights({ state, error }: { state: LocalState; err
             </h3>
             <p>
               이상 의심 · 점수 {chosen.score.toFixed(5)} / 기준 {chosen.threshold.toFixed(5)}. 예측
-              잔차이며 고장 원인 확정과 구분합니다.
+              잔차이며 고장 원인 확정과 구분합니다. 경보의 지속·해제 조건에 따라 점수가 기준
+              아래로 내려가도 경보가 잠시 유지될 수 있습니다.
             </p>
             {series && point >= 0 && (
               <table>

@@ -8,10 +8,11 @@ import time
 from pathlib import Path
 
 import pytest
-from arion.contracts import SourceConfig
-from arion.main import create_app
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
+
+from arion.contracts import SourceConfig
+from arion.main import create_app
 
 
 def test_udp_bind_address_accepts_lan_not_arbitrary_hostname():
@@ -23,7 +24,9 @@ def test_udp_bind_address_accepts_lan_not_arbitrary_hostname():
 
 @pytest.mark.parametrize("automatic", [False, True])
 def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
-    project = Path(__file__).resolve().parents[4]
+    project = Path(
+        os.environ.get("ARION_AI_ROOT", Path(__file__).resolve().parents[4])
+    )
     env = dict(
         os.environ,
         PYTHONPATH=os.pathsep.join(

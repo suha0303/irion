@@ -93,6 +93,9 @@ export type Decision = {
   observations?: number;
   exceedances?: number;
   scores?: number[];
+  alarms?: boolean[];
+  detector_policy?: string;
+  active_domains?: string[];
   time_us?: number;
   target_scores?: number[];
 };
@@ -123,6 +126,9 @@ export type Job = {
   error?: string;
   progress?: { epoch?: number; train_loss?: number; stage?: string; elapsed_seconds?: number };
   result?: {
+    counts?: Record<string, number>;
+    note?: string;
+    missing?: string[];
     elapsed_seconds?: number;
     within_budget?: boolean;
     tuned_models?: {
@@ -133,7 +139,16 @@ export type Job = {
           status: string;
           reasons: string[];
           missing: string[];
-          flights?: { health: string; error_before?: number[]; error_after?: number[] }[];
+          flights?: {
+            health: string;
+            error_before?: number[];
+            error_after?: number[];
+            decisions?: { original: Decision; adapted: Decision };
+            events?: {
+              original: { covered: boolean; detected: boolean };
+              adapted: { covered: boolean; detected: boolean };
+            }[];
+          }[];
         };
       };
     }[];

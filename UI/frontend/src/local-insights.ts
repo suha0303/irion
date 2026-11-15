@@ -55,7 +55,8 @@ export function localAlarms(state: LocalState): LocalAlarm[] {
     if (threshold === undefined || analysis.decision?.status === 'unavailable') continue;
     for (const [i, score] of (analysis.scoring?.scores ?? []).entries()) {
       const time = analysis.scoring?.time_us[i];
-      if (time === undefined || score <= threshold) continue;
+      const active = analysis.decision?.alarms?.[i] ?? score > threshold;
+      if (time === undefined || !active) continue;
       rows.push({
         id: `log-${index}-${time}`,
         model: analysis.model_id,

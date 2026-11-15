@@ -248,8 +248,19 @@
 .local-flight-grid[data-page='logs'] {
   grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.4fr);
 }
-.local-flight-grid[data-page='training'] > div:last-of-type:not([hidden]) {
-  grid-column: 1 / -1;
+.local-flight-grid[data-page='training'] > .local-calibration-section {
+  grid-column: 2;
+}
+.local-calibration-section > .panel {
+  margin: 0;
+}
+.local-calibration-section .local-segment {
+  display: flex;
+  align-items: flex-start;
+}
+.local-calibration-section .button.primary {
+  display: block;
+  margin-top: 14px;
 }
 .local-job-toggle {
   display: flex;
@@ -325,6 +336,9 @@
 @media (max-width: 900px) {
   .local-flight-grid[data-page] {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .local-flight-grid[data-page='training'] > .local-calibration-section {
+    grid-column: 1;
   }
   .local-task-nav button {
     padding: 10px;

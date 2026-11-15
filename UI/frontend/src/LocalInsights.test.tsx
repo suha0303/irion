@@ -75,3 +75,14 @@ it('aggregates all retained sections and keeps missing decisions visible', () =>
   });
   expect(modelDecision([second, { ...second, decision: undefined }])?.status).toBe('unavailable');
 });
+
+it('uses temporal alarm flags instead of reapplying a scalar threshold', () => {
+  const temporal = structuredClone(state);
+  temporal.insights!.report!.analyses[0].decision = {
+    status: 'suspect',
+    threshold: 5,
+    alarms: [false, false, true],
+  };
+  expect(localAlarms(temporal)).toHaveLength(1);
+  expect(localAlarms(temporal)[0]).toMatchObject({ time: 3e6, score: 2 });
+});

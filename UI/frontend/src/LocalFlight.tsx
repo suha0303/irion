@@ -291,7 +291,7 @@ export default function LocalFlight({ active }: { active: boolean }) {
               })
             }
           />
-          <div hidden={page !== 'training'}>
+          <div className="local-calibration-section" hidden={page !== 'training'}>
             <LocalCalibration
               jobs={jobs}
               model={selected[0] ?? ''}
@@ -346,6 +346,8 @@ export default function LocalFlight({ active }: { active: boolean }) {
                   <option value="inspect">로그 검사</option>
                   <option value="prepare">구간 저장</option>
                   <option value="adapt">파인튜닝</option>
+                  <option value="tune">두 모델 파인튜닝</option>
+                  <option value="normal_plan">정상 자료 배치</option>
                   <option value="compare">독립 비교</option>
                   <option value="calibration_fit">보정</option>
                 </select>
@@ -369,6 +371,9 @@ export default function LocalFlight({ active }: { active: boolean }) {
                       prepare: '구간 저장',
                       analyze: '예측·분석',
                       adapt: '적응 학습',
+                      tune: '두 모델 파인튜닝',
+                      tune_select: '검증된 모델·보정 적용',
+                      normal_plan: '정상 자료 배치',
                       compare: '독립 비교',
                       calibration_fit: '임계값 보정',
                       calibration_select: '보정 적용',
