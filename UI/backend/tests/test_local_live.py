@@ -84,11 +84,17 @@ def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
             run.append_raw(item["raw"])
         deadline = time.monotonic() + 30
         next_boot_ms = 13000
+        latest_timestamp = data["rows"][-1]["raw"]["receive_monotonic_ns"]
+        latest_rows = [
+            row
+            for row in data["rows"]
+            if row["raw"]["receive_monotonic_ns"] == latest_timestamp
+        ]
         # Continue receiving while the CPU initializes; old journal rows alone
         # must never be advertised as current predictions.
         while time.monotonic() < deadline:
             next_sample_at = time.monotonic() + 0.1
-            for original in data["rows"][-8:]:
+            for original in latest_rows:
                 item = json.loads(json.dumps(original))
                 raw = item["raw"]
                 raw["receive_monotonic_ns"] = time.monotonic_ns()
@@ -117,7 +123,7 @@ def test_cpu_live_prediction_staleness_and_finish(tmp_path, automatic):
         if automatic:
             assert (
                 run_id in app.state.store.active
-            )  # initial disarmed and stale did not stop capture
+            )  # Armed input and stale reception did not stop capture.
             for mode in (128, 0, 0, 0):
                 run.append_raw(
                     dict(

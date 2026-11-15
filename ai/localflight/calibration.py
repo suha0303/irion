@@ -24,7 +24,7 @@ POLICY = "real-residual-threshold/1"
 
 def binding(runtime, metadata, adaptation=None):
     timing = metadata.get("timing", {})
-    return dict(
+    result = dict(
         model_id=runtime.entry["id"],
         profile_version=fingerprint(metadata["profile"]),
         origin=metadata["origin"],
@@ -41,6 +41,9 @@ def binding(runtime, metadata, adaptation=None):
         fast_max_age_ms=timing.get("fast_max_age_ms", 200),
         battery_max_age_ms=timing.get("battery_max_age_ms", 350),
     )
+    if timing.get("operating_policy"):
+        result["operating_policy"] = timing["operating_policy"]
+    return result
 
 
 def forecast_scores(observed, predicted, scaler):

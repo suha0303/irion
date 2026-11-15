@@ -47,11 +47,12 @@ def request():
     )
 
 
-def samples(seconds=13, start_ns=1000000000):
+def samples(seconds=13, start_ns=1000000000, *, armed=True):
     for t in range(seconds * 10):
         ms = t * 100
         rows = [
-            ("HEARTBEAT", dict(autopilot=12, base_mode=0)),
+            ("HEARTBEAT", dict(autopilot=12, base_mode=128 if armed else 0)),
+            ("EXTENDED_SYS_STATE", dict(landed_state=2)),
             (
                 "ATTITUDE",
                 dict(
@@ -325,7 +326,7 @@ def test_disarm_requires_armed_and_fresh_debounced_heartbeats():
     guard.accept(None, 14_000_000)
     assert not guard.ready
     mapper = Mapper(request())
-    for row in samples(1):
+    for row in samples(1, armed=False):
         mapper.accept(row)
     assert not mapper.disarm.ready
     row = next(samples())

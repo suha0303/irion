@@ -19,7 +19,7 @@ import numpy as np
 
 from capstone_ai.mapping import FEATURES
 from localflight import calibration as localflight_calibration
-from localflight import run_summary
+from localflight import operating, run_summary
 
 from .analysis import analyze, load_runtime
 from .catalog import DEFAULT_BUNDLE, Catalog, digest, read_json
@@ -99,6 +99,15 @@ def decode(name, f, p, request):
     """common.xml SI/FRD/NED semantics, explicit channels/instances and
     masks.
     """
+    if name == "HEARTBEAT":
+        mode = f.get("base_mode")
+        return dict(
+            arming_state=(2 if mode & 128 else 1)
+            if type(mode) is int and 0 <= mode <= 255
+            else None
+        )
+    if name == "EXTENDED_SYS_STATE":
+        return dict(landed_state=number(f.get("landed_state")))
     if name == "ATTITUDE":
         return dict(
             zip(
@@ -326,7 +335,9 @@ def completed(events, journal, output, request, origin, *, end_us=None):
                 ],
             ),
         )
-    values, times, timing = causal_frames(events, 0, end_us)
+    values, times, timing = causal_frames(
+        events, 0, end_us, require_airborne=True
+    )
     segments = [s for s in timing["candidate_segments"] if s["usable"]]
     output.mkdir(exist_ok=False)
     source_hash = digest(journal)
@@ -559,7 +570,10 @@ def run(request):
         imu_message=request["imu_message"], imu_id=request["imu_id"]
     )
     metadata["timing"] = dict(
-        clock="receipt_monotonic", fast_max_age_ms=200, battery_max_age_ms=350
+        clock="receipt_monotonic",
+        fast_max_age_ms=200,
+        battery_max_age_ms=350,
+        operating_policy=operating.POLICY,
     )
     try:
         calibration = localflight_calibration.active(
@@ -583,7 +597,7 @@ def run(request):
     alarm_path.touch(exist_ok=False)
     last_alarm_time = -1
     mapper = Mapper(request)
-    sampler = CausalSampler()
+    sampler = CausalSampler(require_airborne=True)
     sampled_values, sampled_times = [], []
     events = []
     last_publish, last_data = 0.0, time.monotonic()
@@ -742,7 +756,10 @@ def run(request):
                             ),
                         )
                     else:
-                        state["message"] = "완전한 19입력의 연속 10초 이력 대기"
+                        state["message"] = operating.REASONS.get(
+                            sampler.operating_exclusion,
+                            "비행 중 완전한 19입력의 연속 10초 이력 대기",
+                        )
                 else:
                     state["message"] = "초기 입력 이력 수집 중"
                 write(path, state)

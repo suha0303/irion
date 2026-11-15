@@ -32,6 +32,9 @@ def events(seconds=40, gap=None):
             rate_target_q=0.0,
             rate_target_r=0.0,
             climb_target=0.0,
+            arming_state=2,
+            landed=0,
+            nav_state=14,
         )
         rows.append((t, t, values))
     return rows

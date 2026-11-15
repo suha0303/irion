@@ -21,7 +21,7 @@ import numpy as np
 from capstone_ai import mapping
 from capstone_ai.mapping import FEATURES, RATES
 from learning.history19.preprocessing import LowPass
-from localflight import bin_reader, run_summary
+from localflight import bin_reader, operating, run_summary
 
 from .catalog import digest
 from .logs import PX4_REQUIRED, inspect_log
@@ -309,13 +309,22 @@ def px4_events(path, profile, maps=None):
 class CausalSampler:
     """Retain causal filter state across chunks, using the offline frame kernel."""
 
-    def __init__(self, fast_max_age_ms=200, battery_max_age_ms=350):
+    def __init__(
+        self,
+        fast_max_age_ms=200,
+        battery_max_age_ms=350,
+        *,
+        require_airborne=False,
+    ):
         self.fast_max_age_ms = fast_max_age_ms
         self.battery_max_age_ms = battery_max_age_ms
         self.latest, self.filters, self.previous_sample = {}, {}, {}
         self.position = 0
         self.next_us = None
         self.segment_start_us = None
+        self.require_airborne = require_airborne
+        self.operating = {}
+        self.operating_exclusion = None
 
     def sample(self, events, start_us, end_us):
         fast_max_age_ms, battery_max_age_ms = (
@@ -340,11 +349,28 @@ class CausalSampler:
                     latest.clear()
                     filters.clear()
                     previous_sample.clear()
+                    self.operating.clear()
                     boundaries.add(len(values))
                     position += 1
                     continue
                 if sample > available or sample < 0:
                     raise ValueError("Invalid source clock")
+                # Status topics are commonly 1 Hz, not 5+ Hz feature streams.
+                # Their cadence must never clear continuous filter history.
+                for name in operating.FIELDS.intersection(updates):
+                    if (
+                        name in self.operating
+                        and sample < self.operating[name][1]
+                    ):
+                        raise ValueError(
+                            "Source clock reversal; split the log first"
+                        )
+                    self.operating[name] = (_finite(updates[name]), sample)
+                updates = {
+                    k: v
+                    for k, v in updates.items()
+                    if k not in operating.FIELDS
+                }
                 if any(
                     name in latest
                     and sample - latest[name][1]
@@ -444,6 +470,13 @@ class CausalSampler:
                 for name, v in zip(FEATURES, row)
                 if v is None or not math.isfinite(v)
             ]
+            self.operating_exclusion = (
+                operating.exclusion(self.operating, t)
+                if self.require_airborne
+                else None
+            )
+            if self.operating_exclusion:
+                missing.append(self.operating_exclusion)
             invalid.append(missing)
             values.append([np.nan if v is None else v for v in row])
             times.append(t)
@@ -457,7 +490,13 @@ class CausalSampler:
 
 
 def causal_frames(
-    events, start_us, end_us, *, fast_max_age_ms=200, battery_max_age_ms=350
+    events,
+    start_us,
+    end_us,
+    *,
+    fast_max_age_ms=200,
+    battery_max_age_ms=350,
+    require_airborne=False,
 ):
     if (
         type(start_us) is not int
@@ -472,7 +511,7 @@ def causal_frames(
         if type(age) is not int or not 20 <= age <= 2000:
             raise ValueError("Sample hold limits must be integer 20..2000 ms")
     values, times, invalid, boundaries = CausalSampler(
-        fast_max_age_ms, battery_max_age_ms
+        fast_max_age_ms, battery_max_age_ms, require_airborne=require_airborne
     ).sample(events, start_us, end_us)
     spans, start = [], None
     for i in range(len(times) + 1):
@@ -492,12 +531,25 @@ def causal_frames(
         if valid and start is None:
             start = i
 
-    reasons = Counter(name for names in invalid for name in names)
+    reasons = Counter(
+        name
+        for names in invalid
+        for name in names
+        if name not in operating.REASONS
+    )
     excluded = []
     for t, missing in zip(times, invalid):
         if not missing:
             continue
-        if excluded and excluded[-1]["end_us"] == t:
+        reason = next(
+            (n for n in missing if n in operating.REASONS), "missing_or_stale"
+        )
+        missing = [n for n in missing if n not in operating.REASONS]
+        if (
+            excluded
+            and excluded[-1]["end_us"] == t
+            and excluded[-1]["reason"] == reason
+        ):
             excluded[-1]["end_us"] = t + 100000
             excluded[-1]["missing_features"] = sorted(
                 set(excluded[-1]["missing_features"]) | set(missing)
@@ -507,7 +559,7 @@ def causal_frames(
                 dict(
                     start_us=t,
                     end_us=t + 100000,
-                    reason="missing_or_stale",
+                    reason=reason,
                     missing_features=missing,
                 )
             )
@@ -518,11 +570,17 @@ def causal_frames(
         candidate_segments=spans,
         requested_frames=len(times),
         complete_frames=sum(not m for m in invalid),
-        missing_or_stale_frames=sum(bool(m) for m in invalid),
+        missing_or_stale_frames=sum(
+            any(n not in operating.REASONS for n in m) for m in invalid
+        ),
+        operating_excluded_frames=sum(
+            any(n in operating.REASONS for n in m) for m in invalid
+        ),
         missing_by_feature=dict(reasons),
         boundary_count=len(boundaries),
         fast_max_age_ms=fast_max_age_ms,
         battery_max_age_ms=battery_max_age_ms,
+        operating_policy=operating.POLICY if require_airborne else None,
         interpolation="causal bounded sample hold; no gap bridging",
         minimum_segment_frames=110,
     )
@@ -613,6 +671,7 @@ def prepare(
         end_us,
         fast_max_age_ms=fast_max_age_ms,
         battery_max_age_ms=battery_max_age_ms,
+        require_airborne=profile["autopilot"] == "px4",
     )
     timing.update(
         clock_corrections=maps,

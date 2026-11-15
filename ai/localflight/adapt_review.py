@@ -15,7 +15,7 @@ from .analysis import analyze
 from .catalog import Catalog, read_json
 from .prepared import distinct_flights, load
 
-POLICY = "normal-and-anomaly-regression/1"
+POLICY = "normal-and-anomaly-regression/2"
 
 
 def _normal_error(result):
@@ -32,7 +32,12 @@ def _normal_error(result):
 
 
 def _event_detection(result, record, event, voltage_scale):
-    """Count only alarms inside the declared event, optionally voltage-only."""
+    """Separate event detection from the signal domain responding to a fault.
+
+    Forecast success uses the frozen evaluator's global new episode. A motor
+    fault can change voltage while the flight controller holds angular rates;
+    a signal-domain alarm is not a validated fault-localization result.
+    """
     start, end = event["start_us"], event["end_us"]
     target = event.get("target", "any")
     if (
@@ -54,11 +59,7 @@ def _event_detection(result, record, event, voltage_scale):
                 "pack_voltage": "battery",
                 "propulsion": "propulsion",
             }.get(target)
-            flags = (
-                decision["domain_episode_starts"][domain]
-                if domain
-                else decision["episode_starts"]
-            )
+            flags = decision["episode_starts"]
         else:
             flags = decision["alarms"]
             # Post-flight voltage health cannot certify a propulsion event.
@@ -73,7 +74,7 @@ def _event_detection(result, record, event, voltage_scale):
                 )
         covered = (times >= start) & (times <= end)
         alarms = times[covered & np.asarray(flags)]
-        return dict(
+        measured = dict(
             covered=bool(covered.any()),
             detected=bool(len(alarms)),
             first_alarm_us=int(alarms[0]) if len(alarms) else None,
@@ -81,7 +82,22 @@ def _event_detection(result, record, event, voltage_scale):
             if len(alarms)
             else None,
             target=target,
+            metric="any_domain_new_episode"
+            if record["task"] == "forecast"
+            else "completed_voltage_health",
         )
+        if record["task"] == "forecast" and domain:
+            domain_times = times[
+                covered & np.asarray(decision["domain_episode_starts"][domain])
+            ]
+            measured.update(
+                response_domain=domain,
+                response_domain_detected=bool(len(domain_times)),
+                response_domain_first_alarm_us=int(domain_times[0])
+                if len(domain_times)
+                else None,
+            )
+        return measured
     scores = np.asarray(result["scoring"]["scores"])
     if target == "pack_voltage" and result["model_id"].startswith("forecast_"):
         scores = np.concatenate(

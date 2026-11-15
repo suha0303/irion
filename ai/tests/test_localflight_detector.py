@@ -83,7 +83,9 @@ def test_gaps_and_scope_resets_match_frozen_alarm():
 
 def test_live_float32_and_saved_json_residuals_have_identical_scores():
     residual = np.linspace(-0.7, 0.9, 1200, dtype="f4").reshape(30, 10, 4)
-    live = detector.forecast_scores(dict(residual_scaled=residual), parameters())
+    live = detector.forecast_scores(
+        dict(residual_scaled=residual), parameters()
+    )
     saved = detector.forecast_scores(
         dict(residual_scaled=residual.tolist()), parameters()
     )
@@ -101,7 +103,44 @@ def test_preexisting_alarm_is_not_a_new_fault_detection():
     event["start_us"] = 3000000
     assert _event_detection(result, record, event, 1)["detected"]
     event["target"] = "propulsion"
-    assert not _event_detection(result, record, event, 1)["detected"]
+    measured = _event_detection(result, record, event, 1)
+    assert measured["detected"]
+    assert measured["metric"] == "any_domain_new_episode"
+    assert not measured["response_domain_detected"]
+
+
+def test_fault_detection_matches_frozen_event_metric_across_signal_domains():
+    data = evidence()
+    # A voltage alarm is already active when a later rate alarm starts.
+    data["residual_scaled"][10:25, :, :3] = 3
+    params = parameters()
+    decisions = detection_protocol.score_sequence(
+        detector.forecast_scores(data, params),
+        ["fixture"] * 30,
+        data["segment_id"],
+        data["origin_us"],
+        params["high"],
+    )
+    record = dict(schema=detector.POLICY, task="forecast", parameters=params)
+    for onset in (3_000_000, 10_000_000, 20_000_000):
+        frozen = detection_protocol.event_result(
+            dict(
+                event_id="test",
+                onset_kind="step",
+                physical_onset_time_us=onset,
+                end_time_us=30_000_000,
+            ),
+            decisions,
+            0,
+        )
+        measured = _event_detection(
+            dict(model_id="forecast_fixture", scoring=data),
+            record,
+            dict(start_us=onset, end_us=30_000_000, target="propulsion"),
+            1,
+        )
+        assert measured["detected"] == frozen["new_episode_detected"]
+        assert measured["first_alarm_us"] == frozen["new_episode_time_us"]
 
 
 def test_chunked_filter_is_exactly_offline_with_gaps_and_reset():
@@ -169,7 +208,10 @@ def test_protocol_binding_rejects_reference_reuse_and_retains_legacy(
     )
     assert calibration.read(tmp_path, old["id"])["schema"] == calibration.POLICY
     calibration.select(tmp_path, old["id"])
-    assert calibration.active(tmp_path, result["calibration_binding"])["id"] == old["id"]
+    assert (
+        calibration.active(tmp_path, result["calibration_binding"])["id"]
+        == old["id"]
+    )
     if model.startswith("run_health"):
         assert not new["parameters"]["finite_sample_rank_available"]
 

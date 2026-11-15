@@ -140,6 +140,7 @@ def fit(
         source_sha256=[m["source_sha256"] for m in metadata],
         profile=metadata[0]["profile"],
         origin=metadata[0]["origin"],
+        operating_policy=metadata[0].get("timing", {}).get("operating_policy"),
         epochs=epochs,
         learning_rate=learning_rate,
         device=device,
@@ -150,7 +151,7 @@ def fit(
         time_limit_seconds=time_limit_seconds,
         patience=patience,
         anchor_weight=anchor_weight,
-        promotion_policy="normal-and-anomaly-regression/1",
+        promotion_policy="normal-and-anomaly-regression/2",
         task=runtime.entry["task"],
         loss_policy="equal_flight_equal_segment_after_initial_100"
         if health_task

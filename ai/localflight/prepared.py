@@ -177,3 +177,8 @@ def distinct_flights(records):
         raise ValueError(
             "Do not mix synthetic and real flights or different input sources"
         )
+    policies = {m.get("timing", {}).get("operating_policy") for m in records}
+    if len(policies) > 1:
+        raise ValueError(
+            "Do not mix different flight-state preparation policies"
+        )

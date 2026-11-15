@@ -149,7 +149,7 @@ def test_live_no_usable_data_has_complete_exclusion_summary(tmp_path):
     journal.write_text("", encoding="utf-8")
     for length, reason in [
         (5_000_000, "too_short"),
-        (30_000_000, "missing_or_stale"),
+        (30_000_000, "flight_state_unknown"),
     ]:
         result = completed(
             [],
