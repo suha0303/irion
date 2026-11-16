@@ -224,13 +224,38 @@ class StoreV2(Store):
         for r in list(self.catalog["sessions"].values()):
             try:
                 rows.append(
-                    dict(
-                        self.get(r["id"]).manifest(), created_at=r["created_at"]
-                    )
+                    dict(self._session_manifest(r), created_at=r["created_at"])
                 )
             except (OSError, ValueError):
                 continue
         return sorted(rows, key=lambda r: r["created_at"], reverse=True)
+
+    def _session_manifest(self, row):
+        """List completed raw sessions without replaying their entire journals.
+
+        Active sessions use current state. Normalized archives may still have
+        processing jobs, so their manifests continue to use the archive path.
+        Legacy or mismatched summaries fall back to the existing replay loader.
+        Full journal validation remains part of opening a run for analysis.
+        """
+        run_id = row["id"]
+        if run_id not in self.active and row.get("sha"):
+            try:
+                summary = read_json(
+                    self.root / "records" / run_id / "manifest.json", {}
+                )
+            except (OSError, ValueError):
+                summary = {}
+            session = summary.get("session", {})
+            if (
+                summary.get("run_id") == run_id
+                and summary.get("input_sha256") == row["sha"]
+                and summary.get("source_kind") == "replay"
+                and session.get("state") == "finished"
+                and session.get("kind") in {"udp", "tcp", "serial"}
+            ):
+                return summary
+        return self.get(run_id).manifest()
 
     def save_analysis(self, events):
         grouped = {}
