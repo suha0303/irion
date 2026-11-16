@@ -155,7 +155,13 @@ def test_interval_protocol_ack_readback_observation_and_disconnect(
     asyncio.run(check())
 
 
-def test_timeout_does_not_advance_to_ambiguous_next_command(tmp_path):
+def test_timeout_does_not_advance_to_ambiguous_next_command(
+    tmp_path, monkeypatch
+):
+    from arion.message_rates import MessageRates
+
+    monkeypatch.setattr(MessageRates, "RESPONSE_TIMEOUT", 0.03)
+
     async def check():
         store = StoreV2(tmp_path)
         sources = LiveSources(store)
@@ -197,8 +203,9 @@ def test_timeout_does_not_advance_to_ambiguous_next_command(tmp_path):
             sources.rates.start(run, request)
             await asyncio.wait_for(sources.rates.tasks[run.run_id], 5)
             state = sources.rates.status(run.run_id)
-            assert state["state"] == "incomplete" and state["sent"] == 1
-            assert state["rows"][0]["status"] == "ack_timeout"
+            assert state["state"] == "incomplete" and state["sent"] == 6
+            assert state["rows"][0]["status"] == "readback_timeout"
+            assert state["rows"][0]["attempts"] == 3
             assert all(r["status"] == "pending" for r in state["rows"][1:])
         finally:
             task.cancel()

@@ -274,7 +274,15 @@ export default function LocalLive({
                   <td>
                     {r.hz} / {r.observed_hz.toFixed(1)}
                   </td>
-                  <td>{r.verified ? '확인됨' : `${r.state} · ACK ${r.ack ?? '—'}`}</td>
+                  <td>
+                    {r.verified
+                      ? r.ack === null
+                        ? '주기·수신 확인 · ACK 미확인'
+                        : '확인됨'
+                      : r.state === 'readback_confirmed'
+                        ? '주기 확인 · 수신률 확인 중 · ACK 미확인'
+                        : `${r.state} · ACK ${r.ack ?? '—'}`}
+                  </td>
                 </tr>
               ))}
             </tbody>

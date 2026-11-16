@@ -57,6 +57,9 @@ class MessageRates:
     session.
     """
 
+    RESPONSE_TIMEOUT = 2
+    MAX_ATTEMPTS = 3
+
     def __init__(self, sources):
         self.sources = sources
         self.heartbeats = {}
@@ -184,6 +187,7 @@ class MessageRates:
             state="waiting_heartbeat",
             samples={r["id"]: deque(maxlen=512) for r in rows},
             pending=None,
+            ack_ambiguous=False,
             encoder=common.MAVLink(None, srcSystem=255, srcComponent=190),
             sent=0,
         )
@@ -193,7 +197,9 @@ class MessageRates:
         )
         return self.status(run.run_id)
 
-    async def _send(self, run, session, command, message_id, interval=0):
+    async def _send(
+        self, run, session, command, message_id, interval=0, confirmation=0
+    ):
         if command not in (510, 511):
             raise ValueError("Only GET/SET_MESSAGE_INTERVAL are allowed")
         if not run.live:
@@ -207,7 +213,16 @@ class MessageRates:
             raise ValueError("HEARTBEAT 끊김/UDP peer 변경: 전송 중단")
         mav = session["encoder"]
         packet = mav.command_long_encode(
-            *session["target"], command, 0, message_id, interval, 0, 0, 0, 0, 0
+            *session["target"],
+            command,
+            confirmation,
+            message_id,
+            interval,
+            0,
+            0,
+            0,
+            0,
+            0,
         ).pack(mav)
         mav.seq = (mav.seq + 1) % 256
         handle = self.sources.handles[run.run_id]
@@ -236,10 +251,63 @@ class MessageRates:
                 command,
                 row["id"],
                 round(1e6 / row["hz"]) if command == 511 else 0,
+                confirmation=row.get("attempts", 1) - 1,
             )
-            return await asyncio.wait_for(future, 2)
+            return await asyncio.wait_for(future, self.RESPONSE_TIMEOUT)
         finally:
             session["pending"] = None
+
+    @staticmethod
+    def _correct_interval(row):
+        interval = row["readback_us"]
+        wanted = 1e6 / row["hz"]
+        return (
+            interval is not None
+            and interval > 0
+            and abs(interval - wanted) <= 0.2 * wanted
+        )
+
+    async def _configure_row(self, run, session, row):
+        """Recover a lost transaction using message-ID-specific readback.
+
+        SET ACKs contain no message ID. After a timeout, no subsequent SET
+        ACK in this session is attributed to a row. A late ACK can wake an
+        exchange but cannot confirm or reject another stream. Readback and
+        actual incoming samples remain independent requirements.
+        """
+        row.update(attempts=0, ack_timeouts=0)
+        for attempt in range(self.MAX_ATTEMPTS):
+            row.update(attempts=attempt + 1, status="requesting")
+            try:
+                ack = await self._exchange(run, session, row, 511)
+                if session["ack_ambiguous"]:
+                    row["unattributed_ack"] = ack["result"]
+                else:
+                    row["ack"] = ack["result"]
+                    if row["ack"] != 0:
+                        row["status"] = "rejected"
+                        return True
+            except asyncio.TimeoutError:
+                session["ack_ambiguous"] = True
+                row["ack"] = None
+                row["ack_timeouts"] += 1
+            try:
+                reply = await self._exchange(run, session, row, 510)
+                row["readback_us"] = reply["interval_us"]
+                if self._correct_interval(row):
+                    row["status"] = (
+                        "accepted" if row["ack"] == 0 else "readback_confirmed"
+                    )
+                    return True
+                row["status"] = "readback_mismatch"
+            except asyncio.TimeoutError:
+                row["status"] = "readback_timeout"
+        # Some FCs support SET but not GET. Retain the explicit ACK while
+        # reporting unverified configuration; do not invent readback success.
+        if row["ack"] == 0 and row["status"] == "readback_timeout":
+            row["status"] = "accepted_no_readback"
+            return True
+        return False
 
     async def _configure(self, run, session):
         try:
@@ -264,27 +332,9 @@ class MessageRates:
                 return
             session["state"] = "configuring"
             for row in session["rows"]:
-                row["status"] = "requesting"
-                try:
-                    ack = await self._exchange(run, session, row, 511)
-                except asyncio.TimeoutError:
-                    row["status"] = "ack_timeout"
-                    # ACK has no message ID. Stop to avoid attributing a late
-                    # ACK
-                    # to the next SET command. Manual retry starts a new
-                    # attempt.
+                if not await self._configure_row(run, session, row):
                     session["state"] = "incomplete"
                     return
-                row["ack"] = ack["result"]
-                if ack["result"] != 0:
-                    row["status"] = "rejected"
-                    continue
-                try:
-                    reply = await self._exchange(run, session, row, 510)
-                    row["readback_us"] = reply["interval_us"]
-                    row["status"] = "accepted"
-                except asyncio.TimeoutError:
-                    row["status"] = "accepted_no_readback"
             session["state"] = "observing"
             await asyncio.sleep(5)
             session["state"] = "complete"
@@ -319,14 +369,11 @@ class MessageRates:
             fresh = bool(samples) and now - samples[-1] <= max(
                 1.0, 3 / row["hz"]
             )
-            readback = row["readback_us"]
-            correct = (
-                readback is not None
-                and readback > 0
-                and abs(readback - 1e6 / row["hz"]) <= 0.2 * (1e6 / row["hz"])
-            )
             verified = (
-                row["ack"] == 0 and correct and fresh and hz >= 0.7 * row["hz"]
+                (row["ack"] == 0 or row["status"] == "readback_confirmed")
+                and self._correct_interval(row)
+                and fresh
+                and hz >= 0.7 * row["hz"]
             )
             rows.append(
                 dict(
@@ -341,6 +388,7 @@ class MessageRates:
             error=session.get("error"),
             rows=rows,
             sent=session["sent"],
+            ack_ambiguous=session["ack_ambiguous"],
             all_verified=all(r["verified"] for r in rows if r["required"]),
             target=list(session["target"]),
             policy=session["policy"],
