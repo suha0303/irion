@@ -11,6 +11,7 @@ from safetensors.torch import load_file, save_file
 from capstone_ai.training import loss as objective
 from learning.run_health19 import models
 
+from .adapt_data import forecast_training, training_groups
 from .adapt_support import (
     FrozenHeadCache,
     anchor_loss,
@@ -72,6 +73,7 @@ def fit(
     time_limit_seconds=1800,
     patience=5,
     anchor_weight=1.0,
+    training_views=None,
 ):
     started = perf_counter()
     if (
@@ -92,9 +94,9 @@ def fit(
         or not 0 <= anchor_weight <= 100
     ):
         raise ValueError("Invalid time budget, patience or anchor weight")
-    if not 1 <= len(adaptation) <= 3 or len(development) > 20:
+    if not 1 <= len(adaptation) <= 20 or len(development) > 20:
         raise ValueError(
-            "Use 1..3 adaptation flights and at most 20 development flights"
+            "Use 1..20 adaptation flights and at most 20 development flights"
         )
     runtime = Runtime(model_id, catalog=Catalog(bundle))
     permitted = parameter_names(runtime.model, strategy)
@@ -113,24 +115,31 @@ def fit(
         raise ValueError(
             "Evaluation flights may not be used for fitting or model selection"
         )
-    arrays = (
-        [health_segments(f, runtime.scaler) for f in flights]
-        if health_task
-        else [windows(*f, runtime.scaler) for f in flights]
+    groups, view_records = training_groups(
+        adaptation, flights[: len(adaptation)], training_views
     )
-    train_x = (
-        arrays[: len(adaptation)]
+    training_counts = []
+    if health_task:
+        train_x, train_weights = [], []
+        for group in groups:
+            segments, weights = [], []
+            for flight in group:
+                pieces = health_segments(flight, runtime.scaler)
+                segments.extend(pieces)
+                weights.extend([1 / (len(group) * len(pieces))] * len(pieces))
+            train_x.append(segments)
+            train_weights.append(weights)
+        train_y = None
+    else:
+        train_x, train_y, training_counts = forecast_training(
+            groups, runtime.scaler, bounded=bool(training_views)
+        )
+    validation = [
+        health_segments(f, runtime.scaler)
         if health_task
-        else np.concatenate([a[0] for a in arrays[: len(adaptation)]])
-    )
-    train_y = (
-        None
-        if health_task
-        else np.concatenate([a[1] for a in arrays[: len(adaptation)]])
-    )
-    if len(train_x) > 3000:
-        raise ValueError("Adaptation limit is 3000 windows")
-    validation = arrays[len(adaptation) :]
+        else windows(*f, runtime.scaler)
+        for f in flights[len(adaptation) :]
+    ]
     out = Path(output)
     out.mkdir(parents=True, exist_ok=False)
     binding = dict(
@@ -154,7 +163,11 @@ def fit(
         anchor_weight=anchor_weight,
         promotion_policy="normal-and-anomaly-regression/2",
         task=runtime.entry["task"],
-        loss_policy="equal_flight_equal_segment_after_initial_100"
+        loss_policy=(
+            "equal_flight_equal_view_equal_segment_after_initial_100"
+            if training_views
+            else "equal_flight_equal_segment_after_initial_100"
+        )
         if health_task
         else "forecast_objective",
         optimizer="SGD momentum=0 weight_decay=0",
@@ -162,6 +175,13 @@ def fit(
         code_sha256=digest(__file__),
         support_sha256=digest(Path(__file__).with_name("adapt_support.py")),
         preprocessing_sha256=digest(Path(__file__).with_name("prepared.py")),
+        training_views=view_records,
+        training_view_counts=[len(group) for group in groups],
+        training_window_counts=training_counts,
+        training_sampling="equal_flight_then_view_time_spaced_first_last"
+        if training_views
+        else "all_windows",
+        training_data_sha256=digest(Path(__file__).with_name("adapt_data.py")),
     )
     write(out / "plan.json", binding)
     model = runtime.model.to(device)
@@ -244,15 +264,21 @@ def fit(
                             dict(status="cancelled", last_complete_epoch=epoch),
                         )
                         return dict(status="cancelled", output=str(out))
-                    loss = health_objective(
-                        model,
-                        x,
-                        head_cache if phase == "head" else None,
-                        (int(batch[0]), segment_index),
-                    ) / len(segments)
-                    loss = loss + anchor_weight * anchor_loss(
-                        model, original
-                    ) / len(segments)
+                    loss = (
+                        health_objective(
+                            model,
+                            x,
+                            head_cache if phase == "head" else None,
+                            (int(batch[0]), segment_index),
+                        )
+                        * train_weights[int(batch[0])][segment_index]
+                    )
+                    loss = (
+                        loss
+                        + anchor_weight
+                        * anchor_loss(model, original)
+                        * train_weights[int(batch[0])][segment_index]
+                    )
                     if not bool(torch.isfinite(loss)):
                         raise ValueError("Nonfinite adaptation loss")
                     loss.backward()
