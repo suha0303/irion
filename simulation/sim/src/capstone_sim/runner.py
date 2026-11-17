@@ -9,7 +9,7 @@ import sys
 import time
 import uuid
 import xml.etree.ElementTree as ET
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -402,6 +402,9 @@ def run_flight(
     wind_variation=1.,
     phase_policy=None,
     paired_case_id=None,
+    mavlink_only=False,
+    mavlink_battery_stage=None,
+    mavlink_propulsion_stage=None,
 ):
     from . import battery_aging
 
@@ -411,6 +414,19 @@ def run_flight(
     use_cmu = vehicle_profile is None
     aging_selection = None
     custom = vehicle_profile is not None
+    mavlink_fixed_health = (
+        mavlink_battery_stage is not None or mavlink_propulsion_stage is not None
+    )
+    if mavlink_fixed_health:
+        scenario_for_stages = (
+            "propulsion_loss_existing" if mavlink_propulsion_stage is not None
+            else "battery_aging_existing"
+        )
+        if not mavlink_only or scenario != scenario_for_stages or battery_stage is not None:
+            raise ValueError("Fixed training stages require the matching pre-existing MAVLink scenario")
+    if mavlink_only and (configuration != "collection" or custom or gui_preview
+                         or phase_policy is not None or timing or fault_after_mission_s is not None):
+        raise ValueError("MAVLink-only capture requires collection X500 without native capture options")
     prepared: Any = None
     selected: Any = None
     if normal_variation is not None and operation_variation is not None:
@@ -466,6 +482,7 @@ def run_flight(
             fault_after_mission_s=fault_after_mission_s,
             battery_transition_s=battery_transition_s,
             propulsion_transition_s=propulsion_transition_s,
+            mavlink_fixed_health=mavlink_fixed_health,
         )
         collection_config.assert_frozen()
         if not collection_config.PLUGIN.is_file():
@@ -509,6 +526,8 @@ def run_flight(
     if not math.isfinite(duration) or duration <= 0 or duration > 1800:
         raise ValueError("duration must be finite and within (0,1800] seconds")
     instance_limit = collection_config.MAX_INSTANCES - 1 if configuration else 15 if custom else 9
+    if mavlink_only:
+        instance_limit = collection_config.MAVLINK_MAX_INSTANCES - 1
     if type(instance) is not int or not 0 <= instance <= instance_limit:
         raise ValueError(f"instance must be 0..{instance_limit} for the selected configuration")
     if not math.isfinite(capture_interval_ms) or not 1 <= capture_interval_ms <= 50:
@@ -544,7 +563,8 @@ def run_flight(
     if not custom and propulsion_normal != propulsion_health.load_catalog()["states"]["normal"]:
         raise ValueError("X500 healthy propulsion differs from the sealed normal profile")
     propulsion_selection = propulsion_health.resolve(
-        scenario, propulsion_normal, propulsion_transition_s
+        scenario, propulsion_normal, propulsion_transition_s,
+        mavlink_fixed_stage=mavlink_propulsion_stage,
     )
     if custom:
         cfg.update(r0=pack["r0_ohm"], capacity=pack["capacity_ah"])
@@ -554,7 +574,10 @@ def run_flight(
     elif cfg["gust_sigma"] != 0:
         raise ValueError("Gaussian OU is preserved as historical reference; choose an explicit bounded wind environment")
     if use_cmu:
-        aging_selection = battery_aging.resolve(scenario, battery_stage, battery_transition_s, pack)
+        aging_selection = battery_aging.resolve(
+            scenario, battery_stage, battery_transition_s, pack,
+            mavlink_fixed_stage=mavlink_battery_stage,
+        )
         cfg.update(r0=aging_selection["initial"]["r0_ohm"],
                    capacity=aging_selection["initial"]["capacity_ah"],
                    battery_profile_locked=1)
@@ -577,7 +600,10 @@ def run_flight(
     recorder = None
     state = {}
     try:
-        for d in ["observations", "evaluation", "reference", "native_logs", "px4"]:
+        folders = ["evaluation", "reference", "native_logs", "px4"]
+        if not mavlink_only:
+            folders.append("observations")
+        for d in folders:
             (run / d).mkdir(parents=True, exist_ok=True)
         state = {
             "run_id": run.name,
@@ -596,7 +622,19 @@ def run_flight(
         }
         if gui_preview:
             state.update(demo_only=True, dataset_admission="excluded_gui_preview")
+        if mavlink_only:
+            state.pop("observation_metadata")
+            state.update(telemetry_recording="external_mavlink", dataset_admission="mavlink_raw")
         dump(run / "run.json", state)
+        receipt = os.getenv("CAPSTONE_MAVLINK_RUN_RECEIPT") if mavlink_only else None
+        if receipt:
+            progress_path = Path(receipt).absolute()
+            if progress_path.name == "simulator.json" and not any(
+                path.is_symlink() for path in (progress_path, *progress_path.parents)
+            ):
+                # Display metadata must not interrupt the flight.
+                with suppress(OSError):
+                    dump(progress_path, {"run": str(run)})
         if strict:
             state["configuration"] = (
                 "vehicle_profile:" + vehicle_profile["id"] if custom else configuration
@@ -702,14 +740,22 @@ def run_flight(
             propulsion_model_revision=propulsion_selection["catalog_revision"],
             normal_range_revision=scenario_record["normal_range_revision"] + "+" + propulsion_selection["catalog_revision"],
         )
+        if mavlink_fixed_health:
+            scenario_record["mavlink_training_health"] = dict(
+                onset_kind="pre_existing",
+                battery_stage=mavlink_battery_stage,
+                propulsion_stage=mavlink_propulsion_stage,
+            )
         dump(scenario_path, scenario_record)
-        recorder = Recorder(
-            run, timing=timing, vehicle_profile=selected["observation_vehicle"] if custom else None,
-            sync_interval_s=0.1 if phase_policy is not None else 0.0,
-        )
+        if not mavlink_only:
+            recorder = Recorder(
+                run, timing=timing, vehicle_profile=selected["observation_vehicle"] if custom else None,
+                sync_interval_s=0.1 if phase_policy is not None else 0.0,
+            )
         if not custom:
             for name in ["battery.json", "mass-ledger.json", "health_policy.yaml"]:
                 (run / "reference" / name).write_bytes((collection_config.DIRECTORY / name).read_bytes())
+        if not custom and recorder is not None:
             metadata_path = run / "observations/metadata.json"
             metadata = json.loads(metadata_path.read_text())
             metadata["vehicle"].update(
@@ -743,6 +789,7 @@ def run_flight(
             "X500_RUN_ID",
             "CAPSTONE_ESC_ORDER",
             "CAPSTONE_ROTOR_COUNT",
+            "CAPSTONE_MAVLINK_RUN_RECEIPT",
         ]:
             env.pop(name, None)
         if timing:
@@ -785,7 +832,6 @@ def run_flight(
             PX4_GZ_WORLD="x500_world",
             HEADLESS="1",
             X500_TRUTH_PATH=str(run / "evaluation/truth.jsonl"),
-            X500_CAPTURE_PATH=str(run / "native_logs/capture.jsonl"),
             X500_SEED=str(seed),
             PX4_SIM_SPEED_FACTOR="1",
             X500_BATTERY_FILE=str(
@@ -801,6 +847,11 @@ def run_flight(
             X500_PROPULSION_PROFILE_LOCKED="1",
             X500_PROPULSION_TARGET_FILE=str(run / "evaluation/propulsion-target.txt"),
         )
+        if mavlink_only:
+            env["X500_TRUTH_PATH"] = os.devnull
+            env["X500_COUPLED_POWERTRAIN"] = "1"
+        else:
+            env["X500_CAPTURE_PATH"] = str(run / "native_logs/capture.jsonl")
         joint_info = None
         if phase_policy is not None:
             joint_info = joint_phase.prepare(run, flight_variation, duration)
@@ -907,6 +958,8 @@ def run_flight(
             px4_etc = (
                 collection_config.prepare_fc(run, px4_etc, gui_preview=True)
                 if gui_preview
+                else collection_config.prepare_fc(run, px4_etc, mavlink_only=True, instance=instance)
+                if mavlink_only
                 else collection_config.prepare_fc(run, px4_etc)
             )
             fc_expected = collection_config.fc_parameters()
@@ -956,12 +1009,14 @@ def run_flight(
                 state["preview_camera"] = follow_camera(env)
         state["owned_process_groups"] = {"gazebo": processes[0].pid, "px4": processes[1].pid}
         dump(run / "run.json", state)
-        conn = mavutil.mavlink_connection(f"udpin:127.0.0.1:{14540 + instance}", source_system=240)
+        _, offboard_receive_port = collection_config.offboard_ports(instance)
+        conn = mavutil.mavlink_connection(f"udpin:127.0.0.1:{offboard_receive_port}", source_system=240)
         conn.target_system = 1 + instance
         conn.target_component = 1
         now = 0.0
         position = None
         armed = False
+        mavlink_landed = False
         phase = "waiting"
         phase_t = 0.0
         next_send_us = 0
@@ -991,7 +1046,7 @@ def run_flight(
         target_yaw = 0.0
         phase_wait = COLLECTION_PHASE_WAIT_S if strict else {"streaming": 45, "takeoff": 30, "landing": 45}
         state["wait_policy"] = dict(
-            recording_sync_interval_wall_s=recorder.sync_interval_s,
+            recording_sync_interval_wall_s=recorder.sync_interval_s if recorder is not None else None,
             clock_stall_wall_seconds=300 if strict else None,
             phase_sim_seconds=phase_wait,
             gazebo_shutdown_method="partition_server_control_then_signals",
@@ -1011,12 +1066,14 @@ def run_flight(
                 )
             if (
                 not ready_sim
+                and not mavlink_only
                 and (run / "evaluation/truth.jsonl").exists()
                 and (run / "evaluation/truth.jsonl").stat().st_size
             ):
                 transition("simulator_ready")
                 ready_sim = True
-            next_capture_ns = service_capture(recorder, next_capture_ns, capture_interval_ns)
+            if recorder is not None:
+                next_capture_ns = service_capture(recorder, next_capture_ns, capture_interval_ns)
             if fault_request is not None:
                 schedule = fault_request.poll()
                 if schedule is not None:
@@ -1058,8 +1115,11 @@ def run_flight(
                             acknowledgement_source="native_physics_receipt",
                             applied_time_us=None))
                         dump(scenario_path, scenario_record)
-            batch = receive_before_capture(conn, next_capture_ns)
-            next_capture_ns = service_capture(recorder, next_capture_ns, capture_interval_ns)
+            batch = receive_before_capture(
+                conn, next_capture_ns if recorder is not None else time.monotonic_ns() + 20_000_000
+            )
+            if recorder is not None:
+                next_capture_ns = service_capture(recorder, next_capture_ns, capture_interval_ns)
             for msg in batch:
                 typ = msg.get_type()
                 if strict and typ in ("HEARTBEAT", "LOCAL_POSITION_NED", "PARAM_VALUE"):
@@ -1077,6 +1137,11 @@ def run_flight(
                 elif typ == "LOCAL_POSITION_NED":
                     now = msg.time_boot_ms / 1000.0
                     position = msg
+                    if mavlink_only and not ready_sim and now > 0:
+                        transition("simulator_ready", sim_time=now, source="LOCAL_POSITION_NED")
+                        ready_sim = True
+                elif typ == "EXTENDED_SYS_STATE" and msg.get_srcSystem() == 1 + instance:
+                    mavlink_landed = msg.landed_state == mavutil.mavlink.MAV_LANDED_STATE_ON_GROUND
                 elif typ == "PARAM_VALUE" and strict:
                     key = msg.param_id
                     if isinstance(key, bytes):
@@ -1103,7 +1168,7 @@ def run_flight(
                 ready_px4 = True
             if position is None:
                 continue
-            if strict and phase != "waiting":
+            if strict and phase != "waiting" and recorder is not None:
                 health = capture_health(recorder, now, phase_t)
                 if not health["passed"]:
                     state["capture_health_failure"] = health
@@ -1118,6 +1183,10 @@ def run_flight(
                     last_update_utc=datetime.now(UTC).isoformat(),
                     px4_boot_s=now,
                 )
+                if mavlink_only:
+                    state["progress"]["host_monotonic_s"] = time.monotonic()
+                    if math.isfinite(position.z):
+                        state["progress"]["height_m"] = -position.z
                 dump(run / "run.json", state)
                 next_progress = time.monotonic() + 1.0
             if strict and not fc_checked:
@@ -1231,51 +1300,54 @@ def run_flight(
                         "mission", sim_time=now, custom_main_mode=mode, command_ack=acknowledgements
                     )
                     mission_started = True
-                error = math.sqrt(
-                    sum(
-                        (a - b) ** 2
-                        for a, b in zip((position.x, position.y, position.z), target_xyz)
+                if recorder is not None:
+                    error = math.sqrt(
+                        sum(
+                            (a - b) ** 2
+                            for a, b in zip((position.x, position.y, position.z), target_xyz)
+                        )
                     )
-                )
-                mission_errors.append(error)
-                att = recorder.latest.get("vehicle_attitude", {}).get("q")
-                if att and all(v is not None for v in att):
-                    qw, qx, qy, qz = att
-                    yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz))
-                    yaw_errors.append(
-                        abs(math.atan2(math.sin(yaw - target_yaw), math.cos(yaw - target_yaw)))
-                    )
-                if error > tracking["max_position_error_m"]:
-                    raise RuntimeError(
-                        f"mission tracking error exceeded {tracking['max_position_error_m']:g}m: {error}"
-                    )
+                    mission_errors.append(error)
+                    att = recorder.latest.get("vehicle_attitude", {}).get("q")
+                    if att and all(v is not None for v in att):
+                        qw, qx, qy, qz = att
+                        yaw = math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz))
+                        yaw_errors.append(
+                            abs(math.atan2(math.sin(yaw - target_yaw), math.cos(yaw - target_yaw)))
+                        )
+                    if error > tracking["max_position_error_m"]:
+                        raise RuntimeError(
+                            f"mission tracking error exceeded {tracking['max_position_error_m']:g}m: {error}"
+                        )
             if ((phase_policy is None and phase == "flying" and reached_t and now - reached_t >= duration)
                     or (phase_policy is not None and not joint_finished
                         and joint_phase.receipt(run, "landing") is not None)):
-                if (
+                if recorder is not None and (
                     not mission_errors
                     or sum(e <= tracking["position_tolerance_m"] for e in mission_errors)
                     / len(mission_errors) < tracking["position_coverage_min"]
                 ):
                     raise RuntimeError("mission target tolerance coverage below 95 percent")
-                if (not yaw_errors or sum(e <= tracking["yaw_tolerance_rad"] for e in yaw_errors)
+                if recorder is not None and (
+                        not yaw_errors or sum(e <= tracking["yaw_tolerance_rad"] for e in yaw_errors)
                         / len(yaw_errors) < tracking["yaw_coverage_min"]):
                     raise RuntimeError("yaw target tolerance coverage below 95 percent")
-                dump(
-                    run / "evaluation/mission-check.json",
-                    dict(
-                        status="passed",
-                        tracking_acceptance=tracking,
-                        position_tolerance_m=tracking["position_tolerance_m"],
-                        yaw_tolerance_rad=tracking["yaw_tolerance_rad"],
-                        position_coverage=sum(e <= tracking["position_tolerance_m"] for e in mission_errors)
-                        / len(mission_errors),
-                        yaw_coverage=sum(e <= tracking["yaw_tolerance_rad"] for e in yaw_errors) / len(yaw_errors),
-                        max_position_error_m=max(mission_errors),
-                        max_yaw_error_rad=max(yaw_errors),
-                        samples=len(mission_errors),
-                    ),
-                )
+                if recorder is not None:
+                    dump(
+                        run / "evaluation/mission-check.json",
+                        dict(
+                            status="passed",
+                            tracking_acceptance=tracking,
+                            position_tolerance_m=tracking["position_tolerance_m"],
+                            yaw_tolerance_rad=tracking["yaw_tolerance_rad"],
+                            position_coverage=sum(e <= tracking["position_tolerance_m"] for e in mission_errors)
+                            / len(mission_errors),
+                            yaw_coverage=sum(e <= tracking["yaw_tolerance_rad"] for e in yaw_errors) / len(yaw_errors),
+                            max_position_error_m=max(mission_errors),
+                            max_yaw_error_rad=max(yaw_errors),
+                            samples=len(mission_errors),
+                        ),
+                    )
                 if phase_policy is None:
                     conn.mav.command_long_send(
                         conn.target_system,
@@ -1304,10 +1376,14 @@ def run_flight(
                 phase_t = now
             if phase == "flying" and reached_t is not None and not armed:
                 raise RuntimeError("premature_disarm_or_PX4_safety_landing")
+            landed = (
+                recorder.latest.get("vehicle_land_detected", {}).get("landed") == 1
+                if recorder is not None else mavlink_landed
+            )
             if (
                 phase == "landing"
                 and not armed
-                and recorder.latest.get("vehicle_land_detected", {}).get("landed") == 1
+                and landed
             ):
                 transition("disarmed", sim_time=now)
                 success = True
@@ -1322,7 +1398,7 @@ def run_flight(
                     land_command_ack=acknowledgements.get(21),
                     custom_main_mode=mode,
                     armed=armed,
-                    landed=recorder.latest.get("vehicle_land_detected", {}).get("landed"),
+                    landed=landed,
                     position_ned_m=[position.x, position.y, position.z],
                     vertical_speed_ned_mps=position.vz,
                 )
@@ -1381,12 +1457,14 @@ def run_flight(
                 cleanup_errors.append(str(exc))
         try:
             transition("finalizing")
-            recorder.close()
+            if recorder is not None:
+                recorder.close()
         except (OSError, ValueError) as exc:
             success = False
             record_secondary_failure(state, "recording_failure", exc)
         finally:
-            recorder.release()
+            if recorder is not None:
+                recorder.release()
         if cleanup_errors:
             success = False
             record_secondary_failure(state, "cleanup_failure", repr(cleanup_errors))
@@ -1399,136 +1477,137 @@ def run_flight(
         )
         try:
             dump(run / "run.json", state)
-            events = []
-            if scenario.endswith("quality"):
-                events.append(
-                    dict(
-                        schema="drone.evaluation.event/2.1",
-                        run_id=run.name,
-                        event_id="observation-quality-1",
-                        kind="sensor_quality_change",
-                        target="battery_sensor",
-                        onset_kind="in_flight_step"
-                        if "sensor_drop_begin" in cfg
-                        else "pre_existing",
-                        physical_onset_time_us=int(float(cfg["sensor_drop_begin"]) * 1e6)
-                        if "sensor_drop_begin" in cfg
-                        else None,
-                        requested_time_us=int(float(cfg.get("sensor_drop_begin", 0)) * 1e6),
-                        applied_time_us=int(float(cfg.get("sensor_drop_begin", 0)) * 1e6),
-                        end_time_us=int(float(cfg["sensor_drop_end"]) * 1e6)
-                        if "sensor_drop_end" in cfg
-                        else None,
-                        profile_revision=3,
-                        parameters={k: v for k, v in cfg.items() if k.startswith("sensor_")},
-                    )
-                )
-            if unhealthy:
-                evidence = fault_evidence(run / "evaluation/truth.jsonl")
-                applied = evidence["applied_time_us"] if "fault" in cfg else evidence["first_time_us"]
-                if fault_after_mission_s is not None:
-                    from .fault_schedule import complete_evidence
-
-                    scenario_path = run / "evaluation/scenario.json"
-                    scenario_metadata = json.loads(scenario_path.read_text())
-                    schedule = scenario_metadata.get("fault_schedule")
-                    if schedule is not None:
-                        schedule["applied_time_us"] = applied
-                    try:
-                        scenario_metadata["fault_schedule"] = complete_evidence(schedule, applied, duration)
-                    except ValueError as exc:
-                        record_secondary_failure(state, "fault_schedule_failure", exc)
-                        dump(run / "run.json", state)
-                    dump(scenario_path, scenario_metadata)
-                if applied is not None:
-                    events.append(
-                        {
-                            "schema": "drone.evaluation.event/2.1",
-                            "run_id": run.name,
-                            "event_id": "physical-change-1",
-                            "kind": scenario,
-                            "target": "battery_pack" if "battery" in scenario else "propulsion",
-                            "onset_kind": (
-                                "in_flight_step" if scenario.endswith("step") else "in_flight_ramp"
-                            )
-                            if "fault" in cfg
-                            else "pre_existing",
-                            "physical_onset_time_us": applied if "fault" in cfg else None,
-                            "requested_time_us": int(float(cfg.get("fault_at", 0)) * 1e6),
-                            "applied_time_us": applied if "fault" in cfg else 0,
-                            "end_time_us": None,
-                            "profile_revision": 1,
-                            "parameters": dict(parameters, battery_stage=aging_selection["target_stage"],
-                                               battery_selection="evaluation/battery-selection.json")
-                            if aging_selection is not None else parameters,
-                            **(
-                                {
-                                    "ramp_duration_us": int(float(cfg["fault_ramp_s"]) * 1e6),
-                                    "degradation_boundary_time_us": evidence["boundary_time_us"],
-                                    "degradation_boundary_definition": "50 percent of configured parameter change",
-                                }
-                                if "fault_ramp_s" in cfg
-                                else {}
-                            ),
-                        }
-                    )
-            control_events = run / "evaluation/truth.jsonl.control-events.jsonl"
-            if control_events.exists():
-                for line in control_events.read_text().splitlines():
-                    e = json.loads(line)
+            if not mavlink_only:
+                events = []
+                if scenario.endswith("quality"):
                     events.append(
                         dict(
                             schema="drone.evaluation.event/2.1",
                             run_id=run.name,
-                            event_id="request-" + str(e["request_id"]),
-                            kind="physical_parameter_change",
-                            target={0: "battery_pack", 1: "propulsion", 2: "battery_pack"}[
-                                e["field"]
-                            ],
-                            onset_kind="in_flight_step",
-                            physical_onset_time_us=e["applied_time_us"],
-                            requested_time_us=e["requested_time_us"],
-                            applied_time_us=e["applied_time_us"],
-                            end_time_us=None,
-                            profile_revision=e["revision"],
-                            parameters=dict(field=e["field"], value=e["value"]),
+                            event_id="observation-quality-1",
+                            kind="sensor_quality_change",
+                            target="battery_sensor",
+                            onset_kind="in_flight_step"
+                            if "sensor_drop_begin" in cfg
+                            else "pre_existing",
+                            physical_onset_time_us=int(float(cfg["sensor_drop_begin"]) * 1e6)
+                            if "sensor_drop_begin" in cfg
+                            else None,
+                            requested_time_us=int(float(cfg.get("sensor_drop_begin", 0)) * 1e6),
+                            applied_time_us=int(float(cfg.get("sensor_drop_begin", 0)) * 1e6),
+                            end_time_us=int(float(cfg["sensor_drop_end"]) * 1e6)
+                            if "sensor_drop_end" in cfg
+                            else None,
+                            profile_revision=3,
+                            parameters={k: v for k, v in cfg.items() if k.startswith("sensor_")},
                         )
                     )
-            (run / "evaluation/events.jsonl").write_text(
-                "".join(json.dumps(e) + "\n" for e in events)
-            )
-            if events and not scenario.endswith("quality"):
+                if unhealthy:
+                    evidence = fault_evidence(run / "evaluation/truth.jsonl")
+                    applied = evidence["applied_time_us"] if "fault" in cfg else evidence["first_time_us"]
+                    if fault_after_mission_s is not None:
+                        from .fault_schedule import complete_evidence
+
+                        scenario_path = run / "evaluation/scenario.json"
+                        scenario_metadata = json.loads(scenario_path.read_text())
+                        schedule = scenario_metadata.get("fault_schedule")
+                        if schedule is not None:
+                            schedule["applied_time_us"] = applied
+                        try:
+                            scenario_metadata["fault_schedule"] = complete_evidence(schedule, applied, duration)
+                        except ValueError as exc:
+                            record_secondary_failure(state, "fault_schedule_failure", exc)
+                            dump(run / "run.json", state)
+                        dump(scenario_path, scenario_metadata)
+                    if applied is not None:
+                        events.append(
+                            {
+                                "schema": "drone.evaluation.event/2.1",
+                                "run_id": run.name,
+                                "event_id": "physical-change-1",
+                                "kind": scenario,
+                                "target": "battery_pack" if "battery" in scenario else "propulsion",
+                                "onset_kind": (
+                                    "in_flight_step" if scenario.endswith("step") else "in_flight_ramp"
+                                )
+                                if "fault" in cfg
+                                else "pre_existing",
+                                "physical_onset_time_us": applied if "fault" in cfg else None,
+                                "requested_time_us": int(float(cfg.get("fault_at", 0)) * 1e6),
+                                "applied_time_us": applied if "fault" in cfg else 0,
+                                "end_time_us": None,
+                                "profile_revision": 1,
+                                "parameters": dict(parameters, battery_stage=aging_selection["target_stage"],
+                                                   battery_selection="evaluation/battery-selection.json")
+                                if aging_selection is not None else parameters,
+                                **(
+                                    {
+                                        "ramp_duration_us": int(float(cfg["fault_ramp_s"]) * 1e6),
+                                        "degradation_boundary_time_us": evidence["boundary_time_us"],
+                                        "degradation_boundary_definition": "50 percent of configured parameter change",
+                                    }
+                                    if "fault_ramp_s" in cfg
+                                    else {}
+                                ),
+                            }
+                        )
+                control_events = run / "evaluation/truth.jsonl.control-events.jsonl"
+                if control_events.exists():
+                    for line in control_events.read_text().splitlines():
+                        e = json.loads(line)
+                        events.append(
+                            dict(
+                                schema="drone.evaluation.event/2.1",
+                                run_id=run.name,
+                                event_id="request-" + str(e["request_id"]),
+                                kind="physical_parameter_change",
+                                target={0: "battery_pack", 1: "propulsion", 2: "battery_pack"}[
+                                    e["field"]
+                                ],
+                                onset_kind="in_flight_step",
+                                physical_onset_time_us=e["applied_time_us"],
+                                requested_time_us=e["requested_time_us"],
+                                applied_time_us=e["applied_time_us"],
+                                end_time_us=None,
+                                profile_revision=e["revision"],
+                                parameters=dict(field=e["field"], value=e["value"]),
+                            )
+                        )
+                (run / "evaluation/events.jsonl").write_text(
+                    "".join(json.dumps(e) + "\n" for e in events)
+                )
+                if events and not scenario.endswith("quality"):
+                    scenario_path = run / "evaluation/scenario.json"
+                    scenario_metadata = json.loads(scenario_path.read_text())
+                    scenario_metadata["health_eligibility"] = "abnormal"
+                    scenario_metadata["health_basis"] = (
+                        "physical parameter anomaly initialized or applied during run"
+                    )
+                    dump(scenario_path, scenario_metadata)
+                if aging_selection is not None:
+                    try:
+                        check = battery_aging.verify_truth(run / "evaluation/truth.jsonl", aging_selection)
+                    except (ValueError, KeyError, OSError) as exc:
+                        check = {"status": "failed", "error": str(exc)}
+                        record_secondary_failure(state, "battery_profile_failure", exc)
+                        dump(run / "run.json", state)
+                    dump(run / "evaluation/battery-profile-check.json", check)
+                envelope = model_envelope.check(run / "evaluation/truth.jsonl", timeline)
+                dump(run / "evaluation/envelope-check.json", envelope)
                 scenario_path = run / "evaluation/scenario.json"
                 scenario_metadata = json.loads(scenario_path.read_text())
-                scenario_metadata["health_eligibility"] = "abnormal"
-                scenario_metadata["health_basis"] = (
-                    "physical parameter anomaly initialized or applied during run"
-                )
-                dump(scenario_path, scenario_metadata)
-            if aging_selection is not None:
-                try:
-                    check = battery_aging.verify_truth(run / "evaluation/truth.jsonl", aging_selection)
-                except (ValueError, KeyError, OSError) as exc:
-                    check = {"status": "failed", "error": str(exc)}
-                    record_secondary_failure(state, "battery_profile_failure", exc)
-                    dump(run / "run.json", state)
-                dump(run / "evaluation/battery-profile-check.json", check)
-            envelope = model_envelope.check(run / "evaluation/truth.jsonl", timeline)
-            dump(run / "evaluation/envelope-check.json", envelope)
-            scenario_path = run / "evaluation/scenario.json"
-            scenario_metadata = json.loads(scenario_path.read_text())
-            scenario_metadata.update(
-                health_eligibility_scope=model_envelope.POLICY,
-                health_eligibility_interval_us=[envelope["mission_start_us"], envelope["mission_end_us"]],
-            )
-            if (not envelope["normal_eligibility_passed"]
-                    and scenario_metadata["health_eligibility"] == "confirmed_healthy"):
                 scenario_metadata.update(
-                    health_eligibility="uncertain",
-                    health_basis="missing mission interval or outside declared model validity envelope during mission",
+                    health_eligibility_scope=model_envelope.POLICY,
+                    health_eligibility_interval_us=[envelope["mission_start_us"], envelope["mission_end_us"]],
                 )
-            dump(scenario_path, scenario_metadata)
-            integrity(run)
+                if (not envelope["normal_eligibility_passed"]
+                        and scenario_metadata["health_eligibility"] == "confirmed_healthy"):
+                    scenario_metadata.update(
+                        health_eligibility="uncertain",
+                        health_basis="missing mission interval or outside declared model validity envelope during mission",
+                    )
+                dump(scenario_path, scenario_metadata)
+                integrity(run)
         except (OSError, ValueError) as exc:
             record_secondary_failure(state, "finalization_failure", exc)
             try:

@@ -21,53 +21,97 @@ void Parameters::validate() const {
     previous = v;
   }
 }
-Output Powertrain::evaluate(double voltage, const State &s, const RotorValues &duty,
-                            bool armed) const {
-  Output o;
-  o.voltage = voltage;
-  o.current = voltage > 0 ? p.auxiliary_a : 0;
+namespace {
+struct BusLoad {
+  RotorValues resistance, back_emf, duty;
+  bool powered;
+
+  BusLoad(const Parameters &p, const State &s, const RotorValues &duty,
+          bool armed)
+      : duty(duty), powered(armed && s.soc > 0) {
+    for (std::size_t i = 0; i < rotor_count; ++i) {
+      resistance[i] =
+          p.resistance * (1 + .00393 * (s.motor_temperature[i] - 298.15));
+      back_emf[i] = p.ke * s.omega[i];
+    }
+  }
+};
+
+// Bisection only consumes the pack current. Populate per-motor outputs
+// once at the accepted voltage, using the same electrical equations.
+double bus_current(double voltage, const Parameters &p, const BusLoad &load,
+                   Output *output) {
+  const double esc_voltage = p.esc_efficiency * voltage;
+  const double budget = esc_voltage * p.dc_limit;
+  double pack_current = voltage > 0 ? p.auxiliary_a : 0;
   for (std::size_t i = 0; i < rotor_count; ++i) {
-    double w = s.omega[i];
-    double r = p.resistance * (1 + .00393 * (s.motor_temperature[i] - 298.15));
-    double e = p.ke * w;
+    double r = load.resistance[i];
+    double e = load.back_emf[i];
     double requested =
-        armed && s.soc > 0 ? std::max(0., (duty[i] * voltage - e) / r) : 0;
-    double budget = p.esc_efficiency * voltage * p.dc_limit;
+        load.powered ? std::max(0., (load.duty[i] * voltage - e) / r) : 0;
     // Stable positive root of r*I^2 + e*I = budget.
     double power_limit =
         budget > 0 ? 2 * budget / (e + std::sqrt(e * e + 4 * r * budget)) : 0;
     double im = std::min({requested, p.motor_limit, power_limit});
     double pin = (e + r * im) * im;
-    double idc = voltage > 0 ? pin / (p.esc_efficiency * voltage) : 0;
+    double idc = voltage > 0 ? pin / esc_voltage : 0;
+    pack_current += idc;
+    if (output) {
+      output->motor_current[i] = im;
+      output->dc_current[i] = idc;
+    }
+  }
+  return pack_current;
+}
+
+Output evaluate_load(double voltage, const Parameters &p, const State &s,
+                     const BusLoad &load) {
+  Output o;
+  o.voltage = voltage;
+  o.current = bus_current(voltage, p, load, &o);
+  for (std::size_t i = 0; i < rotor_count; ++i) {
+    double w = s.omega[i];
+    double r = load.resistance[i];
+    double im = o.motor_current[i];
+    double pin = (load.back_emf[i] + r * im) * im;
     double friction = p.friction * w + p.coulomb * std::tanh(w);
     double q = p.kq_prop * w * w;
-    o.motor_current[i] = im;
-    o.dc_current[i] = idc;
-    o.current += idc;
     o.thrust[i] = p.kt_prop * w * w;
     o.torque[i] = q;
     o.acceleration[i] = (p.ke * im - q - friction) / p.inertia;
     o.shaft_power += q * w;
-    o.loss_power += im * im * r + friction * w + voltage * idc - pin;
+    o.loss_power +=
+        im * im * r + friction * w + voltage * o.dc_current[i] - pin;
   }
   return o;
 }
+} // namespace
+
+Output Powertrain::evaluate(double voltage, const State &s, const RotorValues &duty,
+                            bool armed) const {
+  return evaluate_load(voltage, p, s, BusLoad(p, s, duty, armed));
+}
+
 Output Powertrain::solve(const State &s, const RotorValues &duty, bool armed) const {
-  double hi = std::max(0., ocv(s.soc) - s.polarization), lo = 0;
+  const double open_circuit = ocv(s.soc);
+  double hi = std::max(0., open_circuit - s.polarization), lo = 0;
   if (s.soc <= 0 || hi <= p.r0 * p.auxiliary_a) {
     auto out = evaluate(0, s, duty, false);
     out.status = s.soc <= 0 ? Output::depleted : Output::brownout;
     return out;
   }
-  Output out;
+  const BusLoad load(p, s, duty, armed);
   for (int k = 1; k <= 64; ++k) {
     double v = (lo + hi) * .5;
-    out = evaluate(v, s, duty, armed);
-    out.residual = v + p.r0 * out.current + s.polarization - ocv(s.soc);
-    out.iterations = k;
-    if (std::abs(out.residual) < 1e-8)
+    double current = bus_current(v, p, load, nullptr);
+    double residual = v + p.r0 * current + s.polarization - open_circuit;
+    if (std::abs(residual) < 1e-8) {
+      auto out = evaluate_load(v, p, s, load);
+      out.residual = residual;
+      out.iterations = k;
       return out;
-    if (out.residual > 0)
+    }
+    if (residual > 0)
       hi = v;
     else
       lo = v;

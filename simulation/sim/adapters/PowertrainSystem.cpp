@@ -34,6 +34,7 @@ class PowertrainSystem : public gz::sim::System,
   Powertrain core;
   CommandGate command_gate;
   BatterySensor sensor;
+  bool write_traces = true;
   bool command_was_fresh = false;
   bool envelope_ok = true;
   unsigned rejected_commands = 0;
@@ -178,44 +179,51 @@ public:
     const char *path = std::getenv("X500_TRUTH_PATH");
     if (!path)
       throw std::runtime_error("X500_TRUTH_PATH required");
-    truth.open(path);
-    if (joint_phase_enabled) {
-      joint_wind_trace.open(std::string(path) + ".joint-wind.csv");
-      joint_wind_trace << "source_us,weather_seconds,east,north,up\n" << std::setprecision(17);
-      if (!joint_wind_trace) throw std::runtime_error("joint wind trace open");
+    // Raw MAVLink collection does not need simulator-only traces.
+    write_traces = std::string(path) != "/dev/null";
+    if (write_traces) {
+      const auto trace_path = [path](const char *suffix) {
+        return std::string(path) + suffix;
+      };
+      truth.open(path);
+      if (joint_phase_enabled) {
+        joint_wind_trace.open(trace_path(".joint-wind.csv"));
+        joint_wind_trace << "source_us,weather_seconds,east,north,up\n" << std::setprecision(17);
+        if (!joint_wind_trace) throw std::runtime_error("joint wind trace open");
+      }
+      wind_trace.open(trace_path(".wind-trace.jsonl"));
+      if (bounded) {
+        double center = bounded->environment == "calm" ? 0 : bounded->environment == "low" ? 1.25 : 3.75;
+        double amplitude = bounded->environment == "calm" ? 0 : 1;
+        wind_trace << std::setprecision(17)
+                   << "{\"schema\":\"drone.bounded-wind-trace/" << (joint_phase_enabled ? "2" : "1") << "\",\"kind\":\"configuration\",\"seed_u32\":"
+                   << static_cast<unsigned>(env("X500_SEED", 17))
+                   << ",\"profile\":{\"revision\":\"bounded-latent-ou-c2-enu-v1\",\"environment\":\""
+                   << bounded->environment << "\",\"direction_deg\":" << bounded->direction_deg
+                   << ",\"variation\":" << bounded->variation << "},\"latent_std_dimensionless\":1,\"latent_tau_s\":2,\"latent_knot_period_s\":1"
+                   << ",\"speed_midpoint_mps\":" << center << ",\"speed_amplitude_mps\":" << amplitude
+                   << ",\"direction_amplitude_rad\":" << BoundedWind::pi / 3
+                   << ",\"elevation_amplitude_rad\":" << BoundedWind::pi / 12;
+        if (joint_phase_enabled) wind_trace << ",\"phase_revision\":\"joint-native-consumption-c2-v2\"";
+        wind_trace << "}\n";
+      } else {
+        wind_trace << std::setprecision(17)
+                   << "{\"schema\":\"drone.ou-wind-trace/1\",\"kind\":\"configuration\",\"seed_u32\":"
+                   << static_cast<unsigned>(env("X500_SEED", 17))
+                   << ",\"sigma_per_axis_mps\":" << turbulence.sigma
+                   << ",\"tau_s\":" << turbulence.tau
+                   << ",\"mean_enu_mps\":[" << wind.X() << ',' << wind.Y() << ",0]}\n";
+      }
+      if (!wind_trace)
+        throw std::runtime_error("cannot open OU wind trace");
+      control_events.open(trace_path(".control-events.jsonl"));
+      command_trace.open(trace_path(".command-trace.jsonl"));
+      sensor_trace.open(trace_path(".sensor-trace.jsonl"));
+      sensor_trace << std::setprecision(12);
+      truth << std::setprecision(12);
+      if (!truth)
+        throw std::runtime_error("cannot open truth");
     }
-    wind_trace.open(std::string(path) + ".wind-trace.jsonl");
-    if (bounded) {
-      double center = bounded->environment == "calm" ? 0 : bounded->environment == "low" ? 1.25 : 3.75;
-      double amplitude = bounded->environment == "calm" ? 0 : 1;
-      wind_trace << std::setprecision(17)
-                 << "{\"schema\":\"drone.bounded-wind-trace/" << (joint_phase_enabled ? "2" : "1") << "\",\"kind\":\"configuration\",\"seed_u32\":"
-                 << static_cast<unsigned>(env("X500_SEED", 17))
-                 << ",\"profile\":{\"revision\":\"bounded-latent-ou-c2-enu-v1\",\"environment\":\""
-                 << bounded->environment << "\",\"direction_deg\":" << bounded->direction_deg
-                 << ",\"variation\":" << bounded->variation << "},\"latent_std_dimensionless\":1,\"latent_tau_s\":2,\"latent_knot_period_s\":1"
-                 << ",\"speed_midpoint_mps\":" << center << ",\"speed_amplitude_mps\":" << amplitude
-                 << ",\"direction_amplitude_rad\":" << BoundedWind::pi / 3
-                 << ",\"elevation_amplitude_rad\":" << BoundedWind::pi / 12;
-      if (joint_phase_enabled) wind_trace << ",\"phase_revision\":\"joint-native-consumption-c2-v2\"";
-      wind_trace << "}\n";
-    } else {
-    wind_trace << std::setprecision(17)
-               << "{\"schema\":\"drone.ou-wind-trace/1\",\"kind\":\"configuration\",\"seed_u32\":"
-               << static_cast<unsigned>(env("X500_SEED", 17))
-               << ",\"sigma_per_axis_mps\":" << turbulence.sigma
-               << ",\"tau_s\":" << turbulence.tau
-               << ",\"mean_enu_mps\":[" << wind.X() << ',' << wind.Y() << ",0]}\n";
-    }
-    if (!wind_trace)
-      throw std::runtime_error("cannot open OU wind trace");
-    control_events.open(std::string(path) + ".control-events.jsonl");
-    command_trace.open(std::string(path) + ".command-trace.jsonl");
-    sensor_trace.open(std::string(path) + ".sensor-trace.jsonl");
-    sensor_trace << std::setprecision(12);
-    truth << std::setprecision(12);
-    if (!truth)
-      throw std::runtime_error("cannot open truth");
     node.Subscribe("/" + name + "/command/motor_speed",
                    &PowertrainSystem::command, this);
     node.Advertise("/" + name + "/apply_parameter_change",
@@ -324,10 +332,12 @@ public:
     }
     if (result != "accepted") {
       ++rejected_commands;
-      command_trace << "{\"kind\":\"command_rejected\",\"reason\":\"" << result
-                    << "\",\"sim_us\":" << static_cast<int64_t>(time * 1e6)
-                    << "}\n";
-      command_trace.flush();
+      if (write_traces) {
+        command_trace << "{\"kind\":\"command_rejected\",\"reason\":\"" << result
+                      << "\",\"sim_us\":" << static_cast<int64_t>(time * 1e6)
+                      << "}\n";
+        command_trace.flush();
+      }
     }
   }
   void PreUpdate(const gz::sim::UpdateInfo &info,
@@ -346,19 +356,21 @@ public:
       scheduled_fault_at = fault_at;
       for (const auto &r :
            changes.apply(core, static_cast<long long>(t * 1e6))) {
-        control_events << "{\"request_id\":" << r.change.id
-                       << ",\"field\":" << r.change.field
-                       << ",\"value\":" << r.change.value
-                       << ",\"requested_time_us\":" << r.change.requested_us
-                       << ",\"applied_time_us\":" << r.applied_us
-                       << ",\"revision\":" << r.revision << "}\n";
-        control_events.flush();
+        if (write_traces) {
+          control_events << "{\"request_id\":" << r.change.id
+                         << ",\"field\":" << r.change.field
+                         << ",\"value\":" << r.change.value
+                         << ",\"requested_time_us\":" << r.change.requested_us
+                         << ",\"applied_time_us\":" << r.applied_us
+                         << ",\"revision\":" << r.revision << "}\n";
+          control_events.flush();
+        }
       }
       bool fresh = command_gate.fresh(static_cast<int64_t>(t * 1e6));
       command = command_gate.duty;
       if (!fresh)
         command.fill(0);
-      if (fresh != command_was_fresh) {
+      if (write_traces && fresh != command_was_fresh) {
         command_trace << "{\"kind\":\"command_state\",\"state\":\""
                       << (fresh ? "active" : "timeout_coast")
                       << "\",\"sim_us\":" << static_cast<int64_t>(t * 1e6)
@@ -428,7 +440,7 @@ public:
       bounded_max_norm = std::max(bounded_max_norm, magnitude);
       bounded_max_step_delta = std::max(bounded_max_step_delta, (wind - previous_bounded_wind).Length());
       previous_bounded_wind = wind;
-      if (joint_phase_enabled) {
+      if (write_traces && joint_phase_enabled) {
         joint_wind_trace << static_cast<int64_t>(std::llround(t*1e6)) << ',' << weather_time << ',' << wind.X() << ',' << wind.Y() << ',' << wind.Z() << '\n';
         if (!joint_wind_trace) throw std::runtime_error("joint wind write");
       }
@@ -439,14 +451,16 @@ public:
       for (int k = 0; k < 3; ++k)
         gust[k] = turbulence.gust[k];
       last_wind = t;
-      ++wind_update_index;
-      wind_trace << "{\"kind\":\"update\",\"index\":" << wind_update_index
-                 << ",\"time_us\":" << static_cast<int64_t>(t * 1e6)
-                 << ",\"dt_s\":" << h << ",\"gust_enu_mps\":["
-                 << gust.X() << ',' << gust.Y() << ',' << gust.Z() << "]}\n";
-      wind_trace.flush();
-      if (!wind_trace)
-        throw std::runtime_error("OU wind trace write failed");
+      if (write_traces) {
+        ++wind_update_index;
+        wind_trace << "{\"kind\":\"update\",\"index\":" << wind_update_index
+                   << ",\"time_us\":" << static_cast<int64_t>(t * 1e6)
+                   << ",\"dt_s\":" << h << ",\"gust_enu_mps\":["
+                   << gust.X() << ',' << gust.Y() << ',' << gust.Z() << "]}\n";
+        wind_trace.flush();
+        if (!wind_trace)
+          throw std::runtime_error("OU wind trace write failed");
+      }
     }
     auto o = core.step(dt, command, true, ambient);
     auto pose = link.WorldPose(ecm);
@@ -491,6 +505,8 @@ public:
       m.add_data(sample.current);
       m.add_data(sample.sample_s);
       battery.Publish(m);
+      if (!write_traces)
+        continue;
       sensor_trace << "{\"sample_s\":" << sample.sample_s
                    << ",\"publish_s\":" << t
                    << ",\"voltage_v\":" << sample.voltage
@@ -501,7 +517,7 @@ public:
                    << "}\n";
       sensor_trace.flush();
     }
-    if (t - last_log >= .01) {
+    if (write_traces && t - last_log >= .01) {
       if (bounded) {
         ++bounded_samples;
         wind_trace << "{\"kind\":\"sample\",\"index\":" << bounded_samples

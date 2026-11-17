@@ -521,7 +521,12 @@ def main(argv=None):
             ROOT / ".cache/setup.lock",
             ROOT.parent / "Data/operations/collection.lock",
         ]
-        paths += [ROOT / ".cache/instances" / f"{i}.lock" for i in range(32)]
+        from capstone_sim.collection_config import MAVLINK_MAX_INSTANCES
+
+        paths += [
+            ROOT / ".cache/instances" / f"{i}.lock"
+            for i in range(MAVLINK_MAX_INSTANCES)
+        ]
         for path in paths:
             path.parent.mkdir(parents=True, exist_ok=True)
             stream = path.open("a")

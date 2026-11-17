@@ -49,6 +49,14 @@ def position_controls(a, b):
     return result
 
 
+def supported_duration(duration, revision):
+    if type(duration) not in (int, float):
+        return False
+    if revision == BOUNDED_REVISION:
+        return duration == 180 or 300 <= duration <= 900
+    return duration in (180, 480, 900)
+
+
 def minimum_speed(a, b):
     """Exact minimum norm on the line between horizontal velocity vectors."""
     dx, dy = b[5] - a[5], b[6] - a[6]
@@ -61,8 +69,8 @@ def build(spec, seed, duration, *, revision=None):
     revision = revision or (BOUNDED_REVISION if "wind_profile" in spec else REVISION)
     if revision == BOUNDED_REVISION and "wind_profile" not in spec:
         raise ValueError("Bounded v6 requires an explicit wind profile")
-    if type(duration) not in (int, float) or duration not in (180, 480, 900):
-        raise ValueError("Random flight requires 180, 480 or 900 seconds")
+    if not supported_duration(duration, revision):
+        raise ValueError("Unsupported duration for this random flight revision")
     validate_wind(spec, revision=revision)
     if revision not in (BOUNDED_REVISION, REVISION, FIXED_WIND_REVISION, LEGACY_REVISION):
         raise ValueError("Unknown random planning revision")
@@ -160,8 +168,8 @@ def metrics(path):
 def validate(path):
     if set(path) != FIELDS or path.get("revision") not in (BOUNDED_REVISION, REVISION, FIXED_WIND_REVISION, LEGACY_REVISION) or path.get("kind") != "random":
         raise ValueError("Retired random path; use current v5 or preserved v3/v4 revision")
-    if type(path["duration_s"]) not in (int, float) or path["duration_s"] not in (180, 480, 900):
-        raise ValueError("Random flight duration must be 180/480/900 seconds")
+    if not supported_duration(path["duration_s"], path["revision"]):
+        raise ValueError("Unsupported duration for this random flight revision")
     limits = path["limits"]
     if not isinstance(limits, dict) or limits.keys() != LIMITS.keys():
         raise ValueError("Exact random flight limits required")

@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 CATALOG = ROOT / "profiles/propulsion-health.json"
 SCENARIOS = {"propulsion_loss_existing", "propulsion_loss_step", "propulsion_loss_ramp"}
 DYNAMIC = SCENARIOS - {"propulsion_loss_existing"}
+TRAINING_STAGES = (4, 8, 12, 16)
 KEYS = ("kt_prop", "kq_prop", "friction", "coulomb", "esc_efficiency", "resistance")
 TRUTH = ("kt_prop", "kq_prop", "friction_nms", "motor_coulomb_nm",
          "esc_efficiency", "motor_resistance_ohm")
@@ -54,7 +55,7 @@ def write_runtime(path, snapshot):
     Path(path).write_text(" ".join(str(snapshot[k]) for k in KEYS) + "\n")
 
 
-def resolve(scenario, normal=None, transition_s=None, *, catalog_path=CATALOG):
+def resolve(scenario, normal=None, transition_s=None, *, catalog_path=CATALOG, mavlink_fixed_stage=None):
     catalog = load_catalog(catalog_path)
     baseline = catalog["states"]["normal"]
     target = dict(catalog["states"]["abnormal"])
@@ -75,6 +76,13 @@ def resolve(scenario, normal=None, transition_s=None, *, catalog_path=CATALOG):
         raise ValueError("Propulsion transition requires a dynamic scenario and positive duration")
     abnormal = scenario in SCENARIOS
     target = target if abnormal else normal
+    if mavlink_fixed_stage is not None:
+        if (type(mavlink_fixed_stage) is not int or mavlink_fixed_stage not in TRAINING_STAGES
+                or scenario != "propulsion_loss_existing"):
+            raise ValueError("MAVLink propulsion stages require pre-existing training wear")
+        if mavlink_fixed_stage != 16:
+            fraction = mavlink_fixed_stage / 16
+            target = {key: normal[key] + fraction * (target[key] - normal[key]) for key in KEYS}
     seconds = (transition_s if transition_s is not None else
                catalog["transition_defaults_s"]["step" if scenario.endswith("step") else "ramp"]
                ) if dynamic else 0.0
@@ -83,6 +91,7 @@ def resolve(scenario, normal=None, transition_s=None, *, catalog_path=CATALOG):
                 normal=normal, initial=normal if dynamic else target, target=target,
                 initial_state="normal" if dynamic or not abnormal else "abnormal",
                 target_state="abnormal" if abnormal else "normal", transition_s=seconds,
+                **({"mavlink_fixed_stage": mavlink_fixed_stage} if mavlink_fixed_stage is not None else {}),
                 fixed_for_flight=not dynamic, interpolation="linear simultaneously in Rm,b,kF,kQ",
                 basis=catalog["abnormal_basis"] if abnormal else catalog["normal_basis"],
                 limitations=catalog["limitations"])

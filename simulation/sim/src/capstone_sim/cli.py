@@ -10,9 +10,11 @@ from typing import Any
 import yaml
 
 from .acceptance import acceptance
+from .battery_aging import TRAINING_STAGES as MAVLINK_BATTERY_STAGES
 from .campaign import campaign, plan
 from .control import control
 from .operations import bench, bootstrap, fetch, native_build, profile_operation
+from .propulsion_health import TRAINING_STAGES as MAVLINK_PROPULSION_STAGES
 from .recording import dump, sha, verify
 from .recovery import recover
 from .runner import PX4, ROOT, SCENARIOS, run_flight
@@ -198,10 +200,16 @@ def main():
     r.add_argument("--paired-case-id")
     r.add_argument("--operation-variation", help="Frozen health-independent conditions/path JSON for collection")
     r.add_argument("--fault-after-mission-s", type=float, help="Dynamic onset seconds after airborne path zero")
-    r.add_argument("--real-time-factor", type=int, choices=(2, 3, 4, 8), default=2)
+    r.add_argument("--real-time-factor", type=int, choices=(1, 2, 3, 4, 8), default=2)
+    r.add_argument("--mavlink-only", action="store_true",
+                   help="Disable native telemetry recording and dataset acceptance checks")
+    r.add_argument("--mavlink-battery-stage", type=int, choices=MAVLINK_BATTERY_STAGES,
+                   help="Fixed CMU battery aging stage for MAVLink training flights")
+    r.add_argument("--mavlink-propulsion-stage", type=int, choices=MAVLINK_PROPULSION_STAGES,
+                   help="Fixed X500 propulsion wear stage for MAVLink training flights")
     r.add_argument("--duration", type=float, default=90)
     r.add_argument("--instance", type=int, default=0,
-                   help="Collection0..31; custom profiles0..15; reference0..9")
+                   help="MAVLink-only collection0..63; collection0..31; custom profiles0..15; reference0..9")
     r.add_argument("--timing", action="store_true", help="Separate native/producer timing sidecars")
     r.add_argument("--capture-interval-ms", type=float, default=5.0)
     r.add_argument(
@@ -317,6 +325,9 @@ def main():
                 wind_variation=a.wind_variation,
                 phase_policy=a.phase_policy,
                 paired_case_id=a.paired_case_id,
+                mavlink_only=a.mavlink_only,
+                mavlink_battery_stage=a.mavlink_battery_stage,
+                mavlink_propulsion_stage=a.mavlink_propulsion_stage,
             )
             code = 0 if result["status"] == "completed" else 4
         elif a.action == "verify":

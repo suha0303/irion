@@ -36,7 +36,12 @@ def build(spec, mode, seed, duration, basic_index, *, random_revision=None):
         kind=mode, duration_s=duration, radius=min(p["radius"], 1.2), omega=min(p["omega"], 0.08)
     )
     if mode == "mixed":
-        count = 2 if duration == 180 else 6
+        if duration in (180, 480, 900):
+            count = 2 if duration == 180 else 6
+        elif 300 <= duration <= 900:
+            count = rng.randint(math.ceil(duration / 180), min(7, int(duration / 80)))
+        else:
+            raise ValueError("Mixed flight requires 180 seconds or a duration within 300–900 seconds")
         kinds = list(allowed)
         rng.shuffle(kinds)
         p["program"] = []
@@ -56,12 +61,17 @@ def validate_program(p, validate_path):
         from .random_flight import validate
 
         return validate(p)
-    if p["duration_s"] not in (180, 480, 900) or p["kind"] != "mixed":
-        raise ValueError("Finite180/480/900s flight program required")
+    duration = p["duration_s"]
+    if (type(duration) not in (int, float)
+            or not (duration == 180 or 300 <= duration <= 900)
+            or p["kind"] != "mixed"):
+        raise ValueError("Mixed flight requires 180 seconds or a duration within 300–900 seconds")
     if p["radius"] > 1.2 or p["omega"] > 0.08 or not isinstance(p["program"], list):
         raise ValueError("Program motion bound exceeded")
     if p["kind"] == "mixed":
-        if len(p["program"]) not in (2, 6):
+        legacy_counts = {180: 2, 480: 6, 900: 6}
+        count = len(p["program"])
+        if not 2 <= count <= 7 or duration in legacy_counts and count != legacy_counts[duration]:
             raise ValueError("Finite composite component count required")
         end = 0.0
         for item in p["program"]:

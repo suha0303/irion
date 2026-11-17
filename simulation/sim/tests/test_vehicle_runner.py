@@ -22,9 +22,10 @@ from capstone_sim.profile import load_battery, load_profile
 
 
 class RecorderFixture:
-    def __init__(self, run, *, timing=False, vehicle_profile=None):
+    def __init__(self, run, *, timing=False, vehicle_profile=None, sync_interval_s=0.0):
         self.run = run
         self.selected_vehicle = vehicle_profile
+        self.sync_interval_s = sync_interval_s
         self.through, self.count, self.latest = 0, 0, {}
         (run / "observations/metadata.json").write_text('{"vehicle": {}}')
         (run / "evaluation/truth.jsonl").write_text(

@@ -14,6 +14,7 @@ DYNAMIC = {"battery_aging_step", "battery_aging_ramp"}
 SOURCE_SHA256 = "596ab1e1e80eeac3509f789609f751527c2073a4310deec8274cbfaf4fef39c4"
 NORMAL_STAGE = "rpt_00"
 AGED_STAGE = "rpt_16"
+TRAINING_STAGES = (4, 8, 12, 16)
 FLIGHT_POLICY = {
     "revision": "cmu-vah01-rpt16-only/1",
     "normal_stage": NORMAL_STAGE,
@@ -86,12 +87,21 @@ def pack_snapshot(catalog, stage_id, nominal_pack):
     }
 
 
-def resolve(scenario, stage_id, transition_s, nominal_pack):
+def resolve(scenario, stage_id, transition_s, nominal_pack, *, mavlink_fixed_stage=None):
     validate_selection(scenario, stage_id, transition_s, None)
     catalog = load_catalog()
     if catalog.get("flight_policy") != FLIGHT_POLICY:
         raise ValueError("Current X500 requires the rpt_16-only battery flight policy")
     selected_stage = AGED_STAGE if scenario in SCENARIOS else stage_id or NORMAL_STAGE
+    policy = FLIGHT_POLICY
+    if mavlink_fixed_stage is not None:
+        if (type(mavlink_fixed_stage) is not int or mavlink_fixed_stage not in TRAINING_STAGES
+                or scenario not in {"battery_aging_existing", "propulsion_loss_existing"}
+                or stage_id is not None):
+            raise ValueError("MAVLink battery stages require pre-existing training wear")
+        selected_stage = f"rpt_{mavlink_fixed_stage:02d}"
+        policy = dict(revision="cmu-vah01-mavlink-fixed-stages/1", normal_stage=NORMAL_STAGE,
+                      aged_stages=[f"rpt_{stage:02d}" for stage in TRAINING_STAGES])
     initial = pack_snapshot(catalog, NORMAL_STAGE, nominal_pack)
     target = pack_snapshot(catalog, selected_stage, nominal_pack)
     dynamic = scenario in DYNAMIC
@@ -101,7 +111,8 @@ def resolve(scenario, stage_id, transition_s, nominal_pack):
         "schema": "drone.battery-aging-selection/1",
         "catalog_sha256": hashlib.sha256(CATALOG.read_bytes()).hexdigest(),
         "catalog_revision": catalog["revision"],
-        "flight_policy": dict(FLIGHT_POLICY),
+        "flight_policy": dict(policy),
+        **({"mavlink_fixed_stage": mavlink_fixed_stage} if mavlink_fixed_stage is not None else {}),
         "source": catalog["source"],
         "initial_stage": NORMAL_STAGE if dynamic else selected_stage,
         "target_stage": selected_stage,

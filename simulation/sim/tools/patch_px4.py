@@ -37,10 +37,15 @@ replace(
     "\tvoid Run() override;",
     "\tvoid Run() override;\n\tvoid batteryCallback(const gz::msgs::Double_V &msg);\n\tBattery _coupled_battery{1, this, 100000, battery_status_s::SOURCE_POWER_MODULE};\n\tRawCapture _raw_capture;",
 )
+coupled = 'getenv("X500_COUPLED_POWERTRAIN") || getenv("X500_CAPTURE_PATH")'
+bridge_path = g / "GZBridge.cpp"
+bridge_legacy = 'if (getenv("X500_CAPTURE_PATH")) {'
+if bridge_legacy in bridge_path.read_text():
+    replace(bridge_path, bridge_legacy, f"if ({coupled}) {{")
 replace(
-    g / "GZBridge.cpp",
+    bridge_path,
     "int GZBridge::init()\n{",
-    'int GZBridge::init()\n{\n\tif (getenv("X500_CAPTURE_PATH")) {\n\t\t_node.Subscribe("/" + _model_name + "/battery_sensor", &GZBridge::batteryCallback, this);\n\t}',
+    f'int GZBridge::init()\n{{\n\tif ({coupled}) {{\n\t\t_node.Subscribe("/" + _model_name + "/battery_sensor", &GZBridge::batteryCallback, this);\n\t}}',
 )
 callback = """void GZBridge::batteryCallback(const gz::msgs::Double_V &msg)
 {
@@ -70,12 +75,15 @@ replace(
     "\t_raw_capture.update(hrt_absolute_time());\n\tScheduleDelayed(10_ms);",
 )
 replace(g / "CMakeLists.txt", "\t\tDEPENDS\n", "\t\tDEPENDS\n\t\t\tbattery\n")
-replace(
-    g / "GZMixingInterfaceESC.cpp",
-    "if (!_node.Subscribe(motor_speed_topic,",
-    'if (!getenv("X500_CAPTURE_PATH") && !_node.Subscribe(motor_speed_topic,',
-)
-capture_header = """        if (getenv("X500_CAPTURE_PATH")) {
+esc_path = g / "GZMixingInterfaceESC.cpp"
+legacy_esc = 'if (!getenv("X500_CAPTURE_PATH") && !_node.Subscribe(motor_speed_topic,'
+esc_condition = f"if (!({coupled}) && !_node.Subscribe(motor_speed_topic,"
+if legacy_esc in esc_path.read_text():
+    replace(esc_path, legacy_esc, esc_condition)
+replace(esc_path, "if (!_node.Subscribe(motor_speed_topic,", esc_condition)
+if bridge_legacy in esc_path.read_text():
+    replace(esc_path, bridge_legacy, f"if ({coupled}) {{")
+capture_header = """        if (COUPLED_POWERTRAIN) {
             static uint64_t command_seq = 0;
             auto *header = rotor_velocity_message.mutable_header();
             const auto now = hrt_absolute_time();
@@ -89,7 +97,7 @@ capture_header = """        if (getenv("X500_CAPTURE_PATH")) {
             semantic->set_key("semantic"); semantic->add_value("post_mapping_count_0_1000");
             auto *sequence = header->add_data();
             sequence->set_key("sequence"); sequence->add_value(std::to_string(command_seq++));
-        }"""
+        }""".replace("COUPLED_POWERTRAIN", coupled)
 if "static uint64_t command_seq = 0;" not in (g / "GZMixingInterfaceESC.cpp").read_text():
     declaration = "\t\tgz::msgs::Actuators rotor_velocity_message;"
     replace(g / "GZMixingInterfaceESC.cpp", declaration, declaration + "\n" + capture_header)
@@ -119,7 +127,8 @@ text = a.read_text()
 text = text.split("# X500 coupled powertrain")[0].rstrip() + "\n"
 if True:
     text += (
-        '\n# X500 coupled powertrain: local simulation only\nif [ -n "$X500_CAPTURE_PATH" ]; then\n'
+        '\n# X500 coupled powertrain: local simulation only\n'
+        'if [ -n "$X500_COUPLED_POWERTRAIN" ] || [ -n "$X500_CAPTURE_PATH" ]; then\n'
     )
     for key, val in {
         "SIM_BAT_ENABLE": 0,

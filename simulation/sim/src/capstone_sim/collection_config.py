@@ -20,6 +20,7 @@ PLUGIN = ROOT / CURRENT_PLUGIN
 HEADER = DIRECTORY / "vehicle_generated.hpp"
 NAME = "collection"
 MAX_INSTANCES = 32
+MAVLINK_MAX_INSTANCES = 64
 # Read-only identities for previously recorded evidence. New runs use NAME.
 LEGACY_NAME = "r3_long15"
 LEGACY_BATTERY_ID = "vtc6_4s4p_r3_long15"
@@ -38,12 +39,12 @@ ANOMALY = {
 
 def validate_request(
     scenario, duration, fault_at_s, *, operation_variation=None, fault_after_mission_s=None,
-    battery_transition_s=None, propulsion_transition_s=None,
+    battery_transition_s=None, propulsion_transition_s=None, mavlink_fixed_health=False,
 ):
     if scenario not in NORMAL | ANOMALY:
         raise ValueError("scenario outside collection scope")
     propulsion_health.resolve(scenario, transition_s=propulsion_transition_s)
-    maximum = 300 if scenario == "low_soc_normal" else 900 if scenario in NORMAL else 480
+    maximum = 300 if scenario == "low_soc_normal" else 900 if scenario in NORMAL or mavlink_fixed_health else 480
     if not math.isfinite(duration) or not 0 < duration <= maximum:
         raise ValueError(f"Collection {scenario} duration must be within (0,{maximum}] seconds")
     if operation_variation is not None:
@@ -125,7 +126,14 @@ def fc_parameters():
             "MPC_LAND_SPEED": 0.3}
 
 
-def prepare_fc(run, upstream_etc, *, gui_preview=False):
+def offboard_ports(instance):
+    """Return the PX4 bind port and the local flight controller's bind port."""
+    if instance < MAX_INSTANCES:
+        return 14580 + instance, 14540 + instance
+    return 19100 + instance, 19000 + instance
+
+
+def prepare_fc(run, upstream_etc, *, gui_preview=False, mavlink_only=False, instance=0):
     """Patch a private run-local startup copy, never the PX4 binary or vendor tree."""
     target = Path(run) / "reference/px4_etc"
     shutil.copytree(upstream_etc, target, symlinks=False)
@@ -165,6 +173,27 @@ def prepare_fc(run, upstream_etc, *, gui_preview=False):
         # heartbeat cannot reach the strict PX4-only offboard receiver.
         lines = [line.replace(" -f", "") for line in lines]
         lines[index] = "udp_gcs_port_remote=14550"
+    if mavlink_only:
+        if instance >= MAX_INSTANCES:
+            local, remote = offboard_ports(instance)
+            old_local, old_remote = offboard_ports(0)
+            for key, old_base, port in (
+                ("udp_offboard_port_local", old_local, local),
+                ("udp_offboard_port_remote", old_remote, remote),
+            ):
+                previous = f"{key}=$(({old_base}+px4_instance))"
+                if lines.count(previous) != 1:
+                    raise ValueError(f"unexpected PX4 {key} policy")
+                lines[lines.index(previous)] = f"{key}={port}"
+        # Keep the PX4 logger and the native uORB capture module off.
+        (target / "init.d/rc.logging").write_text("#!/bin/sh\nparam set SDLOG_MODE -1\n")
+        for name, rate in (
+            ("ATTITUDE", 100), ("ATTITUDE_TARGET", 100),
+            ("LOCAL_POSITION_NED", 100), ("POSITION_TARGET_LOCAL_NED", 100),
+            ("SERVO_OUTPUT_RAW_0", 100), ("HIGHRES_IMU", 100),
+            ("BATTERY_STATUS", 5), ("EXTENDED_SYS_STATE", 5), ("ESC_STATUS", 20),
+        ):
+            lines.append(f"mavlink stream -r {rate} -s {name} -u $udp_gcs_port_local")
     mavlink.write_text("\n".join(lines) + "\n")
     return target
 
