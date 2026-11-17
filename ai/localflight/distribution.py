@@ -201,6 +201,8 @@ def build(output, ui_packages):
         "LOCAL_STARTUP_INPUT_G7.md",
         "LOCAL_ORIGINAL_DETECTION_G8.md",
         "LOCAL_MAVLINK_INPUT_G9.md",
+        "LOCAL_MAVLINK_ADAPTATION_G10.md",
+        "LOCAL_MAVLINK_ROBUSTNESS_G11.md",
     ):
         copy_regular(
             ROOT / "docs/development" / name,

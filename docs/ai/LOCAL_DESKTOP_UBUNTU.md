@@ -1,13 +1,13 @@
 # Ubuntu 로컬 실기체 분석 프로그램
 
-2026-11-15 최신 로컬 배포: `ai/releases/drone-local-ubuntu24-20261115-rc21/`.
+2026-11-15 최신 로컬 배포: `ai/releases/drone-local-ubuntu24-20261115-rc23/`.
 Ubuntu 24.04 x86_64용이며 Python 3.10.22, PyTorch 2.1.2+cpu, UI 의존성,
 최신 forecast 8종/run_health 8종 모델, 빌드된 UI를 포함한다.
 원격 GPU·시스템 Python 변경·실행 시 패키지 다운로드가 필요하지 않다.
 
 ## 현재 PC에서 로컬 GPU 파인튜닝 실행
 
-RC21은 CPU 분석, 선택형 GPU 파인튜닝, 비행 상태에 따른 입력 구간 분리와
+RC22는 설정 응답 누락의 제한된 복구와 확인 상태 구분을 추가한다. CPU 분석, 선택형 GPU 파인튜닝, 비행 상태에 따른 입력 구간 분리와
 과거 평가와 같은 전체 새 경보 검출 조건을 제공한다. 기존 배포와 데이터는 보존한다.
 이 노트북의 승인된 GPU 환경을 지정하는 명령은 다음과 같다.
 
@@ -15,7 +15,7 @@ RC21은 CPU 분석, 선택형 GPU 파인튜닝, 비행 상태에 따른 입력 �
 cd /home/sa/CapstoneV3
 ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
 ARION_GPU_PYTHON="$PWD/ai/.local/gpu-runtime/bin/python" \
-  ./ai/releases/drone-local-ubuntu24-20261115-rc21/drone-local start
+  ./ai/releases/drone-local-ubuntu24-20261115-rc23/drone-local start
 ```
 
 확인은 `start` 대신 `status`, 종료는 `stop`을 사용한다.
@@ -60,11 +60,22 @@ G10에서는 같은 UDP100 수신 조건의 새 정상 16회를 학습 3·개발
 후보·보정값을 먼저 고정한 뒤 수집한 새 정상 8·이상 8회에서, 같은 정상 보정 규칙의
 원본/후보 모두 예측 오경보 2/8·이상 검출 0/8, 종료 후 오경보 3/8·배터리 검출 4/4였다.
 평균 예측 오차 감소를 탐지 성능 개선으로 해석하지 않는다. 두 후보는 기존 적용 검사에서
-거절되어 운영 선택을 유지했다. 실행 제품 코드는 그대로라 배포는 RC21을 유지한다.
-‘로컬 AI · 기체 관리 → 작업 결과’의 최신 파인튜닝 결과에 G10 검토 기록을 추가했다.
+거절되어 운영 선택을 유지했다. G10 당시 실행 제품 코드는 그대로여서 RC21을 유지했다.
+‘로컬 AI · 기체 관리 → 작업 결과’에 G10 검토 기록도 보존한다.
 [부분 파인튜닝 결과·착륙 전환 입력·다음 순서](../development/LOCAL_MAVLINK_ADAPTATION_G10.md)를 참고한다.
 16개 동시 시작에서 5회 발생한 초기 설정 응답 누락은 재수집으로 자료를 확보했으며,
-자동 복구가 해결된 것은 아니다. 실물 기체·직렬 연결·최소 GPU 사양 검증은 별도다.
+G10에서는 자동 복구가 해결되지 않았다. 이후 G11/RC23 결과는 다음과 같다.
+
+G11은 새 48회에서 ACK 누락 6건을 복구했고 모두 수집에 성공했다. 정상 수신 변형과
+이전 정상 착륙 사례를 포함한 부분 학습/CPU 복원은 약 17분 50초였다. 새 16회에서
+예측 평균 오차는 줄었지만 정상 보정 기준의 이상 검출은 원본/후보 모두 0/8건,
+종료 후 건강은 배터리 4/4건 검출·정상 6/8회 오경보로 여전히 미통과다.
+지연·누락 조건의 건강 오경보는 8/8이었다. 두 후보는 적용을 거절하고 기존 선택을 유지한다.
+같은 새 비행의 기존 내부 입력/원본 기준에서는 0/8 오경보·8/8 검출을 재현했다.
+실제 수신의 이력 재시작·착륙 전환 처리와 더 넓은 범위의 재학습이 남았다.
+[최종 결과·누락 원인·후속 체크리스트](../development/LOCAL_MAVLINK_ROBUSTNESS_G11.md)를 참고한다.
+이번 8/9회 수신 변형 학습은 실험 실행기에서 수행했으며 일반 UI는 기존 1~3회
+작업을 유지한다. 실물 기체·직렬 링크·최소 GPU 사양 검증은 별도다.
 
 GPU 환경은 배포에 포함하지 않는다. 다른 Ubuntu PC에서는 별도 사용자 환경에
 `ai/localflight/requirements-gpu.lock`의 조합을 설치하고 `ARION_GPU_PYTHON`으로
@@ -96,8 +107,8 @@ ARION_PORT=8879 \
 압축 파일을 원하는 폴더에 풀고, 풀린 폴더에서 실행한다.
 
 ```bash
-tar -xzf drone-local-ubuntu24-20261115-rc21.tar.gz
-cd drone-local-ubuntu24-20261115-rc21
+tar -xzf drone-local-ubuntu24-20261115-rc23.tar.gz
+cd drone-local-ubuntu24-20261115-rc23
 ./drone-local doctor
 ./drone-local start
 ```
@@ -333,7 +344,7 @@ RC12 SHA-256: `72be97499f8d3ee29cc9bbc0ca0da7ac9c13c22995bc26c6dfa7a6256379a8df`
 ```bash
 cd /home/sa/CapstoneV3
 ARION_DATA_DIR="$PWD/ai/.local/rc13-ui" ARION_PORT=8879 \
-  ./ai/releases/drone-local-ubuntu24-20261115-rc21/drone-local start
+  ./ai/releases/drone-local-ubuntu24-20261115-rc23/drone-local start
 ```
 
 브라우저 주소: `http://127.0.0.1:8879`. 종료도 같은 환경과 경로의 `stop`을 사용한다.
