@@ -321,7 +321,7 @@ def rollback(root, event_id, *, bundle):
     )
 
 
-def active_folder(root, profile, base_model_id, *, bundle):
+def active_folder(root, profile, base_model_id, *, bundle, fill_policy=None):
     state = Path(root) / "model-selection.json"
     if not state.exists():
         return None
@@ -336,4 +336,10 @@ def active_folder(root, profile, base_model_id, *, bundle):
         or descriptor["base_model_id"] != base_model_id
     ):
         raise ValueError("Selected model profile mismatch")
-    return model_path(root, model_id)
+    folder = model_path(root, model_id)
+    if (
+        read_json(folder / "result.json")["binding"].get("fill_policy")
+        != fill_policy
+    ):
+        return None
+    return folder

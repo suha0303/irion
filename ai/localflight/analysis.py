@@ -14,7 +14,7 @@ from learning.run_health19 import scoring as learning_run_health19_scoring
 from localflight import calibration, registry, run_summary
 
 from .catalog import Catalog, digest, read_json
-from .prepared import load, segment_ranges, windows
+from .prepared import load, observed_targets, segment_ranges, windows
 from .registry import fingerprint
 from .runtime import Runtime
 
@@ -66,6 +66,10 @@ def load_runtime(
             )
         if adaptation["binding"]["origin"] != metadata["origin"]:
             raise ValueError("Adapted model and input flight origins differ")
+        if adaptation["binding"].get("fill_policy") != metadata.get(
+            "timing", {}
+        ).get("fill_policy"):
+            raise ValueError("Adapted model and gap fill policies differ")
         live_input = metadata.get("live_input")
         if (
             "live_input" in adaptation["binding"]
@@ -96,8 +100,10 @@ def _forecast_results(runtime, metadata, values, times, ranges):
 
     s = runtime.scaler
     segment_results = []
-    x, y, persistence, origins = windows(metadata, values, times, s)
-    predicted = predict(runtime, x)
+    x, y, persistence, origins = windows(
+        metadata, values, times, s, allow_empty=True
+    )
+    predicted = predict(runtime, x) if len(x) else y.copy()
     scale = s["y_scale"].copy()
     scale[3] *= metadata["profile"]["series_cells"]
     errors = (y - predicted) * scale
@@ -138,10 +144,14 @@ def _forecast_results(runtime, metadata, values, times, ranges):
                     windows=int(mask.sum()),
                     rmse=np.sqrt(
                         np.mean(errors[mask] ** 2, axis=(0, 1))
-                    ).tolist(),
+                    ).tolist()
+                    if mask.any()
+                    else None,
                     persistence_rmse=np.sqrt(
                         np.mean(baseline_errors[mask] ** 2, axis=(0, 1))
-                    ).tolist(),
+                    ).tolist()
+                    if mask.any()
+                    else None,
                 ),
                 scores=calibration.forecast_scores(
                     y[mask, -1], predicted[mask, -1], s
@@ -168,12 +178,16 @@ def _forecast_results(runtime, metadata, values, times, ranges):
         targets=["body_rate_p", "body_rate_q", "body_rate_r", "pack_voltage"],
         units=["rad/s", "rad/s", "rad/s", "V"],
         windows=len(x),
-        rmse=np.sqrt(np.mean(errors**2, axis=(0, 1))).tolist(),
+        rmse=np.sqrt(np.mean(errors**2, axis=(0, 1))).tolist()
+        if len(x)
+        else None,
         persistence_rmse=np.sqrt(
             np.mean(baseline_errors**2, axis=(0, 1))
-        ).tolist(),
-        first_origin_us=int(origins[0]),
-        last_origin_us=int(origins[-1]),
+        ).tolist()
+        if len(x)
+        else None,
+        first_origin_us=int(origins[0]) if len(x) else None,
+        last_origin_us=int(origins[-1]) if len(x) else None,
         series=series,
     )
     return result, scoring, segment_results
@@ -192,6 +206,7 @@ def _health_results(runtime, metadata, values, times, ranges):
     x = ((physical - s["x_mean"]) / s["x_scale"]).astype("f4")
 
     segments = []
+    measured = observed_targets(metadata, times, {"pack_voltage"})
     for a, b in ranges:
         predicted = runtime.predict_scaled(
             x[None, a:b], np.array([b - a], dtype="i8")
@@ -205,21 +220,39 @@ def _health_results(runtime, metadata, values, times, ranges):
                     predicted,
                     x[a:b, 17],
                     cell_voltage_scale=float(s["x_scale"][17]),
+                    observed_mask=measured[a:b],
                 ),
             )
         )
+    scored = [
+        row for row in segments if row["components"]["status"] == "available"
+    ]
     scoring = dict(
-        components=[row["components"] for row in segments],
+        components=[row["components"] for row in scored],
         scores=[
             calibration.health_score(row["components"], float(s["x_scale"][17]))
-            for row in segments
+            for row in scored
         ],
-        time_us=[row["end_us"] for row in segments],
+        time_us=[row["end_us"] for row in scored],
         unit="segment_voltage_standardized_rmse",
     )
     result = dict(segments=segments, frames=len(x), whole_flight_verdict=False)
-    for row, score in zip(segments, scoring["scores"]):
+    score_iter = iter(scoring["scores"])
+    for row in segments:
         c = row["components"]
+        if c["status"] != "available":
+            segment_results.append(
+                dict(
+                    start_us=row["start_us"],
+                    end_us=row["end_us"],
+                    frames=row["frames"],
+                    metrics=dict(samples=0),
+                    scores=[],
+                    scoring=dict(components=[]),
+                )
+            )
+            continue
+        score = next(score_iter)
         segment_results.append(
             dict(
                 start_us=row["start_us"],
@@ -391,7 +424,11 @@ def analyze_run(
             metadata = package[0]
             adapted = (
                 registry.active_folder(
-                    data_root, metadata["profile"], model_id, bundle=bundle
+                    data_root,
+                    metadata["profile"],
+                    model_id,
+                    bundle=bundle,
+                    fill_policy=metadata.get("timing", {}).get("fill_policy"),
                 )
                 if use_active
                 else None

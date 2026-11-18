@@ -22,7 +22,13 @@ from .adapt_support import (
     set_trainable,
 )
 from .catalog import Catalog, digest
-from .prepared import distinct_flights, load, segment_ranges, windows
+from .prepared import (
+    distinct_flights,
+    load,
+    observed_targets,
+    segment_ranges,
+    windows,
+)
 from .runtime import Runtime
 
 
@@ -35,15 +41,24 @@ def write(path, row):
 
 
 def health_segments(flight, scaler):
-    metadata, values, _ = flight
+    metadata, values, times = flight
     physical = values.copy()
     physical[:, 17] /= metadata["profile"]["series_cells"]
     physical[:, 18] /= metadata["profile"]["capacity_ah"]
     x = ((physical - scaler["x_mean"]) / scaler["x_scale"]).astype("f4")
-    return [x[a:b] for a, b in segment_ranges(metadata, len(x))]
+    measured = observed_targets(metadata, times, {"pack_voltage"})
+    segments = [
+        (x[a:b], measured[a:b])
+        for a, b in segment_ranges(metadata, len(x))
+        if measured[a + models.BLOCK : b].any()
+    ]
+    if not segments:
+        raise ValueError("No measured voltage after the initial ten seconds")
+    return segments
 
 
-def health_objective(model, x, cache=None, key=None):
+def health_objective(model, segment, cache=None, key=None):
+    x, measured = segment
     device = next(model.parameters()).device
     values = torch.from_numpy(x[None]).to(device)
     lengths = torch.tensor([len(x)], dtype=torch.int64, device=device)
@@ -52,7 +67,11 @@ def health_objective(model, x, cache=None, key=None):
         if cache is None
         else cache.prediction(values, [key], lengths)
     )
-    return models.normal_loss(predicted, values[:, :, 17], lengths)
+    if measured[models.BLOCK :].all():
+        return models.normal_loss(predicted, values[:, :, 17], lengths)
+    keep = torch.from_numpy(measured[models.BLOCK :]).to(device)
+    residual = predicted[0, models.BLOCK :] - values[0, models.BLOCK :, 17]
+    return residual[keep].square().mean()
 
 
 def fit(
@@ -151,6 +170,7 @@ def fit(
         origin=metadata[0]["origin"],
         live_input=metadata[0].get("live_input"),
         operating_policy=metadata[0].get("timing", {}).get("operating_policy"),
+        fill_policy=metadata[0].get("timing", {}).get("fill_policy"),
         epochs=epochs,
         learning_rate=learning_rate,
         device=device,

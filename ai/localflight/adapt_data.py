@@ -41,6 +41,8 @@ def training_groups(paths, flights, views):
                 )
                 or other.get("timing", {}).get("operating_policy")
                 != metadata.get("timing", {}).get("operating_policy")
+                or other.get("timing", {}).get("fill_policy")
+                != metadata.get("timing", {}).get("fill_policy")
                 or other["role"] != "adaptation"
                 or provenance.get("parent_manifest_sha256") != digest(path)
                 or not provenance.get("recipe_sha256")

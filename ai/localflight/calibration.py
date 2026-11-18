@@ -43,6 +43,8 @@ def binding(runtime, metadata, adaptation=None):
     )
     if timing.get("operating_policy"):
         result["operating_policy"] = timing["operating_policy"]
+    if timing.get("fill_policy"):
+        result["fill_policy"] = timing["fill_policy"]
     return result
 
 
@@ -334,6 +336,8 @@ def decide(record, scores, *, source_sha256=None, evidence=None):
             reason="학습·보정에 사용한 비행: 독립 판정에서 제외",
             calibration_id=record["id"],
         )
+    if a.ndim != 1 or len(a) == 0 or not np.isfinite(a).all() or np.any(a < 0):
+        return dict(status="unavailable", reason="유효한 예측/실측 쌍 없음")
     if record.get("schema") == detector.POLICY:
         if evidence is None:
             return dict(
@@ -346,8 +350,6 @@ def decide(record, scores, *, source_sha256=None, evidence=None):
             validation_status=record["validation_status"],
             scope="retained_scored_observations_only",
         )
-    if a.ndim != 1 or len(a) == 0 or not np.isfinite(a).all() or np.any(a < 0):
-        return dict(status="unavailable", reason="유효한 예측/실측 쌍 없음")
     alarms = a > record["threshold"]
     return dict(
         status="suspect" if bool(alarms.any()) else "normal",

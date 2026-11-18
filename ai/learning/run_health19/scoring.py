@@ -12,7 +12,7 @@ from learning.run_health19 import data
 from .models import BLOCK
 
 
-def components(predicted, observed, *, cell_voltage_scale):
+def components(predicted, observed, *, cell_voltage_scale, observed_mask=None):
     predicted, observed = np.asarray(predicted), np.asarray(observed)
     if predicted.ndim != 1 or predicted.shape != observed.shape:
         raise ValueError(
@@ -30,10 +30,16 @@ def components(predicted, observed, *, cell_voltage_scale):
     short, long, samples = 0.0, 0.0, 0
     for start in range(BLOCK, len(residual), BLOCK):
         block = residual[start : start + BLOCK]
+        if observed_mask is not None:
+            block = block[observed_mask[start : start + BLOCK]]
+            if not len(block):
+                continue
         mean = block.mean()
         short += float(np.square(block - mean).sum())
         long += len(block) * float(mean**2)
         samples += len(block)
+    if not samples:
+        return dict(status="unavailable", reason="no_post_initial_observations")
     return dict(
         status="available",
         samples=samples,

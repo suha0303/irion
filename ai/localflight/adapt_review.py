@@ -27,6 +27,7 @@ def _normal_error(result):
                 s["components"]["short_cell_v"], s["components"]["long_cell_v"]
             )
             for s in result["metrics"]["segments"]
+            if s["components"]["status"] == "available"
         ]
     )
 
@@ -104,6 +105,7 @@ def _event_detection(result, record, event, voltage_scale):
             [
                 np.abs(np.asarray(s["residual"])[:, 3]) / voltage_scale
                 for s in result["metrics"]["series"]
+                if s["residual"]
             ]
         )
     covered = (times >= start) & (times <= end)
@@ -226,6 +228,10 @@ def review(
             health=meta["health"],
             decisions=decisions,
         )
+        if any(d["status"] == "unavailable" for d in decisions.values()):
+            missing.append("evaluation_observations_unavailable")
+            rows.append(row)
+            continue
         if meta["health"] == "confirmed_normal" and meta.get("health_evidence"):
             normal_count += 1
             before, after = (
