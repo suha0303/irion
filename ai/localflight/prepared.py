@@ -16,6 +16,19 @@ from .catalog import digest, read_json
 from .profiles import eligibility
 
 REVISION = "real-common19-segmented-v2"
+GAP_FILL_POLICY = "bounded-causal-hold/2"
+
+
+def observed_targets(metadata, times, fields=None):
+    """Mask timestamps where a target was supplied by the extra gap hold."""
+    filled = metadata.get("timing", {}).get("filled_target_times_us", {})
+    excluded = [
+        stamp
+        for name, stamps in filled.items()
+        if fields is None or name in fields
+        for stamp in stamps
+    ]
+    return ~np.isin(times, excluded)
 
 
 def segment_ranges(metadata, length):
@@ -133,20 +146,30 @@ def load(path, *, normal=False):
     return m, values.astype("f8"), times
 
 
-def windows(metadata, values, times, scaler):
+def windows(metadata, values, times, scaler, *, allow_empty=False):
     # Explicit nameplate conversion; the frozen training scaler itself is never
     # refit.
     physical = values.copy()
     physical[:, 17] /= metadata["profile"]["series_cells"]
     physical[:, 18] /= metadata["profile"]["capacity_ah"]
+    observed = observed_targets(metadata, times)
     indices = np.array(
         [
             i
             for a, b in segment_ranges(metadata, len(values))
             for i in range(a + 99, b - 10, 10)
-        ]
+            if observed[i + 1 : i + 11].all()
+        ],
+        dtype=np.intp,
     )
     if len(indices) == 0:
+        if allow_empty:
+            return (
+                np.empty((0, 100, 19), dtype="f4"),
+                np.empty((0, 10, 4), dtype="f4"),
+                np.empty((0, 4), dtype="f4"),
+                times[:0],
+            )
         raise ValueError("No complete causal history and arrived future target")
     x = np.stack([physical[i - 99 : i + 1] for i in indices])
     y = np.stack([physical[i + 1 : i + 11, [4, 5, 6, 17]] for i in indices])
@@ -183,6 +206,8 @@ def distinct_flights(records):
         raise ValueError(
             "Do not mix different flight-state preparation policies"
         )
+    if len({m.get("timing", {}).get("fill_policy") for m in records}) > 1:
+        raise ValueError("Do not mix different gap fill policies")
     inputs = {json.dumps(m.get("live_input"), sort_keys=True) for m in records}
     if len(inputs) > 1:
         raise ValueError("Do not mix different telemetry acquisition settings")

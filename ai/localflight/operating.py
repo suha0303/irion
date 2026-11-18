@@ -1,6 +1,8 @@
 """Causal flight-controller state, separate from continuous model features."""
 
 POLICY = "fc-confirmed-airborne-history/1"
+DESCENT_POLICY = "fc-confirmed-airborne-and-descent/2"
+LANDING_SILENCE_US = 10_000_000
 FIELDS = {"arming_state", "landed", "nav_state", "landed_state"}
 REASONS = {
     "flight_state_unknown": "비행 상태 누락·오래됨 · 예측 보류",
@@ -9,7 +11,14 @@ REASONS = {
 }
 
 
-def exclusion(state, timestamp):
+def exclusion(
+    state,
+    timestamp,
+    *,
+    include_descent=False,
+    include_takeoff=False,
+    include_armed_ground=False,
+):
     """Return a reason unless fresh observations confirm armed and airborne.
 
     Arming uses PX4's common-mapper enum (2 = armed). MAVLink's explicit
@@ -26,10 +35,10 @@ def exclusion(state, timestamp):
         if landed not in (1, 2, 3, 4) or timestamp - observed > 2_500_000:
             return "flight_state_unknown"
         return {
-            1: "not_airborne",
+            1: None if include_armed_ground else "not_airborne",
             2: None,
-            3: "takeoff_or_landing",
-            4: "takeoff_or_landing",
+            3: None if include_takeoff else "takeoff_or_landing",
+            4: None if include_descent else "takeoff_or_landing",
         }[landed]
     landed, observed = state.get("landed", (None, -1))
     if landed not in (0, 1) or timestamp - observed > 2_500_000:

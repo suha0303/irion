@@ -165,27 +165,37 @@ def aggregate(analyses, *, context=None, spans=None, exclusions=None):
             adapted_variants=len({a.get("adapted_sha256") for a in parts}),
         )
         if "windows" in parts[0]["metrics"]:
-            weights = np.array([a["metrics"]["windows"] for a in parts])
+            metrics = [a["metrics"] for a in parts if a["metrics"]["windows"]]
+            weights = [m["windows"] for m in metrics]
             row.update(
                 targets=parts[0]["metrics"]["targets"],
                 units=parts[0]["metrics"]["units"],
-                windows=int(weights.sum()),
+                windows=sum(weights),
             )
             for key in ("rmse", "persistence_rmse"):
-                row[key] = np.sqrt(
-                    np.average(
-                        np.array([a["metrics"][key] for a in parts]) ** 2,
-                        axis=0,
-                        weights=weights,
-                    )
-                ).tolist()
+                row[key] = (
+                    np.sqrt(
+                        np.average(
+                            np.array([m[key] for m in metrics]) ** 2,
+                            axis=0,
+                            weights=weights,
+                        )
+                    ).tolist()
+                    if weights
+                    else None
+                )
         else:
-            segments = [s for a in parts for s in a["segment_results"]]
-            weights = np.array([s["metrics"]["samples"] for s in segments])
+            segments = [
+                s
+                for a in parts
+                for s in a["segment_results"]
+                if s["metrics"]["samples"]
+            ]
+            weights = [s["metrics"]["samples"] for s in segments]
             row.update(
                 targets=["pack_voltage"],
                 units=["V"],
-                samples=int(weights.sum()),
+                samples=sum(weights),
                 rmse=[
                     float(
                         np.sqrt(
@@ -198,7 +208,9 @@ def aggregate(analyses, *, context=None, spans=None, exclusions=None):
                             )
                         )
                     )
-                ],
+                ]
+                if weights
+                else None,
             )
         models.append(row)
     suspect = any(m["segment_counts"]["suspect"] for m in models)

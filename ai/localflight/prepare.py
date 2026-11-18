@@ -19,15 +19,17 @@ from pathlib import Path
 import numpy as np
 
 from capstone_ai import mapping
-from capstone_ai.mapping import FEATURES, RATES
+from capstone_ai.mapping import FEATURES, RATES, TARGETS
 from learning.history19.preprocessing import LowPass
 from localflight import bin_reader, operating, run_summary
 
 from .catalog import digest
 from .logs import PX4_REQUIRED, inspect_log
-from .prepared import REVISION
+from .prepared import GAP_FILL_POLICY, REVISION
 from .profiles import eligibility
 from .timing import clock_maps, split_streams
+
+GAP_FILL_MAX_AGE_MS = 1000
 
 
 def _finite(value):
@@ -315,22 +317,40 @@ class CausalSampler:
         battery_max_age_ms=350,
         *,
         require_airborne=False,
+        fill_gaps=False,
+        include_takeoff=False,
     ):
-        self.fast_max_age_ms = fast_max_age_ms
-        self.battery_max_age_ms = battery_max_age_ms
+        self.fast_max_age_ms = (
+            min(fast_max_age_ms, GAP_FILL_MAX_AGE_MS)
+            if fill_gaps
+            else fast_max_age_ms
+        )
+        self.battery_max_age_ms = (
+            min(battery_max_age_ms, GAP_FILL_MAX_AGE_MS)
+            if fill_gaps
+            else battery_max_age_ms
+        )
         self.latest, self.filters, self.previous_sample = {}, {}, {}
         self.position = 0
         self.next_us = None
         self.segment_start_us = None
         self.require_airborne = require_airborne
+        self.fill_gaps = fill_gaps
         self.operating = {}
         self.operating_exclusion = None
+        self.was_airborne = False
+        self.include_takeoff = include_takeoff
+        self.has_left_ground = False
+        self.filled_frames = 0
+        self.filled_target_times = {}
+
+    def _age_limits(self, name):
+        battery = name.startswith("pack_")
+        normal = self.battery_max_age_ms if battery else self.fast_max_age_ms
+        maximum = GAP_FILL_MAX_AGE_MS if self.fill_gaps else normal
+        return normal * 1000, maximum * 1000
 
     def sample(self, events, start_us, end_us):
-        fast_max_age_ms, battery_max_age_ms = (
-            self.fast_max_age_ms,
-            self.battery_max_age_ms,
-        )
         latest, filters, previous_sample = (
             self.latest,
             self.filters,
@@ -350,6 +370,9 @@ class CausalSampler:
                     filters.clear()
                     previous_sample.clear()
                     self.operating.clear()
+                    self.was_airborne = False
+                    self.has_left_ground = False
+                    self.segment_start_us = None
                     boundaries.add(len(values))
                     position += 1
                     continue
@@ -373,13 +396,7 @@ class CausalSampler:
                 }
                 if any(
                     name in latest
-                    and sample - latest[name][1]
-                    > (
-                        battery_max_age_ms
-                        if name.startswith("pack_")
-                        else fast_max_age_ms
-                    )
-                    * 1000
+                    and sample - latest[name][1] > self._age_limits(name)[1]
                     for name in updates
                 ):
                     latest.clear()
@@ -413,12 +430,15 @@ class CausalSampler:
                         or name
                         in {"climb_rate", "pack_voltage", "pack_current"}
                     )
-                    limit = (
-                        battery_max_age_ms
-                        if name.startswith("pack_")
-                        else fast_max_age_ms
-                    ) * 1000
+                    limit = self._age_limits(name)[1]
                     old = latest.get(name)
+                    if (
+                        self.fill_gaps
+                        and value is None
+                        and old
+                        and old[0] is not None
+                    ):
+                        boundaries.add(len(values))
                     if old is not None and sample - old[1] > limit:
                         boundaries.add(len(values))
                     if continuous and value is not None:
@@ -434,17 +454,24 @@ class CausalSampler:
                     latest[name] = (value, sample)
                 position += 1
 
+            filled = set()
+
             def at(name, frame_time=t):
                 if name not in latest:
                     return None
                 v, sample = latest[name]
-                limit = (
-                    battery_max_age_ms
-                    if name.startswith("pack_")
-                    else fast_max_age_ms
-                ) * 1000
-                if v is None or frame_time - sample > limit:
+                normal_age, hard_age = self._age_limits(name)
+                age = frame_time - sample
+                if v is None or age > hard_age:
                     return None
+                if age > normal_age:
+                    filled.add(name)
+                    # Freeze the causal estimate at the normal age limit.
+                    frame_time = (
+                        max(sample + normal_age, filters[name].t)
+                        if name in filters
+                        else frame_time
+                    )
                 return filters[name].at(frame_time)[1] if name in filters else v
 
             row = []
@@ -470,13 +497,35 @@ class CausalSampler:
                 for name, v in zip(FEATURES, row)
                 if v is None or not math.isfinite(v)
             ]
+            if self.include_takeoff:
+                armed = self.operating.get("arming_state", (None,))[0]
+                landed = self.operating.get("landed_state", (None,))[0]
+                if armed == 1:
+                    self.has_left_ground = False
+                elif armed == 2 and landed in (2, 3, 4):
+                    self.has_left_ground = True
             self.operating_exclusion = (
-                operating.exclusion(self.operating, t)
+                operating.exclusion(
+                    self.operating,
+                    t,
+                    include_descent=self.fill_gaps and self.was_airborne,
+                    include_takeoff=self.include_takeoff,
+                    include_armed_ground=self.include_takeoff
+                    and not self.has_left_ground,
+                )
                 if self.require_airborne
                 else None
             )
             if self.operating_exclusion:
                 missing.append(self.operating_exclusion)
+                if self.operating_exclusion == "not_airborne":
+                    self.was_airborne = False
+            elif self.require_airborne:
+                self.was_airborne = True
+            if filled and not missing:
+                self.filled_frames += 1
+                for name in filled.intersection(TARGETS):
+                    self.filled_target_times.setdefault(name, []).append(t)
             invalid.append(missing)
             values.append([np.nan if v is None else v for v in row])
             times.append(t)
@@ -497,6 +546,7 @@ def causal_frames(
     fast_max_age_ms=200,
     battery_max_age_ms=350,
     require_airborne=False,
+    fill_gaps=False,
 ):
     if (
         type(start_us) is not int
@@ -510,9 +560,15 @@ def causal_frames(
     for age in (fast_max_age_ms, battery_max_age_ms):
         if type(age) is not int or not 20 <= age <= 2000:
             raise ValueError("Sample hold limits must be integer 20..2000 ms")
-    values, times, invalid, boundaries = CausalSampler(
-        fast_max_age_ms, battery_max_age_ms, require_airborne=require_airborne
-    ).sample(events, start_us, end_us)
+    sampler = CausalSampler(
+        fast_max_age_ms,
+        battery_max_age_ms,
+        require_airborne=require_airborne,
+        fill_gaps=fill_gaps,
+    )
+    values, times, invalid, boundaries = sampler.sample(
+        events, start_us, end_us
+    )
     spans, start = [], None
     for i in range(len(times) + 1):
         valid = i < len(times) and not invalid[i]
@@ -578,12 +634,23 @@ def causal_frames(
         ),
         missing_by_feature=dict(reasons),
         boundary_count=len(boundaries),
-        fast_max_age_ms=fast_max_age_ms,
-        battery_max_age_ms=battery_max_age_ms,
+        fast_max_age_ms=sampler.fast_max_age_ms,
+        battery_max_age_ms=sampler.battery_max_age_ms,
         operating_policy=operating.POLICY if require_airborne else None,
         interpolation="causal bounded sample hold; no gap bridging",
         minimum_segment_frames=110,
     )
+    if fill_gaps:
+        report.update(
+            fill_policy=GAP_FILL_POLICY,
+            fill_max_age_ms=GAP_FILL_MAX_AGE_MS,
+            filled_frames=sampler.filled_frames,
+            filled_target_times_us=sampler.filled_target_times,
+            operating_policy=operating.DESCENT_POLICY
+            if require_airborne
+            else None,
+            interpolation=f"causal hold: up to {GAP_FILL_MAX_AGE_MS} ms per signal",
+        )
     return np.asarray(values, dtype="f8"), np.asarray(times, dtype="i8"), report
 
 
@@ -672,6 +739,7 @@ def prepare(
         fast_max_age_ms=fast_max_age_ms,
         battery_max_age_ms=battery_max_age_ms,
         require_airborne=profile["autopilot"] == "px4",
+        fill_gaps=True,
     )
     timing.update(
         clock_corrections=maps,

@@ -23,8 +23,12 @@ from localflight import operating, run_summary
 
 from .analysis import analyze, load_runtime
 from .catalog import DEFAULT_BUNDLE, Catalog, digest, read_json
+from .mavlink_input import DisarmGuard as DisarmGuard
+from .mavlink_input import Mapper
+from .mavlink_input import decode as decode
+from .mavlink_input import number as number
 from .prepare import CausalSampler, causal_frames
-from .prepared import REVISION
+from .prepared import GAP_FILL_POLICY, REVISION, observed_targets
 from .profiles import eligibility
 from .registry import active_folder
 
@@ -87,226 +91,12 @@ def validate(request):
     )
 
 
-def number(value):
-    return (
-        float(value)
-        if type(value) in (int, float) and math.isfinite(value)
-        else None
-    )
-
-
 def input_binding(request):
     """Keep acquisition settings with saved data and calibration identity."""
     binding = dict(imu_message=request["imu_message"], imu_id=request["imu_id"])
     if "telemetry_policy" in request:
         binding["telemetry_policy"] = request["telemetry_policy"]
     return binding
-
-
-def decode(name, f, p, request):
-    """common.xml SI/FRD/NED semantics, explicit channels/instances and
-    masks.
-    """
-    if name == "HEARTBEAT":
-        mode = f.get("base_mode")
-        return dict(
-            arming_state=(2 if mode & 128 else 1)
-            if type(mode) is int and 0 <= mode <= 255
-            else None
-        )
-    if name == "EXTENDED_SYS_STATE":
-        return dict(landed_state=number(f.get("landed_state")))
-    if name == "ATTITUDE":
-        return dict(
-            zip(
-                ("roll", "pitch", "body_rate_p", "body_rate_q", "body_rate_r"),
-                (
-                    number(f.get(k))
-                    for k in (
-                        "roll",
-                        "pitch",
-                        "rollspeed",
-                        "pitchspeed",
-                        "yawspeed",
-                    )
-                ),
-            )
-        )
-    if name == "ATTITUDE_TARGET":
-        mask = f.get("type_mask", 255)
-        return {
-            "rate_target_" + a: None if mask & (1 << i) else number(f.get(k))
-            for i, (a, k) in enumerate(
-                zip(
-                    "pqr",
-                    ("body_roll_rate", "body_pitch_rate", "body_yaw_rate"),
-                )
-            )
-        }
-    if name == request["imu_message"]:
-        if name == "HIGHRES_IMU" and f.get("id", 0) != request["imu_id"]:
-            return {}
-        scale = 1 if name == "HIGHRES_IMU" else 9.80665 / 1000
-        return {
-            "specific_force_" + a: (
-                number(f.get(a + "acc")) * scale
-                if number(f.get(a + "acc")) is not None
-                else None
-            )
-            for i, a in enumerate("xyz")
-            if name != "HIGHRES_IMU" or f.get("fields_updated", 0) & (1 << i)
-        }
-    if name == "LOCAL_POSITION_NED":
-        v = number(f.get("vz"))
-        return dict(climb_rate=-v if v is not None else None)
-    if name == "POSITION_TARGET_LOCAL_NED":
-        v = number(f.get("vz"))
-        # Only LOCAL_NED. Body/local-offset frames require a separate
-        # conversion.
-        return dict(
-            climb_target=-v
-            if v is not None
-            and f.get("coordinate_frame") == 1
-            and not f.get("type_mask", 65535) & 32
-            else None
-        )
-    if name == "SERVO_OUTPUT_RAW" and f.get("port") == p["actuator_instance"]:
-        return {
-            "motor_request_" + pos: (
-                (number(f.get(f"servo{channel}_raw")) - p["output_min"])
-                / (p["output_max"] - p["output_min"])
-                if number(f.get(f"servo{channel}_raw")) is not None
-                else None
-            )
-            for pos, channel in p["motor_channels"].items()
-        }
-    if name == "BATTERY_STATUS" and f.get("id") == p["battery_instance"]:
-        # MAVLink uses summed mV cells, UINT16_MAX for unused primary slots,
-        # and 0 for unused extension slots. Capacity is never inferred here.
-        cells = f.get("voltages", [])
-        valid = [number(v) for v in cells if v != 65535]
-        extension = [
-            number(v) for v in f.get("voltages_ext", []) if v not in (0, 65535)
-        ]
-        voltage = (
-            sum(valid + extension) / 1000
-            if valid and all(v is not None and v > 0 for v in valid + extension)
-            else None
-        )
-        current = number(f.get("current_battery"))
-        return dict(
-            pack_voltage=voltage,
-            pack_current=None
-            if current is None or current == -1
-            else current / 100,
-        )
-    return {}
-
-
-class DisarmGuard:
-    """Require an observed arming and three fresh disarmed heartbeats over 2
-    s.
-    """
-
-    def __init__(self):
-        self.seen_armed = False
-        self.first = self.last = None
-        self.count = 0
-
-    def accept(self, armed, timestamp):
-        if armed is True:
-            self.seen_armed = True
-        if armed is not False or not self.seen_armed:
-            self.first = self.last = None
-            self.count = 0
-            return
-        if self.last is not None and timestamp <= self.last:
-            return
-        if self.last is None or timestamp - self.last > 3_000_000:
-            self.first, self.count = timestamp, 0
-        self.last = timestamp
-        self.count += 1
-
-    @property
-    def ready(self):
-        return self.count >= 3 and self.last - self.first >= 2_000_000
-
-
-class Mapper:
-    """Convert received MAVLink observations into ordered profile-bound
-    events.
-    """
-
-    def __init__(self, request):
-        self.request = request
-        self.profile = request["profile"]
-        self.base = None
-        self.previous = {}
-        self.heartbeat = None
-        self.last_us = 0
-        self.last_receipt = None
-        self.messages = {}
-        self.resets = 0
-        self.duplicates = 0
-        self.armed = None
-        self.disarm = DisarmGuard()
-
-    def accept(self, item):
-        if item.get("type") != "mavlink":
-            return []
-        raw = item["raw"]
-        if (raw["source_system"], raw["source_component"]) != (
-            self.request["source_system"],
-            self.request["source_component"],
-        ):
-            return []
-        ns = raw["receive_monotonic_ns"]
-        if type(ns) is not int or ns < 0:
-            raise ValueError("Invalid receipt timestamp")
-        if self.base is None:
-            self.base = ns
-        # A monotonic-clock reset is a hard stop, never fabricated elapsed time.
-        if self.last_receipt is not None and ns < self.last_receipt:
-            raise ValueError("수신 시계 역행: 새 세션이 필요합니다.")
-        self.last_receipt = ns
-        t = (ns - self.base) // 1000
-        self.last_us = t
-        name, fields = raw["message_name"], raw["fields"]
-        self.messages[name] = self.messages.get(name, 0) + 1
-        if name == "HEARTBEAT":
-            expected = 12 if self.profile["autopilot"] == "px4" else 3
-            if fields.get("autopilot") != expected:
-                raise ValueError(
-                    "HEARTBEAT autopilot과 기체 프로파일이 다릅니다."
-                )
-            self.heartbeat = t
-            mode = fields.get("base_mode")
-            self.armed = (
-                bool(mode & 128)
-                if type(mode) is int and 0 <= mode <= 255
-                else None
-            )
-            self.disarm.accept(self.armed, t)
-        events = []
-        updates = decode(name, fields, self.profile, self.request)
-        clock = fields.get("time_boot_ms", fields.get("time_usec"))
-        key = (name, fields.get("id"), fields.get("port"))
-        old = self.previous.get(key)
-        if item.get("boundary") or (
-            old is not None and clock is not None and clock < old
-        ):
-            events.append((t, t, {"__reset__": True}))
-            self.previous.clear()
-            self.resets += 1
-            old = None
-        if clock is not None:
-            self.previous[key] = clock
-        if clock is not None and old == clock:
-            self.duplicates += 1
-            return events
-        if updates:
-            events.append((t, t, updates))
-        return events
 
 
 def completed(events, journal, output, request, origin, *, end_us=None):
@@ -344,7 +134,7 @@ def completed(events, journal, output, request, origin, *, end_us=None):
             ),
         )
     values, times, timing = causal_frames(
-        events, 0, end_us, require_airborne=True
+        events, 0, end_us, require_airborne=True, fill_gaps=True
     )
     segments = [s for s in timing["candidate_segments"] if s["usable"]]
     output.mkdir(exist_ok=False)
@@ -395,6 +185,16 @@ def completed(events, journal, output, request, origin, *, end_us=None):
                 timing=dict(
                     timing,
                     clock="receipt_monotonic",
+                    filled_target_times_us={
+                        key: [
+                            t
+                            for t in marks
+                            if times[indices[0]] <= t <= times[indices[-1]]
+                        ]
+                        for key, marks in timing[
+                            "filled_target_times_us"
+                        ].items()
+                    },
                     coverage=timing["complete_frames"]
                     / timing["requested_frames"],
                 ),
@@ -469,6 +269,7 @@ def arrived_decision(
     scaler,
     calibration,
     detector_state=None,
+    measured=None,
 ):
     """Score only an arrived exact target within the same uninterrupted
     segment.
@@ -485,6 +286,10 @@ def arrived_decision(
             continue
         index = np.searchsorted(times, prior["due"])
         if index >= len(times) or int(times[index]) != prior["due"]:
+            continue
+        if measured is not None and (
+            index < 9 or not measured[index - 9 : index + 1].all()
+        ):
             continue
         if detector_state is not None:
             target_times = prior["origin"] + np.arange(1, 11) * 100000
@@ -540,6 +345,13 @@ def run(request):
         profile=request["profile"],
         origin=admitted["origin"],
         live_input=input_binding(request),
+        timing=dict(
+            clock="receipt_monotonic",
+            fast_max_age_ms=200,
+            battery_max_age_ms=350,
+            operating_policy=operating.DESCENT_POLICY,
+            fill_policy=GAP_FILL_POLICY,
+        ),
     )
     bundle = request.get("bundle", DEFAULT_BUNDLE)
     adapted = (
@@ -548,6 +360,7 @@ def run(request):
             request["profile"],
             request["forecast_model"],
             bundle=bundle,
+            fill_policy=GAP_FILL_POLICY,
         )
         if request.get("use_active")
         else None
@@ -562,6 +375,7 @@ def run(request):
             request["profile"],
             request["post_model"],
             bundle=bundle,
+            fill_policy=GAP_FILL_POLICY,
         )
         if request.get("use_active")
         else None
@@ -576,12 +390,6 @@ def run(request):
         state["post_adapted_sha256"] = post_adaptation["model_sha256"]
     state["adapted_sha256"] = adaptation["model_sha256"] if adaptation else None
 
-    metadata["timing"] = dict(
-        clock="receipt_monotonic",
-        fast_max_age_ms=200,
-        battery_max_age_ms=350,
-        operating_policy=operating.POLICY,
-    )
     try:
         calibration = localflight_calibration.active(
             request["data_root"],
@@ -604,7 +412,7 @@ def run(request):
     alarm_path.touch(exist_ok=False)
     last_alarm_time = -1
     mapper = Mapper(request)
-    sampler = CausalSampler(require_airborne=True)
+    sampler = CausalSampler(require_airborne=True, fill_gaps=True)
     sampled_values, sampled_times = [], []
     events = []
     last_publish, last_data = 0.0, time.monotonic()
@@ -706,6 +514,14 @@ def run(request):
                             s,
                             calibration,
                             detector_state,
+                            measured=observed_targets(
+                                dict(
+                                    timing=dict(
+                                        filled_target_times_us=sampler.filled_target_times
+                                    )
+                                ),
+                                times,
+                            ),
                         )
                         if decision is not None:
                             state["decision"] = decision
@@ -772,15 +588,26 @@ def run(request):
                 write(path, state)
                 last_publish = time.monotonic()
             if not line:
+                now_us = (
+                    (time.monotonic_ns() - mapper.base) // 1000
+                    if mapper.base is not None
+                    else 0
+                )
+                auto_finish = folder / "auto-finish.json"
                 if (
                     request.get("auto_finish_disarm")
-                    and mapper.disarm.ready
-                    and not (folder / "auto-finish.json").exists()
+                    and mapper.disarm.landing_ready(
+                        now_us,
+                        mapper.last_measurement_us,
+                    )
+                    and not auto_finish.exists()
                 ):
                     write(
-                        folder / "auto-finish.json",
+                        auto_finish,
                         dict(
-                            reason="confirmed_disarm", receipt_us=mapper.last_us
+                            reason="confirmed_disarm",
+                            receipt_us=mapper.last_us,
+                            confirmed_at_us=now_us,
                         ),
                     )
                 if (folder / "finish").exists():
@@ -798,15 +625,22 @@ def run(request):
                         message="기록 종료 · 구간별 비행 후 분석 중",
                     )
                     write(path, state)
+                    end_us = (
+                        mapper.last_us + 100000
+                        if mapper.base is not None
+                        else 0
+                    )
+                    if auto_finish.exists():
+                        end_us = max(
+                            end_us, read_json(auto_finish)["confirmed_at_us"]
+                        )
                     result = completed(
                         events,
                         journal,
                         folder / "completed",
                         request,
                         admitted["origin"],
-                        end_us=mapper.last_us + 100000
-                        if mapper.base is not None
-                        else 0,
+                        end_us=min(end_us, 7_200_000_000),
                     )
                     write(folder / "result.json", result)
                     state.update(
