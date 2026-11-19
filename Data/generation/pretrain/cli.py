@@ -1078,6 +1078,10 @@ def parser():
     sub.add_parser(
         "main19", help="LR108·전체1674 실제 수집/전처리/검산·조회/중지/명시재개"
     )
+    sub.add_parser("mavlink", help="PX4 SITL의 MAVLink UDP 원문 수집")
+    sub.add_parser(
+        "mavlink-prepare", help="MAVLink 1,600건 10초 버퍼 전처리 및 재개"
+    )
     sub.add_parser("training19", help="LR108·승인된 본학습1674 계획 조회")
     sub.add_parser(
         "pilot45",
@@ -1212,6 +1216,14 @@ def parser():
 
 def main(argv=None):
     words = list(sys.argv[1:] if argv is None else argv)
+    if words[:1] == ["mavlink"]:
+        from .mavlink_capture import main as capture_main
+
+        return capture_main(words[1:])
+    if words[:1] == ["mavlink-prepare"]:
+        from .mavlink_prepare import main as prepare_main
+
+        return prepare_main(words[1:])
     if words[:1] == ["main19"]:
         from .main_collection import main as collection_main
 
