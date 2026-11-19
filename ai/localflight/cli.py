@@ -89,6 +89,7 @@ def execute(request):
                     metadata["profile"],
                     request["model_id"],
                     bundle=bundle,
+                    fill_policy=metadata.get("timing", {}).get("fill_policy"),
                 )
                 if request.get("use_active")
                 else None
@@ -124,6 +125,26 @@ def execute(request):
         from .live import validate
 
         return validate(request)
+    if action == "new19_adapt":
+        from learning.new19.real_adaptation import run
+
+        return dict(new19_candidate=run(request))
+    if action in {"v02_analyze", "v02_adapt"}:
+        from learning.new19.real_adaptation import execute_v02
+
+        return dict(v02=execute_v02(request))
+    if action == "buffered_live_validate":
+        from learning.new19.app_live import validate
+
+        return validate(request)
+    if action == "whole_live_validate":
+        from learning.new19.app_whole import validate
+
+        return validate(request)
+    if action == "buffered_live_replay":
+        from learning.new19.app_live import compare_replay
+
+        return compare_replay(request["output"])
     if action == "catalog":
         return dict(
             models=Catalog(bundle).list(), device="cpu", external_server=False

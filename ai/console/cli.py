@@ -498,14 +498,26 @@ def main(argv=None):
                 json.dumps(reconcile(args.root), indent=2, ensure_ascii=False)
             )
             return 0
-        if args.action == "train" and args.arguments[:1] == ["run-health"]:
+        model_commands = {
+            "run-health": "learning.run_health19.cli",
+            "new19": "learning.new19.cli",
+        }
+        if args.action == "train" and args.arguments[:2] == ["new19", "status"]:
+            from .new19_status import client
+
+            return client(args.arguments[2:])
+        if (
+            args.action == "train"
+            and args.arguments
+            and args.arguments[0] in model_commands
+        ):
             executable = profile.ROOT / "ai/.venv/bin/python"
             return subprocess.run(
                 [
                     str(executable),
                     "-B",
                     "-m",
-                    "learning.run_health19.cli",
+                    model_commands[args.arguments[0]],
                     *args.arguments[1:],
                 ],
                 env=environment({}),
