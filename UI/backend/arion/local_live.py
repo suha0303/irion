@@ -5,10 +5,13 @@ import json
 import os
 import re
 import time
+from pathlib import Path
 
 from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 
-from .local_flight import write
+from .buffered_chart import chart
+from .local_flight import WHOLE_MODELS, write
 from .local_insights import insights
 from .message_rates import input_policy
 from .streaming import SessionRun
@@ -25,6 +28,11 @@ class LocalLive:
         self.finish_locks = {}
         self.root = service.root / "live"
         self.root.mkdir(exist_ok=True)
+        self.delayed_bundle = os.getenv("ARION_NEW19_BUNDLE")
+        self.delayed_calibration = os.getenv("ARION_NEW19_CALIBRATION")
+        self.inflight_root = (
+            str(service.inflight_root) if service.inflight_root else None
+        )
         for path in self.root.glob("*/state.json"):
             state = json.loads(path.read_text(encoding="utf-8"))
             if state.get("status") not in ("finished", "error", "interrupted"):
@@ -36,17 +44,40 @@ class LocalLive:
                 write(path, state)
 
     def folder(self, run_id):
-        self.store.get(run_id)
         if not re.fullmatch(r"[a-zA-Z0-9_-]{1,100}", run_id):
             raise ValueError("Invalid session ID")
+        if self.service.whole_root or self.inflight_root:
+            if run_id not in self.store.catalog["sessions"]:
+                raise KeyError(run_id)
+        else:
+            self.store.get(run_id)
         return self.root / run_id
 
     def state(self, run_id):
         path = self.folder(run_id) / "state.json"
         if not path.exists():
+            run = self.store.get(run_id)
+            if self.service.whole_root:
+                return dict(
+                    status="unconfigured",
+                    mode="px4_whole_run",
+                    message="PX4 UDP 세션에 전체 런 모델 4종을 연결하세요.",
+                    whole_run_models=[model for model, _ in WHOLE_MODELS],
+                )
             return dict(
                 status="unconfigured",
                 message="기체 프로파일과 로컬 모델을 연결하세요.",
+                buffered_available=(
+                    isinstance(run, SessionRun)
+                    and run.config.kind == "udp"
+                    and bool(
+                        self.inflight_root
+                        or (self.delayed_bundle and self.delayed_calibration)
+                    )
+                ),
+                buffered_parallel=bool(
+                    self.inflight_root and run.config.kind == "udp"
+                ),
             )
         state = json.loads(path.read_text(encoding="utf-8"))
         if (
@@ -57,6 +88,7 @@ class LocalLive:
                 state,
                 status="stale",
                 prediction=None,
+                buffered_model_states=None,
                 decision=dict(
                     status="unavailable", reason="CPU 작업 응답 지연"
                 ),
@@ -107,6 +139,51 @@ class LocalLive:
             )
         }
         request["auto_finish_disarm"] = body.get("auto_finish_disarm", False)
+        whole = bool(self.service.whole_root)
+        parallel = bool(self.inflight_root and run.config.kind == "udp")
+        if self.service.v02 and run.config.kind != "udp":
+            raise ValueError(
+                "V0.2 모델을 사용하려면 PX4 MAVLink UDP 세션을 연결하세요."
+            )
+        delayed = not whole and (parallel or body.get("mode") == "px4_buffered")
+        if whole:
+            if body.get("mode") != "px4_whole_run" or run.config.kind != "udp":
+                raise ValueError(
+                    "전체 런 모델 4종은 PX4 UDP 세션에서 시작하세요."
+                )
+            request.update(
+                mode="px4_whole_run",
+                auto_rates=False,
+                auto_finish_disarm=False,
+                whole_root=str(self.service.whole_root),
+                wire=str(run.wire_path),
+            )
+        elif delayed:
+            if run.config.kind != "udp" or not (
+                self.inflight_root
+                or (self.delayed_bundle and self.delayed_calibration)
+            ):
+                raise ValueError(
+                    "PX4 10초 모드에는 UDP 세션과 서버의 학습·보정 번들 설정이 필요합니다."
+                )
+            if request["auto_finish_disarm"]:
+                raise ValueError(
+                    "PX4 10초 모드는 비행 종료 버튼으로 마감해 주세요."
+                )
+            request.update(
+                mode="px4_buffered",
+                auto_rates=False,
+                wire=str(run.wire_path),
+            )
+            if parallel:
+                request["inflight_root"] = self.inflight_root
+            else:
+                request.update(
+                    new19_bundle=str(Path(self.delayed_bundle).resolve()),
+                    new19_calibration=str(
+                        Path(self.delayed_calibration).resolve()
+                    ),
+                )
         request["telemetry_policy"] = (
             input_policy(run, request)
             if request.get("auto_rates") is True
@@ -123,17 +200,32 @@ class LocalLive:
             output=str(folder),
             data_root=str(self.service.root),
         )
-        await self.service.call(dict(request, action="live_validate"))
+        admitted = await self.service.call(
+            dict(
+                request,
+                action=(
+                    "whole_live_validate"
+                    if whole
+                    else "buffered_live_validate"
+                    if delayed
+                    else "live_validate"
+                ),
+            )
+        )
+        if delayed or whole:
+            request["binding"] = admitted
         # Recheck after subprocess awaits: only one worker/job may acquire the
         # CPU.
         if self.service.active or self.workers:
             raise HTTPException(409, "다른 로컬 AI 작업이 실행 중입니다.")
         folder.mkdir()
         write(folder / "request.json", request)
-        write(
-            folder / "state.json",
-            dict(status="starting", message="로컬 CPU 모델 준비 중"),
-        )
+        initial = dict(status="starting", message="로컬 CPU 모델 준비 중")
+        if delayed and parallel:
+            initial.update(
+                mode="px4_buffered", forecast_models=list(admitted["models"])
+            )
+        write(folder / "state.json", initial)
         env = dict(os.environ)
         env["PYTHONPATH"] = os.pathsep.join(
             str(self.service.project / p)
@@ -155,11 +247,15 @@ class LocalLive:
         process = None
         try:
             with (folder / "worker.log").open("wb") as log:
+                module = {
+                    "px4_buffered": "learning.new19.app_live",
+                    "px4_whole_run": "learning.new19.app_whole",
+                }.get(request.get("mode"), "localflight.live")
                 process = await asyncio.create_subprocess_exec(
                     str(self.service.python),
                     "-B",
                     "-m",
-                    "localflight.live",
+                    module,
                     cwd=self.service.project,
                     env=env,
                     stdin=asyncio.subprocess.PIPE,
@@ -229,6 +325,8 @@ class LocalLive:
             run = self.store.get(run_id)
             if run_id in self.store.active:
                 await self.store_sources.disconnect(run)
+                if self.service.whole_root and run.config.kind == "udp":
+                    self.finish(run_id)
                 run = await asyncio.to_thread(self.store.finish_session, run_id)
             self.finish(run_id)
             return run
@@ -251,6 +349,11 @@ def attach(app, service, store):
     @app.get("/api/sessions/{run_id}/local-ai")
     def state(run_id: str):
         result = live.state(run_id)
+        if service.v02 or result.get("mode") in {
+            "px4_whole_run",
+            "px4_buffered",
+        }:
+            return result
         result["insights"] = insights(service.root, run_id, result)
         result["rates"] = app.state.sources.rates.status(run_id)
         saved = store.get(run_id).path.with_suffix(".rates.json")
@@ -271,6 +374,49 @@ def attach(app, service, store):
             return await live.start(run_id, body)
         except (ValueError, KeyError) as error:
             raise HTTPException(422, str(error)) from error
+
+    @app.get("/api/sessions/{run_id}/local-ai/buffered-chart")
+    def buffered_chart(run_id: str, model: str | None = None):
+        session = store.catalog["sessions"].get(run_id)
+        folder = live.root / run_id
+        if not session or not (folder / "request.json").is_file():
+            raise HTTPException(404, "이 비행에 분석 그래프 기록이 없습니다.")
+        workers = getattr(app.state, "buffered_chart_workers", {})
+        try:
+            return JSONResponse(
+                chart(
+                    folder,
+                    model,
+                    workers.get(run_id),
+                    wire_sha=session.get("sha"),
+                )
+            )
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        except (OSError, KeyError, TypeError) as error:
+            raise HTTPException(
+                422, "저장된 그래프 자료를 읽지 못했습니다."
+            ) from error
+
+    @app.post("/api/sessions/{run_id}/local-ai/replay-buffered")
+    async def replay_buffered(run_id: str):
+        state = live.state(run_id)
+        if state.get("mode") != "px4_buffered" or state["status"] != "finished":
+            raise HTTPException(422, "종료된 PX4 10초 버퍼 세션을 선택하세요.")
+        if service.active or service.live_busy or run_id in live.workers:
+            raise HTTPException(409, "다른 로컬 AI 작업이 실행 중입니다.")
+        service.live_busy = True
+        try:
+            return await service.call(
+                dict(
+                    action="buffered_live_replay",
+                    output=str(live.folder(run_id)),
+                )
+            )
+        except (ValueError, KeyError) as error:
+            raise HTTPException(422, str(error)) from error
+        finally:
+            service.live_busy = False
 
     @app.post("/api/sessions/{run_id}/message-rates")
     async def configure_rates(run_id: str):

@@ -185,6 +185,8 @@ def _create_app(data_dir=None):
             ),
             "scope": "local-replay-and-live",
             "live_available": True,
+            "whole_run_only": local_flight.whole_root is not None,
+            "edition": "v0.2" if local_flight.v02 else "legacy",
         }
 
     @application.get("/api/runs")

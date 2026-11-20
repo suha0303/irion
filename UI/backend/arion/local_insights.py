@@ -68,6 +68,8 @@ def insights(root, run_id, state):
         "clock",
         "fast_max_age_ms",
         "battery_max_age_ms",
+        "operating_policy",
+        "fill_policy",
     )
     baseline_input = baseline.get("calibration_binding", {})
     jobs = sorted(

@@ -7,10 +7,47 @@ import os
 import re
 import time
 import uuid
+from datetime import date
 from pathlib import Path
 
 from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
+
+WHOLE_MODELS = [
+    (f"whole-run-{kind}-{size}", f"{label} · {size.replace('x', ' × ')}")
+    for kind, label in (("lstm", "LSTM"), ("transformer", "Transformer"))
+    for size in ("64x2", "128x4")
+]
+FLIGHT_MODELS = [
+    (model.replace("whole-run-", "inflight-"), label)
+    for model, label in WHOLE_MODELS
+]
+V02_ROLES = ("adaptation", "calibration", "evaluation")
+V02_JOB_ACTIONS = {
+    "inspect",
+    "timeline",
+    "prepare",
+    "admit_live",
+    "v02_analyze",
+    "v02_adapt",
+}
+V02_WORKER_ACTIONS = V02_JOB_ACTIONS | {
+    "profiles",
+    "save_profile",
+    "whole_live_validate",
+    "buffered_live_validate",
+    "buffered_live_replay",
+}
+V02_API_SECTIONS = {
+    "catalog",
+    "profiles",
+    "logs",
+    "timeline",
+    "prepare",
+    "live-prepared",
+    "jobs",
+    "v02",
+}
 
 
 def write(path, value):
@@ -62,6 +99,17 @@ class LocalFlight:
             else None
         )
         self.live_busy = False
+        whole_root = os.getenv("ARION_V02_WHOLE_ROOT") or os.getenv(
+            "ARION_NEW19_WHOLE_ROOT"
+        )
+        self.whole_root = Path(whole_root).resolve() if whole_root else None
+        inflight_root = os.getenv("ARION_V02_INFLIGHT_ROOT") or os.getenv(
+            "ARION_NEW19_INFLIGHT_ROOT"
+        )
+        self.inflight_root = (
+            Path(inflight_root).resolve() if inflight_root else None
+        )
+        self.v02 = bool(self.whole_root or self.inflight_root)
         self.process = None
         self.task = None
         self.root.mkdir(parents=True, exist_ok=True)
@@ -78,6 +126,8 @@ class LocalFlight:
         return self.python is not None and self.python.is_file()
 
     async def call(self, request, *, job=False):
+        if self.v02 and request["action"] not in V02_WORKER_ACTIONS:
+            raise ValueError("V0.2에서 제공하는 기능이 아닙니다.")
         if not self.available():
             raise ValueError(
                 "로컬 AI 환경을 찾지 못했습니다. ARION_AI_ROOT와 ai/.venv를 확인하세요."
@@ -125,12 +175,13 @@ class LocalFlight:
                 timeout=3610
                 if job and request["action"] in {"adapt", "tune"}
                 else 1800
-                if job
+                if job or request["action"] == "buffered_live_replay"
                 else 30,
             )
             if process.returncode:
                 raise ValueError(
-                    err.decode(errors="replace")[-4000:] or "로컬 작업 실패"
+                    err.decode(errors="replace")[-4000:]
+                    or f"로컬 작업 실패 (종료 코드 {process.returncode})"
                 )
             return json.loads(out)
         finally:
@@ -150,6 +201,8 @@ class LocalFlight:
         return self.root / "jobs" / (job_id + ".json")
 
     def create_job(self, request):
+        if self.v02 and request["action"] not in V02_JOB_ACTIONS:
+            raise HTTPException(404, "V0.2에서 제공하는 기능이 아닙니다.")
         if self.active or self.live_busy:
             raise HTTPException(
                 409, "다른 로컬 작업이 실행 중입니다. 완료하거나 중지해 주세요."
@@ -201,6 +254,37 @@ class LocalFlight:
                     write(path, row)
                     self.active = None
 
+    def v02_catalog(self):
+        if (
+            not self.available()
+            or not self.project
+            or not (
+                self.project / "ai/learning/new19/real_adaptation.py"
+            ).is_file()
+        ):
+            return []
+        models = []
+        for family, task, root in (
+            (FLIGHT_MODELS, "inflight", self.inflight_root),
+            (WHOLE_MODELS, "whole-run", self.whole_root or self.inflight_root),
+        ):
+            if not root:
+                continue
+            for model, label in family:
+                folder = root / model
+                if all(
+                    (folder / file).is_file()
+                    for file in (
+                        "fit/bundle.json",
+                        "fit/model.safetensors",
+                        "calibration/calibration.json",
+                    )
+                ):
+                    models.append(
+                        dict(id=model, task=task, label=label, root=str(root))
+                    )
+        return models
+
 
 def attach(app, root=None):
     service = LocalFlight(root)
@@ -211,6 +295,21 @@ def attach(app, root=None):
         if not service.available():
             return dict(
                 available=False, models=[], reason="로컬 AI 실행환경 미설치"
+            )
+        if service.v02:
+            return dict(
+                available=True,
+                edition="v0.2",
+                mode="px4_whole_run" if service.whole_root else "px4_buffered",
+                models=[
+                    {
+                        key: value
+                        for key, value in model.items()
+                        if key != "root"
+                    }
+                    for model in service.v02_catalog()
+                ],
+                device="cpu",
             )
         try:
             return dict(
@@ -401,6 +500,136 @@ def attach(app, root=None):
             )
         except (KeyError, ValueError) as error:
             raise HTTPException(422, str(error)) from error
+
+    def v02_selection(request):
+        available = {row["id"]: row["root"] for row in service.v02_catalog()}
+        models = request.get("models")
+        if not service.v02:
+            raise HTTPException(404, "V0.2 앱에서 실행하세요.")
+        if (
+            not isinstance(models, list)
+            or not models
+            or any(
+                not isinstance(model, str) or model not in available
+                for model in models
+            )
+            or len(set(models)) != len(models)
+        ):
+            raise HTTPException(422, "사용 가능한 V0.2 모델을 선택하세요.")
+        return dict(
+            models=models,
+            model_roots={model: available[model] for model in models},
+            output=str(service.root / "v02-jobs" / uuid.uuid4().hex),
+        )
+
+    @app.post("/api/local-ai/v02/analyze")
+    async def v02_analyze(request: dict):
+        options = v02_selection(request)
+        job_id = request.get("prepared_job")
+        if not isinstance(job_id, str):
+            raise HTTPException(422, "준비된 로그를 선택하세요.")
+        source = completed(job_id, "prepare")
+        return service.create_job(
+            dict(
+                action="v02_analyze",
+                manifest=source["result"]["manifest"],
+                path=source["request"].get("path"),
+                **options,
+            )
+        )
+
+    @app.post("/api/local-ai/v02/adapt")
+    async def v02_adapt(request: dict):
+        options = v02_selection(request)
+        logs = request.get("logs")
+        if not isinstance(logs, dict) or set(logs) != set(V02_ROLES):
+            raise HTTPException(422, "학습·보정·평가 자료를 각각 선택하세요.")
+        ids, sources, days = set(), {}, {}
+        selected = {}
+        for role in V02_ROLES:
+            if not isinstance(logs[role], list) or not logs[role]:
+                raise HTTPException(
+                    422, "학습·보정·평가 자료를 각각 선택하세요."
+                )
+            selected[role] = []
+            for entry in logs[role]:
+                if not isinstance(entry, dict) or set(entry) != {
+                    "job_id",
+                    "date",
+                }:
+                    raise HTTPException(
+                        422, "준비 구간과 수집 날짜를 지정하세요."
+                    )
+                job_id, day = entry["job_id"], entry["date"]
+                if not isinstance(job_id, str) or job_id in ids:
+                    raise HTTPException(
+                        422, "같은 준비 구간을 중복 선택했습니다."
+                    )
+                ids.add(job_id)
+                try:
+                    if date.fromisoformat(day).isoformat() != day:
+                        raise ValueError
+                except (TypeError, ValueError) as error:
+                    raise HTTPException(
+                        422, "수집 날짜를 YYYY-MM-DD 형식으로 입력하세요."
+                    ) from error
+                result = completed(job_id, "prepare")["result"]
+                health = result.get("health")
+                if result.get("role") != role or not (
+                    health == "confirmed_normal"
+                    or (role == "evaluation" and health == "abnormal")
+                ):
+                    raise HTTPException(
+                        422, "구간에 저장된 역할과 판정 근거를 확인하세요."
+                    )
+                source = result.get("source_sha256")
+                if not source or sources.setdefault(source, (role, day)) != (
+                    role,
+                    day,
+                ):
+                    raise HTTPException(
+                        422, "같은 원본에는 하나의 날짜와 역할만 지정하세요."
+                    )
+                if days.setdefault(day, role) != role:
+                    raise HTTPException(
+                        422, "같은 수집 날짜의 자료는 한 역할에 묶으세요."
+                    )
+                selected[role].append(
+                    dict(manifest=result["manifest"], date=day)
+                )
+        return service.create_job(
+            dict(action="v02_adapt", logs=selected, **options)
+        )
+
+    @app.get("/api/local-ai/v02/jobs/{job_id}/graphs/{model_id}/{index}")
+    async def v02_graph(job_id: str, model_id: str, index: int):
+        if (
+            not service.v02
+            or model_id not in dict(FLIGHT_MODELS + WHOLE_MODELS)
+            or index < 0
+        ):
+            raise HTTPException(404, "그래프를 찾을 수 없습니다.")
+        try:
+            row = json.loads(
+                service.job_path(job_id).read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError) as error:
+            raise HTTPException(404, "그래프를 찾을 수 없습니다.") from error
+        if row["status"] != "complete" or row["action"] not in {
+            "v02_analyze",
+            "v02_adapt",
+        }:
+            raise HTTPException(404, "그래프를 찾을 수 없습니다.")
+        key = "analyses" if row["action"] == "v02_analyze" else "candidates"
+        if not any(
+            model["model_id"] == model_id and index < len(model["evaluation"])
+            for model in row["result"]["v02"][key]
+        ):
+            raise HTTPException(404, "그래프를 찾을 수 없습니다.")
+        path = Path(row["request"]["output"]) / model_id / f"{index}.json"
+        if not path.is_file():
+            raise HTTPException(404, "그래프 파일을 찾을 수 없습니다.")
+        return FileResponse(path, media_type="application/json")
 
     @app.get("/api/local-ai/calibrations")
     async def calibrations():
@@ -853,10 +1082,21 @@ def attach(app, root=None):
             json.loads(p.read_text(encoding="utf-8"))
             for p in (service.root / "jobs").glob("*.json")
         ]
+        rows = [
+            row
+            for row in rows
+            if (
+                row["action"] in V02_JOB_ACTIONS
+                if service.v02
+                else row["action"] not in {"v02_analyze", "v02_adapt"}
+            )
+        ]
         for row in rows:
             if row["status"] == "running" and row["action"] in {
                 "adapt",
                 "tune",
+                "v02_analyze",
+                "v02_adapt",
             }:
                 p = Path(row["request"]["output"]) / "progress.json"
                 if p.is_file():
@@ -872,4 +1112,17 @@ def attach(app, root=None):
         await service.close()
         return json.loads(service.job_path(job_id).read_text(encoding="utf-8"))
 
+    # The two editions may share raw input/prepare contracts. Their model routes
+    # and job results are exposed only by the edition that owns them.
+    prefix = "/api/local-ai/"
+    app.router.routes[:] = [
+        route
+        for route in app.router.routes
+        if not route.path.startswith(prefix)
+        or (
+            route.path.removeprefix(prefix).split("/", 1)[0] in V02_API_SECTIONS
+            if service.v02
+            else not route.path.startswith(prefix + "v02/")
+        )
+    ]
     return service
