@@ -170,6 +170,8 @@ class NpzReplay(SessionRun):
                 duration_ms=self.duration_ms,
                 session=self.session_status(),
                 npz=self.archive.status(),
+                input_error_records=self.excluded,
+                input_issues=list(self.issues),
             )
             return output
         streams = [
@@ -198,6 +200,8 @@ class NpzReplay(SessionRun):
             "total_records": self.total_lines,
             "accepted_records": self.accepted,
             "excluded_records": self.excluded,
+            "input_error_records": self.excluded,
+            "input_issues": list(self.issues),
             "issues": list(self.issues),
             "boundaries": self.boundaries,
             "epochs": len(self.epoch_starts),

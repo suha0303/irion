@@ -22,6 +22,7 @@ PATH_KEYS = {
     "manifest",
     "manifests",
     "journal",
+    "wire",
     "data_root",
     "adapted",
     "resume",

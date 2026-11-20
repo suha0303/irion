@@ -1,7 +1,7 @@
-"""Timestamp transport arrivals independently of dashboard GC and disk I/O.
+"""Receive transport data independently of dashboard processing.
 
-Ubuntu distribution helper: inherits only the session's already-open fd.
-The parent retains all decoding, recording, display and command policy.
+Raw-only UDP is written directly to the session recording. Other transports
+continue to forward timestamped packets to the parent.
 """
 
 import json
@@ -12,8 +12,46 @@ import socket
 import sys
 import threading
 import time
+from struct import Struct
 
 MAX_QUEUED_PACKETS = 256  # At most 16 MiB of 65535-byte transport payloads.
+UDP_MAGIC = b"MLUDP001"
+UDP_RECORD = Struct("!QQ4sHH")
+
+
+def record_udp(fd, parent_pid, path):
+    """Append each received datagram without waiting for the display to catch up."""
+    stop = threading.Event()
+
+    def terminate(unused_signal, unused_frame):
+        stop.set()
+
+    signal.signal(signal.SIGTERM, terminate)
+    with (
+        socket.socket(fileno=fd) as handle,
+        open(path, "ab", buffering=0) as wire,
+    ):
+        try:
+            while not stop.is_set() and os.getppid() == parent_pid:
+                try:
+                    data, peer = handle.recvfrom(65535)
+                except BlockingIOError:
+                    stop.wait(0.002)
+                    continue
+                record = (
+                    UDP_RECORD.pack(
+                        time.monotonic_ns(),
+                        time.time_ns(),
+                        socket.inet_aton(peer[0]),
+                        peer[1],
+                        len(data),
+                    )
+                    + data
+                )
+                if wire.write(record) != len(record):
+                    raise OSError("Incomplete MAVLink UDP recording")
+        finally:
+            os.fsync(wire.fileno())
 
 
 def receive(fd, kind, parent_pid):
@@ -85,4 +123,7 @@ def receive(fd, kind, parent_pid):
 
 
 if __name__ == "__main__":
-    receive(int(sys.argv[1]), sys.argv[2], int(sys.argv[3]))
+    if len(sys.argv) == 5:
+        record_udp(int(sys.argv[1]), int(sys.argv[3]), sys.argv[4])
+    else:
+        receive(int(sys.argv[1]), sys.argv[2], int(sys.argv[3]))

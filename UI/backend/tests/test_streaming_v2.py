@@ -1,10 +1,13 @@
 """Check streaming epochs, reconnects, source validation and replay."""
 
 import asyncio
+import hashlib
 import json
 import os
 import socket
+import time
 from copy import deepcopy
+from threading import Thread
 
 import httpx
 import pytest
@@ -24,7 +27,13 @@ from arion.main import create_app
 from arion.providers import ProviderRegistry, compatibility, validate_result
 from arion.storage import Store
 from arion.store_v2 import StoreV2
-from arion.streaming import LiveSources, SessionRun
+from arion.streaming import (
+    UDP_MAGIC,
+    UDP_RECORD,
+    LiveSources,
+    SessionRun,
+    mavlink_record,
+)
 
 
 @pytest.fixture(name="store")
@@ -525,6 +534,121 @@ def test_crashed_journal_partial_tail_is_reported_and_original_kept(store):
         and run.path.read_bytes() == original
     )
     store.active.pop(run.run_id)
+
+
+def test_udp_wire_replay_restores_display_without_journalling_packets(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("ARION_NEW19_WHOLE_ROOT", str(tmp_path / "models"))
+    store = StoreV2(tmp_path)
+    run = store.create_session(
+        SourceConfig(kind="udp", source_system=1, source_component=1)
+    )
+    saved_header = run.path.read_bytes()
+    mav = common.MAVLink(None, srcSystem=1, srcComponent=1)
+    decoder = common.MAVLink(None)
+    raw = bytearray(UDP_MAGIC)
+    for i, ms in enumerate((0, 30, 160, 190)):
+        if i == 2:
+            run.force_boundary = True
+            run._write(dict(type="udp_reconnect", offset=len(raw)))
+        packet = mav.attitude_encode(ms + 1, 0, 0, i / 10, 0, 0, 0).pack(mav)
+        stamp = 1_000_000_000 + ms * 1_000_000
+        raw.extend(
+            UDP_RECORD.pack(
+                stamp, stamp, b"\x7f\x00\x00\x01", 14550, len(packet)
+            )
+            + packet
+        )
+        (message,) = decoder.parse_buffer(packet)
+        assert run.append_raw(mavlink_record(message, stamp, stamp))
+    run.wire_path.write_bytes(raw)
+    last_live = run.frame(run.duration_ms)
+    store.finish_session(run.run_id)
+    assert len(run.path.read_bytes().splitlines()) == 2
+    assert run.path.read_bytes().startswith(saved_header)
+    assert run.wire_path.read_bytes() == raw
+    assert run.sha256 == hashlib.sha256(raw).hexdigest()
+    summary_path = tmp_path / "records" / run.run_id / "manifest.json"
+    legacy_summary = json.loads(summary_path.read_bytes())
+    assert legacy_summary.pop("storage") == "udp-wire/1"
+    summary_path.write_text(json.dumps(legacy_summary), encoding="utf-8")
+    monkeypatch.delenv("ARION_NEW19_WHOLE_ROOT")
+    restored_store = StoreV2(tmp_path)
+    assert restored_store.list()[0]["storage"] == "udp-wire/1"
+    restored = restored_store.get(run.run_id)
+    assert restored.manifest()["storage"] == "udp-wire/1"
+    assert restored.accepted == 4 and restored.sha256 == run.sha256
+    assert restored.epoch_starts == [0, 160]
+    assert restored.frame(restored.duration_ms) == last_live
+
+
+def test_udp_wire_keeps_recording_during_dashboard_stall(store):
+    async def check():
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
+        store.compact_mavlink = True
+        run = store.create_session(SourceConfig(port=port))
+        manager = LiveSources(store)
+        await manager.connect(run)
+        packets = [i.to_bytes(4, "big") + b"\0" * 512 for i in range(450)]
+
+        def send():
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sender:
+                for payload in packets:
+                    sender.sendto(payload, ("127.0.0.1", port))
+                    time.sleep(0.002)
+
+        try:
+            receiver = manager.receivers[run.run_id]
+            await asyncio.sleep(0.1)
+            sender = Thread(target=send)
+            sender.start()
+            sender.join(timeout=4)  # Keep the dashboard event loop busy.
+            assert not sender.is_alive()
+            expected_size = len(UDP_MAGIC) + sum(
+                UDP_RECORD.size + len(packet) for packet in packets
+            )
+            deadline = time.monotonic() + 0.5
+            while (
+                run.wire_path.stat().st_size < expected_size
+                and time.monotonic() < deadline
+            ):
+                time.sleep(0.005)
+            with run.wire_path.open("rb") as wire:
+                assert wire.read(len(UDP_MAGIC)) == UDP_MAGIC
+                for expected in packets:
+                    header = wire.read(UDP_RECORD.size)
+                    assert len(header) == UDP_RECORD.size
+                    assert wire.read(UDP_RECORD.unpack(header)[-1]) == expected
+                assert not wire.read(1)
+            await asyncio.sleep(0.1)
+            assert receiver.returncode is None
+            assert len(run.path.read_bytes().splitlines()) == 1
+        finally:
+            await manager.close()
+
+    asyncio.run(check())
+
+
+def test_display_filters_do_not_displace_recorded_input_errors(store):
+    run = store.create_session(SourceConfig(source_system=1))
+    error = "MAVLink 프레임 해석 실패"
+    run.issue(error)
+    mav = common.MAVLink(None, srcSystem=2, srcComponent=1)
+    record = mavlink_record(mav.attitude_encode(1, 0, 0, 0, 0, 0, 0), 1, 1)
+    for _ in range(201):
+        assert not run.append_raw(record)
+
+    finished = store.finish_session(run.run_id)
+    manifest = finished.manifest()
+    assert manifest["excluded_records"] == 202
+    assert all(
+        item["reason"] == "다른 system 제외" for item in manifest["issues"]
+    )
+    assert manifest["input_error_records"] == 1
+    assert [item["reason"] for item in manifest["input_issues"]] == [error]
 
 
 def test_disconnected_normalized_stream_rejects_ingest_until_reconnected(store):

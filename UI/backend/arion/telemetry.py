@@ -76,6 +76,18 @@ def finite(value):
         return False
 
 
+def is_display_filter(reason):
+    """Identify valid telemetry omitted by the display's input selection."""
+    return reason.startswith(
+        ("미지원 메시지: ", "다른 source 제외: ")
+    ) or reason in {
+        "다른 system 제외",
+        "다른 component 제외",
+        "배터리 id 0 외 인스턴스 제외",
+        "ESC index 0 외 bank 제외",
+    }
+
+
 @dataclass
 class Sample:
     t_ms: float
@@ -434,6 +446,11 @@ class TelemetryRun:
 
     def manifest(self):
         statistics = []
+        input_issues = [
+            issue
+            for issue in self.issues
+            if not is_display_filter(issue["reason"])
+        ]
         for name, samples in self.by_stream.items():
             intervals = [
                 b.t_ms - a.t_ms
@@ -465,6 +482,8 @@ class TelemetryRun:
             "total_records": self.total_lines,
             "accepted_records": len(self.samples),
             "excluded_records": len(self.issues),
+            "input_error_records": len(input_issues),
+            "input_issues": input_issues,
             "issues": self.issues,
             "boundaries": self.boundaries,
             "epochs": len(self.epoch_starts),

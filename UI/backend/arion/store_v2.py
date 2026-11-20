@@ -13,6 +13,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 
 from .contracts import (
     InputProfile,
@@ -29,7 +30,7 @@ from .npz_archive import (
 )
 from .npz_replay import NpzReplay
 from .storage import Store
-from .streaming import SessionRun
+from .streaming import UDP_STORAGE, SessionRun
 from .telemetry import LABELS
 
 
@@ -40,6 +41,11 @@ class StoreV2(Store):
 
     def __init__(self, root):
         self.active = {}
+        self.compact_mavlink = bool(
+            os.environ.get("ARION_NEW19_WHOLE_ROOT")
+            or os.environ.get("ARION_NEW19_INFLIGHT_ROOT")
+        )
+        self._journal_load_lock = Lock()
         self.export_executor = None
         self._archive_cache = lru_cache(maxsize=4)(self._load_archive)
         self._journal_cache = lru_cache(maxsize=2)(self._load_journal)
@@ -95,7 +101,12 @@ class StoreV2(Store):
                     if archive:
                         archive.recover()
                         archive.close()
-                    row["sha"] = hash_file(path)
+                    source = (
+                        path.with_suffix(".mavlink.bin")
+                        if row.get("storage") == UDP_STORAGE
+                        else path
+                    )
+                    row["sha"] = hash_file(source)
         self._catalog_save()
 
     def profiles(self):
@@ -145,6 +156,7 @@ class StoreV2(Store):
             config,
             profile,
             run_id,
+            raw_only=self.compact_mavlink and config.kind == "udp",
         )
         with self.lock:
             self.catalog["sessions"][run_id] = {
@@ -153,6 +165,8 @@ class StoreV2(Store):
                 "sha": None,
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
+            if run.raw_only:
+                self.catalog["sessions"][run_id]["storage"] = UDP_STORAGE
             self._catalog_save()
             self.active[run_id] = run
         return run
@@ -168,6 +182,8 @@ class StoreV2(Store):
             self._catalog_save()
             self.active.pop(run_id)
         self._journal_cache.cache_clear()
+        if run.raw_only or self.compact_mavlink and run.config.kind == "udp":
+            return run
         return self.get(run_id)
 
     def archive_for(self, run_id):
@@ -197,6 +213,13 @@ class StoreV2(Store):
         return archive
 
     def journal(self, run_id, path):
+        if (
+            self.compact_mavlink
+            or self.catalog["sessions"][run_id].get("storage") == UDP_STORAGE
+        ):
+            # lru_cache permits concurrent initial loads of the same journal.
+            with self._journal_load_lock:
+                return self._journal_cache(run_id, path)
         return self._journal_cache(run_id, path)
 
     def _load_journal(self, run_id, path):
@@ -206,7 +229,7 @@ class StoreV2(Store):
                 self.root / "records" / run_id / "manifest.json"
             )
             return NpzReplay(Path(path), archive, summary)
-        return SessionRun(Path(path))
+        return SessionRun(Path(path), compact=self.compact_mavlink)
 
     def get(self, run_id):
         if run_id in self.active:
@@ -254,6 +277,8 @@ class StoreV2(Store):
                 and session.get("state") == "finished"
                 and session.get("kind") in {"udp", "tcp", "serial"}
             ):
+                if row.get("storage") == UDP_STORAGE:
+                    summary["storage"] = UDP_STORAGE
                 return summary
         return self.get(run_id).manifest()
 
