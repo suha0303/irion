@@ -25,10 +25,12 @@ export function Chart({
   option,
   height,
   label,
+  merge = false,
 }: {
   option: EChartsCoreOption;
   height: number;
   label: string;
+  merge?: boolean;
 }) {
   const element = useRef<HTMLDivElement>(null);
   const instance = useRef<echarts.EChartsType | null>(null);
@@ -44,8 +46,8 @@ export function Chart({
     };
   }, []);
   useEffect(() => {
-    instance.current?.setOption(option, { notMerge: true, lazyUpdate: false });
-  }, [option]);
+    instance.current?.setOption(option, { notMerge: !merge, lazyUpdate: false });
+  }, [option, merge]);
   return (
     <div ref={element} className="chart-canvas" style={{ height }} role="img" aria-label={label} />
   );

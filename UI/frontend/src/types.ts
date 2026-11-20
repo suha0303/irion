@@ -78,6 +78,7 @@ export interface Manifest {
     model_inference_period_ms: number | null;
   };
   source_kind?: 'live' | 'replay';
+  storage?: 'udp-wire/1' | null;
   session?: SessionState;
   profile?: InputProfile;
   run_id: string;
@@ -90,6 +91,8 @@ export interface Manifest {
   total_records: number;
   accepted_records: number;
   excluded_records: number;
+  input_error_records?: number;
+  input_issues?: Manifest['issues'];
   epochs: number;
   boundaries: { t_ms: number; epoch: number; reason: string; line: number }[];
   issues: { line: number; reason: string; severity: string }[];

@@ -56,6 +56,7 @@ export type Timing = {
   retained_frames?: number;
   coverage?: number;
   missing_or_stale_frames?: number;
+  filled_frames?: number;
   operating_excluded_frames?: number;
   clock_corrections?: Record<
     string,
@@ -111,8 +112,8 @@ export type Analysis = {
   metrics: {
     targets?: string[];
     units?: string[];
-    rmse?: number[];
-    persistence_rmse?: number[];
+    rmse?: number[] | null;
+    persistence_rmse?: number[] | null;
     segments?: unknown[];
     series?: ForecastSeries[];
   };
@@ -128,13 +129,89 @@ export type EventDetection = {
   response_domain_detected?: boolean;
 };
 
+export type V02Task = 'inflight' | 'whole-run';
+export type V02Role = 'adaptation' | 'calibration' | 'evaluation';
+export type V02Model = { id: string; label: string; task: V02Task };
+export type V02Rule = 'original' | 'x500' | 'calibrated';
+export type V02Prediction = 'original' | 'adapted' | 'persistence';
+export type V02Threshold = {
+  score: number | null;
+  threshold: number;
+  alarm: boolean | null;
+};
+export type V02Evaluation = {
+  prepared_sha256: string;
+  filename: string;
+  date: string | null;
+  health: 'confirmed_normal' | 'abnormal' | 'unknown';
+  scored_frames: number;
+  rmse: Partial<Record<V02Prediction, number[]>>;
+  decisions?: Partial<
+    Record<
+      V02Rule,
+      {
+        episodes: number;
+        alarm_seconds: number;
+        alarm_percent: number;
+        episode_starts_us: number[];
+      }
+    >
+  >;
+  whole_decisions?: Partial<
+    Record<
+      V02Rule,
+      {
+        available_segments: number;
+        alarm_segments: number;
+      }
+    >
+  >;
+  segments: {
+    start_us: number;
+    end_us: number;
+    scored_frames: number;
+    whole_decisions?: Partial<Record<V02Rule, V02Threshold>>;
+  }[];
+};
+export type V02ModelResult = { model_id: string; task: V02Task; evaluation: V02Evaluation[] };
+export type V02Candidate = V02ModelResult & {
+  profile_name: string;
+  active: false;
+  review_status: 'pending';
+  anomaly_evidence: boolean;
+  counts: Record<V02Role, number>;
+  thresholds: number[];
+};
+export type V02Result = {
+  filename?: string;
+  coverage?: {
+    context: RunSummary['context'];
+    analyzed_us: number;
+    retained_frames: number;
+    timeline: RunInterval[];
+  };
+  failures: Record<string, string>;
+  analyses: V02ModelResult[];
+  candidates: V02Candidate[];
+};
+
 export type Job = {
   id: string;
   action: string;
   status: string;
   error?: string;
-  progress?: { epoch?: number; train_loss?: number; stage?: string; elapsed_seconds?: number };
+  request?: { path?: string; profile?: { id?: string; name?: string } };
+  progress?: {
+    epoch?: number;
+    train_loss?: number;
+    stage?: string;
+    elapsed_seconds?: number;
+    model_id?: string;
+    finished?: number;
+    total?: number;
+  };
   result?: {
+    v02?: V02Result;
     counts?: Record<string, number>;
     note?: string;
     missing?: string[];
@@ -184,11 +261,15 @@ export type Job = {
   };
 };
 
+export function jobFilename(job: Job) {
+  return job.result?.filename || job.request?.path?.split(/[\\/]/).pop();
+}
+
 export type SegmentMetrics = {
   targets?: string[];
   units?: string[];
-  rmse?: number[];
-  persistence_rmse?: number[];
+  rmse?: number[] | null;
+  persistence_rmse?: number[] | null;
   windows?: number;
   samples?: number;
   short_cell_v?: number;

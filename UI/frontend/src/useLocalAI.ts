@@ -2,11 +2,36 @@ import { useEffect, useState } from 'react';
 import { api } from './api';
 import type { Analysis, Decision, RunSummary } from './local-flight-types';
 
+type BufferedCounts = { forecasts: number; scored_frames: number; alarm_frames: number };
+
 export type LocalState = {
   status: string;
   message?: string;
   scope?: string;
   finish_reason?: string;
+  mode?: string;
+  hold_ms?: number;
+  whole_run_models?: string[];
+  whole_summary?: {
+    frames: number;
+    valid_frames: number;
+    duration_s: number;
+    models: {
+      model_id: string;
+      alarm: boolean | null;
+      score: number | null;
+      threshold: number;
+      coverage?: number;
+    }[];
+  };
+  buffered_available?: boolean;
+  buffered_parallel?: boolean;
+  forecast_models?: string[];
+  buffered_model_states?: Record<
+    string,
+    BufferedCounts & { publishing: boolean; alarm: boolean | null }
+  > | null;
+  buffered_summary?: Partial<BufferedCounts> & { model_summaries?: Record<string, BufferedCounts> };
   forecast_model?: string;
   post_model?: string;
   adapted_sha256?: string;
