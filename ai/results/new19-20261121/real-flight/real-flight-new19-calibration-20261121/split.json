@@ -1,0 +1,421 @@
+{
+  "source": "User confirmed all ten BINs as normal",
+  "evaluation_scope": "Onboard ArduPilot BIN replay; grouped by controller and date",
+  "method": {
+    "reference": "FlightReference fitted on the assigned calibration BIN only",
+    "threshold": "99th percentile per raw score domain on the same calibration BIN",
+    "quantile": 0.99,
+    "quantile_method": "higher",
+    "postprocess": "Existing FlightAlarm with unchanged EMA, 3 s activation, and release"
+  },
+  "logs": [
+    {
+      "file": "2025-01-06 11-16-46.bin",
+      "group": "CubeOrange",
+      "controller_id_hash": "84246600ab45",
+      "day": "2025-01-06",
+      "role": "adaptation",
+      "original_sha256": "b04bfac8ff8a8c4010ced6981a122fb47975d16d9e3adb1caac60284a0656b21",
+      "airborne_runs": 3,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/2025-01-06 11-16-46.bin/part-01-01.npz",
+          "array_sha256": "cfbf42be8ef00bcc753279aabb58359a2d4cedbcf5fc500fdd84dacee4f5a26b",
+          "start_us": 185100000,
+          "end_us": 271700000,
+          "count": 867,
+          "flight_index": 0,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/2025-01-06 11-16-46.bin/part-02-01.npz",
+          "array_sha256": "fb921c2ee2cc7d6bd08c8d610f457ff003831af9e3d21920b1d6ba3759b00d61",
+          "start_us": 801600000,
+          "end_us": 1483100000,
+          "count": 6816,
+          "flight_index": 1,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/2025-01-06 11-16-46.bin/part-04-01.npz",
+          "array_sha256": "81d7918aff1b142db37907bdb42faa9b61ba1b10ef99b0b8bb78cff6f770835d",
+          "start_us": 1483300000,
+          "end_us": 1622100000,
+          "count": 1389,
+          "flight_index": 3,
+          "imu_instance": 0
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/2025-01-06 11-16-46.bin/part-05-01.npz",
+          "array_sha256": "2f37f3f643b10d8d489487c2f64ac10ea62eaed074de75f4bd42b5f37b197e7c",
+          "start_us": 1727000000,
+          "end_us": 2545600000,
+          "count": 8187,
+          "flight_index": 4,
+          "imu_instance": 1
+        }
+      ],
+      "excluded_short": [
+        {
+          "index": 2,
+          "start": 1483126012,
+          "end": 1483226011
+        }
+      ],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 44.0,
+      "firmware": "ArduCopter V4.4.0 (502702df)"
+    },
+    {
+      "file": "00000198.BIN",
+      "group": "CubeOrange",
+      "controller_id_hash": "84246600ab45",
+      "day": "2025-01-24",
+      "role": "adaptation",
+      "original_sha256": "196d8080f28ddd0ffc8de368726faf1d428d849ccec2550791003bf05a723487",
+      "airborne_runs": 3,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000198.BIN/part-01-01.npz",
+          "array_sha256": "72b5c798131783d4a4e54c5ec84218112ff5b82fa04f060a281fa7fe628fe143",
+          "start_us": 111200000,
+          "end_us": 190500000,
+          "count": 794,
+          "flight_index": 0,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000198.BIN/part-02-01.npz",
+          "array_sha256": "502d2e11f3eab92961d23d17660c70b80bb5ba82d691a79156bf059cf55d9c58",
+          "start_us": 453200000,
+          "end_us": 1273800000,
+          "count": 8207,
+          "flight_index": 1,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000198.BIN/part-03-01.npz",
+          "array_sha256": "3f0792bdb14a5af9b06bdabb2991fc591a8e6adc7d28ac071323554a614dd61c",
+          "start_us": 1411100000,
+          "end_us": 2230300000,
+          "count": 8193,
+          "flight_index": 2,
+          "imu_instance": 1
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 44.0,
+      "firmware": "ArduCopter V4.4.0 (502702df)"
+    },
+    {
+      "file": "00000005.BIN",
+      "group": "CubeOrange",
+      "controller_id_hash": "84246600ab45",
+      "day": "2025-03-13",
+      "role": "calibration",
+      "original_sha256": "36c08cfba95cc51b1a3d9284f6a68d12a3d7ff93d5f8d78bb53e25e3268dc82c",
+      "airborne_runs": 3,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000005.BIN/part-01-01.npz",
+          "array_sha256": "bf7913c2e0c96821c3582f18d30ecefd88b74ddda4ec824680dcb62f14b2d582",
+          "start_us": 586300000,
+          "end_us": 620800000,
+          "count": 346,
+          "flight_index": 0,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000005.BIN/part-02-01.npz",
+          "array_sha256": "05451ce3ba503dd7162824781898781ea0f19f5d385ee328b8df263de72d4848",
+          "start_us": 1608600000,
+          "end_us": 2297400000,
+          "count": 6889,
+          "flight_index": 1,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000005.BIN/part-03-01.npz",
+          "array_sha256": "68cdbb4d1701596ecd5b9d58bf333ab4fbf778c937bfc6299054cd43e48e2c7d",
+          "start_us": 2467400000,
+          "end_us": 3042200000,
+          "count": 5749,
+          "flight_index": 2,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000005.BIN/part-04-01.npz",
+          "array_sha256": "80f5b80b9826e113963f47e2915fb947f14bd3979a229fad7dc59aae6b108805",
+          "start_us": 3042300000,
+          "end_us": 3154700000,
+          "count": 1125,
+          "flight_index": 3,
+          "imu_instance": 0
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 44.0,
+      "firmware": "ArduCopter V4.4.0 (502702df)"
+    },
+    {
+      "file": "00000011.BIN",
+      "group": "CubeOrange",
+      "controller_id_hash": "84246600ab45",
+      "day": "2025-03-26",
+      "role": "evaluation",
+      "original_sha256": "7ced88c183c85dafa0433f998657235362ce150da2cc4a262fd1e076f9167446",
+      "airborne_runs": 5,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000011.BIN/part-01-01.npz",
+          "array_sha256": "b7af021ea231894b12a3471b00f8cbadddb2980939187054fac21e0a058308a7",
+          "start_us": 2326700000,
+          "end_us": 2360300000,
+          "count": 337,
+          "flight_index": 0,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000011.BIN/part-02-01.npz",
+          "array_sha256": "8b41bdf6594c883cfdf318054e4ec5ef38404754e1a11703fc6fb57c0ae103ad",
+          "start_us": 3268800000,
+          "end_us": 3923000000,
+          "count": 6543,
+          "flight_index": 1,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000011.BIN/part-03-01.npz",
+          "array_sha256": "3994ac14749b26feffa1ac8192c0d8d7fb7ac90162a0a447163d1263639ee063",
+          "start_us": 4376500000,
+          "end_us": 5029100000,
+          "count": 6527,
+          "flight_index": 2,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000011.BIN/part-04-01.npz",
+          "array_sha256": "f5b61d7c4942a2b1f37f4d8a3d287acae2a0c96bb3b30d27719ce8fa37c59ea3",
+          "start_us": 5219000000,
+          "end_us": 5334000000,
+          "count": 1151,
+          "flight_index": 3,
+          "imu_instance": 1
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000011.BIN/part-05-01.npz",
+          "array_sha256": "561bb97b271e6f9cc8a447a7ca4ac4e599476fa7df4c77b285a11667fb96c973",
+          "start_us": 5351100000,
+          "end_us": 5538600000,
+          "count": 1876,
+          "flight_index": 4,
+          "imu_instance": 1
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 44.0,
+      "firmware": "ArduCopter V4.4.0 (502702df)"
+    },
+    {
+      "file": "2025-01-06 11-27-03.bin",
+      "group": "CUAVv5",
+      "controller_id_hash": "e7199dc0ecc2",
+      "day": "2025-01-06",
+      "role": "adaptation",
+      "original_sha256": "d080cdf0de04057f40b21bb3ff4d5973f9b34c997c21447f9553494647153576",
+      "airborne_runs": 2,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/2025-01-06 11-27-03.bin/part-01-01.npz",
+          "array_sha256": "5b05b650c364fa6c3f2dd6e4c8fc2fabe128c02f996be4b5ff7737e198582afa",
+          "start_us": 549600000,
+          "end_us": 1160400000,
+          "count": 6109,
+          "flight_index": 0,
+          "imu_instance": 0
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/2025-01-06 11-27-03.bin/part-02-01.npz",
+          "array_sha256": "e2e3f49f0f0e8a84ed76250d3484665e45acd6b9c08d31f10ed37f37da0bc01d",
+          "start_us": 1478000000,
+          "end_us": 2088300000,
+          "count": 6104,
+          "flight_index": 1,
+          "imu_instance": 0
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 5.2,
+      "firmware": "ArduCopter V4.4.1 (e010f979)"
+    },
+    {
+      "file": "00000027.BIN",
+      "group": "CUAVv5",
+      "controller_id_hash": "e7199dc0ecc2",
+      "day": "2025-01-24",
+      "role": "adaptation",
+      "original_sha256": "598b97adc32da8512fd6f18f500bc4c6c1fd743a1ed28f888b755a1b8649ccca",
+      "airborne_runs": 3,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000027.BIN/part-01-01.npz",
+          "array_sha256": "d9620747f2fa540f2e2622ea1dcbc34f7bfe7cc90f11f2ed5dfa3baeac607a9f",
+          "start_us": 254600000,
+          "end_us": 348000000,
+          "count": 935,
+          "flight_index": 0,
+          "imu_instance": 0
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000027.BIN/part-02-01.npz",
+          "array_sha256": "ef90c66903584d33cc241b639b3d2ef648430b3bf3c60e69bb9213b3113db814",
+          "start_us": 548100000,
+          "end_us": 1159300000,
+          "count": 6113,
+          "flight_index": 1,
+          "imu_instance": 0
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000027.BIN/part-03-01.npz",
+          "array_sha256": "c7abbdd6ed38a980d2a0d6b7f14f20e8a2fe89d8c639058d18de63512587b52d",
+          "start_us": 1503600000,
+          "end_us": 2112200000,
+          "count": 6087,
+          "flight_index": 2,
+          "imu_instance": 0
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 5.2,
+      "firmware": "ArduCopter V4.4.1 (e010f979)"
+    },
+    {
+      "file": "00000028.BIN",
+      "group": "CUAVv5",
+      "controller_id_hash": "e7199dc0ecc2",
+      "day": "2025-03-13",
+      "role": "calibration",
+      "original_sha256": "9a1707977480d5ca9334752c055a3a330c8f30c364da0b4a72737d9d8c70489a",
+      "airborne_runs": 3,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000028.BIN/part-01-01.npz",
+          "array_sha256": "6480fb3c44d5a403729435a416da5f74c401a8b05e2e5e1cf4288e72a7e51c73",
+          "start_us": 153500000,
+          "end_us": 219800000,
+          "count": 664,
+          "flight_index": 0,
+          "imu_instance": 0
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000028.BIN/part-02-01.npz",
+          "array_sha256": "ac1468c3212b35c6b58046f9c163f80c87c8cbe924ca0a51863e28382f0e0ea7",
+          "start_us": 1202800000,
+          "end_us": 2011400000,
+          "count": 8087,
+          "flight_index": 1,
+          "imu_instance": 0
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000028.BIN/part-03-01.npz",
+          "array_sha256": "1351e4f65104b12a5cf8588a8ef20c9e5f89a1d6cea20e079d5270de19175c86",
+          "start_us": 2056400000,
+          "end_us": 2880100000,
+          "count": 8238,
+          "flight_index": 2,
+          "imu_instance": 0
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 5.2,
+      "firmware": "ArduCopter V4.4.1 (e010f979)"
+    },
+    {
+      "file": "00000029.BIN",
+      "group": "CUAVv5",
+      "controller_id_hash": "e7199dc0ecc2",
+      "day": "2025-03-26",
+      "role": "evaluation",
+      "original_sha256": "af6e84979a867800e0440349591394f11d50fd8a0c49c6c377b907fee10fcfba",
+      "airborne_runs": 1,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000029.BIN/part-01-01.npz",
+          "array_sha256": "8a88dccc08458152deea167aed7f2d8c1b5cd7431b7ab89d329761982dcf6762",
+          "start_us": 485700000,
+          "end_us": 664000000,
+          "count": 1784,
+          "flight_index": 0,
+          "imu_instance": 0
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 5.2,
+      "firmware": "ArduCopter V4.4.1 (e010f979)"
+    },
+    {
+      "file": "00000030.BIN",
+      "group": "CUAVv5",
+      "controller_id_hash": "e7199dc0ecc2",
+      "day": "2025-03-26",
+      "role": "evaluation",
+      "original_sha256": "4dcf51b3919e3289d3bf91d86e730789c1b2c2130977ef2c2abc59147db06299",
+      "airborne_runs": 1,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000030.BIN/part-01-01.npz",
+          "array_sha256": "1dda1557fc66bd50459d00019ab0666c91527c2025a2a3efde39a28c38bc4391",
+          "start_us": 182300000,
+          "end_us": 257400000,
+          "count": 752,
+          "flight_index": 0,
+          "imu_instance": 0
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 5.2,
+      "firmware": "ArduCopter V4.4.1 (e010f979)"
+    },
+    {
+      "file": "00000031.BIN",
+      "group": "CUAVv5",
+      "controller_id_hash": "e7199dc0ecc2",
+      "day": "2025-03-26",
+      "role": "evaluation",
+      "original_sha256": "a667942ed18a9946d493b53a1c4a1b374825b27eb32893ba25baa9a10aec1a34",
+      "airborne_runs": 2,
+      "parts": [
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000031.BIN/part-01-01.npz",
+          "array_sha256": "bd02627cf663bfcd05d873b0f0553a92531e7e9c157632fa35c0f7d7a95cf6ce",
+          "start_us": 238000000,
+          "end_us": 1067800000,
+          "count": 8299,
+          "flight_index": 0,
+          "imu_instance": 0
+        },
+        {
+          "path": "/home/sa/CapstoneV3/ai/reports/real-flight-new19-halves-20261121/runs/00000031.BIN/part-02-01.npz",
+          "array_sha256": "dbd6db1d32133302f9ee070d636aa3546b3a2dbe1ba692e0f8787a87a2863fb3",
+          "start_us": 1124900000,
+          "end_us": 1927400000,
+          "count": 8026,
+          "flight_index": 1,
+          "imu_instance": 0
+        }
+      ],
+      "excluded_short": [],
+      "series_cells": 12,
+      "capacity_ah_as_logged": 5.2,
+      "firmware": "ArduCopter V4.4.1 (e010f979)"
+    }
+  ]
+}

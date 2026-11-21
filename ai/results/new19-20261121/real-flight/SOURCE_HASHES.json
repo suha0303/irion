@@ -1,0 +1,26 @@
+{
+  "real-flight/real-flight-new19-calibration-20261121/summary.json": {
+    "source": "ai/reports/real-flight-new19-calibration-20261121/summary.json",
+    "sha256": "d50c2cb91cdcf12c5c2be6d932c10f3044c24afd50477ed91fc9416d42b47b1c"
+  },
+  "real-flight/real-flight-new19-calibration-20261121/split.json": {
+    "source": "ai/reports/real-flight-new19-calibration-20261121/split.json",
+    "sha256": "9c01697e6be99af9f2b215e0c6ff733c68ae0af849ab97c1138aff29f99a50d2"
+  },
+  "real-flight/real-flight-new19-calibration-20261121/evaluation.csv": {
+    "source": "ai/reports/real-flight-new19-calibration-20261121/evaluation.csv",
+    "sha256": "154eb47f3e2ff6b2bbe0ae3bfba249a63516f65ac0ed620dc2b1d8b5c8b0177d"
+  },
+  "real-flight/real-flight-new19-abnormal-audit-20261121/summary.json": {
+    "source": "ai/reports/real-flight-new19-abnormal-audit-20261121/summary.json",
+    "sha256": "ceace6589b3c82570e2ff927d4d6118e0bdea0b64ed34b0b98ccdaa07cebd0cd"
+  },
+  "real-flight/real-flight-new19-abnormal-audit-20261121/px4-results.csv": {
+    "source": "ai/reports/real-flight-new19-abnormal-audit-20261121/px4-results.csv",
+    "sha256": "dd287890cf0763ee36a833b98338d06498d14a70dd0a1f7411536c319d377668"
+  },
+  "real-flight/real-flight-new19-abnormal-audit-20261121/real-inventory.json": {
+    "source": "ai/reports/real-flight-new19-abnormal-audit-20261121/real-inventory.json",
+    "sha256": "3e35db00841334d65093e090bba0247501f58528a1fa04839e1c9c7a83a1fc0b"
+  }
+}

@@ -1,0 +1,191 @@
+{
+  "real_inventory": {
+    "archives": {
+      "\ube44\ud589\ub85c\uadf8.zip": [
+        {
+          "name": "00000005.BIN",
+          "sha256": "36c08cfba95cc51b1a3d9284f6a68d12a3d7ff93d5f8d78bb53e25e3268dc82c",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000011.BIN",
+          "sha256": "7ced88c183c85dafa0433f998657235362ce150da2cc4a262fd1e076f9167446",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000027.BIN",
+          "sha256": "598b97adc32da8512fd6f18f500bc4c6c1fd743a1ed28f888b755a1b8649ccca",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000028.BIN",
+          "sha256": "9a1707977480d5ca9334752c055a3a330c8f30c364da0b4a72737d9d8c70489a",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000029.BIN",
+          "sha256": "af6e84979a867800e0440349591394f11d50fd8a0c49c6c377b907fee10fcfba",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000030.BIN",
+          "sha256": "4dcf51b3919e3289d3bf91d86e730789c1b2c2130977ef2c2abc59147db06299",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000031.BIN",
+          "sha256": "a667942ed18a9946d493b53a1c4a1b374825b27eb32893ba25baa9a10aec1a34",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000198.BIN",
+          "sha256": "196d8080f28ddd0ffc8de368726faf1d428d849ccec2550791003bf05a723487",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "2025-01-06 11-16-46.bin",
+          "sha256": "b04bfac8ff8a8c4010ced6981a122fb47975d16d9e3adb1caac60284a0656b21",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "2025-01-06 11-27-03.bin",
+          "sha256": "d080cdf0de04057f40b21bb3ff4d5973f9b34c997c21447f9553494647153576",
+          "known_confirmed_normal": true
+        }
+      ],
+      "\ube44\ud589\ub85c\uadf83\uac74.zip": [
+        {
+          "name": "00000005.BIN",
+          "sha256": "36c08cfba95cc51b1a3d9284f6a68d12a3d7ff93d5f8d78bb53e25e3268dc82c",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000011.BIN",
+          "sha256": "7ced88c183c85dafa0433f998657235362ce150da2cc4a262fd1e076f9167446",
+          "known_confirmed_normal": true
+        },
+        {
+          "name": "00000198.BIN",
+          "sha256": "196d8080f28ddd0ffc8de368726faf1d428d849ccec2550791003bf05a723487",
+          "known_confirmed_normal": true
+        }
+      ]
+    },
+    "distinct_confirmed_normal": 10,
+    "confirmed_abnormal_in_archives": 0
+  },
+  "px4_fixed_abnormal_by_component": {
+    "normal": {
+      "files": 19,
+      "coverage_stopped_more_than_5s_before_landing": 10,
+      "x500": 4,
+      "CubeOrange_criterion_only": 1,
+      "CubeOrange_adapted_and_calibrated": 0,
+      "CUAVv5_criterion_only": 0,
+      "CUAVv5_adapted_and_calibrated": 0
+    },
+    "propulsion": {
+      "files": 4,
+      "coverage_stopped_more_than_5s_before_landing": 1,
+      "x500": 4,
+      "CubeOrange_criterion_only": 3,
+      "CubeOrange_adapted_and_calibrated": 0,
+      "CUAVv5_criterion_only": 1,
+      "CUAVv5_adapted_and_calibrated": 0
+    },
+    "battery+propulsion": {
+      "files": 9,
+      "coverage_stopped_more_than_5s_before_landing": 4,
+      "x500": 9,
+      "CubeOrange_criterion_only": 4,
+      "CubeOrange_adapted_and_calibrated": 0,
+      "CUAVv5_criterion_only": 3,
+      "CUAVv5_adapted_and_calibrated": 0
+    },
+    "battery": {
+      "files": 6,
+      "coverage_stopped_more_than_5s_before_landing": 2,
+      "x500": 6,
+      "CubeOrange_criterion_only": 1,
+      "CubeOrange_adapted_and_calibrated": 0,
+      "CUAVv5_criterion_only": 0,
+      "CUAVv5_adapted_and_calibrated": 0
+    }
+  },
+  "real_bin_synthetic_paired_response_by_part": {
+    "CubeOrange": {
+      "normal_control": {
+        "tested_parts": 5,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "voltage_step_0_3_v": {
+        "tested_parts": 5,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "voltage_step_1_2_v": {
+        "tested_parts": 5,
+        "alarms_after_onset": 5,
+        "additional_onsets_with_no_control_onset": 5
+      },
+      "voltage_ramp_1_2_v": {
+        "tested_parts": 5,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "voltage_offset_1_2_v": {
+        "tested_parts": 5,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "yaw_step_0_15_rad_s": {
+        "tested_parts": 5,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "yaw_sine_0_15_rad_s": {
+        "tested_parts": 5,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      }
+    },
+    "CUAVv5": {
+      "normal_control": {
+        "tested_parts": 4,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "voltage_step_0_3_v": {
+        "tested_parts": 4,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "voltage_step_1_2_v": {
+        "tested_parts": 4,
+        "alarms_after_onset": 4,
+        "additional_onsets_with_no_control_onset": 4
+      },
+      "voltage_ramp_1_2_v": {
+        "tested_parts": 4,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "voltage_offset_1_2_v": {
+        "tested_parts": 4,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "yaw_step_0_15_rad_s": {
+        "tested_parts": 4,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      },
+      "yaw_sine_0_15_rad_s": {
+        "tested_parts": 4,
+        "alarms_after_onset": 0,
+        "additional_onsets_with_no_control_onset": 0
+      }
+    }
+  }
+}

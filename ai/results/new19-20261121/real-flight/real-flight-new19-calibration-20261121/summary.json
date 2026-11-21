@@ -1,0 +1,74 @@
+{
+  "scope": "Onboard ArduPilot BIN replay; grouped by controller and date",
+  "method": {
+    "reference": "FlightReference fitted on the assigned calibration BIN only",
+    "threshold": "99th percentile per raw score domain on the same calibration BIN",
+    "quantile": 0.99,
+    "quantile_method": "higher",
+    "postprocess": "Existing FlightAlarm with unchanged EMA, 3 s activation, and release"
+  },
+  "groups": {
+    "CubeOrange": {
+      "evaluated_files": 1,
+      "scored_frames": 15934,
+      "calibration_frames": 13709,
+      "scored_minutes": 26.55666666666667,
+      "calibration_file": "00000005.BIN",
+      "original_thresholds": [
+        3.8689707334814436,
+        3.2367934263949816
+      ],
+      "controller_thresholds": [
+        6.8872029751015384,
+        6.16248469530041
+      ],
+      "results": {
+        "x500": {
+          "episodes": 9,
+          "alarm_frames": 14808,
+          "files_with_alarm": 1,
+          "alarm_percent": 92.93335006903477,
+          "alarm_seconds": 1480.8
+        },
+        "controller": {
+          "episodes": 0,
+          "alarm_frames": 0,
+          "files_with_alarm": 0,
+          "alarm_percent": 0.0,
+          "alarm_seconds": 0.0
+        }
+      }
+    },
+    "CUAVv5": {
+      "evaluated_files": 3,
+      "scored_frames": 18461,
+      "calibration_frames": 16689,
+      "scored_minutes": 30.768333333333334,
+      "calibration_file": "00000028.BIN",
+      "original_thresholds": [
+        3.8689707334814436,
+        3.2367934263949816
+      ],
+      "controller_thresholds": [
+        6.135292549992836,
+        7.449727152026648
+      ],
+      "results": {
+        "x500": {
+          "episodes": 6,
+          "alarm_frames": 17635,
+          "files_with_alarm": 3,
+          "alarm_percent": 95.5257028329993,
+          "alarm_seconds": 1763.5
+        },
+        "controller": {
+          "episodes": 1,
+          "alarm_frames": 133,
+          "files_with_alarm": 1,
+          "alarm_percent": 0.7204376794323167,
+          "alarm_seconds": 13.3
+        }
+      }
+    }
+  }
+}
