@@ -183,6 +183,9 @@
   margin-bottom: 16px;
   align-items: stretch;
 }
+.monitor-hero.single-panel {
+  grid-template-columns: minmax(0, 1fr);
+}
 .monitor-hero .flight-3d {
   margin: 0;
   min-height: 396px;
@@ -452,7 +455,7 @@
 }
 .observation-strip {
   display: grid;
-  grid-template-columns: 0.8fr 1.1fr 1.2fr 1fr;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1.2fr);
   border: 1px solid var(--workspace-line);
   border-radius: 11px;
   background: #fff;
@@ -511,27 +514,14 @@
   padding: 8px 0;
   cursor: pointer;
 }
-.balanced-workspace .charts-grid {
-  gap: 18px;
+.battery-trend {
   margin-bottom: 18px;
-}
-.balanced-workspace .motor-section {
-  margin-bottom: 18px;
-}
-.balanced-workspace .motor-grid {
-  gap: 12px;
-}
-.balanced-workspace .motor-rpm {
-  font-size: 25px;
 }
 .balanced-workspace .muted {
   font-size: 11px;
 }
 .balanced-workspace .text-button {
   font-size: 11px;
-}
-.balanced-workspace .page-footer {
-  font-size: 10px;
 }
 .balanced-workspace .playback-dock {
   left: 0;
@@ -548,9 +538,6 @@
 }
 .balanced-workspace .playback-title {
   font-size: 11px;
-}
-.balanced-workspace .playback-quality {
-  font-size: 10px;
 }
 .balanced-workspace .play-button {
   width: 34px;
@@ -603,21 +590,6 @@
 }
 .upload-notice strong {
   font-size: 12px;
-}
-.import-success {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border: 1px solid #d4eadd;
-  border-radius: 8px;
-  padding: 9px 13px;
-  margin-bottom: 14px;
-  font-size: 12px;
-  background: #f0f8f3;
-  color: #3e7563;
-}
-.import-success > span {
-  flex: 1;
 }
 .balanced-workspace .session-toolbar {
   margin-bottom: 14px;
@@ -683,13 +655,6 @@
   }
   .monitor-hero .flight-3d .panel-footnote span:last-child {
     display: none;
-  }
-  .observation-strip {
-    grid-template-columns: 1fr 1.15fr;
-    gap: 15px 0;
-  }
-  .observation-item:nth-child(3) {
-    border-left: 0;
   }
   .scene-position {
     display: none;
@@ -887,15 +852,11 @@
     border-left: 0;
     border-top: 1px solid #e8eef2;
   }
-  .observation-strip {
-    gap: 0;
-  }
   .observation-item strong {
     font-size: 21px;
   }
   .server-offline,
-  .balanced-workspace .upload-notice,
-  .import-success {
+  .balanced-workspace .upload-notice {
     flex-wrap: wrap;
   }
   .server-offline > div {
@@ -903,9 +864,6 @@
   }
   .server-offline .button {
     margin-left: 31px;
-  }
-  .import-success .text-button {
-    margin-left: 25px;
   }
   .upload-notice .button {
     margin-left: 31px;

@@ -80,24 +80,6 @@
   font-size: 12px;
   background: #fff4f1;
 }
-.archive-raw {
-  display: flex;
-  gap: 12px;
-  padding: 18px;
-  margin-bottom: 18px;
-}
-.archive-raw svg {
-  color: #7592a0;
-  flex-shrink: 0;
-}
-.archive-raw strong {
-  font-size: 13px;
-}
-.archive-raw p {
-  font-size: 12px;
-  color: #7b8998;
-  margin: 7px 0 0;
-}
 .spin {
   animation: archive-spin 1s linear infinite;
 }

@@ -1,7 +1,7 @@
 import { TuningJobResult } from './LocalTuning';
 import LocalRunResult from './LocalRunResult';
-import { useEffect, useRef, useState } from 'react';
-import { api, post, upload } from './api';
+import { useEffect, useState } from 'react';
+import { api, post } from './api';
 import './local-flight.css';
 import LocalPreparation, {
   AnalysisResult,
@@ -9,9 +9,11 @@ import LocalPreparation, {
   FlightEventResult,
 } from './LocalPreparation';
 import type { Profile, Job } from './local-flight-types';
+import { jobFilename } from './local-flight-types';
 import LocalModels from './LocalModels';
 import LocalCalibration from './LocalCalibration';
 import LocalProfile from './LocalProfile';
+import LogInspectionResult from './LogInspectionResult';
 
 type Model = { id: string; task: 'forecast' | 'run_health'; label: string; version: string };
 const labels: Record<string, string> = {
@@ -22,17 +24,48 @@ const labels: Record<string, string> = {
   cancelled: '중지',
   interrupted: '이전 실행 중단',
 };
+const actionNames: Record<string, string> = {
+  inspect: '로그 검사',
+  benchmark: 'CPU 실행 점검',
+  timeline: '보존 구간 검사',
+  prepare: '구간 저장',
+  analyze: '예측·분석',
+  adapt: '적응 학습',
+  tune: '두 모델 파인튜닝',
+  tune_select: '검증된 모델·보정 적용',
+  normal_plan: '정상 자료 배치',
+  compare: '독립 비교',
+  calibration_fit: '임계값 보정',
+  calibration_select: '보정 적용',
+  admit_live: '수신 비행 구간 등록',
+  model_register: '모델 등록',
+  model_import: '백업 가져오기',
+  model_export: '백업 내보내기',
+  model_select: '모델 적용',
+  model_rollback: '모델 원복',
+};
 
 type Page = 'profile' | 'logs' | 'analysis' | 'training' | 'models' | 'results';
 const pages: [Page, string, string][] = [
   ['profile', '기체 프로파일', '분석에 필요한 값과 로그에서 확인한 근거를 관리합니다.'],
   ['logs', '로그 준비', '로그를 가져오고 보존된 비행 구간을 선택합니다.'],
   ['analysis', '로그 분석', '모델을 선택해 준비된 비행을 분석합니다.'],
-  ['training', '파인튜닝 · 보정', '정상 학습, 독립 비교, 판정 기준 보정을 순서대로 진행합니다.'],
+  ['training', '파인튜닝 · 보정', '정상 학습, 판정 기준 보정, 독립 평가를 순서대로 진행합니다.'],
   ['models', '모델 보관함', '비교한 모델을 선택하거나 이전 버전으로 돌아갑니다.'],
-  ['results', '작업 결과', '작업을 선택하면 전체 런과 구간별 결과가 펼쳐집니다.'],
+  ['results', '작업 결과', ''],
 ];
-export default function LocalFlight({ active }: { active: boolean }) {
+
+export default function LocalFlight({
+  active,
+  uploadedLog,
+  chooseLog,
+  uploading,
+}: {
+  active: boolean;
+  uploadedLog: Job | null;
+  chooseLog: () => void;
+  uploading: boolean;
+}) {
   const [page, setPage] = useState<Page>('profile');
   const [query, setQuery] = useState('');
   const [resultPage, setResultPage] = useState(0);
@@ -41,26 +74,34 @@ export default function LocalFlight({ active }: { active: boolean }) {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [models, setModels] = useState<Model[]>([]);
+  const [wholeOnly, setWholeOnly] = useState(false);
   const [mode, setMode] = useState<'forecast' | 'run_health'>('forecast');
   const [selected, setSelected] = useState<string[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profileLog, setProfileLog] = useState('');
+  const [preparationLog, setPreparationLog] = useState('');
+  const [preparedId, setPreparedId] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [available, setAvailable] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
   const running = jobs.some((j) => j.status === 'running' || j.status === 'queued');
 
   useEffect(() => {
     let mounted = true;
     Promise.all([
-      api<{ available: boolean; models: Model[]; reason?: string }>('/local-ai/catalog'),
+      api<{
+        available: boolean;
+        models: Model[];
+        reason?: string;
+        mode?: string;
+      }>('/local-ai/catalog'),
       api<{ profiles: Profile[] }>('/local-ai/profiles'),
     ])
       .then(([c, p]) => {
         if (!mounted) return;
         setModels(c.models);
+        setWholeOnly(c.mode === 'px4_whole_run');
         setAvailable(c.available);
         setProfiles(p.profiles);
         if (c.reason) setError(c.reason);
@@ -80,6 +121,23 @@ export default function LocalFlight({ active }: { active: boolean }) {
     const ids = models.filter((m) => m.task === mode).map((m) => m.id);
     setSelected(ids.length ? [ids[0], ids.find((id) => id.includes('transformer')) ?? ids[0]] : []);
   }, [mode, models]);
+
+  function openResult(job: Job) {
+    setSelectedJob(job.id);
+    setJobFilter(job.action);
+    setQuery('');
+    setResultPage(0);
+    setPage('results');
+  }
+
+  useEffect(() => {
+    if (!uploadedLog) return;
+    setJobs((previous) =>
+      previous.some((job) => job.id === uploadedLog.id) ? previous : [uploadedLog, ...previous],
+    );
+    setProfileLog(uploadedLog.id);
+    openResult(uploadedLog);
+  }, [uploadedLog]);
 
   useEffect(() => {
     if (!active) return;
@@ -116,30 +174,104 @@ export default function LocalFlight({ active }: { active: boolean }) {
     }
   }
 
+  const kinds = [...new Set(jobs.map((job) => job.action))];
   const filteredJobs = jobs.filter(
     (j) =>
       (jobFilter === 'all' || j.action === jobFilter) &&
-      `${j.id} ${j.result?.filename ?? ''} ${j.result?.analyses?.map((a) => a.model_id).join(' ') ?? ''}`
+      `${j.id} ${jobFilename(j) ?? ''} ${j.result?.analyses?.map((a) => a.model_id).join(' ') ?? ''}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
   const maxResultPage = Math.max(0, Math.ceil(filteredJobs.length / 12) - 1);
   const currentResultPage = Math.min(resultPage, maxResultPage);
+  const inspections = jobs.filter((job) => job.action === 'inspect');
+  if (uploadedLog && !inspections.some((job) => job.id === uploadedLog.id)) {
+    inspections.unshift(uploadedLog);
+  }
+  const inspection = inspections.find((job) => job.id === selectedJob);
+  if (catalogLoading) return <p role="status">로컬 AI 기능을 확인하고 있습니다.</p>;
+  if (wholeOnly)
+    return (
+      <section className="local-flight" aria-label="전체 런 모델과 기체 프로파일">
+        <section className="panel local-live">
+          <h2>연결된 전체 런 모델</h2>
+          <ul>
+            {models.map((m) => (
+              <li key={m.id}>{m.label}</li>
+            ))}
+          </ul>
+        </section>
+        {error && (
+          <p className="notice error" role="alert">
+            {error}
+          </p>
+        )}
+        {inspections.length > 0 && (
+          <section className="panel local-live" aria-label="비행 로그 검사">
+            <h2>비행 로그 검사</h2>
+            <label className="form-label">
+              검사한 로그
+              <select
+                className="text-input"
+                value={selectedJob}
+                onChange={(e) => setSelectedJob(e.target.value)}
+              >
+                <option value="">로그 선택</option>
+                {inspections.map((job) => (
+                  <option key={job.id} value={job.id}>
+                    {job.result?.filename ?? job.id.slice(0, 8)} ·{' '}
+                    {labels[job.status] ?? job.status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {inspection && (
+              <>
+                <p role="status">{labels[inspection.status] ?? inspection.status}</p>
+                {inspection.error && (
+                  <p className="notice error" role="alert">
+                    {inspection.error}
+                  </p>
+                )}
+                {inspection.result && <LogInspectionResult result={inspection.result} />}
+                {inspection.result?.flight_events && (
+                  <FlightEventResult events={inspection.result.flight_events} />
+                )}
+                {inspection.result?.timing && <TimingResult timing={inspection.result.timing} />}
+              </>
+            )}
+          </section>
+        )}
+        <LocalProfile
+          profiles={profiles}
+          jobs={jobs}
+          pendingLog={profileLog}
+          disabled={!available}
+          onSaved={(saved) =>
+            setProfiles((previous) => [
+              ...previous.filter((p) => p.version !== saved.version),
+              saved,
+            ])
+          }
+          reinspect={(id) =>
+            perform(async () => {
+              const job = await post<Job>(`/local-ai/logs/${id}/reinspect`);
+              setJobs((previous) => [job, ...previous]);
+              setProfileLog(job.id);
+              setSelectedJob(job.id);
+            })
+          }
+        />
+      </section>
+    );
   return (
     <div>
       <section className="local-flight" aria-label="로컬 AI 관리 작업">
         <header>
-          <div>
-            <span className="eyebrow">CPU 추론 · GPU 선택 학습</span>
-            <p>
-              {catalogLoading
-                ? '모델 목록 확인 중…'
-                : `${models.length}종 모델 · 등록 기체 ${profiles.length}개 · ${running ? '작업 실행 중' : '작업 대기'}`}
-            </p>
-          </div>
-          <button className="button" onClick={() => setPage('results')}>
-            작업 결과 {jobs.length}개
-          </button>
+          <p role="status">
+            등록 기체 {new Set(profiles.map((item) => item.profile.id)).size}개 ·{' '}
+            {running ? '작업 실행 중' : '작업 대기'}
+          </p>
         </header>
         <nav className="local-task-nav" aria-label="로컬 AI 관리 메뉴">
           {pages.map(([id, label]) => (
@@ -150,12 +282,19 @@ export default function LocalFlight({ active }: { active: boolean }) {
               onClick={() => setPage(id)}
             >
               {label}
+              {id === 'results' && jobs.length > 0 && (
+                <span className="local-tab-count">{jobs.length}</span>
+              )}
             </button>
           ))}
         </nav>
         <div className="local-task-intro">
-          <h2>{pages.find(([id]) => id === page)?.[1]}</h2>
-          <p>{pages.find(([id]) => id === page)?.[2]}</p>
+          <h2>
+            {page === 'results'
+              ? `작업 결과 · ${filteredJobs.length}개`
+              : pages.find(([id]) => id === page)?.[1]}
+          </h2>
+          {page !== 'results' && <p>{pages.find(([id]) => id === page)?.[2]}</p>}
         </div>
         {error && (
           <div className="notice error" role="alert">
@@ -164,7 +303,7 @@ export default function LocalFlight({ active }: { active: boolean }) {
         )}
         <div className="local-flight-grid" data-page={page}>
           <section className="panel" hidden={page !== 'analysis' && page !== 'training'}>
-            <h2>분석 모델 선택</h2>
+            <h3>분석 모델 선택</h3>
             <label className="form-label">
               분석 모드
               <select
@@ -196,24 +335,6 @@ export default function LocalFlight({ active }: { active: boolean }) {
                 </select>
               </label>
             ))}
-            <p>
-              최신 2026-11-08 묶음 · {models.length}종 · CPU 실행
-              <br />
-              검증 범위는 X500 시뮬레이션입니다. 실기체 입력 연결·적응 성능은 별도 검증합니다.
-            </p>
-            <button
-              className="button"
-              disabled={!available || busy || running}
-              onClick={() =>
-                perform(async () => {
-                  const job = await post<Job>('/local-ai/benchmark');
-                  setJobs((j) => [job, ...j]);
-                })
-              }
-            >
-              16종 CPU 실행 점검
-            </button>
-            <small>합성 입력 기능·속도 점검입니다. 비행의 정상 여부를 판정하지 않습니다.</small>
           </section>
           <div hidden={page !== 'profile'}>
             <LocalProfile
@@ -238,38 +359,15 @@ export default function LocalFlight({ active }: { active: boolean }) {
           </div>
           <section className="panel" hidden={page !== 'logs'}>
             <h2>비행 로그 가져오기</h2>
-            <p>
-              PX4 ULog 또는 ArduPilot BIN의 메시지·필드·시간축·파서 경고를 확인합니다. 검사가 끝나면
-              로그에 명시된 프로파일 값을 자동으로 채웁니다. 정상 여부는 추정하지 않습니다.
-            </p>
-            <input
-              hidden
-              ref={input}
-              type="file"
-              accept=".bin,.BIN,.ulg"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file)
-                  void perform(async () => {
-                    const job = await upload<Job>('/local-ai/logs', file);
-                    setJobs((j) => [job, ...j]);
-                    setProfileLog(job.id);
-                  });
-                e.target.value = '';
-              }}
-            />
+            <p>PX4 ULog 또는 ArduPilot BIN을 가져오면 시간축과 기체 프로파일 후보를 확인합니다.</p>
             <button
               className="button primary"
-              disabled={!available || busy || running}
-              onClick={() => input.current?.click()}
+              disabled={!available || busy || running || uploading}
+              onClick={chooseLog}
             >
-              ULog / BIN 가져오기
+              {uploading ? '가져오는 중…' : 'ULog / BIN 가져오기'}
             </button>
             <small>최대 256 MiB · 원본 보관 · PC 내부 처리</small>
-            <div className="notice warning">
-              적응 학습에는 정상임이 확인된 비행과 검증된 신호 매핑이 필요합니다. 현재 정보가 없는
-              로그는 검사·열람 단계에 머뭅니다.
-            </div>
           </section>
           <LocalPreparation
             page={
@@ -284,11 +382,17 @@ export default function LocalFlight({ active }: { active: boolean }) {
             jobs={jobs}
             profiles={profiles}
             selectedModels={selected}
+            sourceLog={preparationLog}
+            onSourceLog={setPreparationLog}
+            preparedId={preparedId}
+            onPrepared={setPreparedId}
+            goToLogs={() => setPage('logs')}
             disabled={!available || busy || running}
             submit={(path, body) =>
               perform(async () => {
                 const job = await post<Job>(path, body);
                 setJobs((j) => [job, ...j]);
+                if (job.action === 'analyze' || job.action === 'prepare') openResult(job);
               })
             }
           />
@@ -343,18 +447,14 @@ export default function LocalFlight({ active }: { active: boolean }) {
                   }}
                 >
                   <option value="all">전체 작업</option>
-                  <option value="analyze">예측·분석</option>
-                  <option value="inspect">로그 검사</option>
-                  <option value="prepare">구간 저장</option>
-                  <option value="adapt">파인튜닝</option>
-                  <option value="tune">두 모델 파인튜닝</option>
-                  <option value="normal_plan">정상 자료 배치</option>
-                  <option value="compare">독립 비교</option>
-                  <option value="calibration_fit">보정</option>
+                  {kinds.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {actionNames[kind] ?? kind}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>
-            <h2>작업 결과 · {filteredJobs.length}개</h2>
             {jobsLoading && <p role="status">작업 목록을 불러오는 중…</p>}
             {!jobsLoading && jobs.length === 0 && <p>아직 실행한 작업이 없습니다.</p>}
             {filteredJobs.slice(currentResultPage * 12, currentResultPage * 12 + 12).map((job) => (
@@ -365,22 +465,11 @@ export default function LocalFlight({ active }: { active: boolean }) {
                   onClick={() => setSelectedJob((old) => (old === job.id ? '' : job.id))}
                 >
                   <strong>
-                    {{
-                      inspect: '로그 검사',
-                      benchmark: 'CPU 실행 점검',
-                      timeline: '보존 구간 검사',
-                      prepare: '구간 저장',
-                      analyze: '예측·분석',
-                      adapt: '적응 학습',
-                      tune: '두 모델 파인튜닝',
-                      tune_select: '검증된 모델·보정 적용',
-                      normal_plan: '정상 자료 배치',
-                      compare: '독립 비교',
-                      calibration_fit: '임계값 보정',
-                      calibration_select: '보정 적용',
-                      admit_live: '수신 비행 구간 등록',
-                    }[job.action] ?? job.action}{' '}
-                    · {job.id.slice(0, 8)} · {labels[job.status] ?? job.status}
+                    {jobFilename(job) ?? job.id.slice(0, 8)}
+                    {' · '}
+                    {actionNames[job.action] ?? job.action}
+                    {' · '}
+                    {labels[job.status] ?? job.status}
                   </strong>
                   <span>{selectedJob === job.id ? '접기' : '결과 보기'}</span>
                 </button>
@@ -412,33 +501,45 @@ export default function LocalFlight({ active }: { active: boolean }) {
                       />
                     )}
                     {job.result && job.action === 'inspect' && (
-                      <>
-                        <p>
-                          {job.result.filename} · {job.result.autopilot}
-                          <br />
-                          건강 상태 미확정 · 정상 학습에 사용하지 않음
-                          <br />
-                          후보 필드 누락:{' '}
-                          {Object.keys(job.result.missing_candidate_fields ?? {}).length}개 메시지
-                        </p>
-                        {job.result.parser_warnings && (
-                          <p className="local-warning">파서 경고: {job.result.parser_warnings}</p>
-                        )}
-                        <details>
-                          <summary>입력 진단 상세</summary>
-                          <pre>
-                            {JSON.stringify(
-                              {
-                                missing: job.result.missing_candidate_fields,
-                                parameters: job.result.parameters,
-                                messages: job.result.messages,
-                              },
-                              null,
-                              2,
-                            )}
-                          </pre>
-                        </details>
-                      </>
+                      <LogInspectionResult result={job.result} />
+                    )}
+                    {job.action === 'inspect' && job.status === 'complete' && (
+                      <div className="local-job-actions">
+                        <button
+                          className="button"
+                          onClick={() => {
+                            setProfileLog(job.id);
+                            setPage('profile');
+                          }}
+                        >
+                          기체 프로파일 확인
+                        </button>
+                        <button
+                          className="button primary"
+                          onClick={() => {
+                            setPreparationLog(job.id);
+                            setPage('logs');
+                          }}
+                        >
+                          이 로그의 구간 준비
+                        </button>
+                      </div>
+                    )}
+                    {job.action === 'prepare' && job.status === 'complete' && (
+                      <div className="local-job-actions">
+                        <button
+                          className="button"
+                          onClick={() => {
+                            setPreparedId(job.id);
+                            setPage('analysis');
+                          }}
+                        >
+                          이 구간 분석
+                        </button>
+                        <button className="button" onClick={() => setPage('training')}>
+                          파인튜닝 · 보정 열기
+                        </button>
+                      </div>
                     )}
                     {job.result && job.action === 'benchmark' && (
                       <details open>

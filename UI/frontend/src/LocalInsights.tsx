@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { LocalState } from './useLocalAI';
 import { localAlarms, localStatus, modelDecision } from './local-insights';
 import LocalRunResult from './LocalRunResult';
+import LocalScoreChart from './LocalScoreChart';
 
 const verdict = { normal: '정상 범위', suspect: '이상 의심', unavailable: '판정 불가' };
 const seconds = (us: number) => `${(us / 1e6).toFixed(1)}초`;
@@ -150,6 +151,26 @@ export default function LocalInsights({ state, error }: { state: LocalState; err
             </select>
           </label>
         </div>
+        {source !== 'live' &&
+          report?.analyses.map(
+            (analysis, index) =>
+              (model === 'all' || analysis.model_id === model) && (
+                <LocalScoreChart
+                  key={`${analysis.model_id}-${index}`}
+                  analysis={analysis}
+                  sourceLabel={
+                    state.insights?.report_source === 'saved_log_analysis'
+                      ? '저장 로그 재분석'
+                      : '종료 후 저장 결과'
+                  }
+                  clockLabel={
+                    report.run_summary?.context.clock === 'receipt_monotonic'
+                      ? '수신 시작 후 시간 (초)'
+                      : '로그 시각 (초)'
+                  }
+                />
+              ),
+          )}
         {state.insights && state.insights.alarm_count > state.insights.alarms.length && (
           <p>
             실시간 경보는 최근 {state.insights.alarms.length}건을 표시합니다. 전체 이력은 원본 경보

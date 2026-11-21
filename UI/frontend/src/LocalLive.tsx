@@ -1,26 +1,31 @@
 import LocalRunResult from './LocalRunResult';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import type { LocalState as State } from './useLocalAI';
 import { localStatus as statusNames } from './local-insights';
 import { api, post } from './api';
 import type { Profile } from './local-flight-types';
 import { DecisionResult } from './LocalPreparation';
+import { numeric } from './types';
+import WholeRunLive from './WholeRunLive';
 import './local-flight.css';
 
+const BufferedFlightChart = lazy(() => import('./BufferedFlightChart'));
+
 type Model = { id: string; task: string; label: string };
-export default function LocalLive({
-  runId,
-  live,
-  manage,
-  state,
-  onState,
-}: {
+type LiveProps = {
   runId: string;
   live: boolean;
   manage: () => void;
   state: State;
   onState: (state: State) => void;
-}) {
+};
+
+export default function LocalLive(props: LiveProps) {
+  if (props.state.mode === 'px4_whole_run') return <WholeRunLive key={props.runId} {...props} />;
+  return <LegacyLocalLive {...props} />;
+}
+
+function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
   const [models, setModels] = useState<Model[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [version, setVersion] = useState('');
@@ -32,6 +37,15 @@ export default function LocalLive({
   const [imu, setImu] = useState('HIGHRES_IMU'),
     [imuId, setImuId] = useState(0);
   const [autoFinish, setAutoFinish] = useState(false);
+  const [buffered, setBuffered] = useState(false);
+  const parallel = state.buffered_parallel === true || (state.forecast_models?.length ?? 0) > 1;
+  const useBuffered = parallel || buffered;
+  const modelSummaries = state.buffered_summary?.model_summaries ?? state.buffered_model_states;
+  const [replay, setReplay] = useState<{
+    equal: boolean;
+    frames: number;
+    differing_frames: number;
+  }>();
   const [active, setActive] = useState(true),
     [autoRates, setAutoRates] = useState(true);
   const [evidence, setEvidence] = useState(''),
@@ -42,7 +56,7 @@ export default function LocalLive({
     [busy, setBusy] = useState(false);
   const refresh = async () => {
     const [c, p] = await Promise.all([
-      api<{ models: Model[] }>('/local-ai/catalog'),
+      parallel ? Promise.resolve({ models: [] }) : api<{ models: Model[] }>('/local-ai/catalog'),
       api<{ profiles: Profile[] }>('/local-ai/profiles'),
     ]);
     setModels(c.models);
@@ -60,11 +74,12 @@ export default function LocalLive({
           source_system: system,
           source_component: component,
           scope,
-          imu_message: imu,
+          imu_message: useBuffered ? 'HIGHRES_IMU' : imu,
           imu_id: imuId,
+          mode: useBuffered ? 'px4_buffered' : undefined,
           use_active: active,
           auto_rates: autoRates,
-          auto_finish_disarm: autoFinish,
+          auto_finish_disarm: !useBuffered && autoFinish,
         }),
       );
     } catch (e) {
@@ -77,9 +92,11 @@ export default function LocalLive({
     <section className="panel local-live" aria-label="실기체 로컬 AI">
       <div className="panel-heading">
         <h2>기체별 로컬 AI · {statusNames[state.status] ?? state.status}</h2>
-        <button className="button small" onClick={manage}>
-          프로파일·파인튜닝 관리
-        </button>
+        {live && (
+          <button className="button small" onClick={manage}>
+            기체 프로파일 관리
+          </button>
+        )}
       </div>
       {error && (
         <p className="notice error" role="alert">
@@ -92,7 +109,17 @@ export default function LocalLive({
             if (e.currentTarget.open) void refresh().catch((e) => setError(String(e)));
           }}
         >
-          <summary>기체와 모델 연결</summary>
+          <summary>{parallel ? 'PX4 기체와 비행 중 모델 4종 연결' : '기체와 모델 연결'}</summary>
+          {state.buffered_available && !parallel && (
+            <label>
+              <input
+                type="checkbox"
+                checked={buffered}
+                onChange={(e) => setBuffered(e.target.checked)}
+              />{' '}
+              PX4 MAVLink · 10초 버퍼 모델 사용
+            </label>
+          )}
           <div className="local-live-settings">
             <label className="form-label">
               기체 프로파일
@@ -114,38 +141,42 @@ export default function LocalLive({
                 ))}
               </select>
             </label>
-            <label className="form-label">
-              비행 중 예측 · 8종
-              <select
-                className="text-input"
-                value={forecast}
-                onChange={(e) => setForecast(e.target.value)}
-              >
-                {models
-                  .filter((m) => m.task === 'forecast')
-                  .map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="form-label">
-              비행 종료 후 · 8종
-              <select
-                className="text-input"
-                value={postModel}
-                onChange={(e) => setPostModel(e.target.value)}
-              >
-                {models
-                  .filter((m) => m.task === 'run_health')
-                  .map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.label}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            {!useBuffered && (
+              <label className="form-label">
+                비행 중 예측 · 8종
+                <select
+                  className="text-input"
+                  value={forecast}
+                  onChange={(e) => setForecast(e.target.value)}
+                >
+                  {models
+                    .filter((m) => m.task === 'forecast')
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
+            {!useBuffered && (
+              <label className="form-label">
+                비행 종료 후 · 8종
+                <select
+                  className="text-input"
+                  value={postModel}
+                  onChange={(e) => setPostModel(e.target.value)}
+                >
+                  {models
+                    .filter((m) => m.task === 'run_health')
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
             <label className="form-label">
               연결 대상
               <select
@@ -179,15 +210,17 @@ export default function LocalLive({
                 onChange={(e) => setComponent(Number(e.target.value))}
               />
             </label>
-            <label className="form-label">
-              가속도 메시지
-              <select className="text-input" value={imu} onChange={(e) => setImu(e.target.value)}>
-                {['HIGHRES_IMU', 'SCALED_IMU', 'SCALED_IMU2', 'SCALED_IMU3'].map((m) => (
-                  <option key={m}>{m}</option>
-                ))}
-              </select>
-            </label>
-            {imu === 'HIGHRES_IMU' && (
+            {!useBuffered && (
+              <label className="form-label">
+                가속도 메시지
+                <select className="text-input" value={imu} onChange={(e) => setImu(e.target.value)}>
+                  {['HIGHRES_IMU', 'SCALED_IMU', 'SCALED_IMU2', 'SCALED_IMU3'].map((m) => (
+                    <option key={m}>{m}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {(useBuffered || imu === 'HIGHRES_IMU') && (
               <label className="form-label">
                 MAVLink IMU ID · 로그 인스턴스와 별도
                 <input
@@ -201,51 +234,73 @@ export default function LocalLive({
               </label>
             )}
           </div>
-          <label>
-            <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />{' '}
-            이 기체에서 채택한 파인튜닝 모델 사용 · 없으면 원본
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={autoRates}
-              onChange={(e) => setAutoRates(e.target.checked)}
-            />{' '}
-            필수 메시지 주기 자동 설정 · 기체로 주기 설정 요청 전송
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={autoFinish}
-              onChange={(e) => setAutoFinish(e.target.checked)}
-            />{' '}
-            시동 해제 확인 시 수집 종료·비행 후 분석 자동 실행
-          </label>
-          <small>
-            연결 후 시동 상태를 관측한 뒤, 2초 이상 연속된 시동 해제 HEARTBEAT 3개를 확인합니다.
-            통신 단절만으로 종료하지 않습니다.
-          </small>
+          {!useBuffered && (
+            <label>
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />{' '}
+              이 기체에서 채택한 파인튜닝 모델 사용 · 없으면 원본
+            </label>
+          )}
+          {!useBuffered && (
+            <label>
+              <input
+                type="checkbox"
+                checked={autoRates}
+                onChange={(e) => setAutoRates(e.target.checked)}
+              />{' '}
+              필수 메시지 주기 자동 설정 · 기체로 주기 설정 요청 전송
+            </label>
+          )}
+          {!useBuffered && (
+            <label>
+              <input
+                type="checkbox"
+                checked={autoFinish}
+                onChange={(e) => setAutoFinish(e.target.checked)}
+              />{' '}
+              착륙 후 비행 데이터가 10초 끊기면 자동 종료
+            </label>
+          )}
+          {!useBuffered && (
+            <small>
+              시동 해제를 확인한 뒤 유효한 비행 데이터가 10초 연속 들어오지 않으면 기록을
+              종료합니다. 기체가 지상에서도 데이터를 계속 보내면 비행 종료 버튼으로 마감하세요.
+            </small>
+          )}
+          {useBuffered && (
+            <p>
+              100ms 간격으로 확정한 프레임을 10초 지연으로 평가합니다. 비행 종료 버튼을 누르면 저장
+              원문을 재생해 비교할 수 있습니다.
+            </p>
+          )}
           <p>
             출력 port·배터리 ID·모터 채널과 출력 범위는 선택한 프로파일을 사용합니다. 필요한
             메시지가 없으면 예측을 보류합니다.
           </p>
           <button className="button primary" disabled={busy || !version} onClick={start}>
-            {busy ? '연결 중…' : '로컬 AI 시작'}
+            {busy ? '연결 중…' : parallel ? '비행 중 모델 4종 시작' : '로컬 AI 시작'}
           </button>
         </details>
       )}
       {state.finish_reason === 'confirmed_disarm' && (
-        <p>기체 시동 해제 확인으로 수집을 종료했습니다.</p>
+        <p>기체 시동 해제와 비행 데이터 수신 중단 10초를 확인해 기록을 종료했습니다.</p>
       )}
       <p role="status">{state.message}</p>
       {state.scope && (
         <p>
           {state.scope === 'simulation_test' ? '시뮬레이터 통신 시험' : '실기체 입력'} ·{' '}
-          {state.forecast_model} ·{' '}
-          {state.adapted_sha256 ? `파인튜닝 ${state.adapted_sha256.slice(0, 8)}` : '원본 모델'}
+          {parallel ? '비행 중 모델 4종' : state.forecast_model} ·{' '}
+          {state.mode === 'px4_buffered'
+            ? '10초 지연 판정'
+            : state.adapted_sha256
+              ? `파인튜닝 ${state.adapted_sha256.slice(0, 8)}`
+              : '원본 모델'}
         </p>
       )}
-      {state.status !== 'finished' && state.status !== 'analyzing' && (
+      {!parallel && state.status !== 'finished' && state.status !== 'analyzing' && (
         <DecisionResult decision={state.decision} />
       )}
       {state.rates && (
@@ -305,13 +360,16 @@ export default function LocalLive({
       )}
       {state.prediction && (
         <>
-          <p>관측 시작 후 {(state.prediction.origin_us / 1e6).toFixed(1)}초 기준 · 1초 뒤 예측</p>
+          <p>
+            관측 시작 후 {(state.prediction.origin_us / 1e6).toFixed(1)}초 기준 ·{' '}
+            {state.mode === 'px4_buffered' ? '1초 뒤 모델값 · 10초 지연 표시' : '1초 뒤 예측'}
+          </p>
           <div className="local-live-values">
             {['Roll 각속도', 'Pitch 각속도', 'Yaw 각속도', '팩 전압'].map((name, i) => (
               <div key={name}>
                 <span>{name}</span>
                 <strong>
-                  {state.prediction!.values[i].toFixed(3)}{' '}
+                  {numeric(state.prediction!.values[i], i === 3 ? 2 : 3)}{' '}
                   <small>{state.prediction!.units[i]}</small>
                 </strong>
               </div>
@@ -321,6 +379,82 @@ export default function LocalLive({
       )}
       {!!state.missing_features?.length && (
         <p>미수신·오래된 입력: {state.missing_features.join(', ')}</p>
+      )}
+      {modelSummaries && (
+        <table aria-label="비행 중 모델별 판정">
+          <thead>
+            <tr>
+              <th>모델</th>
+              <th>예측</th>
+              <th>판정</th>
+              <th>경보 프레임</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(modelSummaries).map(([model, summary]) => (
+              <tr key={model}>
+                <td>
+                  {model
+                    .replace('inflight-', '')
+                    .replace('lstm-', 'LSTM ')
+                    .replace('transformer-', 'Transformer ')
+                    .replace('x', '×')}
+                </td>
+                <td>{numeric(summary.forecasts, 0)}</td>
+                <td>{numeric(summary.scored_frames, 0)}</td>
+                <td>{numeric(summary.alarm_frames, 0)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {state.buffered_summary && (
+        <div>
+          {!parallel && (
+            <p>
+              예측 {numeric(state.buffered_summary.forecasts, 0)}회 · 판정{' '}
+              {numeric(state.buffered_summary.scored_frames, 0)}건 · 이상 표시{' '}
+              {numeric(state.buffered_summary.alarm_frames, 0)}건
+            </p>
+          )}
+          <button
+            className="button small"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError('');
+              try {
+                setReplay(
+                  await post<{ equal: boolean; frames: number; differing_frames: number }>(
+                    `/sessions/${runId}/local-ai/replay-buffered`,
+                  ),
+                );
+              } catch (e) {
+                setError(String(e));
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            저장 UDP 재생 비교
+          </button>
+          {replay && (
+            <p role="status">
+              {replay.equal
+                ? `${replay.frames}개 프레임의 입력·예측·판정 일치`
+                : `${replay.differing_frames}개 프레임 차이 또는 기록 불일치`}
+            </p>
+          )}
+        </div>
+      )}
+      {state.mode === 'px4_buffered' && (
+        <Suspense fallback={<p role="status">그래프 기능을 불러오는 중…</p>}>
+          <BufferedFlightChart
+            key={runId}
+            runId={runId}
+            live={!['finished', 'interrupted', 'error'].includes(state.status)}
+          />
+        </Suspense>
       )}
       {state.result && (
         <div>

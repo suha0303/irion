@@ -15,11 +15,12 @@
   padding: 24px;
 }
 .local-flight > header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 20px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
+}
+.local-flight > header p {
+  margin: 0;
+  color: #51637b;
+  font-size: 13px;
 }
 .local-flight h1 {
   font-size: 28px;
@@ -114,6 +115,53 @@
 .local-live {
   margin: 16px 0;
   padding: 20px;
+}
+.buffered-chart {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #dce6ee;
+}
+.buffered-chart summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.buffered-chart-body {
+  padding-top: 10px;
+}
+.buffered-chart-controls,
+.buffered-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.buffered-chart-controls .form-label {
+  min-width: min(100%, 160px);
+}
+.buffered-chart-legend {
+  font-size: 12px;
+  color: #365778;
+}
+.buffered-chart-legend .line-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.buffered-chart-legend .line-key::before {
+  content: '';
+  width: 20px;
+  border-top: 2px solid currentColor;
+}
+.buffered-chart-legend .line-key.dashed::before {
+  border-top-style: dashed;
+}
+.buffered-chart-plot {
+  position: relative;
+}
+.buffered-chart-divider {
+  position: absolute;
+  inset-inline: 8px;
+  border-top: 2px solid #adbfcd;
+  pointer-events: none;
 }
 .local-live-settings {
   display: grid;
@@ -229,6 +277,15 @@
   color: #107b72;
   box-shadow: 0 2px 5px #20344716;
 }
+.local-tab-count {
+  display: inline-block;
+  padding: 1px 6px;
+  margin-left: 6px;
+  border-radius: 6px;
+  background: #e1ebe9;
+  color: #17655f;
+  font-size: 11px;
+}
 .local-task-intro {
   margin: 12px 0 20px;
 }
@@ -237,7 +294,8 @@
 }
 .local-flight-grid[data-page='profile'],
 .local-flight-grid[data-page='models'],
-.local-flight-grid[data-page='results'] {
+.local-flight-grid[data-page='results'],
+.local-flight-grid[data-page='v02'] {
   grid-template-columns: minmax(0, 1fr);
 }
 .local-flight-grid[data-page='profile'] {
@@ -250,6 +308,49 @@
 }
 .local-flight-grid[data-page='training'] > .local-calibration-section {
   grid-column: 2;
+}
+.v02-flight-result {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid #d6e0eb;
+  border-radius: 10px;
+}
+.v02-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+.v02-role-grid fieldset {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #d6e0eb;
+  border-radius: 10px;
+}
+.v02-role-grid legend {
+  padding: 0 4px;
+  font-weight: 700;
+}
+.v02-log-choice {
+  overflow-wrap: anywhere;
+  padding: 8px 0;
+}
+.v02-result-table {
+  overflow-x: auto;
+}
+.v02-result-table table {
+  width: 100%;
+  margin-bottom: 12px;
+  border-collapse: collapse;
+  text-align: left;
+}
+.v02-result-table :is(caption, th, td) {
+  padding: 8px;
+  text-align: left;
+}
+.v02-result-table :is(th, td) {
+  border-bottom: 1px solid #d6e0eb;
+  white-space: nowrap;
 }
 .local-calibration-section > .panel {
   margin: 0;
@@ -281,6 +382,12 @@
 }
 .local-job-body {
   padding: 12px 4px;
+}
+.local-job-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
 }
 .local-pagination {
   display: flex;
@@ -326,6 +433,32 @@
   overflow-wrap: anywhere;
   font-size: 13px;
 }
+.local-score-chart {
+  margin: 20px 0;
+  padding: 20px 16px 12px;
+  border: 1px solid #dce5ef;
+  border-radius: 12px;
+  background: #fff;
+}
+.local-score-chart h3 {
+  margin: 0;
+}
+.local-score-legend {
+  display: flex;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.local-score-legend .score {
+  color: #208778;
+}
+.local-score-legend .threshold {
+  color: #925416;
+}
+.local-score-legend .exceeded {
+  color: #b52b3c;
+}
 .local-alarm-detail {
   margin-top: 20px;
   padding: 20px;
@@ -346,4 +479,9 @@
   .local-insight-panel {
     padding: 16px;
   }
+}
+.whole-run-model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }

@@ -5,8 +5,6 @@ import {
   CircleAlert,
   Download,
   FileCheck2,
-  FileUp,
-  FlaskConical,
   Info,
   Plug,
   ShieldCheck,
@@ -212,29 +210,34 @@ export function Diagnostics({
   run: Manifest;
   frame: Frame | null;
   metrics: Metrics | null;
-  connectAI: () => void;
+  connectAI?: () => void;
 }) {
   const valid = frame?.streams.filter((s) => s.status === 'valid').length ?? 0;
   const period = frame?.input_contract?.sample_period_ms ?? run.profile?.sample_period_ms;
+  const inputErrors = run.input_error_records ?? (run.excluded_records === 0 ? 0 : undefined);
+  const recentErrors = run.input_issues?.slice(-20) ?? [];
+  const rawUdp = run.storage === 'udp-wire/1';
   return (
     <div className="diagnostics">
       <div className="diagnostic-kpis">
         <div className="panel diagnostic-kpi">
           <FileCheck2 size={21} />
-          <small>수집·재생 관측</small>
+          <small>화면에 반영한 관측</small>
           <strong>
             {run.accepted_records.toLocaleString()}
-            <span> / {run.total_records.toLocaleString()}</span>
-          </strong>
-        </div>
-        <div className="panel diagnostic-kpi">
-          <CircleAlert size={21} />
-          <small>검사에서 제외</small>
-          <strong>
-            {run.excluded_records}
             <span>건</span>
           </strong>
         </div>
+        {inputErrors !== undefined && (
+          <div className="panel diagnostic-kpi">
+            <CircleAlert size={21} />
+            <small>입력 오류</small>
+            <strong>
+              {inputErrors.toLocaleString()}
+              <span>건</span>
+            </strong>
+          </div>
+        )}
         <div className="panel diagnostic-kpi">
           <Activity size={21} />
           <small>현재 유효 스트림</small>
@@ -243,14 +246,16 @@ export function Diagnostics({
             <span> / {frame?.streams.length ?? run.streams.length}종</span>
           </strong>
         </div>
-        <div className="panel diagnostic-kpi">
-          <Activity size={21} />
-          <small>전처리 출력 주기</small>
-          <strong>
-            {period ? numeric(1000 / period, 1) : '—'}
-            <span>{period ? 'Hz' : '원본 입력'}</span>
-          </strong>
-        </div>
+        {period != null && period > 0 && (
+          <div className="panel diagnostic-kpi">
+            <Activity size={21} />
+            <small>전처리 출력 주기</small>
+            <strong>
+              {numeric(1000 / period, 1)}
+              <span>Hz</span>
+            </strong>
+          </div>
+        )}
       </div>
       <ArchivePanel run={run} frame={frame} expanded />
       <section className="panel">
@@ -290,15 +295,11 @@ export function Diagnostics({
             </tbody>
           </table>
         </div>
-        <div className="panel-footnote">
-          수신률 · 전처리 주기 · 모델 추론 주기 · 화면 갱신률은 별도입니다. 화면 갱신은 최대
-          10Hz입니다.
-        </div>
       </section>
       <div className="diagnostic-columns">
         <section className="panel">
           <div className="panel-heading">
-            <h2>입력 무결성 검사</h2>
+            <h2>입력 오류와 수신 구간</h2>
             <a className="button small" href={`/api/runs/${run.run_id}/inspection.json`} download>
               <Download size={14} />
               검사 결과
@@ -308,21 +309,29 @@ export function Diagnostics({
             <strong>{run.name}</strong>
             <div className="hash-box">
               <small>
-                {run.input_sha256 ? '최종 파일 SHA-256' : '진행 중인 세션 · 종료 시 파일 해시 확정'}
+                {run.input_sha256
+                  ? rawUdp
+                    ? 'MAVLink UDP 원문 SHA-256'
+                    : '최종 파일 SHA-256'
+                  : '진행 중인 세션 · 종료 시 파일 해시 확정'}
               </small>
               <code>{run.input_sha256 ?? run.run_id}</code>
             </div>
-            {run.issues.length > 20 && <p>최근 20건 표시 · 전체 {run.excluded_records}건 제외</p>}
-            {run.issues.slice(-20).map((e, i) => (
+            {inputErrors !== undefined && inputErrors > 20 && (
+              <p>
+                최근 {recentErrors.length}건 표시 · 입력 오류 {inputErrors.toLocaleString()}건
+              </p>
+            )}
+            {recentErrors.map((e, i) => (
               <div className="issue" key={i}>
                 <CircleAlert size={15} />
                 <div>
-                  <strong>{e.line}번째 레코드 제외</strong>
+                  <strong>{e.line.toLocaleString()}번째 레코드</strong>
                   <p>{e.reason}</p>
                 </div>
               </div>
             ))}
-            {!run.issues.length && <p className="inline-success">제외된 레코드가 없습니다.</p>}
+            {inputErrors === 0 && <p className="inline-success">기록된 입력 오류가 없습니다.</p>}
             {run.boundaries.map((b, i) => (
               <p key={i}>
                 {timeLabel(b.t_ms, true)} · epoch {b.epoch} · {b.reason}
@@ -340,6 +349,20 @@ export function Diagnostics({
                 <dt>입력 종류</dt>
                 <dd>{run.source}</dd>
               </div>
+              {run.source_system != null && (
+                <div>
+                  <dt>시스템 / 컴포넌트 ID</dt>
+                  <dd>
+                    {run.source_system} / {run.source_component ?? '—'}
+                  </dd>
+                </div>
+              )}
+              {rawUdp && (
+                <div>
+                  <dt>원문 파일 형식</dt>
+                  <dd>MAVLink UDP (.mavlink.bin)</dd>
+                </div>
+              )}
               <div>
                 <dt>전처리 버전</dt>
                 <dd>{frame?.input_contract?.preprocess_version ?? 'raw-v1'}</dd>
@@ -354,18 +377,12 @@ export function Diagnostics({
                       : '메시지별 기록 참조'}
                 </dd>
               </div>
-              <div>
-                <dt>전처리 전달 수신률</dt>
-                <dd>{numeric(run.rates?.processed_receipt_hz, 1)} Hz</dd>
-              </div>
-              <div>
-                <dt>모델 추론 주기</dt>
-                <dd>서비스 보고 미제공 · API 확인 주기와 별도</dd>
-              </div>
-              <div>
-                <dt>지원 신호</dt>
-                <dd>{Object.keys(frame?.input_contract?.signals ?? {}).length}개</dd>
-              </div>
+              {run.rates?.processed_receipt_hz != null && (
+                <div>
+                  <dt>전처리 전달 수신률</dt>
+                  <dd>{numeric(run.rates.processed_receipt_hz, 1)} Hz</dd>
+                </div>
+              )}
               <div>
                 <dt>Epoch</dt>
                 <dd>{frame?.epoch ?? 0}</dd>
@@ -378,17 +395,15 @@ export function Diagnostics({
                       {statusLabel[frame?.session?.state ?? run.session.state] ?? run.session.state}
                     </dd>
                   </div>
-                  <div>
-                    <dt>전처리 sequence 누락</dt>
-                    <dd>{frame?.session?.dropped_sequences ?? 0}</dd>
-                  </div>
+                  {run.session.kind === 'normalized' && (
+                    <div>
+                      <dt>전처리 시퀀스 누락</dt>
+                      <dd>{frame?.session?.dropped_sequences ?? run.session.dropped_sequences}</dd>
+                    </div>
+                  )}
                 </>
               )}
             </dl>
-            <p>
-              학습은 외부에서 수행합니다. 모델이 요구하는 특징·단위·주기·전처리 버전을 연결 시
-              확인합니다.
-            </p>
           </div>
         </section>
       </div>
@@ -423,32 +438,34 @@ export function Diagnostics({
           </div>
         </details>
       </section>
-      <section className="panel">
-        <div className="panel-heading">
-          <h2>분석 연결과 화면 반영</h2>
-          <button className="button small" onClick={connectAI}>
-            <Plug size={14} />
-            AI API 설정
-          </button>
-        </div>
-        <div className="inner integration-grid">
-          <div>
-            <small>화면 반영 확인 왕복 p95</small>
-            <strong>
-              {numeric(metrics?.render_ack.p95_ms, 1)} <span>ms</span>
-            </strong>
-            <p>{metrics?.render_ack.samples ?? 0}개 표본</p>
+      {connectAI && (
+        <section className="panel">
+          <div className="panel-heading">
+            <h2>분석 연결과 화면 반영</h2>
+            <button className="button small" onClick={connectAI}>
+              <Plug size={14} />
+              AI API 설정
+            </button>
           </div>
-          <div>
-            <small>결과 수신 → 화면 확인 p95</small>
-            <strong>
-              {numeric(metrics?.result_receipt_to_render_ack.p95_ms, 1)} <span>ms</span>
-            </strong>
-            <p>{metrics?.result_receipt_to_render_ack.samples ?? 0}개 결과 · 목표 500ms 이내</p>
+          <div className="inner integration-grid">
+            <div>
+              <small>화면 반영 확인 왕복 p95</small>
+              <strong>
+                {numeric(metrics?.render_ack.p95_ms, 1)} <span>ms</span>
+              </strong>
+              <p>{metrics?.render_ack.samples ?? 0}개 표본</p>
+            </div>
+            <div>
+              <small>결과 수신 → 화면 확인 p95</small>
+              <strong>
+                {numeric(metrics?.result_receipt_to_render_ack.p95_ms, 1)} <span>ms</span>
+              </strong>
+              <p>{metrics?.result_receipt_to_render_ack.samples ?? 0}개 결과 · 목표 500ms 이내</p>
+            </div>
+            <p className="method-note">{metrics?.method}</p>
           </div>
-          <p className="method-note">{metrics?.method}</p>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

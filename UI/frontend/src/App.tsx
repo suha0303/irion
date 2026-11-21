@@ -4,40 +4,30 @@ import LocalInsights, { LocalModelCards } from './LocalInsights';
 import { useLocalAI } from './useLocalAI';
 import { localAlarms } from './local-insights';
 import {
-  Activity,
-  ArrowDownToLine,
   ArrowRight,
   Battery,
-  Bell,
   ChevronDown,
-  ChevronRight,
   CircleAlert,
   Compass,
-  Database,
   FileUp,
   FlaskConical,
-  FolderOpen,
-  Gauge,
   Info,
-  LayoutDashboard,
   Link2,
   Pause,
   Play,
-  Plug,
   Radio,
   RotateCcw,
-  Settings2,
-  ShieldCheck,
   SkipBack,
   SkipForward,
   Wind,
   X,
 } from 'lucide-react';
 import { ApiError, api, post, upload } from './api';
-import { PathChart, TimeChart, motorColors } from './Charts';
+import { PathChart, TimeChart } from './Charts';
 import { Diagnostics, EventDetail, EventList } from './Panels';
 import type { Detection, Manifest, Metrics, Point, ProviderState } from './types';
-import { detectionKey, numeric, statusLabel, targetLabel, timeLabel } from './types';
+import type { Job } from './local-flight-types';
+import { detectionKey, numeric, statusLabel, timeLabel } from './types';
 import { useReplay } from './useReplay';
 import { ProviderCards, ProviderDialog, SourceDialog } from './Integrations';
 import { useServerHealth } from './useServerHealth';
@@ -46,6 +36,7 @@ import { ArchivePanel } from './ArchivePanel';
 import './extension.css';
 
 const LocalFlight = lazy(() => import('./LocalFlight'));
+const V02Workspace = lazy(() => import('./V02Workspace'));
 const Flight3D = lazy(() => import('./Flight3D').then((module) => ({ default: module.Flight3D })));
 
 type Tab = 'monitor' | 'events' | 'diagnostics' | 'local';
@@ -56,7 +47,7 @@ const titles = {
     '기체 정보부터 로그 준비, 분석과 파인튜닝까지 단계별로 진행하세요.',
   ],
   events: ['이상 구간 분석', '판정 시점과 관측 데이터를 나란히 살펴보세요.'],
-  diagnostics: ['데이터 진단', '좋은 판단은 신뢰할 수 있는 입력에서 시작됩니다.'],
+  diagnostics: ['데이터 진단', '선택한 비행의 수신 주기, 누락과 입력 상태를 확인합니다.'],
 };
 
 export default function App() {
@@ -68,16 +59,12 @@ export default function App() {
       return '';
     }
   });
-  const [tab, setTab] = useState<Tab>('monitor');
+  const [selectedTab, setTab] = useState<Tab>('monitor');
   const [points, setPoints] = useState<Point[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [error, setError] = useState('');
   const [retryFile, setRetryFile] = useState<File | null>(null);
-  const [imported, setImported] = useState<{
-    name: string;
-    accepted: number;
-    excluded: number;
-  } | null>(null);
+  const [uploadedLog, setUploadedLog] = useState<Job | null>(null);
   const server = useServerHealth();
   const [busy, setBusy] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -88,7 +75,6 @@ export default function App() {
   const [providerFilter, setProviderFilter] = useState('all');
   const [sourceModal, setSourceModal] = useState(false);
   const [localVisited, setLocalVisited] = useState(false);
-  const localModal = tab === 'local';
   const openLocal = () => {
     setLocalVisited(true);
     setTab('local');
@@ -99,7 +85,14 @@ export default function App() {
   const availableRunId = run?.run_id ?? '';
   const local = useLocalAI(availableRunId);
   const hasLocal = availableRunId.startsWith('live-');
-  const localRows = localAlarms(local.state);
+  const wholeRun = local.state.mode === 'px4_whole_run';
+  const bufferedRun = local.state.mode === 'px4_buffered' || local.state.buffered_parallel === true;
+  const isV02 = server.edition === 'v0.2';
+  const Workspace = isV02 ? V02Workspace : LocalFlight;
+  const legacyAnalysis = server.edition === 'legacy' && !wholeRun && !bufferedRun;
+  const externalAnalysis = legacyAnalysis && !hasLocal;
+  const tab = selectedTab === 'events' && !legacyAnalysis ? 'monitor' : selectedTab;
+  const localRows = legacyAnalysis ? localAlarms(local.state) : [];
   const isLive = run?.source_kind === 'live';
   const { frame, playback, connection, command } = useReplay(availableRunId, isLive);
   useEffect(() => {
@@ -117,7 +110,7 @@ export default function App() {
   };
   const cursor = frame?.t_ms ?? 0;
   const connected = connection === 'connected';
-  const events = frame?.events ?? [];
+  const events = legacyAnalysis ? (frame?.events ?? []) : [];
   const selectedEvent = events.find((e) => detectionKey(e) === selected) ?? null;
   const filteredEvents = events.filter(
     (e) => providerFilter === 'all' || (e.provider_id ?? 'legacy') === providerFilter,
@@ -145,6 +138,13 @@ export default function App() {
       .finally(() => {
         if (!cancelled) setInitialLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
+  }, [server.status, reload]);
+  useEffect(() => {
+    if (server.status !== 'online' || !externalAnalysis) return;
+    let cancelled = false;
     api<ProviderState[]>('/analysis/providers')
       .then((data) => {
         if (!cancelled) setProviderDefs(data);
@@ -155,7 +155,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [server.status, reload]);
+  }, [server.status, externalAnalysis]);
   useEffect(() => {
     // A remembered selection may belong to a different local data directory.
     if (!availableRunId) return;
@@ -193,7 +193,7 @@ export default function App() {
     }
   };
   useEffect(() => {
-    if (tab !== 'diagnostics') return;
+    if (tab !== 'diagnostics' || !externalAnalysis) return;
     let stale = false;
     const update = () =>
       api<Metrics>('/metrics')
@@ -207,7 +207,7 @@ export default function App() {
       stale = true;
       clearInterval(interval);
     };
-  }, [tab]);
+  }, [tab, externalAnalysis]);
   useEffect(() => {
     const keypress = (e: KeyboardEvent) => {
       if (
@@ -215,16 +215,15 @@ export default function App() {
         !['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName) &&
         !aiModal &&
         !sourceModal &&
-        !localModal &&
+        tab !== 'local' &&
         runId
       ) {
         e.preventDefault();
         command((isLive ? playback.following : playback.playing) ? 'pause' : 'play');
       }
-      if (e.code === 'Escape') {
+      if (e.code === 'Escape' && (aiModal || sourceModal)) {
         setAiModal(false);
         setSourceModal(false);
-        setTab('monitor');
       }
     };
     document.addEventListener('keydown', keypress);
@@ -235,23 +234,10 @@ export default function App() {
     if (!file) return;
     setBusy(true);
     setError('');
-    setImported(null);
     setRetryFile(null);
     try {
-      const manifest = await upload<Manifest>('/runs/import', file);
-      setRuns((previous) => [manifest, ...previous.filter((r) => r.run_id !== manifest.run_id)]);
-      setRunId(manifest.run_id);
-      setTab('monitor');
-      setSelected(null);
-      if (manifest.run_id === runId) {
-        command('pause');
-        command('seek', { t_ms: 0 });
-      }
-      setImported({
-        name: file.name,
-        accepted: manifest.accepted_records,
-        excluded: manifest.excluded_records,
-      });
+      setUploadedLog(await upload<Job>('/local-ai/logs', file));
+      openLocal();
     } catch (e) {
       setError((e as Error).message);
       if (e instanceof ApiError && e.kind === 'network') {
@@ -282,25 +268,19 @@ export default function App() {
     connected ? frame?.active_by_provider?.lstm : null,
     connected ? frame?.active_by_provider?.transformer : null,
   );
-  const extraProviders =
-    frame?.providers
-      ?.filter((p) => !['lstm', 'transformer'].includes(p.provider_id))
-      .map((p) => p.provider_id) ?? [];
-  const motorValues = [1, 2, 3, 4].map((i) => value(`motor_${i}_rpm`));
-  const motorRange = motorValues.every((v) => v != null)
-    ? `${numeric(Math.min(...(motorValues as number[])), 0)}–${numeric(Math.max(...(motorValues as number[])), 0)}`
-    : '—';
-  const titleDate =
-    run?.name.match(/\d{4}-\d{2}-\d{2}/)?.[0]?.replaceAll('-', '.') ?? '선택한 비행';
-
+  const extraProviders = externalAnalysis
+    ? (frame?.providers
+        ?.filter((p) => !['lstm', 'transformer'].includes(p.provider_id))
+        .map((p) => p.provider_id) ?? [])
+    : [];
   return (
     <div className="app-shell balanced-workspace">
       <input
         ref={fileInput}
         type="file"
-        accept=".jsonl,.npz"
+        accept=".ulg,.ULG,.bin,.BIN"
         className="visually-hidden"
-        aria-label="JSONL 또는 NPZ 비행 파일"
+        aria-label="PX4 ULog 또는 ArduPilot BIN 비행 로그"
         onChange={(e) => importLog(e.target.files?.[0])}
       />
       <div className="app-main">
@@ -314,24 +294,26 @@ export default function App() {
             }}
             aria-label="ARION 비행 모니터링"
           >
-            ARION<small>FLIGHT INSIGHTS</small>
+            ARION<small>{isV02 ? 'FLIGHT INSIGHTS · V0.2' : 'FLIGHT INSIGHTS'}</small>
           </a>
           <nav aria-label="주요 화면">
-            {(['monitor', 'events', 'local', 'diagnostics'] as Tab[]).map((key) => (
-              <button
-                key={key}
-                className={tab === key ? 'active' : ''}
-                onClick={() => (key === 'local' ? openLocal() : setTab(key))}
-                aria-current={tab === key ? 'page' : undefined}
-              >
-                {titles[key][0]}
-                {key === 'events' && (hasLocal ? localRows.length : events.length) > 0 && (
-                  <span className="nav-event-count">
-                    {hasLocal ? localRows.length : events.length}
-                  </span>
-                )}
-              </button>
-            ))}
+            {(['monitor', 'events', 'local', 'diagnostics'] as Tab[])
+              .filter((key) => key !== 'events' || legacyAnalysis)
+              .map((key) => (
+                <button
+                  key={key}
+                  className={tab === key ? 'active' : ''}
+                  onClick={() => (key === 'local' ? openLocal() : setTab(key))}
+                  aria-current={tab === key ? 'page' : undefined}
+                >
+                  {titles[key][0]}
+                  {key === 'events' && (hasLocal ? localRows.length : events.length) > 0 && (
+                    <span className="nav-event-count">
+                      {hasLocal ? localRows.length : events.length}
+                    </span>
+                  )}
+                </button>
+              ))}
           </nav>
           <span className={`server-indicator ${server.status}`} role="status">
             <i />
@@ -345,28 +327,35 @@ export default function App() {
         <main>
           <div className="page-heading">
             <div>
-              <div className="eyebrow">FLIGHT WORKSPACE</div>
               <h1>{titles[tab][0]}</h1>
-              <p>{titles[tab][1]}</p>
+              <p>
+                {tab === 'local' && server.wholeRunOnly
+                  ? '등록 기체와 연결된 전체 런 모델을 확인하세요.'
+                  : titles[tab][1]}
+              </p>
             </div>
-            <div className="heading-actions">
-              <button
-                className="button"
-                onClick={() => setSourceModal(true)}
-                disabled={server.status !== 'online' || busy}
-              >
-                <Radio size={17} />
-                실시간 연결
-              </button>
-              <button
-                className="button primary"
-                onClick={() => fileInput.current?.click()}
-                disabled={busy}
-              >
-                <FileUp size={17} />
-                {busy ? '자료 검사 중…' : '비행 로그 가져오기'}
-              </button>
-            </div>
+            {(tab === 'monitor' || (tab === 'local' && server.wholeRunOnly)) && (
+              <div className="heading-actions">
+                {tab === 'monitor' && (
+                  <button
+                    className="button"
+                    onClick={() => setSourceModal(true)}
+                    disabled={server.status !== 'online' || busy}
+                  >
+                    <Radio size={17} />
+                    실시간 연결
+                  </button>
+                )}
+                <button
+                  className="button primary"
+                  onClick={() => fileInput.current?.click()}
+                  disabled={server.status !== 'online' || busy}
+                >
+                  <FileUp size={17} />
+                  비행 로그 가져오기
+                </button>
+              </div>
+            )}
           </div>
           {server.status === 'offline' && (
             <section className="server-offline" role="alert">
@@ -414,30 +403,15 @@ export default function App() {
               </button>
             </div>
           )}
-          {imported && (
-            <div className="import-success" role="status">
-              <ShieldCheck size={17} />
-              <span>
-                <strong>가져오기 완료</strong> · {imported.accepted.toLocaleString()}건 관측
-                {imported.excluded > 0 ? ` · 오류 ${imported.excluded}건 제외` : ''}
-              </span>
-              <button className="text-button" onClick={() => setTab('diagnostics')}>
-                검사 결과 보기
-                <ArrowRight size={13} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label="가져오기 완료 안내 닫기"
-                onClick={() => setImported(null)}
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-          {localVisited && (
+          {localVisited && server.edition && (
             <div hidden={tab !== 'local'} className="local-management-page">
               <Suspense fallback={<div role="status">기체 관리 화면을 불러오는 중…</div>}>
-                <LocalFlight active={tab === 'local'} />
+                <Workspace
+                  active={tab === 'local'}
+                  uploadedLog={uploadedLog}
+                  chooseLog={() => fileInput.current?.click()}
+                  uploading={busy}
+                />
               </Suspense>
             </div>
           )}
@@ -446,28 +420,16 @@ export default function App() {
               <div className="welcome-icon">
                 <Wind size={40} />
               </div>
-              <span className="eyebrow">YOUR NEXT FLIGHT INSIGHT</span>
               <h2>
                 {server.status === 'offline'
                   ? '서버 실행 후 비행 기록을 불러옵니다'
                   : initialLoading
                     ? '비행 기록을 불러오고 있습니다'
-                    : '첫 비행 기록을 열어보세요'}
+                    : '저장된 비행이 없습니다'}
               </h2>
-              <p>
-                JSONL·NPZ 비행 기록으로 배터리, 모터, 비행 상태를
-                <br />
-                같은 시간축에서 확인할 수 있습니다.
-              </p>
-              <button
-                className="button primary"
-                onClick={() => fileInput.current?.click()}
-                disabled={busy}
-              >
-                <FileUp size={17} />
-                JSONL·NPZ 파일 선택
-              </button>
-              <small>최대 64 MiB · 원본 보존 · 로컬 처리</small>
+              {server.status === 'online' && !initialLoading && (
+                <p>실시간으로 연결하거나 PX4 .ulg 또는 ArduPilot .bin 로그를 가져오세요.</p>
+              )}
             </div>
           ) : (
             <>
@@ -482,15 +444,12 @@ export default function App() {
                       id="flight-select"
                       value={runId}
                       disabled={busy}
-                      onChange={(e) => {
-                        setRunId(e.target.value);
-                        setImported(null);
-                      }}
+                      onChange={(e) => setRunId(e.target.value)}
                       aria-label="비행 선택"
                     >
                       {runs.map((r) => (
                         <option key={r.run_id} value={r.run_id}>
-                          {r.name.includes('2026-10-05') ? '이동 비행 · 2026.10.05' : r.name}
+                          {r.name}
                         </option>
                       ))}
                     </select>
@@ -504,7 +463,7 @@ export default function App() {
                 </div>
                 <span className="pill blue">
                   <span className="status-dot" />
-                  {isLive ? 'LIVE STREAM' : 'LOG REPLAY'}
+                  {isLive ? '실시간 수신' : '기록 재생'}
                 </span>
               </section>
               {isLive && (
@@ -544,7 +503,7 @@ export default function App() {
                   </div>
                 </div>
               )}
-              {frame?.fixture_mode && (
+              {externalAnalysis && frame?.fixture_mode && (
                 <div className="notice warning fixture-banner">
                   <FlaskConical size={18} />
                   <div>
@@ -561,17 +520,21 @@ export default function App() {
               )}
               {tab === 'monitor' && (
                 <>
-                  {run.run_id.startsWith('live-') && (
-                    <LocalLive
-                      runId={runId}
-                      live={!!isLive}
-                      manage={openLocal}
-                      state={local.state}
-                      onState={local.setState}
-                    />
-                  )}
+                  {hasLocal &&
+                    (legacyAnalysis ||
+                      bufferedRun ||
+                      (wholeRun && run.session?.kind === 'udp')) && (
+                      <LocalLive
+                        key={runId}
+                        runId={runId}
+                        live={!!isLive}
+                        manage={openLocal}
+                        state={local.state}
+                        onState={local.setState}
+                      />
+                    )}
                   <ArchivePanel run={run} frame={frame} />
-                  <div className="monitor-hero">
+                  <div className={legacyAnalysis ? 'monitor-hero' : 'monitor-hero single-panel'}>
                     <Suspense
                       fallback={
                         <section className="panel" role="status">
@@ -581,37 +544,39 @@ export default function App() {
                     >
                       <Flight3D frame={frame} points={points} connected={connected} />
                     </Suspense>
-                    <aside
-                      className="model-comparison"
-                      aria-label={hasLocal ? '선택한 로컬 모델 상태' : '외부 모델 비교'}
-                    >
-                      <div className="comparison-heading">
-                        <h2>모델 비교</h2>
-                        <span>관측과 별도 판정</span>
-                      </div>
-                      {hasLocal ? (
-                        <LocalModelCards
-                          state={local.state}
-                          error={local.error}
-                          showEvents={() => setTab('events')}
-                        />
-                      ) : (
-                        <>
-                          <ProviderCards
-                            frame={frame}
-                            connected={connected}
-                            configure={configure}
-                            providerIds={['lstm', 'transformer']}
-                            choose={chooseEvent}
-                            offline={server.status === 'offline'}
+                    {legacyAnalysis && (
+                      <aside
+                        className="model-comparison"
+                        aria-label={hasLocal ? '선택한 로컬 모델 상태' : '외부 모델 비교'}
+                      >
+                        <div className="comparison-heading">
+                          <h2>모델 비교</h2>
+                          <span>관측과 별도 판정</span>
+                        </div>
+                        {hasLocal ? (
+                          <LocalModelCards
+                            state={local.state}
+                            error={local.error}
+                            showEvents={() => setTab('events')}
                           />
-                          <div className={`comparison-summary ${comparison.state}`}>
-                            <Info size={15} />
-                            <span>{comparison.label}</span>
-                          </div>
-                        </>
-                      )}
-                    </aside>
+                        ) : (
+                          <>
+                            <ProviderCards
+                              frame={frame}
+                              connected={connected}
+                              configure={configure}
+                              providerIds={['lstm', 'transformer']}
+                              choose={chooseEvent}
+                              offline={server.status === 'offline'}
+                            />
+                            <div className={`comparison-summary ${comparison.state}`}>
+                              <Info size={15} />
+                              <span>{comparison.label}</span>
+                            </div>
+                          </>
+                        )}
+                      </aside>
+                    )}
                   </div>
                   <section className="observation-strip" aria-label="현재 비행 관측">
                     <div className="observation-item">
@@ -658,18 +623,6 @@ export default function App() {
                         · {connected ? (frame?.mode ?? '—') : '—'}
                       </em>
                     </div>
-                    <div className="observation-item">
-                      <span>
-                        <Wind size={14} />
-                        모터 1–4 · RPM
-                      </span>
-                      <strong>{motorRange}</strong>
-                      <em>
-                        {motorRange === '—'
-                          ? 'ESC RPM 미수신 · 회전수를 추정하지 않음'
-                          : '슬롯 번호 · 물리 위치 미지정'}
-                      </em>
-                    </div>
                   </section>
                   {extraProviders.length > 0 && (
                     <details className="extra-providers">
@@ -684,131 +637,53 @@ export default function App() {
                       />
                     </details>
                   )}
-                  <div className="charts-grid">
-                    <section className="panel">
-                      <div className="panel-heading">
-                        <div>
-                          <span className="eyebrow">POWER TREND</span>
-                          <h2>배터리 추이</h2>
-                        </div>
-                        <div className="segmented" aria-label="배터리 지표">
-                          {[
-                            { key: 'battery_current_a', label: '전류' },
-                            { key: 'battery_voltage_v', label: '전압' },
-                            { key: 'battery_soc_pct', label: 'SOC' },
-                          ].map((m) => (
-                            <button
-                              key={m.key}
-                              className={batteryMetric === m.key ? 'active' : ''}
-                              onClick={() => setBatteryMetric(m.key)}
-                            >
-                              {m.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <TimeChart
-                        points={points}
-                        cursor={cursor}
-                        signals={[
-                          {
-                            key: batteryMetric,
-                            name:
-                              batteryMetric === 'battery_current_a'
-                                ? '팩 전류'
-                                : batteryMetric === 'battery_voltage_v'
-                                  ? '팩 전압'
-                                  : 'SOC',
-                          },
-                        ]}
-                        colors={['#0aab97']}
-                        unit={
-                          batteryMetric === 'battery_current_a'
-                            ? 'A'
-                            : batteryMetric === 'battery_voltage_v'
-                              ? 'V'
-                              : '%'
-                        }
-                      />
-                    </section>
-                    <section className="panel">
-                      <div className="panel-heading">
-                        <div>
-                          <span className="eyebrow">MOTOR TREND</span>
-                          <h2>모터 RPM 추이</h2>
-                        </div>
-                        <div className="chart-legend">
-                          {[1, 2, 3, 4].map((i) => (
-                            <span key={i}>
-                              <i style={{ background: motorColors[i - 1] }} />
-                              {i}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <TimeChart
-                        points={points}
-                        cursor={cursor}
-                        signals={[1, 2, 3, 4].map((i) => ({
-                          key: `motor_${i}_rpm`,
-                          name: `모터 ${i}`,
-                        }))}
-                        colors={motorColors}
-                        unit="rpm"
-                      />
-                    </section>
-                  </div>
-                  <section className="panel motor-section">
+                  <section className="panel battery-trend">
                     <div className="panel-heading">
                       <div>
-                        <span className="eyebrow">PROPULSION</span>
-                        <h2>
-                          모터 관측 <span className="heading-note">4 CHANNELS</span>
-                        </h2>
+                        <span className="eyebrow">POWER TREND</span>
+                        <h2>배터리 추이</h2>
                       </div>
-                      <span className="muted">슬롯 번호 기준 · 물리 위치 미지정</span>
+                      <div className="segmented" aria-label="배터리 지표">
+                        {[
+                          { key: 'battery_current_a', label: '전류' },
+                          { key: 'battery_voltage_v', label: '전압' },
+                          { key: 'battery_soc_pct', label: 'SOC' },
+                        ].map((m) => (
+                          <button
+                            key={m.key}
+                            className={batteryMetric === m.key ? 'active' : ''}
+                            onClick={() => setBatteryMetric(m.key)}
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="motor-grid">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div className="motor-card" key={i}>
-                          <div className="motor-card-top">
-                            <span
-                              className="motor-number"
-                              style={{
-                                color: motorColors[i - 1],
-                                background: `${motorColors[i - 1]}12`,
-                              }}
-                            >
-                              <Wind size={17} />
-                            </span>
-                            <strong>모터 {i}</strong>
-                            <span
-                              className={`status-dot ${connected && frame?.values[`motor_${i}_rpm`]?.status === 'valid' ? 'teal' : 'gray'}`}
-                            />
-                          </div>
-                          <div className="motor-rpm">
-                            {numeric(value(`motor_${i}_rpm`), 0)}
-                            <small>rpm</small>
-                          </div>
-                          <div className="motor-current">
-                            <span>전류</span>
-                            <b>
-                              {numeric(value(`motor_${i}_current_a`), 2)} <small>A</small>
-                            </b>
-                          </div>
-                          <div className="motor-progress">
-                            <i
-                              style={{
-                                width: `${Math.min(100, Math.abs(value(`motor_${i}_rpm`) ?? 0) / 100)}%`,
-                                background: motorColors[i - 1],
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <TimeChart
+                      points={points}
+                      cursor={cursor}
+                      signals={[
+                        {
+                          key: batteryMetric,
+                          name:
+                            batteryMetric === 'battery_current_a'
+                              ? '팩 전류'
+                              : batteryMetric === 'battery_voltage_v'
+                                ? '팩 전압'
+                                : 'SOC',
+                        },
+                      ]}
+                      colors={['#0aab97']}
+                      unit={
+                        batteryMetric === 'battery_current_a'
+                          ? 'A'
+                          : batteryMetric === 'battery_voltage_v'
+                            ? 'V'
+                            : '%'
+                      }
+                    />
                   </section>
-                  <div className="bottom-grid">
+                  <div className={legacyAnalysis ? 'bottom-grid' : undefined}>
                     <section className="panel">
                       <div className="panel-heading">
                         <div>
@@ -819,50 +694,51 @@ export default function App() {
                       </div>
                       <PathChart points={points} cursor={cursor} />
                     </section>
-                    {hasLocal ? (
-                      <section className="panel event-summary">
-                        <div className="panel-heading">
-                          <h2>로컬 AI 판정 이력</h2>
-                          <button className="text-button" onClick={() => setTab('events')}>
-                            전체 보기
-                          </button>
-                        </div>
-                        <div className="inner">
-                          <p>
-                            {local.state.insights?.history_available
-                              ? `실시간 기록 경보 ${local.state.insights.alarm_count}건`
-                              : '실시간 경보 이력 없음'}
-                          </p>
-                          <p>
-                            저장 로그 기준 초과{' '}
-                            {localRows.filter((row) => row.source === 'log').length}시점
-                          </p>
-                          <p>예측과 종료 후 모델의 결과를 이상 구간 분석에서 확인하세요.</p>
-                        </div>
-                      </section>
-                    ) : (
-                      <section className="panel event-summary">
-                        <div className="panel-heading">
-                          <div>
-                            <span className="eyebrow">DETECTION TIMELINE</span>
-                            <h2>
-                              판정 이력 <span className="heading-note">{events.length}건</span>
-                            </h2>
+                    {legacyAnalysis &&
+                      (hasLocal ? (
+                        <section className="panel event-summary">
+                          <div className="panel-heading">
+                            <h2>로컬 AI 판정 이력</h2>
+                            <button className="text-button" onClick={() => setTab('events')}>
+                              전체 보기
+                            </button>
                           </div>
-                          <button className="text-button" onClick={() => setTab('events')}>
-                            전체 보기
-                            <ArrowUpRightIcon />
-                          </button>
-                        </div>
-                        <EventList events={events} selected={selected} choose={chooseEvent} />
-                        <div className="event-summary-foot">
-                          <Info size={14} />
-                          {frame?.fixture_mode
-                            ? '시험용 응답의 판정 시각을 따라 표시합니다.'
-                            : '이상 점수는 고장 확률이나 건강도 %가 아닙니다.'}
-                        </div>
-                      </section>
-                    )}
+                          <div className="inner">
+                            <p>
+                              {local.state.insights?.history_available
+                                ? `실시간 기록 경보 ${local.state.insights.alarm_count}건`
+                                : '실시간 경보 이력 없음'}
+                            </p>
+                            <p>
+                              저장 로그 기준 초과{' '}
+                              {localRows.filter((row) => row.source === 'log').length}시점
+                            </p>
+                            <p>예측과 종료 후 모델의 결과를 이상 구간 분석에서 확인하세요.</p>
+                          </div>
+                        </section>
+                      ) : (
+                        <section className="panel event-summary">
+                          <div className="panel-heading">
+                            <div>
+                              <span className="eyebrow">DETECTION TIMELINE</span>
+                              <h2>
+                                판정 이력 <span className="heading-note">{events.length}건</span>
+                              </h2>
+                            </div>
+                            <button className="text-button" onClick={() => setTab('events')}>
+                              전체 보기
+                              <ArrowUpRightIcon />
+                            </button>
+                          </div>
+                          <EventList events={events} selected={selected} choose={chooseEvent} />
+                          <div className="event-summary-foot">
+                            <Info size={14} />
+                            {frame?.fixture_mode
+                              ? '시험용 응답의 판정 시각을 따라 표시합니다.'
+                              : '이상 점수는 고장 확률이나 건강도 %가 아닙니다.'}
+                          </div>
+                        </section>
+                      ))}
                   </div>
                 </>
               )}
@@ -927,19 +803,9 @@ export default function App() {
                   run={run}
                   frame={connected ? frame : null}
                   metrics={metrics}
-                  connectAI={() => configure()}
+                  connectAI={externalAnalysis ? () => configure() : undefined}
                 />
               )}
-              <div className="page-footer">
-                <span>
-                  <ShieldCheck size={13} />
-                  원본 보존 · 읽기 전용 분석
-                </span>
-                <span>
-                  {titleDate} <i>•</i> Source {run.source_system}/{run.source_component} <i>•</i>{' '}
-                  Epoch {frame?.epoch ?? 0}
-                </span>
-              </div>
             </>
           )}
         </main>
@@ -960,13 +826,6 @@ export default function App() {
               <div className="playback-time">
                 <strong>{timeLabel(cursor, true)}</strong>
                 <span>/ {timeLabel(Math.max(run.duration_ms, cursor), true)}</span>
-              </div>
-              <div className="playback-quality">
-                <button onClick={() => setTab('diagnostics')} className="text-button">
-                  <CircleAlert size={14} />
-                  제외 {run.excluded_records}건
-                </button>
-                <span>최대 10Hz 화면 갱신</span>
               </div>
             </div>
             <div className="playback-controls">
@@ -1063,7 +922,7 @@ export default function App() {
           </footer>
         )}
       </div>
-      {aiModal && run && (
+      {externalAnalysis && aiModal && run && (
         <ProviderDialog
           runId={runId}
           initial={providerId}
@@ -1073,12 +932,12 @@ export default function App() {
       )}
       {sourceModal && (
         <SourceDialog
+          isV02={isV02}
           close={() => setSourceModal(false)}
           created={(m) => {
             setRuns((previous) => [m, ...previous.filter((r) => r.run_id !== m.run_id)]);
             setRunId(m.run_id);
             setTab('monitor');
-            setImported(null);
           }}
         />
       )}

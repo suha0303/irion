@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plug, Radio, X, Activity, Settings2, ArrowUpRight } from 'lucide-react';
+import { Plug, Radio, X, Settings2, ArrowUpRight } from 'lucide-react';
 import { api, post } from './api';
 import type { Detection, Frame, InputProfile, Manifest, ProviderState } from './types';
 import { numeric, statusLabel, targetLabel, timeLabel } from './types';
@@ -212,9 +212,11 @@ export function ProviderDialog({
 export function SourceDialog({
   close,
   created,
+  isV02,
 }: {
   close: () => void;
   created: (m: Manifest) => void;
+  isV02: boolean;
 }) {
   const [kind, setKind] = useState('udp'),
     [profiles, setProfiles] = useState<InputProfile[]>([]),
@@ -227,24 +229,38 @@ export function SourceDialog({
     [source, setSource] = useState('');
   const [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
+  const compatible = profiles.filter(
+    (item) => (item.input_format === 'normalized') === (kind === 'normalized'),
+  );
+  const selectedProfile = compatible.find((item) => item.profile_id === profile) ?? compatible[0];
+  const portNumber = Number(port);
+  const baudRate = Number(baud);
+  const systemId = Number(source);
+  const validLink =
+    (kind !== 'udp' ||
+      (host.trim() && Number.isInteger(portNumber) && portNumber >= 1024 && portNumber <= 65535)) &&
+    (kind !== 'serial' ||
+      (device.trim() && Number.isInteger(baudRate) && baudRate >= 1200 && baudRate <= 3000000)) &&
+    (kind === 'normalized' ||
+      !source.trim() ||
+      (Number.isInteger(systemId) && systemId >= 1 && systemId <= 255));
   useEffect(() => {
     api<InputProfile[]>('/profiles')
       .then(setProfiles)
       .catch((e) => setError(e.message));
   }, []);
   const submit = async () => {
+    if (!selectedProfile || !name.trim() || !validLink) return;
     setBusy(true);
     setError('');
     try {
       const m = await post<Manifest>('/sessions', {
         kind,
-        name,
-        profile_id: profile,
-        host,
-        port: Number(port),
-        device,
-        baud: Number(baud),
-        source_system: source ? Number(source) : null,
+        name: name.trim(),
+        profile_id: selectedProfile.profile_id,
+        ...(kind === 'udp' && { host: host.trim(), port: portNumber }),
+        ...(kind === 'serial' && { device: device.trim(), baud: baudRate }),
+        source_system: kind !== 'normalized' && source.trim() ? systemId : null,
       });
       created(m);
       close();
@@ -272,7 +288,12 @@ export function SourceDialog({
         <div className="inner">
           <label className="form-label">
             세션 이름
-            <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} />
+            <input
+              className="text-input"
+              value={name}
+              maxLength={120}
+              onChange={(e) => setName(e.target.value)}
+            />
           </label>
           <label className="form-label">
             입력 방식
@@ -291,26 +312,26 @@ export function SourceDialog({
               <option value="normalized">공용 수집기 / 전처리 스트림</option>
             </select>
           </label>
-          <label className="form-label">
-            데이터 프로필
-            <select
-              className="text-input"
-              value={profile}
-              onChange={(e) => setProfile(e.target.value)}
-            >
-              {profiles
-                .filter((p) => (p.input_format === 'normalized') === (kind === 'normalized'))
-                .map((p) => (
-                  <option key={p.profile_id}>{p.profile_id}</option>
+          {compatible.length > 1 && (
+            <label className="form-label">
+              입력 데이터 계약
+              <select
+                className="text-input"
+                value={selectedProfile?.profile_id ?? ''}
+                onChange={(e) => setProfile(e.target.value)}
+              >
+                {compatible.map((item) => (
+                  <option key={item.profile_id}>{item.profile_id}</option>
                 ))}
-            </select>
-          </label>
+              </select>
+            </label>
+          )}
           {kind === 'normalized' && (
             <div className="profile-summary">
               외부 전처리 입력 → 실시간 화면 + 60초 NPZ 저장
               <br />
-              선택 프로필: {profiles.find((p) => p.profile_id === profile)?.sample_period_ms ?? '—'}
-              ms · {profiles.find((p) => p.profile_id === profile)?.preprocess_version ?? '—'}
+              선택 프로필: {selectedProfile?.sample_period_ms ?? '—'}
+              ms · {selectedProfile?.preprocess_version ?? '—'}
               <br />
               특징·단위·주기 변경은 새 프로필로 등록합니다. 학습은 외부에서 수행합니다.
             </div>
@@ -322,6 +343,7 @@ export function SourceDialog({
                 <input
                   className="text-input"
                   value={host}
+                  maxLength={64}
                   onChange={(e) => setHost(e.target.value)}
                 />
                 <small>같은 PC: 127.0.0.1 · 외부 기체 링크 수신: 이 PC의 LAN IP 또는 0.0.0.0</small>
@@ -331,6 +353,8 @@ export function SourceDialog({
                 <input
                   className="text-input"
                   type="number"
+                  min={1024}
+                  max={65535}
                   value={port}
                   onChange={(e) => setPort(e.target.value)}
                 />
@@ -344,15 +368,19 @@ export function SourceDialog({
                 <input
                   className="text-input"
                   placeholder="/dev/serial/by-id/… 또는 /dev/ttyACM0"
+                  maxLength={256}
                   value={device}
                   onChange={(e) => setDevice(e.target.value)}
                 />
+                <small>연결된 장치 경로를 입력하세요.</small>
               </label>
               <label className="form-label">
                 Baud rate
                 <input
                   className="text-input"
                   type="number"
+                  min={1200}
+                  max={3000000}
                   value={baud}
                   onChange={(e) => setBaud(e.target.value)}
                 />
@@ -361,20 +389,20 @@ export function SourceDialog({
           )}
           {kind !== 'normalized' && (
             <label className="form-label">
-              Source system · 비워두면 첫 유효 기체
+              MAVLink 시스템 ID · 선택
               <input
                 className="text-input"
                 type="number"
+                min={1}
+                max={255}
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
               />
+              <small>비워두면 첫 유효 기체를 사용합니다.</small>
             </label>
           )}
-          <p>
-            {kind === 'normalized'
-              ? '세션을 만든 뒤 공통 프레임 API로 데이터를 전달하세요. 주기·단위·mask·age를 검사하며 추가 전처리는 하지 않습니다.'
-              : '전용 링크로 전달된 텔레메트리만 수신합니다. 기존 QGC·공용 수집기와 같은 포트를 사용하지 마세요.'}
-          </p>
+          {isV02 && kind === 'udp' && <p>V0.2 모델은 PX4 MAVLink UDP 세션에서 연결합니다.</p>}
+          {kind === 'serial' && <p>시리얼은 MAVLink 텔레메트리 수신에 사용합니다.</p>}
           {error && (
             <div className="notice error" role="alert">
               {error}
@@ -384,7 +412,11 @@ export function SourceDialog({
             <button className="button" onClick={close}>
               닫기
             </button>
-            <button className="button primary" disabled={busy} onClick={submit}>
+            <button
+              className="button primary"
+              disabled={busy || !selectedProfile || !name.trim() || !validLink}
+              onClick={submit}
+            >
               <Radio size={15} />
               수집 시작
             </button>

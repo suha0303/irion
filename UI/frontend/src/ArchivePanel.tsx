@@ -93,16 +93,7 @@ export function ArchivePanel({
       setBusy(false);
     }
   };
-  if (!applicable)
-    return expanded ? (
-      <section className="panel archive-raw">
-        <Archive size={19} />
-        <div>
-          <strong>원본 텔레메트리 기록</strong>
-          <p>이 비행은 원본 JSONL 경로입니다. NPZ 저장은 외부 전처리 스트림 입력에 적용됩니다.</p>
-        </div>
-      </section>
-    ) : null;
+  if (!applicable) return null;
   const live = run.source_kind === 'live';
   return (
     <section
