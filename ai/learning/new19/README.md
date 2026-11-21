@@ -1,6 +1,6 @@
 # X500 V0.2 AI 모델 8종 실행
 
-비행 중과 전체 런에서 각각 LSTM·Transformer `64×2`, `128×4`를 학습한다. 숫자는 hidden 크기와 스택별 층수다. 모델 ID는 `inflight-lstm-64x2` 또는 `whole-run-transformer-128x4`와 같은 형태다. [설계](../../../docs/ai/NEW_EIGHT_MODEL_DESIGN.md)
+비행 중과 전체 런에서 각각 LSTM·Transformer `64×2`, `128×4`를 학습한다. 숫자는 hidden 크기와 스택별 층수다. 모델 ID는 `inflight-lstm-64x2` 또는 `whole-run-transformer-128x4`와 같은 형태다. [학습·예측](#학습과-예측)
 
 ```bash
 ./ai/drone-ai train new19 models
