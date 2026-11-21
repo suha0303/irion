@@ -199,7 +199,7 @@ export default function LocalProfile({
   }
   return (
     <section className="panel">
-      <h2>기체 프로파일</h2>
+      <h3>프로파일 편집</h3>
       <p>
         로그 설정과 근거가 충분한 셀 수 추정값을 채웁니다. 셀 수는 아래에서 바로 수정할 수 있습니다.
         기록용 정보는 비워도 됩니다.
