@@ -1,0 +1,38 @@
+{
+  "live/new19-app-four-models-20261121/verification.json": {
+    "source": "ai/reports/new19-app-four-models-20261121/verification.json",
+    "sha256": "74405c45a32af27e4aad6e559a973f83bd9f46c924bc9b3df331bbad9f66c648"
+  },
+  "live/new19-app-random-16x16-20261121/summary.json": {
+    "source": "ai/reports/new19-app-random-16x16-20261121/summary.json",
+    "sha256": "e2fac8dca0d65cf13270d715194adc723c49ed84b62f464fc69056cd80e9369d"
+  },
+  "live/new19-app-random-16x16-20261121/models.csv": {
+    "source": "ai/reports/new19-app-random-16x16-20261121/models.csv",
+    "sha256": "f0803b5dad22fa367594a75c8269f754951ca1b765323adfff741b763fbc3e80"
+  },
+  "live/new19-app-random-16x16-20261121/coverage.json": {
+    "source": "ai/reports/new19-app-random-16x16-20261121/coverage.json",
+    "sha256": "69f563f1aac6fdcae35e6a6f2d6ef8795211b99d75d855c68f0469e9229f119b"
+  },
+  "live/new19-app-random-16x16-20261121/capture-verified.json": {
+    "source": "ai/reports/new19-app-random-16x16-20261121/capture-verified.json",
+    "sha256": "d72471b95a20db8e7aff9009853e7f42e6517571515552201c03a0dcdef9770d"
+  },
+  "live/new19-app-random-16x16-20261121/verified-on-8880.json": {
+    "source": "ai/reports/new19-app-random-16x16-20261121/verified-on-8880.json",
+    "sha256": "37d1291f3529be6f987380433a27b9b6da666be4a26d0e11acd63c828cd44e11"
+  },
+  "live/new19-inflight-live-verification-20261121/summary.json": {
+    "source": "ai/reports/new19-inflight-live-verification-20261121/summary.json",
+    "sha256": "d8ecb44977851509006e1da4d948281407ac557cd8d0b7d802577d68a1f69668"
+  },
+  "live/new19-inflight-live-verification-20261121/final-results-by-condition.json": {
+    "source": "ai/reports/new19-inflight-live-verification-20261121/final-results-by-condition.json",
+    "sha256": "67ae70b83a16da000cea7e97c85fc916e025fd220bff1a1232a34c7c75c4fa31"
+  },
+  "live/new19-inflight-live-verification-20261121/frozen-evaluation-audit.json": {
+    "source": "ai/reports/new19-inflight-live-verification-20261121/frozen-evaluation-audit.json",
+    "sha256": "d6c4e6662baa4bba316d9d1d89814b64f1c2da66d3de29648be84d34bdc0a188"
+  }
+}

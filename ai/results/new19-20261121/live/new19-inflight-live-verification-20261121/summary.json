@@ -1,0 +1,754 @@
+{
+  "model_package": "ai/artifacts/new19-best-models-20261121",
+  "ui": "http://127.0.0.1:8880/",
+  "dashboard_model": "inflight-lstm-128x4",
+  "normal": {
+    "session_id": "live-482fbeebc4bd4042",
+    "seed": 1554547799,
+    "wind": "low",
+    "duration_s": 370.965,
+    "scenario": "hover_normal",
+    "degradation": {},
+    "wire_sha256": "c47a4398181a961fe6fa978ad9c7e472d25405bfb80ebcf3af5117c8920c197e",
+    "raw_bytes": 21584861,
+    "same_input_for_four_models": true,
+    "training_frame_policy_equal": true,
+    "training_frames": 4034,
+    "live_frames": 4034,
+    "takeoff_frames": 43,
+    "landing_frames": 281,
+    "models": {
+      "inflight-lstm-128x4": {
+        "replay": {
+          "equal": true,
+          "frames": 4034,
+          "differing_frames": 0,
+          "live_predictions": 3865,
+          "max_live_delay_us": 10033682,
+          "forecasts": 3935,
+          "scored_frames": 3934,
+          "alarm_frames": 0,
+          "wire_sha256": "c47a4398181a961fe6fa978ad9c7e472d25405bfb80ebcf3af5117c8920c197e",
+          "weights_sha256": "f0743be331832c926864ea5c9b38f790119aa78fb8e619c18f2b9a733ee8601a",
+          "calibration_sha256": "e5ac8ffd2eac86908afad27212b90d3bcd24d1a443bcfbcc89bae862377e2a43"
+        },
+        "live": {
+          "scored_frames": 3934,
+          "alarm_frames": 0,
+          "episodes": 0,
+          "alarm_intervals_us": [],
+          "first_scored_to_alarm_s": null,
+          "alarm_domains": [],
+          "live_predictions": 3865,
+          "frame_latency_ms": [
+            10012.447,
+            10019.735,
+            10033.682
+          ],
+          "publication_over_10_1s": 0
+        },
+        "batch": {
+          "comparison": "batch size 64 over the exact app-published input",
+          "residual_masks_equal": true,
+          "max_residual_delta_by_target": [
+            5.74637440183684e-08,
+            6.357934271682825e-08,
+            7.522766418133209e-08,
+            1.3573004231659525e-07
+          ],
+          "verdict_differences": 0,
+          "alarm_frames": 0
+        },
+        "verification_seconds": 35.75858435599366
+      },
+      "inflight-lstm-64x2": {
+        "replay": {
+          "equal": true,
+          "frames": 4034,
+          "differing_frames": 0,
+          "live_predictions": 3865,
+          "max_live_delay_us": 10020618,
+          "forecasts": 3935,
+          "scored_frames": 3934,
+          "alarm_frames": 0,
+          "wire_sha256": "c47a4398181a961fe6fa978ad9c7e472d25405bfb80ebcf3af5117c8920c197e",
+          "weights_sha256": "c82a1aa5750c6c092a7843db2072ad4cce1d752486896f51cfafadac3e25ce5f",
+          "calibration_sha256": "2b9691736f265c70585e8474f0763517fe741106941c23f16ca8cc4e5b59cf54"
+        },
+        "live": {
+          "scored_frames": 3934,
+          "alarm_frames": 0,
+          "episodes": 0,
+          "alarm_intervals_us": [],
+          "first_scored_to_alarm_s": null,
+          "alarm_domains": [],
+          "live_predictions": 3865,
+          "frame_latency_ms": [
+            10009.587,
+            10015.4688,
+            10020.618
+          ],
+          "publication_over_10_1s": 0
+        },
+        "batch": {
+          "comparison": "batch size 64 over the exact app-published input",
+          "residual_masks_equal": true,
+          "max_residual_delta_by_target": [
+            6.499787934396636e-08,
+            6.510199860795818e-08,
+            5.750129094053702e-08,
+            2.450475182769196e-07
+          ],
+          "verdict_differences": 0,
+          "alarm_frames": 0
+        },
+        "verification_seconds": 14.368010607999167
+      },
+      "inflight-transformer-64x2": {
+        "replay": {
+          "equal": true,
+          "frames": 4034,
+          "differing_frames": 0,
+          "live_predictions": 3865,
+          "max_live_delay_us": 10021366,
+          "forecasts": 3935,
+          "scored_frames": 3934,
+          "alarm_frames": 0,
+          "wire_sha256": "c47a4398181a961fe6fa978ad9c7e472d25405bfb80ebcf3af5117c8920c197e",
+          "weights_sha256": "4cbec2218b32dbb457ad01daf397cf2c09e7e56ec8f7a29ca45611812a1d675e",
+          "calibration_sha256": "0ebd2e1714a0c8793555cd627b30f63584cc8687061bddc3dfc529b74cb0970b"
+        },
+        "live": {
+          "scored_frames": 3934,
+          "alarm_frames": 0,
+          "episodes": 0,
+          "alarm_intervals_us": [],
+          "first_scored_to_alarm_s": null,
+          "alarm_domains": [],
+          "live_predictions": 3865,
+          "frame_latency_ms": [
+            10010.035,
+            10015.804199999999,
+            10021.366
+          ],
+          "publication_over_10_1s": 0
+        },
+        "batch": {
+          "comparison": "batch size 64 over the exact app-published input",
+          "residual_masks_equal": true,
+          "max_residual_delta_by_target": [
+            2.6177927811565915e-09,
+            2.6223518148627e-09,
+            4.1580381637817965e-09,
+            7.264546297847119e-09
+          ],
+          "verdict_differences": 0,
+          "alarm_frames": 0
+        },
+        "verification_seconds": 17.18521129200235
+      },
+      "inflight-transformer-128x4": {
+        "replay": {
+          "equal": true,
+          "frames": 4034,
+          "differing_frames": 0,
+          "live_predictions": 3865,
+          "max_live_delay_us": 10023348,
+          "forecasts": 3935,
+          "scored_frames": 3934,
+          "alarm_frames": 0,
+          "wire_sha256": "c47a4398181a961fe6fa978ad9c7e472d25405bfb80ebcf3af5117c8920c197e",
+          "weights_sha256": "218fd564eb66c5851c204097b252cdd50f2b803cf6f50fef0e9ca42b258eb413",
+          "calibration_sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e"
+        },
+        "live": {
+          "scored_frames": 3934,
+          "alarm_frames": 0,
+          "episodes": 0,
+          "alarm_intervals_us": [],
+          "first_scored_to_alarm_s": null,
+          "alarm_domains": [],
+          "live_predictions": 3865,
+          "frame_latency_ms": [
+            10012.052,
+            10017.9596,
+            10023.348
+          ],
+          "publication_over_10_1s": 0
+        },
+        "batch": {
+          "comparison": "batch size 64 over the exact app-published input",
+          "residual_masks_equal": true,
+          "max_residual_delta_by_target": [
+            2.1389282489278627e-09,
+            3.7051293387546647e-09,
+            4.267460204654405e-09,
+            8.923517924586122e-09
+          ],
+          "verdict_differences": 0,
+          "alarm_frames": 0
+        },
+        "verification_seconds": 30.941188073993544
+      }
+    }
+  },
+  "abnormal": {
+    "session_id": "live-96646194ff6045d7",
+    "seed": 3033555660,
+    "wind": "calm",
+    "duration_s": 337.341,
+    "scenario": "propulsion_loss_existing",
+    "degradation": {
+      "propulsion": 8
+    },
+    "wire_sha256": "3c5e25c91c75c3f9151b3c84d9de7d6651d0e6f16e8d24b41213617f376d0c70",
+    "raw_bytes": 20190214,
+    "same_input_for_four_models": true,
+    "training_frame_policy_equal": true,
+    "training_frames": 3759,
+    "live_frames": 3759,
+    "takeoff_frames": 44,
+    "landing_frames": 342,
+    "landing_us": 353392393.592,
+    "disarmed_us": 391130814.818,
+    "models": {
+      "inflight-lstm-128x4": {
+        "replay": {
+          "equal": true,
+          "frames": 3759,
+          "differing_frames": 0,
+          "live_predictions": 3596,
+          "max_live_delay_us": 10022904,
+          "forecasts": 3660,
+          "scored_frames": 3659,
+          "alarm_frames": 0,
+          "wire_sha256": "3c5e25c91c75c3f9151b3c84d9de7d6651d0e6f16e8d24b41213617f376d0c70",
+          "weights_sha256": "f0743be331832c926864ea5c9b38f790119aa78fb8e619c18f2b9a733ee8601a",
+          "calibration_sha256": "e5ac8ffd2eac86908afad27212b90d3bcd24d1a443bcfbcc89bae862377e2a43"
+        },
+        "live": {
+          "scored_frames": 3659,
+          "alarm_frames": 0,
+          "episodes": 0,
+          "alarm_intervals_us": [],
+          "alarm_frames_with_live_publication": 0,
+          "observed_alarm_frames_before_landing": 0,
+          "alerts_published_before_disarm": 0,
+          "first_alarm_origin_since_landing_s": null,
+          "first_alarm_published_since_landing_s": null,
+          "first_scored_to_alarm_s": null,
+          "alarm_domains": [],
+          "live_predictions": 3596,
+          "frame_latency_ms": [
+            10011.2345,
+            10016.9685,
+            10022.904
+          ],
+          "publication_over_10_1s": 0
+        },
+        "batch": {
+          "comparison": "batch size 64 over the exact app-published input",
+          "residual_masks_equal": true,
+          "max_residual_delta_by_target": [
+            1.3341165902656243e-07,
+            1.1690613575636444e-07,
+            5.89784887119766e-08,
+            1.9459732847337818e-07
+          ],
+          "verdict_differences": 0,
+          "alarm_frames": 0
+        },
+        "verification_seconds": 34.3441036669974
+      },
+      "inflight-lstm-64x2": {
+        "replay": {
+          "equal": true,
+          "frames": 3759,
+          "differing_frames": 0,
+          "live_predictions": 3596,
+          "max_live_delay_us": 10016241,
+          "forecasts": 3660,
+          "scored_frames": 3659,
+          "alarm_frames": 177,
+          "wire_sha256": "3c5e25c91c75c3f9151b3c84d9de7d6651d0e6f16e8d24b41213617f376d0c70",
+          "weights_sha256": "c82a1aa5750c6c092a7843db2072ad4cce1d752486896f51cfafadac3e25ce5f",
+          "calibration_sha256": "2b9691736f265c70585e8474f0763517fe741106941c23f16ca8cc4e5b59cf54"
+        },
+        "live": {
+          "scored_frames": 3659,
+          "alarm_frames": 177,
+          "episodes": 1,
+          "alarm_intervals_us": [
+            [
+              356900000,
+              374500000
+            ]
+          ],
+          "alarm_frames_with_live_publication": 177,
+          "observed_alarm_frames_before_landing": 0,
+          "alerts_published_before_disarm": 177,
+          "first_alarm_origin_since_landing_s": 3.5076064079999925,
+          "first_alarm_published_since_landing_s": 13.518055407999992,
+          "first_scored_to_alarm_s": 335.2,
+          "alarm_domains": [
+            1
+          ],
+          "live_predictions": 3596,
+          "frame_latency_ms": [
+            10008.313,
+            10013.252,
+            10016.241
+          ],
+          "publication_over_10_1s": 0
+        },
+        "batch": {
+          "comparison": "batch size 64 over the exact app-published input",
+          "residual_masks_equal": true,
+          "max_residual_delta_by_target": [
+            2.8197139945868033e-08,
+            5.2366673907768e-08,
+            3.7921581624855705e-08,
+            1.5217131910105763e-07
+          ],
+          "verdict_differences": 0,
+          "alarm_frames": 177
+        },
+        "verification_seconds": 12.98688902700087
+      },
+      "inflight-transformer-64x2": {
+        "replay": {
+          "equal": true,
+          "frames": 3759,
+          "differing_frames": 0,
+          "live_predictions": 3596,
+          "max_live_delay_us": 10016432,
+          "forecasts": 3660,
+          "scored_frames": 3659,
+          "alarm_frames": 185,
+          "wire_sha256": "3c5e25c91c75c3f9151b3c84d9de7d6651d0e6f16e8d24b41213617f376d0c70",
+          "weights_sha256": "4cbec2218b32dbb457ad01daf397cf2c09e7e56ec8f7a29ca45611812a1d675e",
+          "calibration_sha256": "0ebd2e1714a0c8793555cd627b30f63584cc8687061bddc3dfc529b74cb0970b"
+        },
+        "live": {
+          "scored_frames": 3659,
+          "alarm_frames": 185,
+          "episodes": 1,
+          "alarm_intervals_us": [
+            [
+              356900000,
+              375300000
+            ]
+          ],
+          "alarm_frames_with_live_publication": 185,
+          "observed_alarm_frames_before_landing": 0,
+          "alerts_published_before_disarm": 185,
+          "first_alarm_origin_since_landing_s": 3.5076064079999925,
+          "first_alarm_published_since_landing_s": 13.517960407999992,
+          "first_scored_to_alarm_s": 335.2,
+          "alarm_domains": [
+            1
+          ],
+          "live_predictions": 3596,
+          "frame_latency_ms": [
+            10008.837,
+            10013.666,
+            10016.432
+          ],
+          "publication_over_10_1s": 0
+        },
+        "batch": {
+          "comparison": "batch size 64 over the exact app-published input",
+          "residual_masks_equal": true,
+          "max_residual_delta_by_target": [
+            1.564290809732971e-09,
+            3.1129853807557173e-09,
+            2.680840396895867e-09,
+            5.692891491548835e-09
+          ],
+          "verdict_differences": 0,
+          "alarm_frames": 185
+        },
+        "verification_seconds": 15.227252497992595
+      },
+      "inflight-transformer-128x4": {
+        "replay": {
+          "equal": true,
+          "frames": 3759,
+          "differing_frames": 0,
+          "live_predictions": 3596,
+          "max_live_delay_us": 10021503,
+          "forecasts": 3660,
+          "scored_frames": 3659,
+          "alarm_frames": 176,
+          "wire_sha256": "3c5e25c91c75c3f9151b3c84d9de7d6651d0e6f16e8d24b41213617f376d0c70",
+          "weights_sha256": "218fd564eb66c5851c204097b252cdd50f2b803cf6f50fef0e9ca42b258eb413",
+          "calibration_sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e"
+        },
+        "live": {
+          "scored_frames": 3659,
+          "alarm_frames": 176,
+          "episodes": 1,
+          "alarm_intervals_us": [
+            [
+              356900000,
+              374400000
+            ]
+          ],
+          "alarm_frames_with_live_publication": 176,
+          "observed_alarm_frames_before_landing": 0,
+          "alerts_published_before_disarm": 176,
+          "first_alarm_origin_since_landing_s": 3.5076064079999925,
+          "first_alarm_published_since_landing_s": 13.515009407999992,
+          "first_scored_to_alarm_s": 335.2,
+          "alarm_domains": [
+            1
+          ],
+          "live_predictions": 3596,
+          "frame_latency_ms": [
+            10010.998,
+            10015.795,
+            10021.503
+          ],
+          "publication_over_10_1s": 0
+        },
+        "batch": {
+          "comparison": "batch size 64 over the exact app-published input",
+          "residual_masks_equal": true,
+          "max_residual_delta_by_target": [
+            1.7877609254091098e-09,
+            2.013289458757672e-09,
+            2.215796657267788e-09,
+            8.172618137791687e-09
+          ],
+          "verdict_differences": 0,
+          "alarm_frames": 176
+        },
+        "verification_seconds": 27.55308282500482
+      }
+    }
+  },
+  "frozen_evaluation": {
+    "inflight-lstm-128x4": {
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "bundle_sha256": "d1ce4b5cc193a704106cf35f295504a7e0055735d21ae8d817996837a433ab1a",
+        "weights_sha256": "f0743be331832c926864ea5c9b38f790119aa78fb8e619c18f2b9a733ee8601a",
+        "calibration_sha256": "e5ac8ffd2eac86908afad27212b90d3bcd24d1a443bcfbcc89bae862377e2a43",
+        "cadence_us": 100000,
+        "semantics": "SITL stored MAVLink replay; static pre-existing degradation"
+      },
+      "normal_test": {
+        "runs": 250,
+        "available": 250,
+        "unavailable": 0,
+        "alarms": 30,
+        "alarm_run_rate": 0.12,
+        "episodes": 35,
+        "scored_hours": 43.62327777777775,
+        "coverage": 0.9843303218301183,
+        "episodes_per_scored_hour": 0.8023239376530629
+      },
+      "anomaly_test": {
+        "runs": 200,
+        "available": 200,
+        "unavailable": 0,
+        "alarms": 184,
+        "alarm_run_rate": 0.92,
+        "not_detected_including_unavailable": 16,
+        "episodes": 469,
+        "scored_hours": 33.726861111111106,
+        "coverage": 0.9837947376651621,
+        "episodes_per_scored_hour": 13.905830087623864
+      }
+    },
+    "inflight-lstm-64x2": {
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "bundle_sha256": "285524a16464b8d5cef033b0b2bfa6b5e104cfc109fb0de4251578dd8db4d310",
+        "weights_sha256": "c82a1aa5750c6c092a7843db2072ad4cce1d752486896f51cfafadac3e25ce5f",
+        "calibration_sha256": "2b9691736f265c70585e8474f0763517fe741106941c23f16ca8cc4e5b59cf54",
+        "cadence_us": 100000,
+        "semantics": "SITL stored MAVLink replay; static pre-existing degradation"
+      },
+      "normal_test": {
+        "runs": 250,
+        "available": 250,
+        "unavailable": 0,
+        "alarms": 27,
+        "alarm_run_rate": 0.108,
+        "episodes": 32,
+        "scored_hours": 43.62327777777775,
+        "coverage": 0.9843303218301183,
+        "episodes_per_scored_hour": 0.7335533144256575
+      },
+      "anomaly_test": {
+        "runs": 200,
+        "available": 200,
+        "unavailable": 0,
+        "alarms": 160,
+        "alarm_run_rate": 0.8,
+        "not_detected_including_unavailable": 40,
+        "episodes": 248,
+        "scored_hours": 33.726861111111106,
+        "coverage": 0.9837947376651621,
+        "episodes_per_scored_hour": 7.3531894706411896
+      }
+    },
+    "inflight-transformer-128x4": {
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "bundle_sha256": "3c43117c257e4dee8b78164339f6782da81612476dfb7f186446f50cc5abc99f",
+        "weights_sha256": "218fd564eb66c5851c204097b252cdd50f2b803cf6f50fef0e9ca42b258eb413",
+        "calibration_sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e",
+        "cadence_us": 100000,
+        "semantics": "SITL stored MAVLink replay; static pre-existing degradation"
+      },
+      "normal_test": {
+        "runs": 250,
+        "available": 250,
+        "unavailable": 0,
+        "alarms": 24,
+        "alarm_run_rate": 0.096,
+        "episodes": 27,
+        "scored_hours": 43.62327777777775,
+        "coverage": 0.9843303218301183,
+        "episodes_per_scored_hour": 0.6189356090466485
+      },
+      "anomaly_test": {
+        "runs": 200,
+        "available": 200,
+        "unavailable": 0,
+        "alarms": 152,
+        "alarm_run_rate": 0.76,
+        "not_detected_including_unavailable": 48,
+        "episodes": 220,
+        "scored_hours": 33.726861111111106,
+        "coverage": 0.9837947376651621,
+        "episodes_per_scored_hour": 6.522990659439765
+      }
+    },
+    "inflight-transformer-64x2": {
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "bundle_sha256": "47d5d1edc2052d891e12150b93054539b61f0a4b8dd85dab62313e35eb648576",
+        "weights_sha256": "4cbec2218b32dbb457ad01daf397cf2c09e7e56ec8f7a29ca45611812a1d675e",
+        "calibration_sha256": "0ebd2e1714a0c8793555cd627b30f63584cc8687061bddc3dfc529b74cb0970b",
+        "cadence_us": 100000,
+        "semantics": "SITL stored MAVLink replay; static pre-existing degradation"
+      },
+      "normal_test": {
+        "runs": 250,
+        "available": 250,
+        "unavailable": 0,
+        "alarms": 26,
+        "alarm_run_rate": 0.104,
+        "episodes": 32,
+        "scored_hours": 43.62327777777775,
+        "coverage": 0.9843303218301183,
+        "episodes_per_scored_hour": 0.7335533144256575
+      },
+      "anomaly_test": {
+        "runs": 200,
+        "available": 200,
+        "unavailable": 0,
+        "alarms": 159,
+        "alarm_run_rate": 0.795,
+        "not_detected_including_unavailable": 41,
+        "episodes": 244,
+        "scored_hours": 33.726861111111106,
+        "coverage": 0.9837947376651621,
+        "episodes_per_scored_hour": 7.234589640469558
+      }
+    }
+  },
+  "frozen_evaluation_by_condition": {
+    "inflight-lstm-128x4": {
+      "normal_wind": {
+        "low": {
+          "total": 82,
+          "alarms": 1
+        },
+        "strong": {
+          "total": 78,
+          "alarms": 25
+        },
+        "calm": {
+          "total": 90,
+          "alarms": 4
+        }
+      },
+      "anomaly_fault": {
+        "battery_only": {
+          "total": 43,
+          "alarms": 43
+        },
+        "propulsion_only": {
+          "total": 45,
+          "alarms": 29
+        },
+        "combined": {
+          "total": 112,
+          "alarms": 112
+        }
+      }
+    },
+    "inflight-lstm-64x2": {
+      "normal_wind": {
+        "low": {
+          "total": 82,
+          "alarms": 1
+        },
+        "strong": {
+          "total": 78,
+          "alarms": 23
+        },
+        "calm": {
+          "total": 90,
+          "alarms": 3
+        }
+      },
+      "anomaly_fault": {
+        "battery_only": {
+          "total": 43,
+          "alarms": 43
+        },
+        "propulsion_only": {
+          "total": 45,
+          "alarms": 10
+        },
+        "combined": {
+          "total": 112,
+          "alarms": 107
+        }
+      }
+    },
+    "inflight-transformer-128x4": {
+      "normal_wind": {
+        "low": {
+          "total": 82,
+          "alarms": 0
+        },
+        "strong": {
+          "total": 78,
+          "alarms": 23
+        },
+        "calm": {
+          "total": 90,
+          "alarms": 1
+        }
+      },
+      "anomaly_fault": {
+        "battery_only": {
+          "total": 43,
+          "alarms": 42
+        },
+        "propulsion_only": {
+          "total": 45,
+          "alarms": 7
+        },
+        "combined": {
+          "total": 112,
+          "alarms": 103
+        }
+      }
+    },
+    "inflight-transformer-64x2": {
+      "normal_wind": {
+        "low": {
+          "total": 82,
+          "alarms": 0
+        },
+        "strong": {
+          "total": 78,
+          "alarms": 26
+        },
+        "calm": {
+          "total": 90,
+          "alarms": 0
+        }
+      },
+      "anomaly_fault": {
+        "battery_only": {
+          "total": 43,
+          "alarms": 42
+        },
+        "propulsion_only": {
+          "total": 45,
+          "alarms": 10
+        },
+        "combined": {
+          "total": 112,
+          "alarms": 107
+        }
+      }
+    }
+  },
+  "positive_control": {
+    "scope": "previous SITL raw replay control",
+    "session": "live-42cfd8d04dba4265",
+    "battery_stage": 12,
+    "propulsion_stage": 16,
+    "models": {
+      "inflight-lstm-128x4": {
+        "preprocessing_revision": "px4-buffered-common19/2",
+        "hold_us": 10000000,
+        "model": "inflight-lstm-128x4",
+        "bundle_sha256": "d1ce4b5cc193a704106cf35f295504a7e0055735d21ae8d817996837a433ab1a",
+        "weights_sha256": "f0743be331832c926864ea5c9b38f790119aa78fb8e619c18f2b9a733ee8601a",
+        "calibration_sha256": "e5ac8ffd2eac86908afad27212b90d3bcd24d1a443bcfbcc89bae862377e2a43",
+        "frame_policy": "valid-flight-edges/1",
+        "wire_sha256": "62eca2bb3b1a0109aa0fa2841479e2a4201ae0a2ffa56220cdaafaf88fd8c8b1",
+        "frames": 8864,
+        "forecasts": 8765,
+        "scored_frames": 8764,
+        "alarm_frames": 8723,
+        "late_samples": 0
+      },
+      "inflight-lstm-64x2": {
+        "preprocessing_revision": "px4-buffered-common19/2",
+        "hold_us": 10000000,
+        "model": "inflight-lstm-64x2",
+        "bundle_sha256": "285524a16464b8d5cef033b0b2bfa6b5e104cfc109fb0de4251578dd8db4d310",
+        "weights_sha256": "c82a1aa5750c6c092a7843db2072ad4cce1d752486896f51cfafadac3e25ce5f",
+        "calibration_sha256": "2b9691736f265c70585e8474f0763517fe741106941c23f16ca8cc4e5b59cf54",
+        "frame_policy": "valid-flight-edges/1",
+        "wire_sha256": "62eca2bb3b1a0109aa0fa2841479e2a4201ae0a2ffa56220cdaafaf88fd8c8b1",
+        "frames": 8864,
+        "forecasts": 8765,
+        "scored_frames": 8764,
+        "alarm_frames": 1737,
+        "late_samples": 0
+      },
+      "inflight-transformer-128x4": {
+        "preprocessing_revision": "px4-buffered-common19/2",
+        "hold_us": 10000000,
+        "model": "inflight-transformer-128x4",
+        "bundle_sha256": "3c43117c257e4dee8b78164339f6782da81612476dfb7f186446f50cc5abc99f",
+        "weights_sha256": "218fd564eb66c5851c204097b252cdd50f2b803cf6f50fef0e9ca42b258eb413",
+        "calibration_sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e",
+        "frame_policy": "valid-flight-edges/1",
+        "wire_sha256": "62eca2bb3b1a0109aa0fa2841479e2a4201ae0a2ffa56220cdaafaf88fd8c8b1",
+        "frames": 8864,
+        "forecasts": 8765,
+        "scored_frames": 8764,
+        "alarm_frames": 232,
+        "late_samples": 0
+      },
+      "inflight-transformer-64x2": {
+        "preprocessing_revision": "px4-buffered-common19/2",
+        "hold_us": 10000000,
+        "model": "inflight-transformer-64x2",
+        "bundle_sha256": "47d5d1edc2052d891e12150b93054539b61f0a4b8dd85dab62313e35eb648576",
+        "weights_sha256": "4cbec2218b32dbb457ad01daf397cf2c09e7e56ec8f7a29ca45611812a1d675e",
+        "calibration_sha256": "0ebd2e1714a0c8793555cd627b30f63584cc8687061bddc3dfc529b74cb0970b",
+        "frame_policy": "valid-flight-edges/1",
+        "wire_sha256": "62eca2bb3b1a0109aa0fa2841479e2a4201ae0a2ffa56220cdaafaf88fd8c8b1",
+        "frames": 8864,
+        "forecasts": 8765,
+        "scored_frames": 8764,
+        "alarm_frames": 1482,
+        "late_samples": 0
+      }
+    }
+  }
+}

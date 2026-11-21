@@ -1,0 +1,251 @@
+{
+  "app": "http://127.0.0.1:8880",
+  "graph_checks": [
+    {
+      "run_id": "live-ad8258a717f4bf91",
+      "title": "PX4 · 16+16 정상 01 · 4모델",
+      "frames": 6176
+    },
+    {
+      "run_id": "live-eea16970f6e4ed18",
+      "title": "PX4 · 16+16 정상 02 · 4모델",
+      "frames": 6791
+    },
+    {
+      "run_id": "live-274c50d6a3cb1565",
+      "title": "PX4 · 16+16 정상 03 · 4모델",
+      "frames": 5178
+    },
+    {
+      "run_id": "live-41772e4770691df8",
+      "title": "PX4 · 16+16 정상 04 · 4모델",
+      "frames": 7080
+    },
+    {
+      "run_id": "live-2d65b3f532a23f35",
+      "title": "PX4 · 16+16 정상 05 · 4모델",
+      "frames": 4967
+    },
+    {
+      "run_id": "live-6f2a1560160b8069",
+      "title": "PX4 · 16+16 정상 06 · 4모델",
+      "frames": 5589
+    },
+    {
+      "run_id": "live-6fc912cdc1b7be47",
+      "title": "PX4 · 16+16 정상 07 · 4모델",
+      "frames": 6891
+    },
+    {
+      "run_id": "live-c38f8b3adb24e95f",
+      "title": "PX4 · 16+16 정상 08 · 4모델",
+      "frames": 3734
+    },
+    {
+      "run_id": "live-94a873759ed56840",
+      "title": "PX4 · 16+16 정상 09 · 4모델",
+      "frames": 4570
+    },
+    {
+      "run_id": "live-119cbff623b2ad3e",
+      "title": "PX4 · 16+16 정상 10 · 4모델",
+      "frames": 6860
+    },
+    {
+      "run_id": "live-7414837e34f36302",
+      "title": "PX4 · 16+16 정상 11 · 4모델",
+      "frames": 4351
+    },
+    {
+      "run_id": "live-9eec757437166701",
+      "title": "PX4 · 16+16 정상 12 · 4모델",
+      "frames": 4945
+    },
+    {
+      "run_id": "live-acaee5b4be36f782",
+      "title": "PX4 · 16+16 정상 13 · 4모델",
+      "frames": 5026
+    },
+    {
+      "run_id": "live-6a0c3528fc99ae66",
+      "title": "PX4 · 16+16 정상 14 · 4모델",
+      "frames": 4806
+    },
+    {
+      "run_id": "live-fdc555a028742f89",
+      "title": "PX4 · 16+16 정상 15 · 4모델",
+      "frames": 4222
+    },
+    {
+      "run_id": "live-ee5ffeac2ca614ee",
+      "title": "PX4 · 16+16 정상 16 · 4모델",
+      "frames": 4552
+    },
+    {
+      "run_id": "live-1c2e0f89e4f5e821",
+      "title": "PX4 · 16+16 이상 01 · 4모델",
+      "frames": 8447
+    },
+    {
+      "run_id": "live-f1d9158e287c6ecf",
+      "title": "PX4 · 16+16 이상 02 · 4모델",
+      "frames": 6419
+    },
+    {
+      "run_id": "live-5b25783ef011f741",
+      "title": "PX4 · 16+16 이상 03 · 4모델",
+      "frames": 7028
+    },
+    {
+      "run_id": "live-32d032478c9ba42c",
+      "title": "PX4 · 16+16 이상 04 · 4모델",
+      "frames": 6522
+    },
+    {
+      "run_id": "live-992901370d4f03d0",
+      "title": "PX4 · 16+16 이상 05 · 4모델",
+      "frames": 4931
+    },
+    {
+      "run_id": "live-725fd4249750e0cd",
+      "title": "PX4 · 16+16 이상 06 · 4모델",
+      "frames": 3613
+    },
+    {
+      "run_id": "live-7c631ea77a4b1b62",
+      "title": "PX4 · 16+16 이상 07 · 4모델",
+      "frames": 3312
+    },
+    {
+      "run_id": "live-65c81685a596554f",
+      "title": "PX4 · 16+16 이상 08 · 4모델",
+      "frames": 4922
+    },
+    {
+      "run_id": "live-629e9ae4f7929463",
+      "title": "PX4 · 16+16 이상 09 · 4모델",
+      "frames": 6393
+    },
+    {
+      "run_id": "live-16d27a360ade6cd5",
+      "title": "PX4 · 16+16 이상 10 · 4모델",
+      "frames": 5078
+    },
+    {
+      "run_id": "live-bce60b24487dcaed",
+      "title": "PX4 · 16+16 이상 11 · 4모델",
+      "frames": 6984
+    },
+    {
+      "run_id": "live-9d4bc664eca61a32",
+      "title": "PX4 · 16+16 이상 12 · 4모델",
+      "frames": 6552
+    },
+    {
+      "run_id": "live-995f48047891696f",
+      "title": "PX4 · 16+16 이상 13 · 4모델",
+      "frames": 6268
+    },
+    {
+      "run_id": "live-9164ae076e78bdb0",
+      "title": "PX4 · 16+16 이상 14 · 4모델",
+      "frames": 5106
+    },
+    {
+      "run_id": "live-75042cec1c0d94cc",
+      "title": "PX4 · 16+16 이상 15 · 4모델",
+      "frames": 7883
+    },
+    {
+      "run_id": "live-ba5c3d0ae5882043",
+      "title": "PX4 · 16+16 이상 16 · 4모델",
+      "frames": 7247
+    },
+    {
+      "run_id": "live-c7872119bbd1493d",
+      "title": "PX4 · 랜덤 정상 1 · 4모델",
+      "frames": 5790
+    },
+    {
+      "run_id": "live-974f45c3e4bf47dd",
+      "title": "PX4 · 랜덤 이상 1 · 4모델",
+      "frames": 7392
+    },
+    {
+      "run_id": "live-95947d5f2a324586",
+      "title": "PX4 · 랜덤 정상 2 · 4모델",
+      "frames": 8968
+    },
+    {
+      "run_id": "live-45175df1c0e6405b",
+      "title": "PX4 · 랜덤 이상 2 · 4모델",
+      "frames": 5761
+    },
+    {
+      "run_id": "live-177918c7a3494939",
+      "title": "PX4 · 랜덤 정상 3 · 4모델",
+      "frames": 3313
+    },
+    {
+      "run_id": "live-703f52239ec941df",
+      "title": "PX4 · 랜덤 이상 3 · 4모델",
+      "frames": 7907
+    }
+  ],
+  "replay_smoke_test": {
+    "equal": true,
+    "frames": 3312,
+    "differing_frames": 0,
+    "live_predictions": 0,
+    "max_live_delay_us": null,
+    "wire_sha256": "7c631ea77a4b1b62f1814b58d91d51471f3e442157dda218a120e3ee1599a9f5",
+    "models": {
+      "inflight-lstm-64x2": {
+        "model": "inflight-lstm-64x2",
+        "bundle_sha256": "285524a16464b8d5cef033b0b2bfa6b5e104cfc109fb0de4251578dd8db4d310",
+        "weights_sha256": "c82a1aa5750c6c092a7843db2072ad4cce1d752486896f51cfafadac3e25ce5f",
+        "calibration_sha256": "2b9691736f265c70585e8474f0763517fe741106941c23f16ca8cc4e5b59cf54"
+      },
+      "inflight-lstm-128x4": {
+        "model": "inflight-lstm-128x4",
+        "bundle_sha256": "d1ce4b5cc193a704106cf35f295504a7e0055735d21ae8d817996837a433ab1a",
+        "weights_sha256": "f0743be331832c926864ea5c9b38f790119aa78fb8e619c18f2b9a733ee8601a",
+        "calibration_sha256": "e5ac8ffd2eac86908afad27212b90d3bcd24d1a443bcfbcc89bae862377e2a43"
+      },
+      "inflight-transformer-64x2": {
+        "model": "inflight-transformer-64x2",
+        "bundle_sha256": "47d5d1edc2052d891e12150b93054539b61f0a4b8dd85dab62313e35eb648576",
+        "weights_sha256": "4cbec2218b32dbb457ad01daf397cf2c09e7e56ec8f7a29ca45611812a1d675e",
+        "calibration_sha256": "0ebd2e1714a0c8793555cd627b30f63584cc8687061bddc3dfc529b74cb0970b"
+      },
+      "inflight-transformer-128x4": {
+        "model": "inflight-transformer-128x4",
+        "bundle_sha256": "3c43117c257e4dee8b78164339f6782da81612476dfb7f186446f50cc5abc99f",
+        "weights_sha256": "218fd564eb66c5851c204097b252cdd50f2b803cf6f50fef0e9ca42b258eb413",
+        "calibration_sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e"
+      }
+    },
+    "model_summaries": {
+      "inflight-lstm-64x2": {
+        "forecasts": 3213,
+        "scored_frames": 3212,
+        "alarm_frames": 472
+      },
+      "inflight-lstm-128x4": {
+        "forecasts": 3213,
+        "scored_frames": 3212,
+        "alarm_frames": 455
+      },
+      "inflight-transformer-64x2": {
+        "forecasts": 3213,
+        "scored_frames": 3212,
+        "alarm_frames": 187
+      },
+      "inflight-transformer-128x4": {
+        "forecasts": 3213,
+        "scored_frames": 3212,
+        "alarm_frames": 365
+      }
+    }
+  }
+}

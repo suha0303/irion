@@ -1,0 +1,4622 @@
+{
+  "flights": [
+    {
+      "run_id": "live-ad8258a717f4bf91",
+      "title": "PX4 · 16+16 정상 01 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0001/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0001/19-51-48.688278",
+      "sha256": "ad8258a717f4bf9141010d3becf36e4ab45514405992b813c8ea4f65374d880b",
+      "port": 14700,
+      "system": 1,
+      "lane": 0,
+      "number": 1,
+      "kind": "normal",
+      "seed": 3181764195,
+      "result": {
+        "flight_started_ns": 115312986319570,
+        "flight_exit": 0,
+        "flight_finished_ns": 116043873031550,
+        "run": "/home/sa/CapstoneV3/simulation/runs/46f303165ba24d26b348f457af356211",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "low",
+      "stages": {},
+      "nominal_duration_s": 668.202,
+      "mission_speed": 0.9860831549901178,
+      "created_at": "2026-11-20T19:34:14.860336+00:00",
+      "wire_sha256": "ad8258a717f4bf9141010d3becf36e4ab45514405992b813c8ea4f65374d880b",
+      "wire_bytes": 36725905,
+      "frames": 6176,
+      "mission_s": 17.115400811992004,
+      "landing_s": 692.7176526389958,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.5710468357774627,
+            1.5684083382901062
+          ],
+          "scored_pre_landing": 6068,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6069,
+          "scored_frames": 6068,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.4132899490230786,
+            1.635132972872855
+          ],
+          "scored_pre_landing": 6068,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6069,
+          "scored_frames": 6068,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.364412729444821,
+            1.8336111322900055
+          ],
+          "scored_pre_landing": 6068,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6069,
+          "scored_frames": 6068,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.372636829921977,
+            1.435799520077885
+          ],
+          "scored_pre_landing": 6068,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6069,
+          "scored_frames": 6068,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-eea16970f6e4ed18",
+      "title": "PX4 · 16+16 정상 02 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0002/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0002/19-51-35.756030",
+      "sha256": "eea16970f6e4ed18445dbea350a0d7e45f304244b1da8e6fb63d9f1305cd86fc",
+      "port": 14701,
+      "system": 2,
+      "lane": 1,
+      "number": 2,
+      "kind": "normal",
+      "seed": 3181764196,
+      "result": {
+        "flight_started_ns": 115312988265411,
+        "flight_exit": 0,
+        "flight_finished_ns": 116027481042554,
+        "run": "/home/sa/CapstoneV3/simulation/runs/1ad4a2601a9342d1a8d5669b46514af0",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "lissajous",
+      "wind": "low",
+      "stages": {},
+      "nominal_duration_s": 661.267,
+      "mission_speed": 0.9861968824993963,
+      "created_at": "2026-11-20T19:34:14.634501+00:00",
+      "wire_sha256": "eea16970f6e4ed18445dbea350a0d7e45f304244b1da8e6fb63d9f1305cd86fc",
+      "wire_bytes": 35871148,
+      "frames": 6791,
+      "mission_s": 16.81255259999307,
+      "landing_s": 685.3311939580017,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.5908545430728442,
+            3.694748400958991
+          ],
+          "scored_pre_landing": 6656,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6684,
+          "scored_frames": 6683,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.5628226334548176,
+            3.856122290721885
+          ],
+          "scored_pre_landing": 6656,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6684,
+          "scored_frames": 6683,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.62676093462186,
+            1.9613060858146534
+          ],
+          "scored_pre_landing": 6656,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6684,
+          "scored_frames": 6683,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.613665298417335,
+            2.629809451049259
+          ],
+          "scored_pre_landing": 6656,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6684,
+          "scored_frames": 6683,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-274c50d6a3cb1565",
+      "title": "PX4 · 16+16 정상 03 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0003/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0003/19-45-08.750556",
+      "sha256": "274c50d6a3cb156560499362fd94da01ef500d3d2275463d1e1dd97e6fb63009",
+      "port": 14702,
+      "system": 3,
+      "lane": 2,
+      "number": 3,
+      "kind": "normal",
+      "seed": 3181764197,
+      "result": {
+        "flight_started_ns": 115312988232760,
+        "flight_exit": 0,
+        "flight_finished_ns": 115901298025603,
+        "run": "/home/sa/CapstoneV3/simulation/runs/34d34e21a8aa40d48e422268bb7070fc",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "low",
+      "stages": {},
+      "nominal_duration_s": 538.444,
+      "mission_speed": 0.9832575312777935,
+      "created_at": "2026-11-20T19:34:14.421784+00:00",
+      "wire_sha256": "274c50d6a3cb156560499362fd94da01ef500d3d2275463d1e1dd97e6fb63009",
+      "wire_bytes": 29366333,
+      "frames": 5178,
+      "mission_s": 17.203909768009908,
+      "landing_s": 562.7700335310074,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.996764795663356,
+            1.4238764580543164
+          ],
+          "scored_pre_landing": 5070,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 5071,
+          "scored_frames": 5070,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.9705854495107876,
+            0.9573307785242258
+          ],
+          "scored_pre_landing": 5070,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 5071,
+          "scored_frames": 5070,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.9319759595966964,
+            1.341131967834463
+          ],
+          "scored_pre_landing": 5070,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 5071,
+          "scored_frames": 5070,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.0232684203625098,
+            1.0238747254031035
+          ],
+          "scored_pre_landing": 5070,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 5071,
+          "scored_frames": 5070,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-41772e4770691df8",
+      "title": "PX4 · 16+16 정상 04 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0004/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0004/19-52-44.630285",
+      "sha256": "41772e4770691df810240b5220def867bf293e636e666bfb5696d2c0b223c34d",
+      "port": 14703,
+      "system": 4,
+      "lane": 3,
+      "number": 4,
+      "kind": "normal",
+      "seed": 3181764198,
+      "result": {
+        "flight_started_ns": 115312986342465,
+        "flight_exit": 0,
+        "flight_finished_ns": 116077546023750,
+        "run": "/home/sa/CapstoneV3/simulation/runs/258e9aef87734133b56755127f721de6",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "strong",
+      "stages": {},
+      "nominal_duration_s": 713.295,
+      "mission_speed": 0.9869845283437267,
+      "created_at": "2026-11-20T19:34:14.659847+00:00",
+      "wire_sha256": "41772e4770691df810240b5220def867bf293e636e666bfb5696d2c0b223c34d",
+      "wire_bytes": 38464946,
+      "frames": 7080,
+      "mission_s": 17.233768455000245,
+      "landing_s": 737.9056529410009,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.2740787107696305,
+            1.8685520145103212
+          ],
+          "scored_pre_landing": 6972,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6973,
+          "scored_frames": 6972,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.4577866200584384,
+            1.8707866953760677
+          ],
+          "scored_pre_landing": 6972,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6973,
+          "scored_frames": 6972,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.4658455078083583,
+            1.7763496032325183
+          ],
+          "scored_pre_landing": 6972,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6973,
+          "scored_frames": 6972,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.440876624442504,
+            1.6233485588281533
+          ],
+          "scored_pre_landing": 6972,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6973,
+          "scored_frames": 6972,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-2d65b3f532a23f35",
+      "title": "PX4 · 16+16 정상 05 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0005/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0005/19-45-08.748077",
+      "sha256": "2d65b3f532a23f3583dae9a593124f14f93a08e691ca45f56f0d6e5e06b7d8d8",
+      "port": 14704,
+      "system": 5,
+      "lane": 4,
+      "number": 5,
+      "kind": "normal",
+      "seed": 3181764199,
+      "result": {
+        "flight_started_ns": 115312988487519,
+        "flight_exit": 0,
+        "flight_finished_ns": 115878593033379,
+        "run": "/home/sa/CapstoneV3/simulation/runs/d648288524ea4f4d9de2bca78fcc4221",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "low",
+      "stages": {},
+      "nominal_duration_s": 504.564,
+      "mission_speed": 0.9819376451451859,
+      "created_at": "2026-11-20T19:34:14.734457+00:00",
+      "wire_sha256": "2d65b3f532a23f3583dae9a593124f14f93a08e691ca45f56f0d6e5e06b7d8d8",
+      "wire_bytes": 28200148,
+      "frames": 4967,
+      "mission_s": 17.113571374997264,
+      "landing_s": 528.9220375079894,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.422898390052339,
+            1.439541180183649
+          ],
+          "scored_pre_landing": 4860,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4861,
+          "scored_frames": 4860,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.3836777026807632,
+            1.4225252162004707
+          ],
+          "scored_pre_landing": 4860,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4861,
+          "scored_frames": 4860,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.4925572495007977,
+            1.300072057298495
+          ],
+          "scored_pre_landing": 4860,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4861,
+          "scored_frames": 4860,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.509456707198918,
+            1.2516057139736114
+          ],
+          "scored_pre_landing": 4860,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4861,
+          "scored_frames": 4860,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-6f2a1560160b8069",
+      "title": "PX4 · 16+16 정상 06 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0006/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0006/19-45-08.753172",
+      "sha256": "6f2a1560160b8069084f130b7cb55e030ac0d9a6d8284ee06564550a70e2f66f",
+      "port": 14705,
+      "system": 6,
+      "lane": 5,
+      "number": 6,
+      "kind": "normal",
+      "seed": 3181764200,
+      "result": {
+        "flight_started_ns": 115312988330620,
+        "flight_exit": 0,
+        "flight_finished_ns": 115951170022910,
+        "run": "/home/sa/CapstoneV3/simulation/runs/56f2127a7e0e4a2792c9028562a421a5",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "calm",
+      "stages": {},
+      "nominal_duration_s": 587.566,
+      "mission_speed": 0.9845046459237446,
+      "created_at": "2026-11-20T19:34:14.454597+00:00",
+      "wire_sha256": "6f2a1560160b8069084f130b7cb55e030ac0d9a6d8284ee06564550a70e2f66f",
+      "wire_bytes": 31937653,
+      "frames": 5589,
+      "mission_s": 17.301338239994948,
+      "landing_s": 612.0755756440049,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.6375063973883628,
+            1.1735834937834972
+          ],
+          "scored_pre_landing": 5481,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 5482,
+          "scored_frames": 5481,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.5508784612587682,
+            1.1740616614196022
+          ],
+          "scored_pre_landing": 5481,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 5482,
+          "scored_frames": 5481,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.5348097015276932,
+            1.2359366104287584
+          ],
+          "scored_pre_landing": 5481,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 5482,
+          "scored_frames": 5481,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.5360596677187867,
+            1.0842612607429867
+          ],
+          "scored_pre_landing": 5481,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 5482,
+          "scored_frames": 5481,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-6fc912cdc1b7be47",
+      "title": "PX4 · 16+16 정상 07 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0007/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0007/19-56-30.269344",
+      "sha256": "6fc912cdc1b7be47afa02345f46744770029beb85467600894771df0e5d6ab2c",
+      "port": 14706,
+      "system": 7,
+      "lane": 6,
+      "number": 7,
+      "kind": "normal",
+      "seed": 3181764201,
+      "result": {
+        "flight_started_ns": 115312986495517,
+        "flight_exit": 0,
+        "flight_finished_ns": 116254650079411,
+        "run": "/home/sa/CapstoneV3/simulation/runs/3f5bbf590d5142498072cace4fa418fe",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "low",
+      "stages": {},
+      "nominal_duration_s": 875.87,
+      "mission_speed": 0.9892835673647591,
+      "created_at": "2026-11-20T19:34:14.626876+00:00",
+      "wire_sha256": "6fc912cdc1b7be47afa02345f46744770029beb85467600894771df0e5d6ab2c",
+      "wire_bytes": 47627817,
+      "frames": 6891,
+      "mission_s": 17.353539097995963,
+      "landing_s": 900.6836871239939,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            3.0007914877983257,
+            1.894472815478926
+          ],
+          "scored_pre_landing": 6789,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6790,
+          "scored_frames": 6789,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.846956179494784,
+            1.7274683732805636
+          ],
+          "scored_pre_landing": 6789,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6790,
+          "scored_frames": 6789,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.7693086168630456,
+            1.87579553553601
+          ],
+          "scored_pre_landing": 6789,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6790,
+          "scored_frames": 6789,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.598433502083797,
+            1.6877109386557607
+          ],
+          "scored_pre_landing": 6789,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6790,
+          "scored_frames": 6789,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-c38f8b3adb24e95f",
+      "title": "PX4 · 16+16 정상 08 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0008/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0008/19-45-08.742482",
+      "sha256": "c38f8b3adb24e95f0d72ac46db43ded3e94a293e684f50d8827b5e2c0186741b",
+      "port": 14707,
+      "system": 8,
+      "lane": 7,
+      "number": 8,
+      "kind": "normal",
+      "seed": 3181764202,
+      "result": {
+        "flight_started_ns": 115312987015192,
+        "flight_exit": 0,
+        "flight_finished_ns": 115718041054947,
+        "run": "/home/sa/CapstoneV3/simulation/runs/0297c385cc5249448c50269972e2dc7f",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "calm",
+      "stages": {},
+      "nominal_duration_s": 344.732,
+      "mission_speed": 0.9762576054386054,
+      "created_at": "2026-11-20T19:34:14.782595+00:00",
+      "wire_sha256": "c38f8b3adb24e95f0d72ac46db43ded3e94a293e684f50d8827b5e2c0186741b",
+      "wire_bytes": 19934822,
+      "frames": 3734,
+      "mission_s": 16.984854615002405,
+      "landing_s": 368.05100569099886,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 363.0,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 363.0,
+              "end_s": 383.3,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.7441026153956498,
+            58.842564393418684
+          ],
+          "scored_pre_landing": 3481,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 3635,
+          "scored_frames": 3634,
+          "alarm_frames": 204
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 362.7,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 362.7,
+              "end_s": 383.3,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.6081420220486295,
+            167.47493529828884
+          ],
+          "scored_pre_landing": 3481,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 3635,
+          "scored_frames": 3634,
+          "alarm_frames": 207
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 362.8,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 362.8,
+              "end_s": 383.3,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.3899206586749335,
+            139.89436361795214
+          ],
+          "scored_pre_landing": 3481,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 3635,
+          "scored_frames": 3634,
+          "alarm_frames": 206
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 362.7,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 362.7,
+              "end_s": 383.3,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.3712570095837198,
+            82.03830006143045
+          ],
+          "scored_pre_landing": 3481,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 3635,
+          "scored_frames": 3634,
+          "alarm_frames": 207
+        }
+      }
+    },
+    {
+      "run_id": "live-94a873759ed56840",
+      "title": "PX4 · 16+16 정상 09 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0009/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0009/19-46-31.387576",
+      "sha256": "94a873759ed568407a94bb9e3ee8223d8eb7f90bed846c5dbdbb85e24696350e",
+      "port": 14708,
+      "system": 9,
+      "lane": 8,
+      "number": 9,
+      "kind": "normal",
+      "seed": 3181764203,
+      "result": {
+        "flight_started_ns": 115312979076701,
+        "flight_exit": 0,
+        "flight_finished_ns": 115802354384714,
+        "run": "/home/sa/CapstoneV3/simulation/runs/1337c823b01c43c6aa94633efa7d26c7",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "low",
+      "stages": {},
+      "nominal_duration_s": 423.995,
+      "mission_speed": 0.9794359209359351,
+      "created_at": "2026-11-20T19:34:14.804599+00:00",
+      "wire_sha256": "94a873759ed568407a94bb9e3ee8223d8eb7f90bed846c5dbdbb85e24696350e",
+      "wire_bytes": 24273812,
+      "frames": 4570,
+      "mission_s": 17.143103466005414,
+      "landing_s": 447.9574027790077,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 442.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 442.4,
+              "end_s": 467.0,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            2.536632099981689,
+            78.54255000209982
+          ],
+          "scored_pre_landing": 4279,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4471,
+          "scored_frames": 4470,
+          "alarm_frames": 247
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 442.3,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 442.3,
+              "end_s": 467.0,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            2.2670535071407287,
+            77.53063438486188
+          ],
+          "scored_pre_landing": 4279,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4471,
+          "scored_frames": 4470,
+          "alarm_frames": 248
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 442.2,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 442.2,
+              "end_s": 467.0,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.9302710689436322,
+            88.53026609316765
+          ],
+          "scored_pre_landing": 4279,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4471,
+          "scored_frames": 4470,
+          "alarm_frames": 249
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 442.0,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 442.0,
+              "end_s": 467.0,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.8664159504087483,
+            75.72198770588334
+          ],
+          "scored_pre_landing": 4279,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4471,
+          "scored_frames": 4470,
+          "alarm_frames": 251
+        }
+      }
+    },
+    {
+      "run_id": "live-119cbff623b2ad3e",
+      "title": "PX4 · 16+16 정상 10 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0010/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0010/19-52-41.141760",
+      "sha256": "119cbff623b2ad3e96fd0f6d2acd51c11035b53af74d0699cd2c39c55c505577",
+      "port": 14709,
+      "system": 10,
+      "lane": 9,
+      "number": 10,
+      "kind": "normal",
+      "seed": 3181764204,
+      "result": {
+        "flight_started_ns": 115312980258617,
+        "flight_exit": 0,
+        "flight_finished_ns": 116055754023258,
+        "run": "/home/sa/CapstoneV3/simulation/runs/2d0179a403b84a06af9320fecf39bd60",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "hover",
+      "wind": "calm",
+      "stages": {},
+      "nominal_duration_s": 691.136,
+      "mission_speed": 0.9865571719633659,
+      "created_at": "2026-11-20T19:34:14.831913+00:00",
+      "wire_sha256": "119cbff623b2ad3e96fd0f6d2acd51c11035b53af74d0699cd2c39c55c505577",
+      "wire_bytes": 37284370,
+      "frames": 6860,
+      "mission_s": 16.743741479003802,
+      "landing_s": 715.28612663901,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.4692522563975795,
+            1.0137063761396405
+          ],
+          "scored_pre_landing": 6760,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6761,
+          "scored_frames": 6760,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.4424681267602425,
+            1.081659359363274
+          ],
+          "scored_pre_landing": 6760,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6761,
+          "scored_frames": 6760,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.459668528481419,
+            1.097164856826464
+          ],
+          "scored_pre_landing": 6760,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6761,
+          "scored_frames": 6760,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.46168108051766543,
+            1.0915531420444946
+          ],
+          "scored_pre_landing": 6760,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6761,
+          "scored_frames": 6760,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-7414837e34f36302",
+      "title": "PX4 · 16+16 정상 11 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0011/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0011/19-46-59.309237",
+      "sha256": "7414837e34f363023a39174f7c221f6ef302f71273871d8accc7fb4b76c79b7a",
+      "port": 14710,
+      "system": 11,
+      "lane": 10,
+      "number": 11,
+      "kind": "normal",
+      "seed": 3181764205,
+      "result": {
+        "flight_started_ns": 115312978828284,
+        "flight_exit": 0,
+        "flight_finished_ns": 115780905037458,
+        "run": "/home/sa/CapstoneV3/simulation/runs/3490fbf3137747edb6868947855f029b",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "yaw",
+      "wind": "low",
+      "stages": {},
+      "nominal_duration_s": 416.518,
+      "mission_speed": 0.9791859822120638,
+      "created_at": "2026-11-20T19:34:14.366535+00:00",
+      "wire_sha256": "7414837e34f363023a39174f7c221f6ef302f71273871d8accc7fb4b76c79b7a",
+      "wire_bytes": 23186440,
+      "frames": 4351,
+      "mission_s": 17.414991874000407,
+      "landing_s": 440.71762031198887,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.71063793031216,
+            12.719026182879496
+          ],
+          "scored_pre_landing": 4201,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4252,
+          "scored_frames": 4251,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.8970139974493883,
+            39.675657684860425
+          ],
+          "scored_pre_landing": 4201,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4252,
+          "scored_frames": 4251,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            3.157676248469216,
+            15.947360952207683
+          ],
+          "scored_pre_landing": 4201,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4252,
+          "scored_frames": 4251,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            2.6429846883677928,
+            19.77463994774428
+          ],
+          "scored_pre_landing": 4201,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4252,
+          "scored_frames": 4251,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-9eec757437166701",
+      "title": "PX4 · 16+16 정상 12 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0012/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0012/19-47-03.373945",
+      "sha256": "9eec7574371667019a6bffa69a344940e0ba762801903061f2235ea89cb46581",
+      "port": 14711,
+      "system": 12,
+      "lane": 11,
+      "number": 12,
+      "kind": "normal",
+      "seed": 3181764206,
+      "result": {
+        "flight_started_ns": 115312979100587,
+        "flight_exit": 0,
+        "flight_finished_ns": 115870409029990,
+        "run": "/home/sa/CapstoneV3/simulation/runs/ad0bed65f48c48009cadd081cb662749",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "lissajous",
+      "wind": "low",
+      "stages": {},
+      "nominal_duration_s": 506.274,
+      "mission_speed": 0.9820064890276812,
+      "created_at": "2026-11-20T19:34:14.535989+00:00",
+      "wire_sha256": "9eec7574371667019a6bffa69a344940e0ba762801903061f2235ea89cb46581",
+      "wire_bytes": 27762592,
+      "frames": 4945,
+      "mission_s": 17.04518585599726,
+      "landing_s": 530.579470643992,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.9278758364356315,
+            1.308319470971684
+          ],
+          "scored_pre_landing": 4837,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4838,
+          "scored_frames": 4837,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.9612546648629869,
+            1.0913413786914432
+          ],
+          "scored_pre_landing": 4837,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4838,
+          "scored_frames": 4837,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.9208519049156704,
+            1.3507079388018748
+          ],
+          "scored_pre_landing": 4837,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4838,
+          "scored_frames": 4837,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.9430180432180493,
+            1.0989416047245661
+          ],
+          "scored_pre_landing": 4837,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4838,
+          "scored_frames": 4837,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-acaee5b4be36f782",
+      "title": "PX4 · 16+16 정상 13 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0013/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0013/20-00-23.023296",
+      "sha256": "acaee5b4be36f78214eb28b6cea724d40f7890c76908780c7ab97be313eaa0bf",
+      "port": 14712,
+      "system": 13,
+      "lane": 12,
+      "number": 13,
+      "kind": "normal",
+      "seed": 3181764207,
+      "result": {
+        "flight_started_ns": 115312980214599,
+        "flight_exit": 0,
+        "flight_finished_ns": 116273857149919,
+        "run": "/home/sa/CapstoneV3/simulation/runs/64e05c54cfcb4a2ba45fa8e9b2e5ee7f",
+        "status": "completed",
+        "reason": "mission_landed_disarmed",
+        "seed": 3181764207,
+        "folder": "flight-0013"
+      },
+      "completed": true,
+      "cleanup_verified": true,
+      "operation": "random",
+      "wind": "calm",
+      "stages": {},
+      "nominal_duration_s": 894.226,
+      "mission_speed": 0.989226084273972,
+      "created_at": "2026-11-20T19:34:14.602278+00:00",
+      "wire_sha256": "acaee5b4be36f78214eb28b6cea724d40f7890c76908780c7ab97be313eaa0bf",
+      "wire_bytes": 48611531,
+      "inference_execution": "serial_models",
+      "frames": 5026,
+      "mission_s": 17.04427879600553,
+      "landing_s": 918.989763436999,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.3153858683148352,
+            1.6354961366898295
+          ],
+          "scored_pre_landing": 4926,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4927,
+          "scored_frames": 4926,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.28057949717753,
+            1.5144305736839745
+          ],
+          "scored_pre_landing": 4926,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4927,
+          "scored_frames": 4926,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.334952389865923,
+            1.6722605169037479
+          ],
+          "scored_pre_landing": 4926,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4927,
+          "scored_frames": 4926,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.2434653739043615,
+            1.3312924996734639
+          ],
+          "scored_pre_landing": 4926,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4927,
+          "scored_frames": 4926,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-6a0c3528fc99ae66",
+      "title": "PX4 · 16+16 정상 14 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0014/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0014/19-47-11.872309",
+      "sha256": "6a0c3528fc99ae6671ba857f99b689241ad39b22b260fa3c302cec61ef8cf096",
+      "port": 14713,
+      "system": 14,
+      "lane": 13,
+      "number": 14,
+      "kind": "normal",
+      "seed": 3181764208,
+      "result": {
+        "flight_started_ns": 115312980375186,
+        "flight_exit": 0,
+        "flight_finished_ns": 115867394044518,
+        "run": "/home/sa/CapstoneV3/simulation/runs/c39808c15a694c7caa6438d007d5fec5",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "calm",
+      "stages": {},
+      "nominal_duration_s": 505.921,
+      "mission_speed": 0.9819154973405845,
+      "created_at": "2026-11-20T19:34:14.457903+00:00",
+      "wire_sha256": "6a0c3528fc99ae6671ba857f99b689241ad39b22b260fa3c302cec61ef8cf096",
+      "wire_bytes": 27605013,
+      "frames": 4806,
+      "mission_s": 17.35515084399958,
+      "landing_s": 530.5591906670015,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.6095526335854797,
+            1.7826163352530031
+          ],
+          "scored_pre_landing": 4697,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4698,
+          "scored_frames": 4697,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.6254211968413351,
+            1.3272206093059213
+          ],
+          "scored_pre_landing": 4697,
+          "phase_starts": {},
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4698,
+          "scored_frames": 4697,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.5611290629529688,
+            1.3169612659344831
+          ],
+          "scored_pre_landing": 4697,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4698,
+          "scored_frames": 4697,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.5534745286069007,
+            1.297315420489249
+          ],
+          "scored_pre_landing": 4697,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4698,
+          "scored_frames": 4697,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-fdc555a028742f89",
+      "title": "PX4 · 16+16 정상 15 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0015/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0015/19-48-01.520324",
+      "sha256": "fdc555a028742f89d250d08f23a6da204574b287cd22b50421e49b20061d6c05",
+      "port": 14714,
+      "system": 15,
+      "lane": 14,
+      "number": 15,
+      "kind": "normal",
+      "seed": 3181764209,
+      "result": {
+        "flight_started_ns": 115312980236614,
+        "flight_exit": 0,
+        "flight_finished_ns": 115767025042160,
+        "run": "/home/sa/CapstoneV3/simulation/runs/5ad6ec77cac74436b76b6c0a03fc6e8c",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "calm",
+      "stages": {},
+      "nominal_duration_s": 403.936,
+      "mission_speed": 0.9791142734966105,
+      "created_at": "2026-11-20T19:34:14.967708+00:00",
+      "wire_sha256": "fdc555a028742f89d250d08f23a6da204574b287cd22b50421e49b20061d6c05",
+      "wire_bytes": 22436290,
+      "frames": 4222,
+      "mission_s": 17.113923988988972,
+      "landing_s": 427.59103670099284,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 423.9,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 423.9,
+              "end_s": 432.5,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.7468817197803432,
+            20.884090306076697
+          ],
+          "scored_pre_landing": 4072,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4123,
+          "scored_frames": 4122,
+          "alarm_frames": 87
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 423.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 423.4,
+              "end_s": 432.5,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.6562108518192652,
+            53.962459012039986
+          ],
+          "scored_pre_landing": 4072,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4123,
+          "scored_frames": 4122,
+          "alarm_frames": 92
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.871369586916216,
+            43.25365171608247
+          ],
+          "scored_pre_landing": 4072,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4123,
+          "scored_frames": 4122,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.7190822852770622,
+            46.04819678974327
+          ],
+          "scored_pre_landing": 4072,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4123,
+          "scored_frames": 4122,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-ee5ffeac2ca614ee",
+      "title": "PX4 · 16+16 정상 16 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0016/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0016/19-48-21.770545",
+      "sha256": "ee5ffeac2ca614eeb78da12fb66160f8db13efa825878e5f39b147b1c1b94dcd",
+      "port": 14715,
+      "system": 16,
+      "lane": 15,
+      "number": 16,
+      "kind": "normal",
+      "seed": 3181764210,
+      "result": {
+        "flight_started_ns": 115312979355629,
+        "flight_exit": 0,
+        "flight_finished_ns": 115800146048056,
+        "run": "/home/sa/CapstoneV3/simulation/runs/f1247b38b5294957980d1bba75c3df1e",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "hover",
+      "wind": "calm",
+      "stages": {},
+      "nominal_duration_s": 436.617,
+      "mission_speed": 0.9797729079307292,
+      "created_at": "2026-11-20T19:34:14.655831+00:00",
+      "wire_sha256": "ee5ffeac2ca614eeb78da12fb66160f8db13efa825878e5f39b147b1c1b94dcd",
+      "wire_bytes": 24133733,
+      "frames": 4552,
+      "mission_s": 16.8593609189993,
+      "landing_s": 460.4274535680015,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.469371887461421,
+            14.994688473248333
+          ],
+          "scored_pre_landing": 4406,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4453,
+          "scored_frames": 4452,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 455.9,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 455.9,
+              "end_s": 465.0,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.3207580040861295,
+            21.539886750356594
+          ],
+          "scored_pre_landing": 4406,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4453,
+          "scored_frames": 4452,
+          "alarm_frames": 92
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.5020950684006347,
+            19.07171392546942
+          ],
+          "scored_pre_landing": 4406,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4453,
+          "scored_frames": 4452,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.382262242092908,
+            28.817158422005747
+          ],
+          "scored_pre_landing": 4406,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4453,
+          "scored_frames": 4452,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-1c2e0f89e4f5e821",
+      "title": "PX4 · 16+16 이상 01 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0017/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0017/19-55-09.998706",
+      "sha256": "1c2e0f89e4f5e8217fd8dd936d871dfb993b4dc2fd5042cfab09bb8bcd786055",
+      "port": 14716,
+      "system": 17,
+      "lane": 16,
+      "number": 17,
+      "kind": "abnormal",
+      "seed": 3181764211,
+      "result": {
+        "flight_started_ns": 115312984658040,
+        "flight_exit": 0,
+        "flight_finished_ns": 116190601027884,
+        "run": "/home/sa/CapstoneV3/simulation/runs/1b95fa1408dd4219a9fb6a0442739047",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "strong",
+      "stages": {
+        "propulsion": 4
+      },
+      "nominal_duration_s": 808.319,
+      "mission_speed": 0.9887862137149769,
+      "created_at": "2026-11-20T19:34:14.941118+00:00",
+      "wire_sha256": "1c2e0f89e4f5e8217fd8dd936d871dfb993b4dc2fd5042cfab09bb8bcd786055",
+      "wire_bytes": 44322731,
+      "frames": 8447,
+      "mission_s": 17.262493072004872,
+      "landing_s": 832.7016535459989,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 827.1,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 827.1,
+              "end_s": 855.2,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            5.296462227478607,
+            105.71471403335713
+          ],
+          "scored_pre_landing": 8122,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 8348,
+          "scored_frames": 8347,
+          "alarm_frames": 282
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 826.9,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 826.9,
+              "end_s": 855.2,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            5.100565974616827,
+            88.76045139084711
+          ],
+          "scored_pre_landing": 8122,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 8348,
+          "scored_frames": 8347,
+          "alarm_frames": 284
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 715.2,
+          "first_domains": [
+            true,
+            false
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 715.2,
+              "end_s": 747.2,
+              "phase": "mission",
+              "domains": [
+                true,
+                false
+              ]
+            },
+            {
+              "start_s": 827.3,
+              "end_s": 855.2,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.966862208800523,
+            100.47148336242203
+          ],
+          "scored_pre_landing": 8122,
+          "phase_starts": {
+            "mission": 2
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 8348,
+          "scored_frames": 8347,
+          "alarm_frames": 601
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 827.3,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 827.3,
+              "end_s": 855.2,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.988602618611122,
+            91.71022483552359
+          ],
+          "scored_pre_landing": 8122,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 8348,
+          "scored_frames": 8347,
+          "alarm_frames": 280
+        }
+      }
+    },
+    {
+      "run_id": "live-f1d9158e287c6ecf",
+      "title": "PX4 · 16+16 이상 02 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0018/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0018/19-50-10.608964",
+      "sha256": "f1d9158e287c6ecf26ee6f4dd6a22f010fa94196dd2a3eae5553f50f62a8619c",
+      "port": 14717,
+      "system": 18,
+      "lane": 17,
+      "number": 18,
+      "kind": "abnormal",
+      "seed": 3181764212,
+      "result": {
+        "flight_started_ns": 115312986736313,
+        "flight_exit": 0,
+        "flight_finished_ns": 115987122032410,
+        "run": "/home/sa/CapstoneV3/simulation/runs/72a8b12635444b5f99de2f8a49d595d6",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "lissajous",
+      "wind": "calm",
+      "stages": {
+        "propulsion": 4
+      },
+      "nominal_duration_s": 621.531,
+      "mission_speed": 0.9856845527732779,
+      "created_at": "2026-11-20T19:34:14.592754+00:00",
+      "wire_sha256": "f1d9158e287c6ecf26ee6f4dd6a22f010fa94196dd2a3eae5553f50f62a8619c",
+      "wire_bytes": 33791680,
+      "frames": 6419,
+      "mission_s": 17.124766943001305,
+      "landing_s": 645.6493778410077,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.4800768228878423,
+            25.256503314812946
+          ],
+          "scored_pre_landing": 6257,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6320,
+          "scored_frames": 6319,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 640.3,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 640.3,
+              "end_s": 651.8,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.8875263613953767,
+            27.261899265559236
+          ],
+          "scored_pre_landing": 6257,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6320,
+          "scored_frames": 6319,
+          "alarm_frames": 116
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.4792144795730853,
+            18.243862428316184
+          ],
+          "scored_pre_landing": 6257,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6320,
+          "scored_frames": 6319,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            0.5489041002020084,
+            29.23822382857633
+          ],
+          "scored_pre_landing": 6257,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6320,
+          "scored_frames": 6319,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-5b25783ef011f741",
+      "title": "PX4 · 16+16 이상 03 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0019/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0019/19-53-19.690812",
+      "sha256": "5b25783ef011f741877e413fd7bf6a4b6c70773af33f4433393b641a3664ac91",
+      "port": 14718,
+      "system": 19,
+      "lane": 18,
+      "number": 19,
+      "kind": "abnormal",
+      "seed": 3181764213,
+      "result": {
+        "flight_started_ns": 115312984781519,
+        "flight_exit": 0,
+        "flight_finished_ns": 116107769041225,
+        "run": "/home/sa/CapstoneV3/simulation/runs/cab90f3f705d4e3e9094a9e5c1fcb3a3",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "strong",
+      "stages": {
+        "battery": 12,
+        "propulsion": 4
+      },
+      "nominal_duration_s": 726.325,
+      "mission_speed": 0.9872365049352189,
+      "created_at": "2026-11-20T19:34:14.864285+00:00",
+      "wire_sha256": "5b25783ef011f741877e413fd7bf6a4b6c70773af33f4433393b641a3664ac91",
+      "wire_bytes": 40037296,
+      "frames": 7028,
+      "mission_s": 16.882905680991826,
+      "landing_s": 750.571334319,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 23.8,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.8,
+              "end_s": 45.8,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.165673844299201,
+            12.057054878018308
+          ],
+          "scored_pre_landing": 6920,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6921,
+          "scored_frames": 6920,
+          "alarm_frames": 221
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 23.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.4,
+              "end_s": 44.6,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.059569798736249,
+            9.901065959637046
+          ],
+          "scored_pre_landing": 6920,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6921,
+          "scored_frames": 6920,
+          "alarm_frames": 213
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 23.3,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.3,
+              "end_s": 46.4,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.025026079209328,
+            12.526300314741242
+          ],
+          "scored_pre_landing": 6920,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6921,
+          "scored_frames": 6920,
+          "alarm_frames": 232
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 24.0,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.0,
+              "end_s": 46.9,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.096263833115033,
+            11.999794087364698
+          ],
+          "scored_pre_landing": 6920,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6921,
+          "scored_frames": 6920,
+          "alarm_frames": 230
+        }
+      }
+    },
+    {
+      "run_id": "live-32d032478c9ba42c",
+      "title": "PX4 · 16+16 이상 04 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0020/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0020/19-56-20.080254",
+      "sha256": "32d032478c9ba42cbad5e5d0a91169a8e3703c8797f312f9f1f3d77e1127fc10",
+      "port": 14719,
+      "system": 20,
+      "lane": 19,
+      "number": 20,
+      "kind": "abnormal",
+      "seed": 3181764214,
+      "result": {
+        "flight_started_ns": 115312984733139,
+        "flight_exit": 0,
+        "flight_finished_ns": 116208969047456,
+        "run": "/home/sa/CapstoneV3/simulation/runs/c5c5f5bf1c2f4e15b36470adc675571a",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "altitude",
+      "wind": "strong",
+      "stages": {
+        "propulsion": 12
+      },
+      "nominal_duration_s": 843.358,
+      "mission_speed": 0.9887009811691017,
+      "created_at": "2026-11-20T19:34:14.853058+00:00",
+      "wire_sha256": "32d032478c9ba42cbad5e5d0a91169a8e3703c8797f312f9f1f3d77e1127fc10",
+      "wire_bytes": 45223269,
+      "frames": 6522,
+      "mission_s": 16.8425684190006,
+      "landing_s": 867.7772959290014,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            3.847473082088055,
+            0.8820141060435863
+          ],
+          "scored_pre_landing": 6414,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6415,
+          "scored_frames": 6414,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 205.1,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 205.1,
+              "end_s": 219.6,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 223.5,
+              "end_s": 661.1,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            5.798117233752582,
+            103.07978735776398
+          ],
+          "scored_pre_landing": 6414,
+          "phase_starts": {
+            "mission": 2
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6415,
+          "scored_frames": 6414,
+          "alarm_frames": 4523
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            3.520532226360181,
+            2.4642002107526775
+          ],
+          "scored_pre_landing": 6414,
+          "phase_starts": {},
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6415,
+          "scored_frames": 6414,
+          "alarm_frames": 0
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            3.6784866132533502,
+            1.3573944845945767
+          ],
+          "scored_pre_landing": 6414,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6415,
+          "scored_frames": 6414,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-992901370d4f03d0",
+      "title": "PX4 · 16+16 이상 05 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0021/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0021/19-48-37.136116",
+      "sha256": "992901370d4f03d037e4fb0f189ad949049398f96f9eb074763a34f2666218dd",
+      "port": 14720,
+      "system": 21,
+      "lane": 20,
+      "number": 21,
+      "kind": "abnormal",
+      "seed": 3181764215,
+      "result": {
+        "flight_started_ns": 115312986702345,
+        "flight_exit": 0,
+        "flight_finished_ns": 115838242026932,
+        "run": "/home/sa/CapstoneV3/simulation/runs/818e08e2855b469ca2a0de9123c6d570",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "calm",
+      "stages": {
+        "battery": 12
+      },
+      "nominal_duration_s": 476.069,
+      "mission_speed": 0.981638130666903,
+      "created_at": "2026-11-20T19:34:14.803803+00:00",
+      "wire_sha256": "992901370d4f03d037e4fb0f189ad949049398f96f9eb074763a34f2666218dd",
+      "wire_bytes": 26099492,
+      "frames": 4931,
+      "mission_s": 17.126046770994435,
+      "landing_s": 500.05349751899485,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 24.1,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.1,
+              "end_s": 52.5,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 495.1,
+              "end_s": 503.0,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.256902528693553,
+            175.99266157473582
+          ],
+          "scored_pre_landing": 4801,
+          "phase_starts": {
+            "early": 1,
+            "mission": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4832,
+          "scored_frames": 4831,
+          "alarm_frames": 365
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 23.7,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.7,
+              "end_s": 47.5,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 495.2,
+              "end_s": 503.0,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.6963985975576777,
+            100.33114824786054
+          ],
+          "scored_pre_landing": 4801,
+          "phase_starts": {
+            "early": 1,
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4832,
+          "scored_frames": 4831,
+          "alarm_frames": 318
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 23.8,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.8,
+              "end_s": 50.5,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.7251556049895433,
+            68.88070239623562
+          ],
+          "scored_pre_landing": 4801,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4832,
+          "scored_frames": 4831,
+          "alarm_frames": 268
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 23.6,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.6,
+              "end_s": 50.2,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 495.2,
+              "end_s": 503.0,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.7251262028961798,
+            28.63507057226185
+          ],
+          "scored_pre_landing": 4801,
+          "phase_starts": {
+            "early": 1,
+            "mission": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4832,
+          "scored_frames": 4831,
+          "alarm_frames": 346
+        }
+      }
+    },
+    {
+      "run_id": "live-725fd4249750e0cd",
+      "title": "PX4 · 16+16 이상 06 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0022/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0022/19-48-43.903903",
+      "sha256": "725fd4249750e0cd311e7575445a9d2ca90030d3738a01be1ffd37b3047a7b12",
+      "port": 14721,
+      "system": 22,
+      "lane": 21,
+      "number": 22,
+      "kind": "abnormal",
+      "seed": 3181764216,
+      "result": {
+        "flight_started_ns": 115312986637502,
+        "flight_exit": 0,
+        "flight_finished_ns": 115705545079170,
+        "run": "/home/sa/CapstoneV3/simulation/runs/2a3ba428286844d28f6873970ac50706",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "line",
+      "wind": "strong",
+      "stages": {
+        "battery": 12
+      },
+      "nominal_duration_s": 343.063,
+      "mission_speed": 0.976887472272026,
+      "created_at": "2026-11-20T19:34:14.671566+00:00",
+      "wire_sha256": "725fd4249750e0cd311e7575445a9d2ca90030d3738a01be1ffd37b3047a7b12",
+      "wire_bytes": 19304426,
+      "frames": 3613,
+      "mission_s": 17.010881178008276,
+      "landing_s": 366.10738377399684,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 24.5,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.5,
+              "end_s": 52.0,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            6.963096366280114,
+            22.266723497175324
+          ],
+          "scored_pre_landing": 3463,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 3514,
+          "scored_frames": 3513,
+          "alarm_frames": 276
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 24.0,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.0,
+              "end_s": 49.3,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            6.98398411215953,
+            15.242476208178635
+          ],
+          "scored_pre_landing": 3463,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 3514,
+          "scored_frames": 3513,
+          "alarm_frames": 254
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 24.0,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.0,
+              "end_s": 50.4,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            6.484423640803764,
+            20.292259669399172
+          ],
+          "scored_pre_landing": 3463,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 3514,
+          "scored_frames": 3513,
+          "alarm_frames": 265
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 23.7,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.7,
+              "end_s": 49.1,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            6.906105714510093,
+            26.135023196367747
+          ],
+          "scored_pre_landing": 3463,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 3514,
+          "scored_frames": 3513,
+          "alarm_frames": 255
+        }
+      }
+    },
+    {
+      "run_id": "live-7c631ea77a4b1b62",
+      "title": "PX4 · 16+16 이상 07 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0023/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0023/19-49-16.719715",
+      "sha256": "7c631ea77a4b1b62f1814b58d91d51471f3e442157dda218a120e3ee1599a9f5",
+      "port": 14722,
+      "system": 23,
+      "lane": 22,
+      "number": 23,
+      "kind": "abnormal",
+      "seed": 3181764217,
+      "result": {
+        "flight_started_ns": 115312984630357,
+        "flight_exit": 0,
+        "flight_finished_ns": 115676242046025,
+        "run": "/home/sa/CapstoneV3/simulation/runs/cea3319195fe46feac5083a72acefb12",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "calm",
+      "stages": {
+        "battery": 4
+      },
+      "nominal_duration_s": 313.708,
+      "mission_speed": 0.9768978829116985,
+      "created_at": "2026-11-20T19:34:14.901231+00:00",
+      "wire_sha256": "7c631ea77a4b1b62f1814b58d91d51471f3e442157dda218a120e3ee1599a9f5",
+      "wire_bytes": 17795226,
+      "frames": 3312,
+      "mission_s": 17.28449850800098,
+      "landing_s": 336.34855366899865,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 30.2,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 30.2,
+              "end_s": 68.4,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 332.9,
+              "end_s": 341.7,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.5145573003717754,
+            12.59502094726308
+          ],
+          "scored_pre_landing": 3158,
+          "phase_starts": {
+            "early": 1,
+            "mission": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 3213,
+          "scored_frames": 3212,
+          "alarm_frames": 472
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 29.8,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 29.8,
+              "end_s": 66.4,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 333.0,
+              "end_s": 341.7,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.47788345892068373,
+            28.95993741544635
+          ],
+          "scored_pre_landing": 3158,
+          "phase_starts": {
+            "early": 1,
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 3213,
+          "scored_frames": 3212,
+          "alarm_frames": 455
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 41.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 41.4,
+              "end_s": 60.0,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.4333567430840857,
+            17.961916860104886
+          ],
+          "scored_pre_landing": 3158,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 3213,
+          "scored_frames": 3212,
+          "alarm_frames": 187
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 32.1,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 32.1,
+              "end_s": 68.5,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.4495210577823757,
+            27.74870325219214
+          ],
+          "scored_pre_landing": 3158,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 3213,
+          "scored_frames": 3212,
+          "alarm_frames": 365
+        }
+      }
+    },
+    {
+      "run_id": "live-65c81685a596554f",
+      "title": "PX4 · 16+16 이상 08 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0024/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0024/19-49-41.493797",
+      "sha256": "65c81685a596554fdacee32a26b601886b0da2202e9032ad1203d3e330aaaf1b",
+      "port": 14723,
+      "system": 24,
+      "lane": 23,
+      "number": 24,
+      "kind": "abnormal",
+      "seed": 3181764218,
+      "result": {
+        "flight_started_ns": 115312986684161,
+        "flight_exit": 0,
+        "flight_finished_ns": 115928585028715,
+        "run": "/home/sa/CapstoneV3/simulation/runs/128c5043f00945cfb6df3f35c533e55f",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "ellipse",
+      "wind": "strong",
+      "stages": {
+        "battery": 8,
+        "propulsion": 16
+      },
+      "nominal_duration_s": 564.129,
+      "mission_speed": 0.9835260969778019,
+      "created_at": "2026-11-20T19:34:14.777717+00:00",
+      "wire_sha256": "65c81685a596554fdacee32a26b601886b0da2202e9032ad1203d3e330aaaf1b",
+      "wire_bytes": 30768807,
+      "frames": 4922,
+      "mission_s": 17.535688396994374,
+      "landing_s": 589.0426384689927,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 24.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.4,
+              "end_s": 63.3,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            5.701473930932806,
+            17.52035367317776
+          ],
+          "scored_pre_landing": 4814,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4815,
+          "scored_frames": 4814,
+          "alarm_frames": 390
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 24.2,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.2,
+              "end_s": 63.3,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 91.3,
+              "end_s": 109.5,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 129.2,
+              "end_s": 501.9,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            6.519419669666749,
+            108.89189474707344
+          ],
+          "scored_pre_landing": 4814,
+          "phase_starts": {
+            "early": 1,
+            "mission": 2
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4815,
+          "scored_frames": 4814,
+          "alarm_frames": 4303
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 24.8,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.8,
+              "end_s": 47.9,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            3.9850916664670994,
+            12.428304039684019
+          ],
+          "scored_pre_landing": 4814,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4815,
+          "scored_frames": 4814,
+          "alarm_frames": 232
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 24.6,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.6,
+              "end_s": 47.2,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.197243321032606,
+            10.72447112077813
+          ],
+          "scored_pre_landing": 4814,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4815,
+          "scored_frames": 4814,
+          "alarm_frames": 227
+        }
+      }
+    },
+    {
+      "run_id": "live-629e9ae4f7929463",
+      "title": "PX4 · 16+16 이상 09 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0025/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0025/19-51-03.886199",
+      "sha256": "629e9ae4f7929463d5c60cc5fbeb86984dc57eaf67160b9f11bd043d01e9a620",
+      "port": 14724,
+      "system": 25,
+      "lane": 24,
+      "number": 25,
+      "kind": "abnormal",
+      "seed": 3181764219,
+      "result": {
+        "flight_started_ns": 115313001352565,
+        "flight_exit": 0,
+        "flight_finished_ns": 115989602035056,
+        "run": "/home/sa/CapstoneV3/simulation/runs/60b835c742584bbd8f322d2e415c7140",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "lissajous",
+      "wind": "calm",
+      "stages": {
+        "battery": 16,
+        "propulsion": 16
+      },
+      "nominal_duration_s": 624.436,
+      "mission_speed": 0.9854082365386827,
+      "created_at": "2026-11-20T19:34:14.765322+00:00",
+      "wire_sha256": "629e9ae4f7929463d5c60cc5fbeb86984dc57eaf67160b9f11bd043d01e9a620",
+      "wire_bytes": 33896141,
+      "frames": 6393,
+      "mission_s": 17.19888973599882,
+      "landing_s": 648.8477606509987,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.5210538518980157,
+            3.9550636045953187
+          ],
+          "scored_pre_landing": 6286,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6287,
+          "scored_frames": 6286,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 24.1,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.1,
+              "end_s": 648.5,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.671431159095161,
+            168.46129441255292
+          ],
+          "scored_pre_landing": 6286,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6287,
+          "scored_frames": 6286,
+          "alarm_frames": 6245
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 22.9,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 22.9,
+              "end_s": 46.4,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.5776705250397072,
+            22.506434103101622
+          ],
+          "scored_pre_landing": 6286,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6287,
+          "scored_frames": 6286,
+          "alarm_frames": 236
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 22.9,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 22.9,
+              "end_s": 46.0,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.861485739556542,
+            21.04893231264274
+          ],
+          "scored_pre_landing": 6286,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6287,
+          "scored_frames": 6286,
+          "alarm_frames": 232
+        }
+      }
+    },
+    {
+      "run_id": "live-16d27a360ade6cd5",
+      "title": "PX4 · 16+16 이상 10 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0026/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0026/19-49-44.873700",
+      "sha256": "16d27a360ade6cd5385d2e46308b1a8e3f4de0435573d0315c25c0303418d80e",
+      "port": 14725,
+      "system": 26,
+      "lane": 25,
+      "number": 26,
+      "kind": "abnormal",
+      "seed": 3181764220,
+      "result": {
+        "flight_started_ns": 115313002102803,
+        "flight_exit": 0,
+        "flight_finished_ns": 115874177042571,
+        "run": "/home/sa/CapstoneV3/simulation/runs/403307e3bd794f9cbdd67a73824532e7",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "strong",
+      "stages": {
+        "battery": 12
+      },
+      "nominal_duration_s": 509.979,
+      "mission_speed": 0.9822532779829936,
+      "created_at": "2026-11-20T19:34:14.242008+00:00",
+      "wire_sha256": "16d27a360ade6cd5385d2e46308b1a8e3f4de0435573d0315c25c0303418d80e",
+      "wire_bytes": 27976039,
+      "frames": 5078,
+      "mission_s": 17.5371987450053,
+      "landing_s": 534.6746941199963,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 24.6,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.6,
+              "end_s": 51.4,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            3.3191457290265687,
+            8.449944543510956
+          ],
+          "scored_pre_landing": 4978,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 4979,
+          "scored_frames": 4978,
+          "alarm_frames": 269
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 24.3,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.3,
+              "end_s": 50.3,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            3.243000170410469,
+            12.82837053116034
+          ],
+          "scored_pre_landing": 4978,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 4979,
+          "scored_frames": 4978,
+          "alarm_frames": 261
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 24.6,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.6,
+              "end_s": 50.9,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            3.2080333568787895,
+            17.628532389216613
+          ],
+          "scored_pre_landing": 4978,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 4979,
+          "scored_frames": 4978,
+          "alarm_frames": 264
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 24.5,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.5,
+              "end_s": 50.4,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            3.3730599891066637,
+            15.298075265139996
+          ],
+          "scored_pre_landing": 4978,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 4979,
+          "scored_frames": 4978,
+          "alarm_frames": 260
+        }
+      }
+    },
+    {
+      "run_id": "live-bce60b24487dcaed",
+      "title": "PX4 · 16+16 이상 11 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0027/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0027/19-54-27.237310",
+      "sha256": "bce60b24487dcaedbd07c99e89175681170e8316b09f548eda38b127122c84dc",
+      "port": 14726,
+      "system": 27,
+      "lane": 26,
+      "number": 27,
+      "kind": "abnormal",
+      "seed": 3181764221,
+      "result": {
+        "flight_started_ns": 115313002157792,
+        "flight_exit": 0,
+        "flight_finished_ns": 116136530038789,
+        "run": "/home/sa/CapstoneV3/simulation/runs/752a99f7fe074dee9e531942b34d28e0",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "altitude",
+      "wind": "calm",
+      "stages": {
+        "battery": 12,
+        "propulsion": 8
+      },
+      "nominal_duration_s": 771.929,
+      "mission_speed": 0.9879503657556887,
+      "created_at": "2026-11-20T19:34:14.602624+00:00",
+      "wire_sha256": "bce60b24487dcaedbd07c99e89175681170e8316b09f548eda38b127122c84dc",
+      "wire_bytes": 41480550,
+      "frames": 6984,
+      "mission_s": 17.232571616987116,
+      "landing_s": 796.5510745369975,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 24.2,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.2,
+              "end_s": 48.9,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.1586149927582072,
+            18.751418971261522
+          ],
+          "scored_pre_landing": 6876,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6877,
+          "scored_frames": 6876,
+          "alarm_frames": 248
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 23.7,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.7,
+              "end_s": 48.5,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            2.4527273187896577,
+            15.83336558276854
+          ],
+          "scored_pre_landing": 6876,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6877,
+          "scored_frames": 6876,
+          "alarm_frames": 249
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 24.3,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.3,
+              "end_s": 47.7,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.5303338858076494,
+            14.704541923054197
+          ],
+          "scored_pre_landing": 6876,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6877,
+          "scored_frames": 6876,
+          "alarm_frames": 235
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 23.6,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.6,
+              "end_s": 46.6,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.6683055807876663,
+            17.227280400973676
+          ],
+          "scored_pre_landing": 6876,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6877,
+          "scored_frames": 6876,
+          "alarm_frames": 231
+        }
+      }
+    },
+    {
+      "run_id": "live-9d4bc664eca61a32",
+      "title": "PX4 · 16+16 이상 12 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0028/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0028/19-51-04.887697",
+      "sha256": "9d4bc664eca61a32a6b08617bb8e2d21ef8d3fe3d5dceafd7c597e4d0187363e",
+      "port": 14727,
+      "system": 28,
+      "lane": 27,
+      "number": 28,
+      "kind": "abnormal",
+      "seed": 3181764222,
+      "result": {
+        "flight_started_ns": 115313002228849,
+        "flight_exit": 0,
+        "flight_finished_ns": 116000257036827,
+        "run": "/home/sa/CapstoneV3/simulation/runs/721909626fa8435b8d8cb17c8af92677",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "lissajous",
+      "wind": "calm",
+      "stages": {
+        "battery": 8,
+        "propulsion": 16
+      },
+      "nominal_duration_s": 637.522,
+      "mission_speed": 0.9859475481887585,
+      "created_at": "2026-11-20T19:34:14.667747+00:00",
+      "wire_sha256": "9d4bc664eca61a32a6b08617bb8e2d21ef8d3fe3d5dceafd7c597e4d0187363e",
+      "wire_bytes": 34461699,
+      "frames": 6552,
+      "mission_s": 17.28186220700445,
+      "landing_s": 661.8273059960047,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 24.0,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.0,
+              "end_s": 46.2,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            5.601666807019543,
+            49.412295957652375
+          ],
+          "scored_pre_landing": 6418,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6453,
+          "scored_frames": 6452,
+          "alarm_frames": 223
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 23.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.4,
+              "end_s": 65.1,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 127.1,
+              "end_s": 665.2,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            6.4597793348773305,
+            173.9195540816854
+          ],
+          "scored_pre_landing": 6418,
+          "phase_starts": {
+            "early": 1,
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6453,
+          "scored_frames": 6452,
+          "alarm_frames": 5800
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 24.1,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.1,
+              "end_s": 47.7,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            4.658362596865937,
+            18.97015022694735
+          ],
+          "scored_pre_landing": 6418,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6453,
+          "scored_frames": 6452,
+          "alarm_frames": 237
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 23.7,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 23.7,
+              "end_s": 44.6,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            5.28888176888437,
+            9.471469232297828
+          ],
+          "scored_pre_landing": 6418,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6453,
+          "scored_frames": 6452,
+          "alarm_frames": 210
+        }
+      }
+    },
+    {
+      "run_id": "live-995f48047891696f",
+      "title": "PX4 · 16+16 이상 13 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0029/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0029/19-50-00.335433",
+      "sha256": "995f48047891696f09cbc2e6e68a19cee196a93c472d00984b664cb1771a00dd",
+      "port": 14728,
+      "system": 29,
+      "lane": 28,
+      "number": 29,
+      "kind": "abnormal",
+      "seed": 3181764223,
+      "result": {
+        "flight_started_ns": 115313002180494,
+        "flight_exit": 0,
+        "flight_finished_ns": 115972178020295,
+        "run": "/home/sa/CapstoneV3/simulation/runs/59a35771c9c34ac39031c6c3fbf4aa97",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "mixed",
+      "wind": "calm",
+      "stages": {
+        "propulsion": 16
+      },
+      "nominal_duration_s": 609.145,
+      "mission_speed": 0.9851633989663238,
+      "created_at": "2026-11-20T19:34:14.491264+00:00",
+      "wire_sha256": "995f48047891696f09cbc2e6e68a19cee196a93c472d00984b664cb1771a00dd",
+      "wire_bytes": 33015387,
+      "frames": 6268,
+      "mission_s": 17.01872742200794,
+      "landing_s": 633.2900999039994,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.4161402311199325,
+            36.830736937659935
+          ],
+          "scored_pre_landing": 6133,
+          "phase_starts": {},
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 6169,
+          "scored_frames": 6168,
+          "alarm_frames": 0
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 230.8,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 230.8,
+              "end_s": 636.7,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            3.1114395308813556,
+            158.06992416079126
+          ],
+          "scored_pre_landing": 6133,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 6169,
+          "scored_frames": 6168,
+          "alarm_frames": 4060
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 628.0,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 628.0,
+              "end_s": 636.7,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.6574994467448078,
+            9.304723480972957
+          ],
+          "scored_pre_landing": 6133,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 6169,
+          "scored_frames": 6168,
+          "alarm_frames": 88
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": null,
+          "first_domains": null,
+          "alarm_episodes": [],
+          "peak_ema": [
+            1.105046294915243,
+            38.14724754823367
+          ],
+          "scored_pre_landing": 6133,
+          "phase_starts": {},
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 6169,
+          "scored_frames": 6168,
+          "alarm_frames": 0
+        }
+      }
+    },
+    {
+      "run_id": "live-9164ae076e78bdb0",
+      "title": "PX4 · 16+16 이상 14 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0030/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0030/19-55-28.145837",
+      "sha256": "9164ae076e78bdb0266c14b6d7bfcaa1e634a9c7849a4bfc5942cdbadc68e0f5",
+      "port": 14729,
+      "system": 30,
+      "lane": 29,
+      "number": 30,
+      "kind": "abnormal",
+      "seed": 3181764224,
+      "result": {
+        "flight_started_ns": 115313003050033,
+        "flight_exit": 0,
+        "flight_finished_ns": 116192889071105,
+        "run": "/home/sa/CapstoneV3/simulation/runs/0e583ef3db5f46aca4fbbf20eef0130d",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "low",
+      "stages": {
+        "battery": 4,
+        "propulsion": 8
+      },
+      "nominal_duration_s": 811.275,
+      "mission_speed": 0.9881578736929414,
+      "created_at": "2026-11-20T19:34:14.530543+00:00",
+      "wire_sha256": "9164ae076e78bdb0266c14b6d7bfcaa1e634a9c7849a4bfc5942cdbadc68e0f5",
+      "wire_bytes": 44425242,
+      "frames": 5106,
+      "mission_s": 17.137987096997676,
+      "landing_s": 836.1002415550029,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 24.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 24.4,
+              "end_s": 55.5,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            2.2490798327163075,
+            9.548978790729711
+          ],
+          "scored_pre_landing": 4999,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 5000,
+          "scored_frames": 4999,
+          "alarm_frames": 312
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 27.6,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 27.6,
+              "end_s": 55.1,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 439.2,
+              "end_s": 453.6,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 473.1,
+              "end_s": 486.9,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            2.4137195297303,
+            12.338293971959777
+          ],
+          "scored_pre_landing": 4999,
+          "phase_starts": {
+            "early": 1,
+            "mission": 2
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 5000,
+          "scored_frames": 4999,
+          "alarm_frames": 560
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 32.5,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 32.5,
+              "end_s": 53.7,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            1.9733454591246578,
+            5.266504126686918
+          ],
+          "scored_pre_landing": 4999,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 5000,
+          "scored_frames": 4999,
+          "alarm_frames": 213
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 31.3,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 31.3,
+              "end_s": 52.6,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            2.1735063582494663,
+            4.705220683717277
+          ],
+          "scored_pre_landing": 4999,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 5000,
+          "scored_frames": 4999,
+          "alarm_frames": 214
+        }
+      }
+    },
+    {
+      "run_id": "live-75042cec1c0d94cc",
+      "title": "PX4 · 16+16 이상 15 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0031/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0031/19-53-27.523090",
+      "sha256": "75042cec1c0d94cc8d941fc5d0c5bbec9cf812d4a3817d9ef477434e50fb29b6",
+      "port": 14730,
+      "system": 31,
+      "lane": 30,
+      "number": 31,
+      "kind": "abnormal",
+      "seed": 3181764225,
+      "result": {
+        "flight_started_ns": 115313002202005,
+        "flight_exit": 0,
+        "flight_finished_ns": 116133634030742,
+        "run": "/home/sa/CapstoneV3/simulation/runs/d97c98bd082948bdaf1a766213ff44e3",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "random",
+      "wind": "strong",
+      "stages": {
+        "battery": 4
+      },
+      "nominal_duration_s": 753.48,
+      "mission_speed": 0.9878338958592465,
+      "created_at": "2026-11-20T19:34:14.796007+00:00",
+      "wire_sha256": "75042cec1c0d94cc8d941fc5d0c5bbec9cf812d4a3817d9ef477434e50fb29b6",
+      "wire_bytes": 41376417,
+      "frames": 7883,
+      "mission_s": 17.001519818004454,
+      "landing_s": 777.7124077009939,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 25.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 25.4,
+              "end_s": 56.3,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 772.3,
+              "end_s": 798.1,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            7.3399927124039985,
+            30.054709150913148
+          ],
+          "scored_pre_landing": 7579,
+          "phase_starts": {
+            "early": 1,
+            "mission": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 7784,
+          "scored_frames": 7783,
+          "alarm_frames": 569
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 29.6,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 29.6,
+              "end_s": 56.4,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            },
+            {
+              "start_s": 772.1,
+              "end_s": 798.1,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            7.891369018444463,
+            110.68580516047388
+          ],
+          "scored_pre_landing": 7579,
+          "phase_starts": {
+            "early": 1,
+            "mission": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 7784,
+          "scored_frames": 7783,
+          "alarm_frames": 530
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 772.1,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 772.1,
+              "end_s": 798.1,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            6.739336778331407,
+            54.31183824452227
+          ],
+          "scored_pre_landing": 7579,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 7784,
+          "scored_frames": 7783,
+          "alarm_frames": 261
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 772.4,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 772.4,
+              "end_s": 798.1,
+              "phase": "mission",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            7.1061794669415725,
+            45.32716160995095
+          ],
+          "scored_pre_landing": 7579,
+          "phase_starts": {
+            "mission": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 7784,
+          "scored_frames": 7783,
+          "alarm_frames": 258
+        }
+      }
+    },
+    {
+      "run_id": "live-ba5c3d0ae5882043",
+      "title": "PX4 · 16+16 이상 16 · 4모델",
+      "wire": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0032/datagrams.bin",
+      "stage": "/home/sa/CapstoneV3/ai/reports/new19-app-random-16x16-20261121/analysis/flight-0032/19-54-34.090206",
+      "sha256": "ba5c3d0ae588204350db23cb8407ea2d61fe0aa124aa1adbcc07e2f52fb3a7f7",
+      "port": 14731,
+      "system": 32,
+      "lane": 31,
+      "number": 32,
+      "kind": "abnormal",
+      "seed": 3181764226,
+      "result": {
+        "flight_started_ns": 115313001390113,
+        "flight_exit": 0,
+        "flight_finished_ns": 116166338031467,
+        "run": "/home/sa/CapstoneV3/simulation/runs/09117084e0434194b78cfda53b3aec11",
+        "status": "completed",
+        "reason": "mission_landed_disarmed"
+      },
+      "completed": true,
+      "operation": "line",
+      "wind": "calm",
+      "stages": {
+        "battery": 4
+      },
+      "nominal_duration_s": 804.717,
+      "mission_speed": 0.9885260345009664,
+      "created_at": "2026-11-20T19:34:14.452623+00:00",
+      "wire_sha256": "ba5c3d0ae588204350db23cb8407ea2d61fe0aa124aa1adbcc07e2f52fb3a7f7",
+      "wire_bytes": 43023094,
+      "frames": 7247,
+      "mission_s": 17.379659489990445,
+      "landing_s": 829.4209937429987,
+      "model_results": {
+        "inflight-lstm-64x2": {
+          "first_alarm_s": 29.5,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 29.5,
+              "end_s": 63.5,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.42491799161044486,
+            11.470528445240937
+          ],
+          "scored_pre_landing": 7139,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8455717031087793,
+            3.274754827098879
+          ],
+          "forecasts": 7140,
+          "scored_frames": 7139,
+          "alarm_frames": 341
+        },
+        "inflight-lstm-128x4": {
+          "first_alarm_s": 29.5,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 29.5,
+              "end_s": 63.1,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.4381660148779124,
+            11.651820687812547
+          ],
+          "scored_pre_landing": 7139,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.8689707334814436,
+            3.2367934263949816
+          ],
+          "forecasts": 7140,
+          "scored_frames": 7139,
+          "alarm_frames": 337
+        },
+        "inflight-transformer-64x2": {
+          "first_alarm_s": 40.8,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 40.8,
+              "end_s": 59.9,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.43064534227347084,
+            4.4230070704936635
+          ],
+          "scored_pre_landing": 7139,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7818023881479386,
+            3.146479882749526
+          ],
+          "forecasts": 7140,
+          "scored_frames": 7139,
+          "alarm_frames": 192
+        },
+        "inflight-transformer-128x4": {
+          "first_alarm_s": 30.2,
+          "first_domains": [
+            false,
+            true
+          ],
+          "alarm_episodes": [
+            {
+              "start_s": 30.2,
+              "end_s": 63.2,
+              "phase": "early",
+              "domains": [
+                false,
+                true
+              ]
+            }
+          ],
+          "peak_ema": [
+            0.42262161272665777,
+            6.601188214535383
+          ],
+          "scored_pre_landing": 7139,
+          "phase_starts": {
+            "early": 1
+          },
+          "threshold": [
+            3.7948267074776294,
+            3.10481440274456
+          ],
+          "forecasts": 7140,
+          "scored_frames": 7139,
+          "alarm_frames": 331
+        }
+      }
+    }
+  ],
+  "by_model": {
+    "inflight-lstm-64x2": {
+      "normal_alarms": 3,
+      "abnormal_detected": 12,
+      "abnormal_pre_landing": 12,
+      "abnormal_first_early": 11
+    },
+    "inflight-lstm-128x4": {
+      "normal_alarms": 4,
+      "abnormal_detected": 16,
+      "abnormal_pre_landing": 16,
+      "abnormal_first_early": 12
+    },
+    "inflight-transformer-64x2": {
+      "normal_alarms": 2,
+      "abnormal_detected": 14,
+      "abnormal_pre_landing": 14,
+      "abnormal_first_early": 11
+    },
+    "inflight-transformer-128x4": {
+      "normal_alarms": 2,
+      "abnormal_detected": 13,
+      "abnormal_pre_landing": 13,
+      "abnormal_first_early": 11
+    }
+  }
+}

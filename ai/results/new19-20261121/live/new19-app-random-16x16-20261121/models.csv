@@ -1,0 +1,129 @@
+flight,kind,seed,battery_stage,propulsion_stage,operation,wind,model,alarm_frames,scored_frames,first_s,mission_s,landing_s,episodes
+PX4 · 16+16 정상 01 · 4모델,normal,3181764195,0,0,random,low,inflight-lstm-64x2,0,6068,,17.115400811992004,692.7176526389958,[]
+PX4 · 16+16 정상 01 · 4모델,normal,3181764195,0,0,random,low,inflight-lstm-128x4,0,6068,,17.115400811992004,692.7176526389958,[]
+PX4 · 16+16 정상 01 · 4모델,normal,3181764195,0,0,random,low,inflight-transformer-64x2,0,6068,,17.115400811992004,692.7176526389958,[]
+PX4 · 16+16 정상 01 · 4모델,normal,3181764195,0,0,random,low,inflight-transformer-128x4,0,6068,,17.115400811992004,692.7176526389958,[]
+PX4 · 16+16 정상 02 · 4모델,normal,3181764196,0,0,lissajous,low,inflight-lstm-64x2,0,6683,,16.81255259999307,685.3311939580017,[]
+PX4 · 16+16 정상 02 · 4모델,normal,3181764196,0,0,lissajous,low,inflight-lstm-128x4,0,6683,,16.81255259999307,685.3311939580017,[]
+PX4 · 16+16 정상 02 · 4모델,normal,3181764196,0,0,lissajous,low,inflight-transformer-64x2,0,6683,,16.81255259999307,685.3311939580017,[]
+PX4 · 16+16 정상 02 · 4모델,normal,3181764196,0,0,lissajous,low,inflight-transformer-128x4,0,6683,,16.81255259999307,685.3311939580017,[]
+PX4 · 16+16 정상 03 · 4모델,normal,3181764197,0,0,mixed,low,inflight-lstm-64x2,0,5070,,17.203909768009908,562.7700335310074,[]
+PX4 · 16+16 정상 03 · 4모델,normal,3181764197,0,0,mixed,low,inflight-lstm-128x4,0,5070,,17.203909768009908,562.7700335310074,[]
+PX4 · 16+16 정상 03 · 4모델,normal,3181764197,0,0,mixed,low,inflight-transformer-64x2,0,5070,,17.203909768009908,562.7700335310074,[]
+PX4 · 16+16 정상 03 · 4모델,normal,3181764197,0,0,mixed,low,inflight-transformer-128x4,0,5070,,17.203909768009908,562.7700335310074,[]
+PX4 · 16+16 정상 04 · 4모델,normal,3181764198,0,0,mixed,strong,inflight-lstm-64x2,0,6972,,17.233768455000245,737.9056529410009,[]
+PX4 · 16+16 정상 04 · 4모델,normal,3181764198,0,0,mixed,strong,inflight-lstm-128x4,0,6972,,17.233768455000245,737.9056529410009,[]
+PX4 · 16+16 정상 04 · 4모델,normal,3181764198,0,0,mixed,strong,inflight-transformer-64x2,0,6972,,17.233768455000245,737.9056529410009,[]
+PX4 · 16+16 정상 04 · 4모델,normal,3181764198,0,0,mixed,strong,inflight-transformer-128x4,0,6972,,17.233768455000245,737.9056529410009,[]
+PX4 · 16+16 정상 05 · 4모델,normal,3181764199,0,0,random,low,inflight-lstm-64x2,0,4860,,17.113571374997264,528.9220375079894,[]
+PX4 · 16+16 정상 05 · 4모델,normal,3181764199,0,0,random,low,inflight-lstm-128x4,0,4860,,17.113571374997264,528.9220375079894,[]
+PX4 · 16+16 정상 05 · 4모델,normal,3181764199,0,0,random,low,inflight-transformer-64x2,0,4860,,17.113571374997264,528.9220375079894,[]
+PX4 · 16+16 정상 05 · 4모델,normal,3181764199,0,0,random,low,inflight-transformer-128x4,0,4860,,17.113571374997264,528.9220375079894,[]
+PX4 · 16+16 정상 06 · 4모델,normal,3181764200,0,0,mixed,calm,inflight-lstm-64x2,0,5481,,17.301338239994948,612.0755756440049,[]
+PX4 · 16+16 정상 06 · 4모델,normal,3181764200,0,0,mixed,calm,inflight-lstm-128x4,0,5481,,17.301338239994948,612.0755756440049,[]
+PX4 · 16+16 정상 06 · 4모델,normal,3181764200,0,0,mixed,calm,inflight-transformer-64x2,0,5481,,17.301338239994948,612.0755756440049,[]
+PX4 · 16+16 정상 06 · 4모델,normal,3181764200,0,0,mixed,calm,inflight-transformer-128x4,0,5481,,17.301338239994948,612.0755756440049,[]
+PX4 · 16+16 정상 07 · 4모델,normal,3181764201,0,0,random,low,inflight-lstm-64x2,0,6789,,17.353539097995963,900.6836871239939,[]
+PX4 · 16+16 정상 07 · 4모델,normal,3181764201,0,0,random,low,inflight-lstm-128x4,0,6789,,17.353539097995963,900.6836871239939,[]
+PX4 · 16+16 정상 07 · 4모델,normal,3181764201,0,0,random,low,inflight-transformer-64x2,0,6789,,17.353539097995963,900.6836871239939,[]
+PX4 · 16+16 정상 07 · 4모델,normal,3181764201,0,0,random,low,inflight-transformer-128x4,0,6789,,17.353539097995963,900.6836871239939,[]
+PX4 · 16+16 정상 08 · 4모델,normal,3181764202,0,0,random,calm,inflight-lstm-64x2,204,3634,363.0,16.984854615002405,368.05100569099886,"[{""start_s"": 363.0, ""end_s"": 383.3, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 08 · 4모델,normal,3181764202,0,0,random,calm,inflight-lstm-128x4,207,3634,362.7,16.984854615002405,368.05100569099886,"[{""start_s"": 362.7, ""end_s"": 383.3, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 08 · 4모델,normal,3181764202,0,0,random,calm,inflight-transformer-64x2,206,3634,362.8,16.984854615002405,368.05100569099886,"[{""start_s"": 362.8, ""end_s"": 383.3, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 08 · 4모델,normal,3181764202,0,0,random,calm,inflight-transformer-128x4,207,3634,362.7,16.984854615002405,368.05100569099886,"[{""start_s"": 362.7, ""end_s"": 383.3, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 09 · 4모델,normal,3181764203,0,0,random,low,inflight-lstm-64x2,247,4470,442.4,17.143103466005414,447.9574027790077,"[{""start_s"": 442.4, ""end_s"": 467.0, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 09 · 4모델,normal,3181764203,0,0,random,low,inflight-lstm-128x4,248,4470,442.3,17.143103466005414,447.9574027790077,"[{""start_s"": 442.3, ""end_s"": 467.0, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 09 · 4모델,normal,3181764203,0,0,random,low,inflight-transformer-64x2,249,4470,442.2,17.143103466005414,447.9574027790077,"[{""start_s"": 442.2, ""end_s"": 467.0, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 09 · 4모델,normal,3181764203,0,0,random,low,inflight-transformer-128x4,251,4470,442.0,17.143103466005414,447.9574027790077,"[{""start_s"": 442.0, ""end_s"": 467.0, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 10 · 4모델,normal,3181764204,0,0,hover,calm,inflight-lstm-64x2,0,6760,,16.743741479003802,715.28612663901,[]
+PX4 · 16+16 정상 10 · 4모델,normal,3181764204,0,0,hover,calm,inflight-lstm-128x4,0,6760,,16.743741479003802,715.28612663901,[]
+PX4 · 16+16 정상 10 · 4모델,normal,3181764204,0,0,hover,calm,inflight-transformer-64x2,0,6760,,16.743741479003802,715.28612663901,[]
+PX4 · 16+16 정상 10 · 4모델,normal,3181764204,0,0,hover,calm,inflight-transformer-128x4,0,6760,,16.743741479003802,715.28612663901,[]
+PX4 · 16+16 정상 11 · 4모델,normal,3181764205,0,0,yaw,low,inflight-lstm-64x2,0,4251,,17.414991874000407,440.71762031198887,[]
+PX4 · 16+16 정상 11 · 4모델,normal,3181764205,0,0,yaw,low,inflight-lstm-128x4,0,4251,,17.414991874000407,440.71762031198887,[]
+PX4 · 16+16 정상 11 · 4모델,normal,3181764205,0,0,yaw,low,inflight-transformer-64x2,0,4251,,17.414991874000407,440.71762031198887,[]
+PX4 · 16+16 정상 11 · 4모델,normal,3181764205,0,0,yaw,low,inflight-transformer-128x4,0,4251,,17.414991874000407,440.71762031198887,[]
+PX4 · 16+16 정상 12 · 4모델,normal,3181764206,0,0,lissajous,low,inflight-lstm-64x2,0,4837,,17.04518585599726,530.579470643992,[]
+PX4 · 16+16 정상 12 · 4모델,normal,3181764206,0,0,lissajous,low,inflight-lstm-128x4,0,4837,,17.04518585599726,530.579470643992,[]
+PX4 · 16+16 정상 12 · 4모델,normal,3181764206,0,0,lissajous,low,inflight-transformer-64x2,0,4837,,17.04518585599726,530.579470643992,[]
+PX4 · 16+16 정상 12 · 4모델,normal,3181764206,0,0,lissajous,low,inflight-transformer-128x4,0,4837,,17.04518585599726,530.579470643992,[]
+PX4 · 16+16 정상 13 · 4모델,normal,3181764207,0,0,random,calm,inflight-lstm-64x2,0,4926,,17.04427879600553,918.989763436999,[]
+PX4 · 16+16 정상 13 · 4모델,normal,3181764207,0,0,random,calm,inflight-lstm-128x4,0,4926,,17.04427879600553,918.989763436999,[]
+PX4 · 16+16 정상 13 · 4모델,normal,3181764207,0,0,random,calm,inflight-transformer-64x2,0,4926,,17.04427879600553,918.989763436999,[]
+PX4 · 16+16 정상 13 · 4모델,normal,3181764207,0,0,random,calm,inflight-transformer-128x4,0,4926,,17.04427879600553,918.989763436999,[]
+PX4 · 16+16 정상 14 · 4모델,normal,3181764208,0,0,mixed,calm,inflight-lstm-64x2,0,4697,,17.35515084399958,530.5591906670015,[]
+PX4 · 16+16 정상 14 · 4모델,normal,3181764208,0,0,mixed,calm,inflight-lstm-128x4,0,4697,,17.35515084399958,530.5591906670015,[]
+PX4 · 16+16 정상 14 · 4모델,normal,3181764208,0,0,mixed,calm,inflight-transformer-64x2,0,4697,,17.35515084399958,530.5591906670015,[]
+PX4 · 16+16 정상 14 · 4모델,normal,3181764208,0,0,mixed,calm,inflight-transformer-128x4,0,4697,,17.35515084399958,530.5591906670015,[]
+PX4 · 16+16 정상 15 · 4모델,normal,3181764209,0,0,mixed,calm,inflight-lstm-64x2,87,4122,423.9,17.113923988988972,427.59103670099284,"[{""start_s"": 423.9, ""end_s"": 432.5, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 15 · 4모델,normal,3181764209,0,0,mixed,calm,inflight-lstm-128x4,92,4122,423.4,17.113923988988972,427.59103670099284,"[{""start_s"": 423.4, ""end_s"": 432.5, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 15 · 4모델,normal,3181764209,0,0,mixed,calm,inflight-transformer-64x2,0,4122,,17.113923988988972,427.59103670099284,[]
+PX4 · 16+16 정상 15 · 4모델,normal,3181764209,0,0,mixed,calm,inflight-transformer-128x4,0,4122,,17.113923988988972,427.59103670099284,[]
+PX4 · 16+16 정상 16 · 4모델,normal,3181764210,0,0,hover,calm,inflight-lstm-64x2,0,4452,,16.8593609189993,460.4274535680015,[]
+PX4 · 16+16 정상 16 · 4모델,normal,3181764210,0,0,hover,calm,inflight-lstm-128x4,92,4452,455.9,16.8593609189993,460.4274535680015,"[{""start_s"": 455.9, ""end_s"": 465.0, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 정상 16 · 4모델,normal,3181764210,0,0,hover,calm,inflight-transformer-64x2,0,4452,,16.8593609189993,460.4274535680015,[]
+PX4 · 16+16 정상 16 · 4모델,normal,3181764210,0,0,hover,calm,inflight-transformer-128x4,0,4452,,16.8593609189993,460.4274535680015,[]
+PX4 · 16+16 이상 01 · 4모델,abnormal,3181764211,0,4,random,strong,inflight-lstm-64x2,282,8347,827.1,17.262493072004872,832.7016535459989,"[{""start_s"": 827.1, ""end_s"": 855.2, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 01 · 4모델,abnormal,3181764211,0,4,random,strong,inflight-lstm-128x4,284,8347,826.9,17.262493072004872,832.7016535459989,"[{""start_s"": 826.9, ""end_s"": 855.2, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 01 · 4모델,abnormal,3181764211,0,4,random,strong,inflight-transformer-64x2,601,8347,715.2,17.262493072004872,832.7016535459989,"[{""start_s"": 715.2, ""end_s"": 747.2, ""phase"": ""mission"", ""domains"": [true, false]}, {""start_s"": 827.3, ""end_s"": 855.2, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 01 · 4모델,abnormal,3181764211,0,4,random,strong,inflight-transformer-128x4,280,8347,827.3,17.262493072004872,832.7016535459989,"[{""start_s"": 827.3, ""end_s"": 855.2, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 02 · 4모델,abnormal,3181764212,0,4,lissajous,calm,inflight-lstm-64x2,0,6319,,17.124766943001305,645.6493778410077,[]
+PX4 · 16+16 이상 02 · 4모델,abnormal,3181764212,0,4,lissajous,calm,inflight-lstm-128x4,116,6319,640.3,17.124766943001305,645.6493778410077,"[{""start_s"": 640.3, ""end_s"": 651.8, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 02 · 4모델,abnormal,3181764212,0,4,lissajous,calm,inflight-transformer-64x2,0,6319,,17.124766943001305,645.6493778410077,[]
+PX4 · 16+16 이상 02 · 4모델,abnormal,3181764212,0,4,lissajous,calm,inflight-transformer-128x4,0,6319,,17.124766943001305,645.6493778410077,[]
+PX4 · 16+16 이상 03 · 4모델,abnormal,3181764213,12,4,random,strong,inflight-lstm-64x2,221,6920,23.8,16.882905680991826,750.571334319,"[{""start_s"": 23.8, ""end_s"": 45.8, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 03 · 4모델,abnormal,3181764213,12,4,random,strong,inflight-lstm-128x4,213,6920,23.4,16.882905680991826,750.571334319,"[{""start_s"": 23.4, ""end_s"": 44.6, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 03 · 4모델,abnormal,3181764213,12,4,random,strong,inflight-transformer-64x2,232,6920,23.3,16.882905680991826,750.571334319,"[{""start_s"": 23.3, ""end_s"": 46.4, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 03 · 4모델,abnormal,3181764213,12,4,random,strong,inflight-transformer-128x4,230,6920,24.0,16.882905680991826,750.571334319,"[{""start_s"": 24.0, ""end_s"": 46.9, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 04 · 4모델,abnormal,3181764214,0,12,altitude,strong,inflight-lstm-64x2,0,6414,,16.8425684190006,867.7772959290014,[]
+PX4 · 16+16 이상 04 · 4모델,abnormal,3181764214,0,12,altitude,strong,inflight-lstm-128x4,4523,6414,205.1,16.8425684190006,867.7772959290014,"[{""start_s"": 205.1, ""end_s"": 219.6, ""phase"": ""mission"", ""domains"": [false, true]}, {""start_s"": 223.5, ""end_s"": 661.1, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 04 · 4모델,abnormal,3181764214,0,12,altitude,strong,inflight-transformer-64x2,0,6414,,16.8425684190006,867.7772959290014,[]
+PX4 · 16+16 이상 04 · 4모델,abnormal,3181764214,0,12,altitude,strong,inflight-transformer-128x4,0,6414,,16.8425684190006,867.7772959290014,[]
+PX4 · 16+16 이상 05 · 4모델,abnormal,3181764215,12,0,mixed,calm,inflight-lstm-64x2,365,4831,24.1,17.126046770994435,500.05349751899485,"[{""start_s"": 24.1, ""end_s"": 52.5, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 495.1, ""end_s"": 503.0, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 05 · 4모델,abnormal,3181764215,12,0,mixed,calm,inflight-lstm-128x4,318,4831,23.7,17.126046770994435,500.05349751899485,"[{""start_s"": 23.7, ""end_s"": 47.5, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 495.2, ""end_s"": 503.0, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 05 · 4모델,abnormal,3181764215,12,0,mixed,calm,inflight-transformer-64x2,268,4831,23.8,17.126046770994435,500.05349751899485,"[{""start_s"": 23.8, ""end_s"": 50.5, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 05 · 4모델,abnormal,3181764215,12,0,mixed,calm,inflight-transformer-128x4,346,4831,23.6,17.126046770994435,500.05349751899485,"[{""start_s"": 23.6, ""end_s"": 50.2, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 495.2, ""end_s"": 503.0, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 06 · 4모델,abnormal,3181764216,12,0,line,strong,inflight-lstm-64x2,276,3513,24.5,17.010881178008276,366.10738377399684,"[{""start_s"": 24.5, ""end_s"": 52.0, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 06 · 4모델,abnormal,3181764216,12,0,line,strong,inflight-lstm-128x4,254,3513,24.0,17.010881178008276,366.10738377399684,"[{""start_s"": 24.0, ""end_s"": 49.3, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 06 · 4모델,abnormal,3181764216,12,0,line,strong,inflight-transformer-64x2,265,3513,24.0,17.010881178008276,366.10738377399684,"[{""start_s"": 24.0, ""end_s"": 50.4, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 06 · 4모델,abnormal,3181764216,12,0,line,strong,inflight-transformer-128x4,255,3513,23.7,17.010881178008276,366.10738377399684,"[{""start_s"": 23.7, ""end_s"": 49.1, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 07 · 4모델,abnormal,3181764217,4,0,mixed,calm,inflight-lstm-64x2,472,3212,30.2,17.28449850800098,336.34855366899865,"[{""start_s"": 30.2, ""end_s"": 68.4, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 332.9, ""end_s"": 341.7, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 07 · 4모델,abnormal,3181764217,4,0,mixed,calm,inflight-lstm-128x4,455,3212,29.8,17.28449850800098,336.34855366899865,"[{""start_s"": 29.8, ""end_s"": 66.4, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 333.0, ""end_s"": 341.7, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 07 · 4모델,abnormal,3181764217,4,0,mixed,calm,inflight-transformer-64x2,187,3212,41.4,17.28449850800098,336.34855366899865,"[{""start_s"": 41.4, ""end_s"": 60.0, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 07 · 4모델,abnormal,3181764217,4,0,mixed,calm,inflight-transformer-128x4,365,3212,32.1,17.28449850800098,336.34855366899865,"[{""start_s"": 32.1, ""end_s"": 68.5, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 08 · 4모델,abnormal,3181764218,8,16,ellipse,strong,inflight-lstm-64x2,390,4814,24.4,17.535688396994374,589.0426384689927,"[{""start_s"": 24.4, ""end_s"": 63.3, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 08 · 4모델,abnormal,3181764218,8,16,ellipse,strong,inflight-lstm-128x4,4303,4814,24.2,17.535688396994374,589.0426384689927,"[{""start_s"": 24.2, ""end_s"": 63.3, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 91.3, ""end_s"": 109.5, ""phase"": ""mission"", ""domains"": [false, true]}, {""start_s"": 129.2, ""end_s"": 501.9, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 08 · 4모델,abnormal,3181764218,8,16,ellipse,strong,inflight-transformer-64x2,232,4814,24.8,17.535688396994374,589.0426384689927,"[{""start_s"": 24.8, ""end_s"": 47.9, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 08 · 4모델,abnormal,3181764218,8,16,ellipse,strong,inflight-transformer-128x4,227,4814,24.6,17.535688396994374,589.0426384689927,"[{""start_s"": 24.6, ""end_s"": 47.2, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 09 · 4모델,abnormal,3181764219,16,16,lissajous,calm,inflight-lstm-64x2,0,6286,,17.19888973599882,648.8477606509987,[]
+PX4 · 16+16 이상 09 · 4모델,abnormal,3181764219,16,16,lissajous,calm,inflight-lstm-128x4,6245,6286,24.1,17.19888973599882,648.8477606509987,"[{""start_s"": 24.1, ""end_s"": 648.5, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 09 · 4모델,abnormal,3181764219,16,16,lissajous,calm,inflight-transformer-64x2,236,6286,22.9,17.19888973599882,648.8477606509987,"[{""start_s"": 22.9, ""end_s"": 46.4, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 09 · 4모델,abnormal,3181764219,16,16,lissajous,calm,inflight-transformer-128x4,232,6286,22.9,17.19888973599882,648.8477606509987,"[{""start_s"": 22.9, ""end_s"": 46.0, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 10 · 4모델,abnormal,3181764220,12,0,mixed,strong,inflight-lstm-64x2,269,4978,24.6,17.5371987450053,534.6746941199963,"[{""start_s"": 24.6, ""end_s"": 51.4, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 10 · 4모델,abnormal,3181764220,12,0,mixed,strong,inflight-lstm-128x4,261,4978,24.3,17.5371987450053,534.6746941199963,"[{""start_s"": 24.3, ""end_s"": 50.3, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 10 · 4모델,abnormal,3181764220,12,0,mixed,strong,inflight-transformer-64x2,264,4978,24.6,17.5371987450053,534.6746941199963,"[{""start_s"": 24.6, ""end_s"": 50.9, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 10 · 4모델,abnormal,3181764220,12,0,mixed,strong,inflight-transformer-128x4,260,4978,24.5,17.5371987450053,534.6746941199963,"[{""start_s"": 24.5, ""end_s"": 50.4, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 11 · 4모델,abnormal,3181764221,12,8,altitude,calm,inflight-lstm-64x2,248,6876,24.2,17.232571616987116,796.5510745369975,"[{""start_s"": 24.2, ""end_s"": 48.9, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 11 · 4모델,abnormal,3181764221,12,8,altitude,calm,inflight-lstm-128x4,249,6876,23.7,17.232571616987116,796.5510745369975,"[{""start_s"": 23.7, ""end_s"": 48.5, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 11 · 4모델,abnormal,3181764221,12,8,altitude,calm,inflight-transformer-64x2,235,6876,24.3,17.232571616987116,796.5510745369975,"[{""start_s"": 24.3, ""end_s"": 47.7, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 11 · 4모델,abnormal,3181764221,12,8,altitude,calm,inflight-transformer-128x4,231,6876,23.6,17.232571616987116,796.5510745369975,"[{""start_s"": 23.6, ""end_s"": 46.6, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 12 · 4모델,abnormal,3181764222,8,16,lissajous,calm,inflight-lstm-64x2,223,6452,24.0,17.28186220700445,661.8273059960047,"[{""start_s"": 24.0, ""end_s"": 46.2, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 12 · 4모델,abnormal,3181764222,8,16,lissajous,calm,inflight-lstm-128x4,5800,6452,23.4,17.28186220700445,661.8273059960047,"[{""start_s"": 23.4, ""end_s"": 65.1, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 127.1, ""end_s"": 665.2, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 12 · 4모델,abnormal,3181764222,8,16,lissajous,calm,inflight-transformer-64x2,237,6452,24.1,17.28186220700445,661.8273059960047,"[{""start_s"": 24.1, ""end_s"": 47.7, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 12 · 4모델,abnormal,3181764222,8,16,lissajous,calm,inflight-transformer-128x4,210,6452,23.7,17.28186220700445,661.8273059960047,"[{""start_s"": 23.7, ""end_s"": 44.6, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 13 · 4모델,abnormal,3181764223,0,16,mixed,calm,inflight-lstm-64x2,0,6168,,17.01872742200794,633.2900999039994,[]
+PX4 · 16+16 이상 13 · 4모델,abnormal,3181764223,0,16,mixed,calm,inflight-lstm-128x4,4060,6168,230.8,17.01872742200794,633.2900999039994,"[{""start_s"": 230.8, ""end_s"": 636.7, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 13 · 4모델,abnormal,3181764223,0,16,mixed,calm,inflight-transformer-64x2,88,6168,628.0,17.01872742200794,633.2900999039994,"[{""start_s"": 628.0, ""end_s"": 636.7, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 13 · 4모델,abnormal,3181764223,0,16,mixed,calm,inflight-transformer-128x4,0,6168,,17.01872742200794,633.2900999039994,[]
+PX4 · 16+16 이상 14 · 4모델,abnormal,3181764224,4,8,random,low,inflight-lstm-64x2,312,4999,24.4,17.137987096997676,836.1002415550029,"[{""start_s"": 24.4, ""end_s"": 55.5, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 14 · 4모델,abnormal,3181764224,4,8,random,low,inflight-lstm-128x4,560,4999,27.6,17.137987096997676,836.1002415550029,"[{""start_s"": 27.6, ""end_s"": 55.1, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 439.2, ""end_s"": 453.6, ""phase"": ""mission"", ""domains"": [false, true]}, {""start_s"": 473.1, ""end_s"": 486.9, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 14 · 4모델,abnormal,3181764224,4,8,random,low,inflight-transformer-64x2,213,4999,32.5,17.137987096997676,836.1002415550029,"[{""start_s"": 32.5, ""end_s"": 53.7, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 14 · 4모델,abnormal,3181764224,4,8,random,low,inflight-transformer-128x4,214,4999,31.3,17.137987096997676,836.1002415550029,"[{""start_s"": 31.3, ""end_s"": 52.6, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 15 · 4모델,abnormal,3181764225,4,0,random,strong,inflight-lstm-64x2,569,7783,25.4,17.001519818004454,777.7124077009939,"[{""start_s"": 25.4, ""end_s"": 56.3, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 772.3, ""end_s"": 798.1, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 15 · 4모델,abnormal,3181764225,4,0,random,strong,inflight-lstm-128x4,530,7783,29.6,17.001519818004454,777.7124077009939,"[{""start_s"": 29.6, ""end_s"": 56.4, ""phase"": ""early"", ""domains"": [false, true]}, {""start_s"": 772.1, ""end_s"": 798.1, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 15 · 4모델,abnormal,3181764225,4,0,random,strong,inflight-transformer-64x2,261,7783,772.1,17.001519818004454,777.7124077009939,"[{""start_s"": 772.1, ""end_s"": 798.1, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 15 · 4모델,abnormal,3181764225,4,0,random,strong,inflight-transformer-128x4,258,7783,772.4,17.001519818004454,777.7124077009939,"[{""start_s"": 772.4, ""end_s"": 798.1, ""phase"": ""mission"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 16 · 4모델,abnormal,3181764226,4,0,line,calm,inflight-lstm-64x2,341,7139,29.5,17.379659489990445,829.4209937429987,"[{""start_s"": 29.5, ""end_s"": 63.5, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 16 · 4모델,abnormal,3181764226,4,0,line,calm,inflight-lstm-128x4,337,7139,29.5,17.379659489990445,829.4209937429987,"[{""start_s"": 29.5, ""end_s"": 63.1, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 16 · 4모델,abnormal,3181764226,4,0,line,calm,inflight-transformer-64x2,192,7139,40.8,17.379659489990445,829.4209937429987,"[{""start_s"": 40.8, ""end_s"": 59.9, ""phase"": ""early"", ""domains"": [false, true]}]"
+PX4 · 16+16 이상 16 · 4모델,abnormal,3181764226,4,0,line,calm,inflight-transformer-128x4,331,7139,30.2,17.379659489990445,829.4209937429987,"[{""start_s"": 30.2, ""end_s"": 63.2, ""phase"": ""early"", ""domains"": [false, true]}]"

@@ -1,0 +1,238 @@
+{
+  "completed": {
+    "normal": 16,
+    "abnormal": 16
+  },
+  "raw_bytes": 1060420049,
+  "mission_sim_wall_ratio_range": [
+    0.9762576054386054,
+    0.9892835673647591
+  ],
+  "distinct_seeds": 32,
+  "flights": [
+    {
+      "seed": 3181764195,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0001/datagrams.bin",
+      "bytes": 36725905,
+      "mission_sim_wall_ratio": 0.9860831549901178
+    },
+    {
+      "seed": 3181764196,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0002/datagrams.bin",
+      "bytes": 35871148,
+      "mission_sim_wall_ratio": 0.9861968824993963
+    },
+    {
+      "seed": 3181764197,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0003/datagrams.bin",
+      "bytes": 29366333,
+      "mission_sim_wall_ratio": 0.9832575312777935
+    },
+    {
+      "seed": 3181764198,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0004/datagrams.bin",
+      "bytes": 38464946,
+      "mission_sim_wall_ratio": 0.9869845283437267
+    },
+    {
+      "seed": 3181764199,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0005/datagrams.bin",
+      "bytes": 28200148,
+      "mission_sim_wall_ratio": 0.9819376451451859
+    },
+    {
+      "seed": 3181764200,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0006/datagrams.bin",
+      "bytes": 31937653,
+      "mission_sim_wall_ratio": 0.9845046459237446
+    },
+    {
+      "seed": 3181764201,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0007/datagrams.bin",
+      "bytes": 47627817,
+      "mission_sim_wall_ratio": 0.9892835673647591
+    },
+    {
+      "seed": 3181764202,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0008/datagrams.bin",
+      "bytes": 19934822,
+      "mission_sim_wall_ratio": 0.9762576054386054
+    },
+    {
+      "seed": 3181764203,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0009/datagrams.bin",
+      "bytes": 24273812,
+      "mission_sim_wall_ratio": 0.9794359209359351
+    },
+    {
+      "seed": 3181764204,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0010/datagrams.bin",
+      "bytes": 37284370,
+      "mission_sim_wall_ratio": 0.9865571719633659
+    },
+    {
+      "seed": 3181764205,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0011/datagrams.bin",
+      "bytes": 23186440,
+      "mission_sim_wall_ratio": 0.9791859822120638
+    },
+    {
+      "seed": 3181764206,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0012/datagrams.bin",
+      "bytes": 27762592,
+      "mission_sim_wall_ratio": 0.9820064890276812
+    },
+    {
+      "seed": 3181764207,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0013/datagrams.bin",
+      "bytes": 48611531,
+      "mission_sim_wall_ratio": 0.989226084273972
+    },
+    {
+      "seed": 3181764208,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0014/datagrams.bin",
+      "bytes": 27605013,
+      "mission_sim_wall_ratio": 0.9819154973405845
+    },
+    {
+      "seed": 3181764209,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0015/datagrams.bin",
+      "bytes": 22436290,
+      "mission_sim_wall_ratio": 0.9791142734966105
+    },
+    {
+      "seed": 3181764210,
+      "kind": "normal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0016/datagrams.bin",
+      "bytes": 24133733,
+      "mission_sim_wall_ratio": 0.9797729079307292
+    },
+    {
+      "seed": 3181764211,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0017/datagrams.bin",
+      "bytes": 44322731,
+      "mission_sim_wall_ratio": 0.9887862137149769
+    },
+    {
+      "seed": 3181764212,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0018/datagrams.bin",
+      "bytes": 33791680,
+      "mission_sim_wall_ratio": 0.9856845527732779
+    },
+    {
+      "seed": 3181764213,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0019/datagrams.bin",
+      "bytes": 40037296,
+      "mission_sim_wall_ratio": 0.9872365049352189
+    },
+    {
+      "seed": 3181764214,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0020/datagrams.bin",
+      "bytes": 45223269,
+      "mission_sim_wall_ratio": 0.9887009811691017
+    },
+    {
+      "seed": 3181764215,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0021/datagrams.bin",
+      "bytes": 26099492,
+      "mission_sim_wall_ratio": 0.981638130666903
+    },
+    {
+      "seed": 3181764216,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0022/datagrams.bin",
+      "bytes": 19304426,
+      "mission_sim_wall_ratio": 0.976887472272026
+    },
+    {
+      "seed": 3181764217,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0023/datagrams.bin",
+      "bytes": 17795226,
+      "mission_sim_wall_ratio": 0.9768978829116985
+    },
+    {
+      "seed": 3181764218,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0024/datagrams.bin",
+      "bytes": 30768807,
+      "mission_sim_wall_ratio": 0.9835260969778019
+    },
+    {
+      "seed": 3181764219,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0025/datagrams.bin",
+      "bytes": 33896141,
+      "mission_sim_wall_ratio": 0.9854082365386827
+    },
+    {
+      "seed": 3181764220,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0026/datagrams.bin",
+      "bytes": 27976039,
+      "mission_sim_wall_ratio": 0.9822532779829936
+    },
+    {
+      "seed": 3181764221,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0027/datagrams.bin",
+      "bytes": 41480550,
+      "mission_sim_wall_ratio": 0.9879503657556887
+    },
+    {
+      "seed": 3181764222,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0028/datagrams.bin",
+      "bytes": 34461699,
+      "mission_sim_wall_ratio": 0.9859475481887585
+    },
+    {
+      "seed": 3181764223,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0029/datagrams.bin",
+      "bytes": 33015387,
+      "mission_sim_wall_ratio": 0.9851633989663238
+    },
+    {
+      "seed": 3181764224,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0030/datagrams.bin",
+      "bytes": 44425242,
+      "mission_sim_wall_ratio": 0.9881578736929414
+    },
+    {
+      "seed": 3181764225,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0031/datagrams.bin",
+      "bytes": 41376417,
+      "mission_sim_wall_ratio": 0.9878338958592465
+    },
+    {
+      "seed": 3181764226,
+      "kind": "abnormal",
+      "capture": "/home/sa/CapstoneV3/Data/streamed/mavlink/app-eval-random-16x16-20261121/flight-0032/datagrams.bin",
+      "bytes": 43023094,
+      "mission_sim_wall_ratio": 0.9885260345009664
+    }
+  ]
+}

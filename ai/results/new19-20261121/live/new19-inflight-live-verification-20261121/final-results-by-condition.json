@@ -1,0 +1,122 @@
+{
+  "inflight-lstm-128x4": {
+    "normal_wind": {
+      "low": {
+        "total": 82,
+        "alarms": 1
+      },
+      "strong": {
+        "total": 78,
+        "alarms": 25
+      },
+      "calm": {
+        "total": 90,
+        "alarms": 4
+      }
+    },
+    "anomaly_fault": {
+      "battery_only": {
+        "total": 43,
+        "alarms": 43
+      },
+      "propulsion_only": {
+        "total": 45,
+        "alarms": 29
+      },
+      "combined": {
+        "total": 112,
+        "alarms": 112
+      }
+    }
+  },
+  "inflight-lstm-64x2": {
+    "normal_wind": {
+      "low": {
+        "total": 82,
+        "alarms": 1
+      },
+      "strong": {
+        "total": 78,
+        "alarms": 23
+      },
+      "calm": {
+        "total": 90,
+        "alarms": 3
+      }
+    },
+    "anomaly_fault": {
+      "battery_only": {
+        "total": 43,
+        "alarms": 43
+      },
+      "propulsion_only": {
+        "total": 45,
+        "alarms": 10
+      },
+      "combined": {
+        "total": 112,
+        "alarms": 107
+      }
+    }
+  },
+  "inflight-transformer-128x4": {
+    "normal_wind": {
+      "low": {
+        "total": 82,
+        "alarms": 0
+      },
+      "strong": {
+        "total": 78,
+        "alarms": 23
+      },
+      "calm": {
+        "total": 90,
+        "alarms": 1
+      }
+    },
+    "anomaly_fault": {
+      "battery_only": {
+        "total": 43,
+        "alarms": 42
+      },
+      "propulsion_only": {
+        "total": 45,
+        "alarms": 7
+      },
+      "combined": {
+        "total": 112,
+        "alarms": 103
+      }
+    }
+  },
+  "inflight-transformer-64x2": {
+    "normal_wind": {
+      "low": {
+        "total": 82,
+        "alarms": 0
+      },
+      "strong": {
+        "total": 78,
+        "alarms": 26
+      },
+      "calm": {
+        "total": 90,
+        "alarms": 0
+      }
+    },
+    "anomaly_fault": {
+      "battery_only": {
+        "total": 43,
+        "alarms": 42
+      },
+      "propulsion_only": {
+        "total": 45,
+        "alarms": 10
+      },
+      "combined": {
+        "total": 112,
+        "alarms": 107
+      }
+    }
+  }
+}
