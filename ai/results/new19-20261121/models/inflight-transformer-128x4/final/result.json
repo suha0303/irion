@@ -1,0 +1,37 @@
+{
+  "status": "final_complete",
+  "locked": {
+    "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+    "bundle_sha256": "3c43117c257e4dee8b78164339f6782da81612476dfb7f186446f50cc5abc99f",
+    "weights_sha256": "218fd564eb66c5851c204097b252cdd50f2b803cf6f50fef0e9ca42b258eb413",
+    "calibration_sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e",
+    "cadence_us": 100000,
+    "semantics": "SITL stored MAVLink replay; static pre-existing degradation"
+  },
+  "summary": {
+    "normal_test": {
+      "runs": 250,
+      "available": 250,
+      "unavailable": 0,
+      "alarms": 24,
+      "alarm_run_rate": 0.096,
+      "episodes": 27,
+      "scored_hours": 43.62327777777775,
+      "coverage": 0.9843303218301183,
+      "episodes_per_scored_hour": 0.6189356090466485
+    },
+    "anomaly_test": {
+      "runs": 200,
+      "available": 200,
+      "unavailable": 0,
+      "alarms": 152,
+      "alarm_run_rate": 0.76,
+      "not_detected_including_unavailable": 48,
+      "episodes": 220,
+      "scored_hours": 33.726861111111106,
+      "coverage": 0.9837947376651621,
+      "episodes_per_scored_hour": 6.522990659439765
+    }
+  },
+  "total_runs": 450
+}

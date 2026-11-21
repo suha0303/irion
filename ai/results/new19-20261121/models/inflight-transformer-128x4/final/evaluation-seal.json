@@ -1,0 +1,17 @@
+{
+  "model": "inflight-transformer-128x4",
+  "candidate": "twice-range-suggestion",
+  "peak_lr": 0.00010428016575999369,
+  "best_epoch": 60,
+  "best_validation_loss": 0.13407424877725418,
+  "weights_sha256": "218fd564eb66c5851c204097b252cdd50f2b803cf6f50fef0e9ca42b258eb413",
+  "bundle_sha256": "3c43117c257e4dee8b78164339f6782da81612476dfb7f186446f50cc5abc99f",
+  "fit_plan_sha256": "4e057f1bd40c3891610a4196ff0a00bce009e01958013202d44bd3c616f2783c",
+  "fit_result_sha256": "abda984b65d2d3ecfef14f527fdb279c4e32e9a49fbc778a0e32731b81b974c8",
+  "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+  "calibration_sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e",
+  "final_roles": {
+    "normal_test": 250,
+    "anomaly_test": 200
+  }
+}

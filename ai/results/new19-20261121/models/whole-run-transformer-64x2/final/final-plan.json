@@ -1,0 +1,8 @@
+{
+  "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+  "bundle_sha256": "644070f2a2137838bea26bf986a5ccd0e1fd7a84da4e3ae0f5178efc6524e149",
+  "weights_sha256": "773bd7aff26dfcdd4aa1bdb84ffafdd7fc5a38c4305590abc2a71efd805562e6",
+  "calibration_sha256": "11df6271de1e978c1c9b8567f283eb1f756db53f597eb5dbbe7309c0e05485b5",
+  "cadence_us": 100000,
+  "semantics": "SITL stored MAVLink replay; static pre-existing degradation"
+}

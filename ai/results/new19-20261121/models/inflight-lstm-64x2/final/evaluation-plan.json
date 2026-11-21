@@ -1,0 +1,18 @@
+{
+  "model": "inflight-lstm-64x2",
+  "best_epoch": 59,
+  "best_validation_loss": 0.12980982550640666,
+  "fit_plan_sha256": "59aab3e651501213ac4d7a1a7fa1119e1fc5ba7a2e9c8b4b01d08485d10f6865",
+  "fit_result_sha256": "382ca2a75ad30f6437de229588ff3f62b78445f16840977b82dd2950999a38e6",
+  "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+  "weights_sha256": "c82a1aa5750c6c092a7843db2072ad4cce1d752486896f51cfafadac3e25ce5f",
+  "bundle_sha256": "285524a16464b8d5cef033b0b2bfa6b5e104cfc109fb0de4251578dd8db4d310",
+  "normal_calibration_roles": [
+    "normal_validation",
+    "normal_calibration"
+  ],
+  "final_roles": {
+    "normal_test": 250,
+    "anomaly_test": 200
+  }
+}

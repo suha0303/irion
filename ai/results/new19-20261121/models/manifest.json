@@ -1,0 +1,342 @@
+{
+  "schema": "drone-ai.new19.local-best/1",
+  "created_at": "2026-11-21T01:00:17+09:00",
+  "dataset": {
+    "path": "Data/processed/new19-mavlink-1750-20261120.json",
+    "sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84"
+  },
+  "selection": "Lowest normal-validation loss for each task, architecture, and size among completed fits",
+  "verification": {
+    "python": "3.10.22",
+    "torch": "2.1.2+cpu",
+    "run_id": "7625ac0cf0e14f65bb657f387e527377",
+    "role": "normal_validation",
+    "input_sha256": "74fbca54dcd9429e7301693d21d9cec75b099c234af14844e05b75c7b56f42f2"
+  },
+  "models": {
+    "inflight-lstm-128x4": {
+      "task": "inflight",
+      "chosen_run": "half-lr",
+      "peak_lr": 0.0012100641323971905,
+      "best_validation_epoch": 53,
+      "best_validation_loss": 0.13300152021989914,
+      "validation_candidates": [
+        {
+          "run": "original",
+          "best_epoch": 18,
+          "best_validation_loss": 0.14683132284867859
+        },
+        {
+          "run": "half-lr",
+          "best_epoch": 53,
+          "best_validation_loss": 0.13300152021989914
+        }
+      ],
+      "bundle": "inflight-lstm-128x4/fit",
+      "calibration": "inflight-lstm-128x4/calibration/calibration.json",
+      "final": "inflight-lstm-128x4/final/result.json",
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "weights_sha256": "f0743be331832c926864ea5c9b38f790119aa78fb8e619c18f2b9a733ee8601a",
+        "bundle_sha256": "d1ce4b5cc193a704106cf35f295504a7e0055735d21ae8d817996837a433ab1a",
+        "calibration_sha256": "e5ac8ffd2eac86908afad27212b90d3bcd24d1a443bcfbcc89bae862377e2a43"
+      },
+      "cpu_smoke": {
+        "passed": true,
+        "prediction_shape": [
+          1,
+          10,
+          4
+        ]
+      },
+      "detection": {
+        "alarms": 184,
+        "runs": 200
+      },
+      "false_alarms": {
+        "alarms": 30,
+        "runs": 250
+      }
+    },
+    "inflight-lstm-64x2": {
+      "task": "inflight",
+      "chosen_run": "half-lr",
+      "peak_lr": 0.0012100641323971905,
+      "best_validation_epoch": 59,
+      "best_validation_loss": 0.12980982550640666,
+      "validation_candidates": [
+        {
+          "run": "original",
+          "best_epoch": 59,
+          "best_validation_loss": 0.13210599202466441
+        },
+        {
+          "run": "half-lr",
+          "best_epoch": 59,
+          "best_validation_loss": 0.12980982550640666
+        }
+      ],
+      "bundle": "inflight-lstm-64x2/fit",
+      "calibration": "inflight-lstm-64x2/calibration/calibration.json",
+      "final": "inflight-lstm-64x2/final/result.json",
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "weights_sha256": "c82a1aa5750c6c092a7843db2072ad4cce1d752486896f51cfafadac3e25ce5f",
+        "bundle_sha256": "285524a16464b8d5cef033b0b2bfa6b5e104cfc109fb0de4251578dd8db4d310",
+        "calibration_sha256": "2b9691736f265c70585e8474f0763517fe741106941c23f16ca8cc4e5b59cf54"
+      },
+      "cpu_smoke": {
+        "passed": true,
+        "prediction_shape": [
+          1,
+          10,
+          4
+        ]
+      },
+      "detection": {
+        "alarms": 160,
+        "runs": 200
+      },
+      "false_alarms": {
+        "alarms": 27,
+        "runs": 250
+      }
+    },
+    "inflight-transformer-128x4": {
+      "task": "inflight",
+      "chosen_run": "twice-range-suggestion",
+      "peak_lr": 0.00010428016575999369,
+      "best_validation_epoch": 60,
+      "best_validation_loss": 0.13407424877725418,
+      "validation_candidates": [
+        {
+          "run": "original",
+          "best_epoch": 60,
+          "best_validation_loss": 0.20750677203104279
+        },
+        {
+          "run": "range-suggestion",
+          "best_epoch": 47,
+          "best_validation_loss": 0.13778899494318234
+        },
+        {
+          "run": "twice-range-suggestion",
+          "best_epoch": 60,
+          "best_validation_loss": 0.13407424877725418
+        }
+      ],
+      "bundle": "inflight-transformer-128x4/fit",
+      "calibration": "inflight-transformer-128x4/calibration/calibration.json",
+      "final": "inflight-transformer-128x4/final/result.json",
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "weights_sha256": "218fd564eb66c5851c204097b252cdd50f2b803cf6f50fef0e9ca42b258eb413",
+        "bundle_sha256": "3c43117c257e4dee8b78164339f6782da81612476dfb7f186446f50cc5abc99f",
+        "calibration_sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e"
+      },
+      "cpu_smoke": {
+        "passed": true,
+        "prediction_shape": [
+          1,
+          10,
+          4
+        ]
+      },
+      "detection": {
+        "alarms": 152,
+        "runs": 200
+      },
+      "false_alarms": {
+        "alarms": 24,
+        "runs": 250
+      }
+    },
+    "inflight-transformer-64x2": {
+      "task": "inflight",
+      "chosen_run": "original",
+      "peak_lr": 0.00026560877829466864,
+      "best_validation_epoch": 48,
+      "best_validation_loss": 0.1341119061066764,
+      "validation_candidates": [
+        {
+          "run": "original",
+          "best_epoch": 48,
+          "best_validation_loss": 0.1341119061066764
+        }
+      ],
+      "bundle": "inflight-transformer-64x2/fit",
+      "calibration": "inflight-transformer-64x2/calibration/calibration.json",
+      "final": "inflight-transformer-64x2/final/result.json",
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "weights_sha256": "4cbec2218b32dbb457ad01daf397cf2c09e7e56ec8f7a29ca45611812a1d675e",
+        "bundle_sha256": "47d5d1edc2052d891e12150b93054539b61f0a4b8dd85dab62313e35eb648576",
+        "calibration_sha256": "0ebd2e1714a0c8793555cd627b30f63584cc8687061bddc3dfc529b74cb0970b"
+      },
+      "cpu_smoke": {
+        "passed": true,
+        "prediction_shape": [
+          1,
+          10,
+          4
+        ]
+      },
+      "detection": {
+        "alarms": 159,
+        "runs": 200
+      },
+      "false_alarms": {
+        "alarms": 26,
+        "runs": 250
+      }
+    },
+    "whole-run-lstm-128x4": {
+      "task": "whole-run",
+      "chosen_run": "original",
+      "peak_lr": 0.00033516026509388406,
+      "best_validation_epoch": 53,
+      "best_validation_loss": 0.00016137597034685314,
+      "validation_candidates": [
+        {
+          "run": "original",
+          "best_epoch": 53,
+          "best_validation_loss": 0.00016137597034685314
+        }
+      ],
+      "bundle": "whole-run-lstm-128x4/fit",
+      "calibration": "whole-run-lstm-128x4/calibration/calibration.json",
+      "final": "whole-run-lstm-128x4/final/result.json",
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "weights_sha256": "f15ea08bded96e2a279b164dd77f28ad25cced0259f22266b18555b0ce40e1a8",
+        "bundle_sha256": "053f314b008c662f158d2d763938284227495ea9db1108ecf4285669a206736b",
+        "calibration_sha256": "e5038b929eea4140c482523caabc70bed41bce748587b1d912ac85b10b6447d1"
+      },
+      "cpu_smoke": {
+        "passed": true,
+        "prediction_shape": [
+          8371
+        ]
+      },
+      "detection": {
+        "alarms": 200,
+        "runs": 200
+      },
+      "false_alarms": {
+        "alarms": 13,
+        "runs": 250
+      }
+    },
+    "whole-run-lstm-64x2": {
+      "task": "whole-run",
+      "chosen_run": "original",
+      "peak_lr": 0.0006734150657750821,
+      "best_validation_epoch": 60,
+      "best_validation_loss": 0.00016359524122284104,
+      "validation_candidates": [
+        {
+          "run": "original",
+          "best_epoch": 60,
+          "best_validation_loss": 0.00016359524122284104
+        }
+      ],
+      "bundle": "whole-run-lstm-64x2/fit",
+      "calibration": "whole-run-lstm-64x2/calibration/calibration.json",
+      "final": "whole-run-lstm-64x2/final/result.json",
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "weights_sha256": "40f97b3f57a8a9d81e41d246fb11fa49030a12b78bea49fa444492eb508e91e9",
+        "bundle_sha256": "d72f7abb7a6d3ecf45dc3836aa999ff35f409a85b7bc084265d72067acbc2598",
+        "calibration_sha256": "c7a5b6211c0a7cdbf07385971ffdced787e6a16f64d85f3e533d2a05ccb29426"
+      },
+      "cpu_smoke": {
+        "passed": true,
+        "prediction_shape": [
+          8371
+        ]
+      },
+      "detection": {
+        "alarms": 200,
+        "runs": 200
+      },
+      "false_alarms": {
+        "alarms": 9,
+        "runs": 250
+      }
+    },
+    "whole-run-transformer-128x4": {
+      "task": "whole-run",
+      "chosen_run": "original",
+      "peak_lr": 8.302175681319735e-05,
+      "best_validation_epoch": 40,
+      "best_validation_loss": 0.0002214590027385081,
+      "validation_candidates": [
+        {
+          "run": "original",
+          "best_epoch": 40,
+          "best_validation_loss": 0.0002214590027385081
+        }
+      ],
+      "bundle": "whole-run-transformer-128x4/fit",
+      "calibration": "whole-run-transformer-128x4/calibration/calibration.json",
+      "final": "whole-run-transformer-128x4/final/result.json",
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "weights_sha256": "b3793f9c019f5f799ca3d559a647dd3fde15fc0a05b7b6a2e9647db70cc3f8c7",
+        "bundle_sha256": "fba217191222a7d124df06d4b481312a8115fadde8542950bddc146f5198b0f9",
+        "calibration_sha256": "47c1a5ee53d0a5cedd69c16a4dbf531aa3b64647bc66c248c29e125cd15290ac"
+      },
+      "cpu_smoke": {
+        "passed": true,
+        "prediction_shape": [
+          8371
+        ]
+      },
+      "detection": {
+        "alarms": 200,
+        "runs": 200
+      },
+      "false_alarms": {
+        "alarms": 1,
+        "runs": 250
+      }
+    },
+    "whole-run-transformer-64x2": {
+      "task": "whole-run",
+      "chosen_run": "original",
+      "peak_lr": 0.00033516026509388406,
+      "best_validation_epoch": 44,
+      "best_validation_loss": 0.00019461320092280707,
+      "validation_candidates": [
+        {
+          "run": "original",
+          "best_epoch": 44,
+          "best_validation_loss": 0.00019461320092280707
+        }
+      ],
+      "bundle": "whole-run-transformer-64x2/fit",
+      "calibration": "whole-run-transformer-64x2/calibration/calibration.json",
+      "final": "whole-run-transformer-64x2/final/result.json",
+      "locked": {
+        "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+        "weights_sha256": "773bd7aff26dfcdd4aa1bdb84ffafdd7fc5a38c4305590abc2a71efd805562e6",
+        "bundle_sha256": "644070f2a2137838bea26bf986a5ccd0e1fd7a84da4e3ae0f5178efc6524e149",
+        "calibration_sha256": "11df6271de1e978c1c9b8567f283eb1f756db53f597eb5dbbe7309c0e05485b5"
+      },
+      "cpu_smoke": {
+        "passed": true,
+        "prediction_shape": [
+          8371
+        ]
+      },
+      "detection": {
+        "alarms": 193,
+        "runs": 200
+      },
+      "false_alarms": {
+        "alarms": 7,
+        "runs": 250
+      }
+    }
+  }
+}

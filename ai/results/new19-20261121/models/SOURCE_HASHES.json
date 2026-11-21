@@ -1,0 +1,242 @@
+{
+  "models/manifest.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/manifest.json",
+    "sha256": "92e9ae5501ed4e438c4e2f5645dd0a29d3a1c9a5d8d8fbc04004514dab77a548"
+  },
+  "models/inflight-lstm-128x4/calibration/calibration.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-128x4/calibration/calibration.json",
+    "sha256": "e5ac8ffd2eac86908afad27212b90d3bcd24d1a443bcfbcc89bae862377e2a43"
+  },
+  "models/inflight-lstm-128x4/final/completed-runs.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-128x4/final/completed-runs.json",
+    "sha256": "a4683dbdf592e19f7b1f36f80aaaebc89d958f0b5a382aa68535244585e55b1f"
+  },
+  "models/inflight-lstm-128x4/final/evaluation-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-128x4/final/evaluation-plan.json",
+    "sha256": "69cfcc5dba720cab1625e3822c2e550514bc5fcd1024d4d56e8d47a277674a0c"
+  },
+  "models/inflight-lstm-128x4/final/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-128x4/final/result.json",
+    "sha256": "a7edc9bff7080637874a8cfff568ec202d5727388aa5498e6c70b3f12eaabd69"
+  },
+  "models/inflight-lstm-128x4/final/final-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-128x4/final/final-plan.json",
+    "sha256": "4677d240eeee572b5140d1e192b30130b1d55de0848f5985366809c8410641f8"
+  },
+  "models/inflight-lstm-128x4/fit/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-128x4/fit/result.json",
+    "sha256": "fd2002b0c842b2a1ca2b693d94d2d36aec30a6bf3a822fe3b04d70c79b70114b"
+  },
+  "models/inflight-lstm-128x4/fit/fit-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-128x4/fit/fit-plan.json",
+    "sha256": "cf96484fac4348fd8ca97cd460c7c5c1fbb889255de448350793927f508276d5"
+  },
+  "models/inflight-lstm-128x4/fit/bundle.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-128x4/fit/bundle.json",
+    "sha256": "d1ce4b5cc193a704106cf35f295504a7e0055735d21ae8d817996837a433ab1a"
+  },
+  "models/inflight-lstm-64x2/calibration/calibration.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-64x2/calibration/calibration.json",
+    "sha256": "2b9691736f265c70585e8474f0763517fe741106941c23f16ca8cc4e5b59cf54"
+  },
+  "models/inflight-lstm-64x2/final/completed-runs.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-64x2/final/completed-runs.json",
+    "sha256": "83f10da6537e7b8edf3cae54e9270ec2a9dae46cd81eaf1f9f0805ea01debcb2"
+  },
+  "models/inflight-lstm-64x2/final/evaluation-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-64x2/final/evaluation-plan.json",
+    "sha256": "e0236c6587f82e6d87b9e31abcb26b946d9ecef24f02e552c8dd415c92870f2d"
+  },
+  "models/inflight-lstm-64x2/final/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-64x2/final/result.json",
+    "sha256": "03fd026f26f373262208009ccaa1867d34edc78f3ff5231bc279263461ddb956"
+  },
+  "models/inflight-lstm-64x2/final/final-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-64x2/final/final-plan.json",
+    "sha256": "46d5e181fb7b5ee7b3f92ae248eabcdcc8c63f9dcd414a0dc4c8d56f66e6c23c"
+  },
+  "models/inflight-lstm-64x2/fit/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-64x2/fit/result.json",
+    "sha256": "382ca2a75ad30f6437de229588ff3f62b78445f16840977b82dd2950999a38e6"
+  },
+  "models/inflight-lstm-64x2/fit/fit-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-64x2/fit/fit-plan.json",
+    "sha256": "59aab3e651501213ac4d7a1a7fa1119e1fc5ba7a2e9c8b4b01d08485d10f6865"
+  },
+  "models/inflight-lstm-64x2/fit/bundle.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-lstm-64x2/fit/bundle.json",
+    "sha256": "285524a16464b8d5cef033b0b2bfa6b5e104cfc109fb0de4251578dd8db4d310"
+  },
+  "models/inflight-transformer-128x4/calibration/calibration.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-128x4/calibration/calibration.json",
+    "sha256": "5d5d4791a1c0bdc1102435875dcf560f9d11c11d1e81df57e787e16a68fd912e"
+  },
+  "models/inflight-transformer-128x4/final/completed-runs.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-128x4/final/completed-runs.json",
+    "sha256": "45d36cd8cc14c6cd56dbffa3ce4b9312943f663334b606098986832078c1f98b"
+  },
+  "models/inflight-transformer-128x4/final/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-128x4/final/result.json",
+    "sha256": "fe74dcb78c01f21a7106a79bf048239d43d370750eb35ba4edff899c426080c8"
+  },
+  "models/inflight-transformer-128x4/final/evaluation-seal.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-128x4/final/evaluation-seal.json",
+    "sha256": "fde9ab8ee86eeae5cb290f7b9186767a7e95a53095f304b96f1cc32bdada14cd"
+  },
+  "models/inflight-transformer-128x4/final/final-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-128x4/final/final-plan.json",
+    "sha256": "a6df121e39533e8b86dd8656ac16edf6ee8a65fb5d2a76047596825e7ef23b52"
+  },
+  "models/inflight-transformer-128x4/fit/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-128x4/fit/result.json",
+    "sha256": "abda984b65d2d3ecfef14f527fdb279c4e32e9a49fbc778a0e32731b81b974c8"
+  },
+  "models/inflight-transformer-128x4/fit/fit-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-128x4/fit/fit-plan.json",
+    "sha256": "4e057f1bd40c3891610a4196ff0a00bce009e01958013202d44bd3c616f2783c"
+  },
+  "models/inflight-transformer-128x4/fit/bundle.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-128x4/fit/bundle.json",
+    "sha256": "3c43117c257e4dee8b78164339f6782da81612476dfb7f186446f50cc5abc99f"
+  },
+  "models/inflight-transformer-64x2/calibration/calibration.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-64x2/calibration/calibration.json",
+    "sha256": "0ebd2e1714a0c8793555cd627b30f63584cc8687061bddc3dfc529b74cb0970b"
+  },
+  "models/inflight-transformer-64x2/final/completed-runs.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-64x2/final/completed-runs.json",
+    "sha256": "d6afa3554c361538e68134d64eb0263334876d91ebdbae65ca30f2892f896ff7"
+  },
+  "models/inflight-transformer-64x2/final/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-64x2/final/result.json",
+    "sha256": "2ef6eaa988bd407bae86af997b6be85c1a52a2c720430679d4c0a457ac31de08"
+  },
+  "models/inflight-transformer-64x2/final/final-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-64x2/final/final-plan.json",
+    "sha256": "6c73481c0b955cfa9e45e3212421e6dca2a468756b25ef2a3e636d9af5a882bb"
+  },
+  "models/inflight-transformer-64x2/fit/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-64x2/fit/result.json",
+    "sha256": "3be654c49bb383377b606f5e4f67881b4fe5e9ea9b5dd72717bbd107cdeb7c78"
+  },
+  "models/inflight-transformer-64x2/fit/fit-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-64x2/fit/fit-plan.json",
+    "sha256": "47c766c0769ffd2b0d094fbc3795c92ec70f2985b57c1b66a115053320e93096"
+  },
+  "models/inflight-transformer-64x2/fit/bundle.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/inflight-transformer-64x2/fit/bundle.json",
+    "sha256": "47d5d1edc2052d891e12150b93054539b61f0a4b8dd85dab62313e35eb648576"
+  },
+  "models/whole-run-lstm-128x4/calibration/calibration.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-128x4/calibration/calibration.json",
+    "sha256": "e5038b929eea4140c482523caabc70bed41bce748587b1d912ac85b10b6447d1"
+  },
+  "models/whole-run-lstm-128x4/final/completed-runs.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-128x4/final/completed-runs.json",
+    "sha256": "c019daacdeeca7418776c13b24646290d855cc6d3e6dede8461ce2b7d94a5106"
+  },
+  "models/whole-run-lstm-128x4/final/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-128x4/final/result.json",
+    "sha256": "3cc54b1c90ad73487d74a0534e1d06ba27dd9e690c648803454a5ece53081498"
+  },
+  "models/whole-run-lstm-128x4/final/final-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-128x4/final/final-plan.json",
+    "sha256": "15444bdcbda4b9f128cb118161c58c3a35f76089a4c9755cea5503250f34ad69"
+  },
+  "models/whole-run-lstm-128x4/fit/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-128x4/fit/result.json",
+    "sha256": "32fe218a597d78d6a68239377f1e78d963e7471ee430dccc14ec1075080eac63"
+  },
+  "models/whole-run-lstm-128x4/fit/fit-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-128x4/fit/fit-plan.json",
+    "sha256": "e1e32ef964e326c6eb96e9d1b4e6c30330ebf8047744cb41a26cfd9b8b99e967"
+  },
+  "models/whole-run-lstm-128x4/fit/bundle.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-128x4/fit/bundle.json",
+    "sha256": "053f314b008c662f158d2d763938284227495ea9db1108ecf4285669a206736b"
+  },
+  "models/whole-run-lstm-64x2/calibration/calibration.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-64x2/calibration/calibration.json",
+    "sha256": "c7a5b6211c0a7cdbf07385971ffdced787e6a16f64d85f3e533d2a05ccb29426"
+  },
+  "models/whole-run-lstm-64x2/final/completed-runs.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-64x2/final/completed-runs.json",
+    "sha256": "26534adf4c721df0c06b5d988ebc7c8126068e8a423de501ccb67880ec2ce3f5"
+  },
+  "models/whole-run-lstm-64x2/final/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-64x2/final/result.json",
+    "sha256": "f9603363d9749241ea1f2d6a4f6a6043f7f28aea63aebe87e5a317b3ad8e3340"
+  },
+  "models/whole-run-lstm-64x2/final/final-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-64x2/final/final-plan.json",
+    "sha256": "f067ce37eeb078986db22aa8b9610a569ec5ff29d3478803f16f4a96eee79499"
+  },
+  "models/whole-run-lstm-64x2/fit/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-64x2/fit/result.json",
+    "sha256": "3c7271fe568f2ac221b01653caba1fd07ed9a8644b93cd513db4212c7d9c1d55"
+  },
+  "models/whole-run-lstm-64x2/fit/fit-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-64x2/fit/fit-plan.json",
+    "sha256": "2cb26f87beec4119fd8826bf0dc58425c977e652e6da40a0ffd2fb29945e3a1c"
+  },
+  "models/whole-run-lstm-64x2/fit/bundle.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-lstm-64x2/fit/bundle.json",
+    "sha256": "d72f7abb7a6d3ecf45dc3836aa999ff35f409a85b7bc084265d72067acbc2598"
+  },
+  "models/whole-run-transformer-128x4/calibration/calibration.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-128x4/calibration/calibration.json",
+    "sha256": "47c1a5ee53d0a5cedd69c16a4dbf531aa3b64647bc66c248c29e125cd15290ac"
+  },
+  "models/whole-run-transformer-128x4/final/completed-runs.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-128x4/final/completed-runs.json",
+    "sha256": "4a477d7051a352515a0df0d3f3048e3a9139f5a3a95dccb64a7fce2dddd62569"
+  },
+  "models/whole-run-transformer-128x4/final/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-128x4/final/result.json",
+    "sha256": "a1ac061f293faa8678a9c698a19cf6e1339bb0009633e12a88fd1816ece8874f"
+  },
+  "models/whole-run-transformer-128x4/final/final-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-128x4/final/final-plan.json",
+    "sha256": "50d1cd0c8e98b938c6e80970b485dda077d3a2c9dfa7c14b4dc30d6efd47de01"
+  },
+  "models/whole-run-transformer-128x4/fit/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-128x4/fit/result.json",
+    "sha256": "79250b041788b16c8a48a641a66867cc6c50362fb31d8af1eec746bf0bde8d79"
+  },
+  "models/whole-run-transformer-128x4/fit/fit-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-128x4/fit/fit-plan.json",
+    "sha256": "7fe23ee6dd54fe674273c57a970138f88e4fdc92d6da27ea0fccfbe30d4492a4"
+  },
+  "models/whole-run-transformer-128x4/fit/bundle.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-128x4/fit/bundle.json",
+    "sha256": "fba217191222a7d124df06d4b481312a8115fadde8542950bddc146f5198b0f9"
+  },
+  "models/whole-run-transformer-64x2/calibration/calibration.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-64x2/calibration/calibration.json",
+    "sha256": "11df6271de1e978c1c9b8567f283eb1f756db53f597eb5dbbe7309c0e05485b5"
+  },
+  "models/whole-run-transformer-64x2/final/completed-runs.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-64x2/final/completed-runs.json",
+    "sha256": "5b895e309c4a347e01b0f30b747b5e0452cff61d4ab6628c2ed9da12169ff278"
+  },
+  "models/whole-run-transformer-64x2/final/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-64x2/final/result.json",
+    "sha256": "0957dd44a2dfe26851fbf7dea782f9c70bc7758153b8a0e36cec025c5e512204"
+  },
+  "models/whole-run-transformer-64x2/final/final-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-64x2/final/final-plan.json",
+    "sha256": "9f739d12cbc50f1b07cec0158a4256739824a192464e5dedb52131efa6576072"
+  },
+  "models/whole-run-transformer-64x2/fit/result.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-64x2/fit/result.json",
+    "sha256": "ec6fc838ff1e8ea307ea58c19c88cc83a131c63f5579a2a7a3d6982d621a9776"
+  },
+  "models/whole-run-transformer-64x2/fit/fit-plan.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-64x2/fit/fit-plan.json",
+    "sha256": "498c5ce38ed032a5eee405aaf676489bdc0c17af2b18abad846aa6ccebdb75ab"
+  },
+  "models/whole-run-transformer-64x2/fit/bundle.json": {
+    "source": "ai/artifacts/new19-best-models-20261121/whole-run-transformer-64x2/fit/bundle.json",
+    "sha256": "644070f2a2137838bea26bf986a5ccd0e1fd7a84da4e3ae0f5178efc6524e149"
+  }
+}

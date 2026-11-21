@@ -1,0 +1,15 @@
+{
+  "schema": "drone-ai.new19.calibration/1",
+  "bundle_sha256": "fba217191222a7d124df06d4b481312a8115fadde8542950bddc146f5198b0f9",
+  "parameters": {
+    "scale": [
+      0.0018722257382153662,
+      0.001532442020725921
+    ],
+    "threshold": 1.87078029892293,
+    "alpha": 0.05
+  },
+  "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+  "validation_runs": 150,
+  "calibration_runs": 150
+}

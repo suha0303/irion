@@ -1,0 +1,29 @@
+{
+  "status": "final_complete",
+  "locked": {
+    "manifest_sha256": "ea0fcdaba639c5f226270a4190259045f1a11da8a07ec4f3f41a74e8da479e84",
+    "bundle_sha256": "053f314b008c662f158d2d763938284227495ea9db1108ecf4285669a206736b",
+    "weights_sha256": "f15ea08bded96e2a279b164dd77f28ad25cced0259f22266b18555b0ce40e1a8",
+    "calibration_sha256": "e5038b929eea4140c482523caabc70bed41bce748587b1d912ac85b10b6447d1",
+    "cadence_us": 100000,
+    "semantics": "SITL stored MAVLink replay; static pre-existing degradation"
+  },
+  "summary": {
+    "normal_test": {
+      "runs": 250,
+      "available": 250,
+      "unavailable": 0,
+      "alarms": 13,
+      "alarm_run_rate": 0.052
+    },
+    "anomaly_test": {
+      "runs": 200,
+      "available": 200,
+      "unavailable": 0,
+      "alarms": 200,
+      "alarm_run_rate": 1.0,
+      "not_detected_including_unavailable": 0
+    }
+  },
+  "total_runs": 450
+}
