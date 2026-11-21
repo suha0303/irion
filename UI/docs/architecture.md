@@ -8,6 +8,8 @@
 
 균형형 워크스페이스에서 왼쪽 3D와 오른쪽 LSTM·Transformer를 같은 시간축으로 봅니다. 전처리 스트림에는 저장 상태 바가 추가되며 기존 배터리·모터·궤적·이상 상세·데이터 진단은 유지합니다. 학습과 물리 시뮬레이션·비행 제어는 외부에서 수행합니다.
 
+아래 화살표는 앱의 수신·추론 경로를 보여줍니다. 원본 16종의 본학습 자료는 PX4 SITL 내부 uORB 관측에서 생성한 임무 구간 NPZ입니다. MAVLink 수신 원문은 앱 연결과 이후 별도의 부분 학습 실험에 사용했습니다. [학습과 통신 경로 대조](../../docs/development/LOCAL_ORIGINAL_DETECTION_G8.md)
+
 ```mermaid
 flowchart LR
   UDP[MAVLink UDP] --> Prep[외부 공용 전처리기]
