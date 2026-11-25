@@ -1,8 +1,37 @@
-# 드론 시뮬레이션·데이터와 X500 이상탐지
+# ARION V0.2 · 드론 비행 분석
 
-[ARION V0.2 릴리즈 전 체크리스트와 Windows 실행 시험](docs/ai/ARION_RELEASE_CHECKLIST.md)
+PX4·ArduPilot 비행 로그와 MAVLink 수신 데이터를 분석하는 오프라인 데스크톱 앱입니다. 비행 중 예측 4종과 비행 후 판정 4종을 기본 제공하며, 설치 후 CPU에서 실행합니다.
 
-PX4·Gazebo에서 X500 비행로그를 수집하고, 정상 train 기준 공통 scaler를 사용하는 학습용 데이터셋으로 정제한다. 수집부터 독립 품질 검산·압축까지 로컬 프로그램이 실행하며 LLM 연결은 필요하지 않다.
+## 설치
+
+[GitHub Releases에서 ARION V0.2.0-rc.3 받기](https://github.com/suha0303/irion/releases/tag/v0.2.0-rc.3)
+
+| 운영체제 | 설치 방법 | 검증 환경 |
+| --- | --- | --- |
+| Ubuntu x64 | `.deb`와 `.sha256`을 받은 뒤 아래 명령으로 설치합니다. 앱 메뉴에서 **ARION**을 엽니다. | Ubuntu 24.04.5 노트북 |
+| Windows x64 | `.exe`를 실행한 뒤 시작 메뉴에서 **ARION**을 엽니다. 설치본에는 코드 서명이 없습니다. | Windows Server 2025 GitHub Actions |
+| macOS | Apple Silicon·Intel DMG의 빌드와 실행 시험을 마쳤습니다. 공개 설치본은 Developer ID 서명과 공증을 기다리고 있습니다. | macOS 15 GitHub Actions |
+
+```bash
+sha256sum -c ARION-0.2.0-rc.3-ubuntu-amd64.deb.sha256
+sudo apt install ./ARION-0.2.0-rc.3-ubuntu-amd64.deb
+```
+
+Windows 설치본은 `Get-FileHash .\ARION-0.2.0-rc.3-windows-x64.exe -Algorithm SHA256`으로 첨부된 `.sha256`과 대조할 수 있습니다. 자세한 절차는 [설치 안내](docs/ai/DESKTOP_RELEASE.md)와 [검증 체크리스트](docs/ai/ARION_RELEASE_CHECKLIST.md)에 있습니다.
+
+## 사용 방법
+
+- **비행 로그 분석**은 **로그 모니터링 → 비행 로그 가져오기**에서 PX4 `.ulg` 또는 ArduPilot `.bin`을 열어 시작합니다. 프로파일과 사용 구간을 저장해 분석하면 예측 그래프와 비행 후 판정을 볼 수 있습니다.
+- **실시간 비행 모니터링**에서 MAVLink UDP를 연결합니다. 수신 중에는 10초 버퍼를 거친 비행 중 모델 결과를 확인하고, **비행 종료 · 결과 분석**을 누르면 저장된 원문으로 전체 비행을 분석합니다.
+- **기체별 파인튜닝**은 학습·보정·평가 로그를 따로 지정합니다. 출력층을 파인튜닝하고 판정 기준을 보정한 후보를 함께 저장합니다. 검증 대기 후보는 자동 적용하지 않습니다.
+
+## 검증 범위
+
+Ubuntu에서 외부 네트워크 없이 로그 분석, PX4 SITL 이륙·착륙과 MAVLink 기록 마감, 정상 CUAVv5 로그로 파인튜닝 후보 검증을 확인했습니다. Windows와 macOS에서는 합성 ULog 8종 분석과 루프백 MAVLink 원문 저장을 자동 검증했습니다. 정상 비행에 오경보가 남아 있으며 실기체 이상 검출 성능은 추가 검증이 필요합니다. [V0.2 평가 결과](ai/results/new19-20261121/README.md), [Ubuntu 추가 검증](docs/ai/ARION_RELEASE_CHECKLIST.md#ubuntu-노트북-검증-기록)
+
+## 개발과 연구
+
+이 저장소는 앱 소스와 PX4·Gazebo X500 비행 데이터 수집, 전처리, 모델 학습·평가 코드를 함께 관리합니다.
 
 | 폴더 | 목적 |
 |---|---|
@@ -12,13 +41,7 @@ PX4·Gazebo에서 X500 비행로그를 수집하고, 정상 train 기준 공통 
 | [UI/](UI/README.md) | 비행 모니터링 대시보드·재생·실시간 수신·모델 결과 표시 |
 | [docs/](docs/README.md) | 명세·운영·개발 안내와 과거 보존 자료 |
 
-## 최신 로컬 실기체 분석 (2026-11-15)
-
-GPU 서버 없이 최신 forecast 8종과 run-health 8종을 선택하고, 기체 프로파일·PX4/ArduPilot 로그·기체별 출력층 파인튜닝·실시간 MAVLink 분석을 연결한다. 로그 분석과 비행 종료 결과는 전체 런 요약, 구간별 상세, 분석 제외 구간을 함께 표시한다.
-
-[설치·실행 안내](docs/ai/LOCAL_DESKTOP_UBUNTU.md), [기능 체크리스트](docs/ai/LOCAL_REAL_FLIGHT_CHECKLIST.md), [전체 코드 검수 마일스톤](docs/development/CODE_REVIEW_MILESTONES.md)을 참고한다. 모델 가중치·원시 비행 로그·개인 설정·설치형 바이너리는 Git 소스와 별도로 관리한다. 실기체 정확도·정상 판정 성능은 아직 검증되지 않았다.
-
-## 다른 컴퓨터에서 시작
+### 수집 환경 설정
 
 지원 기준은 **Ubuntu 24.04 x86_64와 Python 3.12**다. 비행 수집에는 Gazebo Harmonic·PX4 빌드 의존성과 user systemd가 필요하다. 자세한 사전 조건과 단계별 실행은 [설치·이동 안내](docs/data/PORTABLE_SETUP.md)를 따른다.
 
@@ -39,7 +62,7 @@ GPU 서버 없이 최신 forecast 8종과 run-health 8종을 선택하고, 기�
 
 최종 저장 위치는 메뉴에서 지정하며 기본값은 프로젝트의 `Data/`다. 원시·중간 파일은 성공 산출물의 복원 가능성을 검증한 뒤 해당 작업 소유분만 정리한다. 개인 데이터셋·학습 가중치·실행 상태·로컬 설치 환경은 Git 소스에 포함하지 않는다. `export` 명령으로 다른 위치에서 설치할 소스 묶음을 만들 수 있다.
 
-## AI 학습
+### AI 학습
 
 서버에서 클론한 뒤 `./ai/drone-ai configure`로 서버·기존 Python·데이터·출력 경로를 입력한다. 환경 진단·짧은 GPU 학습/저장/복원 시험·진행 화면은 [서버 사용 안내](docs/ai/PORTABLE_SETUP.md), 비교 구성은 [실험 계획](docs/ai/EXPERIMENT_PLAN.md)을 따른다. 본학습과 다음 회차는 자동 시작하지 않는다. 데이터와 모델·컴퓨터별 설정은 Git 소스와 분리한다.
 
@@ -47,10 +70,10 @@ GPU 서버 없이 최신 forecast 8종과 run-health 8종을 선택하고, 기�
 
 기체를 지정하지 않으면 X500을 사용한다. 다른 기체는 [프로파일 안내](docs/simulation/VEHICLE_PROFILES.md)에 따라 시뮬레이션에서 명시적으로 선택한다. 데이터·AI 인수는 현재 X500 전용이다. `drone-data`·`drone-pretrain`은 현재 실행 파일명이며 옛 이름의 호환 링크는 만들지 않는다.
 
-## 최종 결과
+### 평가 기록
 
-- [V0.2 8모델 최종 평가·실시간 앱·실기체 검증 (2026-11-21)](ai/results/new19-20261121/README.md)
 - [V0.2 모델 실행과 앱 연결](ai/learning/new19/README.md)
+- [기능과 실기체 검증 체크리스트](docs/ai/LOCAL_REAL_FLIGHT_CHECKLIST.md)
 
 이전 평가 기록:
 
