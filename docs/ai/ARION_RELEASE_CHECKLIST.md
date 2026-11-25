@@ -33,6 +33,12 @@ try {
 
 Windows 후보는 서명 전 EXE이고 macOS 후보는 내부 검증용 ad-hoc 서명을 사용한다. 오프라인 시험은 외부 접속을 차단한 내장 백엔드에서 합성 ULog와 루프백 MAVLink로 수행했다. 사용자 PC의 첫 실행, 외부 장치 연결, 실제 비행 탐지 성능은 별도로 확인한다.
 
+## Ubuntu 노트북 검증 기록
+
+- 같은 검증 커밋의 Ubuntu 24.04.5 x64 후보에서 임시 루트 설치와 실제 앱 창을 확인했다. 외부 접속 없이 합성 PX4 ULog 350프레임과 실기체 ArduPilot 31번 BIN 8,299프레임을 8종으로 분석했다. [설치·오프라인 검증](../../ai/results/new19-20261125/ubuntu-validation/ubuntu-offline.json)
+- PX4 SITL X500 정상 호버의 이륙·착륙과 MAVLink 원문 마감을 확인했다. 비행 중 예측용 4종은 각각 717프레임에 경보 0건이었다. 비행 후 4종은 817프레임을 사용했다. LSTM 2종이 정상 범위, Transformer 2종이 이상 의심을 표시했다. [비행 결과](../../ai/results/new19-20261125/ubuntu-validation/px4-cycle.json)
+- 같은 CUAVv5 제어기의 로그를 날짜별로 분리해 LSTM 128×4의 두 후보를 만들었다. 31번 평가 로그에서 전용 기준까지 적용한 비행 중 모델의 오경보는 0%였다. 비행 후 모델은 정상 로그에 이상 의심이 남아 두 후보를 검증 대기로 보존했다. [후보 재분석](../../ai/results/new19-20261125/ubuntu-validation/cuavv5-comparison.json)
+
 ## 공개 전 확인 항목
 
 - [x] **출처 고정.** 후보 커밋과 기본 모델 8종의 가중치·판정 기준 해시를 기록했다. 설치본마다 SHA-256을 포함했다.
