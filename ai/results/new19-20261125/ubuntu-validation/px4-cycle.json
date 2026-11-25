@@ -1,0 +1,140 @@
+{
+  "run_id": "live-a244bf63f49a4553",
+  "scope": "PX4 SITL normal X500 hover",
+  "simulation_id": "276ca60a7b9c4b34a6a5e4bd6def8ac4",
+  "phases": [
+    {
+      "state": "preparing"
+    },
+    {
+      "state": "simulator_ready",
+      "sim_time": 3.86
+    },
+    {
+      "state": "px4_ready"
+    },
+    {
+      "state": "preflight_ready",
+      "sim_time": 12.032
+    },
+    {
+      "state": "armed",
+      "sim_time": 14.832
+    },
+    {
+      "state": "airborne",
+      "sim_time": 19.4
+    },
+    {
+      "state": "mission",
+      "sim_time": 21.432
+    },
+    {
+      "state": "landing",
+      "sim_time": 84.424
+    },
+    {
+      "state": "disarmed",
+      "sim_time": 99.824
+    },
+    {
+      "state": "finalizing"
+    }
+  ],
+  "termination": "mission_landed_disarmed",
+  "wire_sha256": "25bca777572b9ed25fc0b686a37d984129fd74acec1cdc4e904b45511e47588b",
+  "realtime": {
+    "frames": 817,
+    "late_samples": 0,
+    "models": {
+      "inflight-lstm-64x2": {
+        "forecasts": 718,
+        "scored_frames": 717,
+        "alarm_frames": 0
+      },
+      "inflight-lstm-128x4": {
+        "forecasts": 718,
+        "scored_frames": 717,
+        "alarm_frames": 0
+      },
+      "inflight-transformer-64x2": {
+        "forecasts": 718,
+        "scored_frames": 717,
+        "alarm_frames": 0
+      },
+      "inflight-transformer-128x4": {
+        "forecasts": 718,
+        "scored_frames": 717,
+        "alarm_frames": 0
+      }
+    }
+  },
+  "whole": {
+    "frames": 817,
+    "valid_frames": 817,
+    "duration_s": 81.7,
+    "late_samples": 0,
+    "wire_sha256": "25bca777572b9ed25fc0b686a37d984129fd74acec1cdc4e904b45511e47588b",
+    "models": [
+      {
+        "model_id": "whole-run-lstm-64x2",
+        "bundle_sha256": "d72f7abb7a6d3ecf45dc3836aa999ff35f409a85b7bc084265d72067acbc2598",
+        "weights_sha256": "40f97b3f57a8a9d81e41d246fb11fa49030a12b78bea49fa444492eb508e91e9",
+        "calibration_sha256": "c7a5b6211c0a7cdbf07385971ffdced787e6a16f64d85f3e533d2a05ccb29426",
+        "threshold": 2.1068543141540026,
+        "status": "available",
+        "short_cell_v": 0.0019827784557214,
+        "long_cell_v": 0.0007853012996018846,
+        "coverage": 1.0,
+        "score": 1.354306931805364,
+        "alarm": false
+      },
+      {
+        "model_id": "whole-run-lstm-128x4",
+        "bundle_sha256": "053f314b008c662f158d2d763938284227495ea9db1108ecf4285669a206736b",
+        "weights_sha256": "f15ea08bded96e2a279b164dd77f28ad25cced0259f22266b18555b0ce40e1a8",
+        "calibration_sha256": "e5038b929eea4140c482523caabc70bed41bce748587b1d912ac85b10b6447d1",
+        "threshold": 1.9119638196881823,
+        "status": "available",
+        "short_cell_v": 0.0020551905031044268,
+        "long_cell_v": 0.0010158359037695326,
+        "coverage": 1.0,
+        "score": 1.5251985637663896,
+        "alarm": false
+      },
+      {
+        "model_id": "whole-run-transformer-64x2",
+        "bundle_sha256": "644070f2a2137838bea26bf986a5ccd0e1fd7a84da4e3ae0f5178efc6524e149",
+        "weights_sha256": "773bd7aff26dfcdd4aa1bdb84ffafdd7fc5a38c4305590abc2a71efd805562e6",
+        "calibration_sha256": "11df6271de1e978c1c9b8567f283eb1f756db53f597eb5dbbe7309c0e05485b5",
+        "threshold": 1.8316721829849605,
+        "status": "available",
+        "short_cell_v": 0.002385426809888296,
+        "long_cell_v": 0.0033247206762025603,
+        "coverage": 1.0,
+        "score": 2.872636366425496,
+        "alarm": true
+      },
+      {
+        "model_id": "whole-run-transformer-128x4",
+        "bundle_sha256": "fba217191222a7d124df06d4b481312a8115fadde8542950bddc146f5198b0f9",
+        "weights_sha256": "b3793f9c019f5f799ca3d559a647dd3fde15fc0a05b7b6a2e9647db70cc3f8c7",
+        "calibration_sha256": "47c1a5ee53d0a5cedd69c16a4dbf531aa3b64647bc66c248c29e125cd15290ac",
+        "threshold": 1.87078029892293,
+        "status": "available",
+        "short_cell_v": 0.0023892993904442677,
+        "long_cell_v": 0.002399465205604635,
+        "coverage": 1.0,
+        "score": 2.0199756922683823,
+        "alarm": true
+      }
+    ],
+    "journal_sha256": "3a156745a4ff0c036c13c270b488b45a15c6b71a59771c939656b376e0049d03"
+  },
+  "graphs": [
+    "inflight-lstm-128x4",
+    "inflight-lstm-64x2",
+    "inflight-transformer-128x4",
+    "inflight-transformer-64x2"
+  ]
+}

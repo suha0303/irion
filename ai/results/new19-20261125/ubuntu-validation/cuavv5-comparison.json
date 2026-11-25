@@ -1,0 +1,169 @@
+{
+  "candidate_id": "0ba213f9b8294ab28881644153e94e7c",
+  "analysis_id": "e2733cfa39cf4797b63f4725ec66b44c",
+  "review_status": "pending",
+  "calibration_thresholds": {
+    "inflight-lstm-128x4": [
+      5.532654942933914,
+      7.104043322221279
+    ],
+    "whole-run-lstm-128x4": [
+      1.4142135623730951
+    ]
+  },
+  "frames": 8299,
+  "models": [
+    {
+      "model_id": "inflight-lstm-128x4",
+      "task": "inflight",
+      "evaluation": [
+        {
+          "filename": "31.bin",
+          "date": null,
+          "role": "evaluation",
+          "source_sha256": "a667942ed18a9946d493b53a1c4a1b374825b27eb32893ba25baa9a10aec1a34",
+          "prepared_sha256": "e8be95feae440cbc28392692457c068c68942edc83a7b9489980bbbaf21ecdc4",
+          "health": "confirmed_normal",
+          "scored_frames": 8199,
+          "segments": [
+            {
+              "start_us": 238000000,
+              "end_us": 1067900000,
+              "retained_frames": 8299,
+              "scored_frames": 8199,
+              "alarm_frames": {
+                "original": 8170,
+                "x500": 8141,
+                "calibrated": 0
+              }
+            }
+          ],
+          "rmse": {
+            "original": [
+              0.04444914790270002,
+              0.0526528839766047,
+              0.0315940734193689,
+              0.19447719781818973
+            ],
+            "persistence": [
+              0.04443563379808807,
+              0.05268155875789663,
+              0.03157267223974275,
+              0.0904230934717898
+            ],
+            "adapted": [
+              0.0444661512370927,
+              0.052752929708251003,
+              0.03167609277349025,
+              0.09040320340899058
+            ]
+          },
+          "decisions": {
+            "original": {
+              "episode_starts_us": [
+                250900000
+              ],
+              "alarm_frames": 8170,
+              "episodes": 1,
+              "alarm_seconds": 817.0,
+              "alarm_percent": 99.64629832906452
+            },
+            "x500": {
+              "episode_starts_us": [
+                253800000
+              ],
+              "alarm_frames": 8141,
+              "episodes": 1,
+              "alarm_seconds": 814.1,
+              "alarm_percent": 99.29259665812904
+            },
+            "calibrated": {
+              "episode_starts_us": [],
+              "alarm_frames": 0,
+              "episodes": 0,
+              "alarm_seconds": 0.0,
+              "alarm_percent": 0.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "model_id": "whole-run-lstm-128x4",
+      "task": "whole-run",
+      "evaluation": [
+        {
+          "filename": "31.bin",
+          "date": null,
+          "role": "evaluation",
+          "source_sha256": "a667942ed18a9946d493b53a1c4a1b374825b27eb32893ba25baa9a10aec1a34",
+          "prepared_sha256": "e8be95feae440cbc28392692457c068c68942edc83a7b9489980bbbaf21ecdc4",
+          "health": "confirmed_normal",
+          "scored_frames": 8199,
+          "segments": [
+            {
+              "start_us": 238000000,
+              "end_us": 1067900000,
+              "retained_frames": 8299,
+              "scored_frames": 8199,
+              "whole_decisions": {
+                "original": {
+                  "status": "available",
+                  "short_cell_v": 0.021126124951020387,
+                  "long_cell_v": 0.1339737756419486,
+                  "coverage": 1.0,
+                  "score": 134.5722559244657,
+                  "alarm": true,
+                  "threshold": 1.9119638196881823
+                },
+                "x500": {
+                  "status": "available",
+                  "short_cell_v": 0.012479902596157931,
+                  "long_cell_v": 0.10409407843878682,
+                  "coverage": 1.0,
+                  "score": 104.39253775409587,
+                  "alarm": true,
+                  "threshold": 1.9119638196881823
+                },
+                "calibrated": {
+                  "status": "available",
+                  "short_cell_v": 0.012479902596157931,
+                  "long_cell_v": 0.10409407843878682,
+                  "coverage": 1.0,
+                  "score": 1.5749799736572878,
+                  "alarm": true,
+                  "threshold": 1.4142135623730951
+                }
+              }
+            }
+          ],
+          "rmse": {
+            "original": [
+              1.6275506606440628
+            ],
+            "adapted": [
+              1.2580742214110152
+            ],
+            "persistence": [
+              1.3770174121160201
+            ]
+          },
+          "whole_decisions": {
+            "original": {
+              "available_segments": 1,
+              "alarm_segments": 1
+            },
+            "x500": {
+              "available_segments": 1,
+              "alarm_segments": 1
+            },
+            "calibrated": {
+              "available_segments": 1,
+              "alarm_segments": 1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

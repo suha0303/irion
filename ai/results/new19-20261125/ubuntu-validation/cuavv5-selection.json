@@ -1,0 +1,34 @@
+[
+  {
+    "file": "2025-01-06 11-27-03.bin",
+    "date": "2025-01-06",
+    "role": "adaptation",
+    "flight_index": 0,
+    "sha256": "d080cdf0de04057f40b21bb3ff4d5973f9b34c997c21447f9553494647153576",
+    "frames": 6109
+  },
+  {
+    "file": "00000027.BIN",
+    "date": "2025-01-24",
+    "role": "adaptation",
+    "flight_index": 1,
+    "sha256": "598b97adc32da8512fd6f18f500bc4c6c1fd743a1ed28f888b755a1b8649ccca",
+    "frames": 6113
+  },
+  {
+    "file": "00000028.BIN",
+    "date": "2025-03-13",
+    "role": "calibration",
+    "flight_index": 2,
+    "sha256": "9a1707977480d5ca9334752c055a3a330c8f30c364da0b4a72737d9d8c70489a",
+    "frames": 8238
+  },
+  {
+    "file": "00000031.BIN",
+    "date": "2025-03-26",
+    "role": "evaluation",
+    "flight_index": 0,
+    "sha256": "a667942ed18a9946d493b53a1c4a1b374825b27eb32893ba25baa9a10aec1a34",
+    "frames": 8299
+  }
+]

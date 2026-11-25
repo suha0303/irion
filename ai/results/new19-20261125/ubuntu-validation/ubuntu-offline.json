@@ -1,0 +1,22 @@
+{
+  "source_commit": "a27890ae9ee9bcdb083fddc1ae3f76d244b71b51",
+  "os": "Ubuntu 24.04.5 x86_64",
+  "package": "ARION-0.2.0-rc.3-ubuntu-amd64.deb",
+  "package_sha256": "5f5a7544679bed9d066c2af1d2dba15f1df375a05154dd2f235c8e68353c7a9b",
+  "installation": "dpkg in isolated root",
+  "desktop_title_and_models": "passed",
+  "installed_synthetic_ulog": {
+    "models": 8,
+    "frames": 350,
+    "udp_original": true,
+    "offline_egress": "[Errno 101] Network is unreachable",
+    "platform": "linux",
+    "backend_exit": 0
+  },
+  "installed_ardupilot_bin": {
+    "filename": "31.bin",
+    "models": 8,
+    "frames": 8299,
+    "graph": "passed"
+  }
+}
