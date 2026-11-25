@@ -42,7 +42,9 @@ class StoreV2(Store):
     def __init__(self, root):
         self.active = {}
         self.compact_mavlink = bool(
-            os.environ.get("ARION_NEW19_WHOLE_ROOT")
+            os.environ.get("ARION_V02_INFLIGHT_ROOT")
+            or os.environ.get("ARION_V02_WHOLE_ROOT")
+            or os.environ.get("ARION_NEW19_WHOLE_ROOT")
             or os.environ.get("ARION_NEW19_INFLIGHT_ROOT")
         )
         self._journal_load_lock = Lock()

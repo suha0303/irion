@@ -1,0 +1,7 @@
+{
+  "name": "arion",
+  "productName": "ARION",
+  "version": "0.2.0-rc.3",
+  "main": "main.cjs",
+  "private": true
+}

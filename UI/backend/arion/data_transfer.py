@@ -111,6 +111,12 @@ def legacy_servers_stopped(root):
         pid = read_json(path).get("pid")
         if type(pid) is not int or pid <= 0:
             raise ValueError(f"서버 기록을 확인할 수 없습니다: {path.name}")
+        if os.name == "nt":
+            # Windows os.kill(pid, 0) is not a read-only existence probe.
+            # These state files come from the previous Ubuntu launcher.
+            raise ValueError(
+                f"이전 Ubuntu 앱의 서버 기록을 확인하세요: {path.name}"
+            )
         try:
             os.kill(pid, 0)
         except ProcessLookupError:

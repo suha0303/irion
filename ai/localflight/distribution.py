@@ -9,8 +9,9 @@ import shutil
 import sys
 import sysconfig
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from .catalog import ROOT, Catalog, digest
+from .catalog import ROOT, Catalog, digest, read_json
 
 LAUNCHER = """#!/bin/sh
 set -eu
@@ -112,6 +113,71 @@ def ui_source(root):
     raise ValueError(
         "UI backend sources are missing; use a complete project checkout"
     )
+
+
+def stage_v02_models(source: Path, output: Path) -> dict:
+    """Stage only the sealed V0.2 files used during inference and adaptation."""
+    from learning.new19.models import VARIANTS
+
+    source, output = source.absolute(), output.absolute()
+    if not source.is_dir() or source.resolve() != source:
+        raise ValueError("Choose a regular V0.2 model directory")
+    if output.exists() or output.is_symlink() or output.is_relative_to(source):
+        raise ValueError("Choose a new output outside the source model directory")
+
+    checksum_file = source / "SHA256SUMS"
+    if checksum_file.is_symlink():
+        raise ValueError("The source checksum list must be a regular file")
+    checksums = {}
+    for line in checksum_file.read_text(encoding="utf-8").splitlines():
+        expected, _, name = line.partition("  ")
+        if not name or len(expected) != 64 or name in checksums:
+            raise ValueError(f"Invalid checksum entry: {line}")
+        checksums[name] = expected
+
+    files = {"manifest.json": "SOURCE_MANIFEST.json"}
+    for model in VARIANTS:
+        for relative in (
+            "fit/bundle.json",
+            "fit/model.safetensors",
+            "calibration/calibration.json",
+        ):
+            name = f"{model}/{relative}"
+            files[name] = name
+    for name in files:
+        path = source / name
+        if (
+            not path.is_file()
+            or path.resolve() != path
+            or digest(path) != checksums.get(name)
+        ):
+            raise ValueError(f"Missing or changed V0.2 file: {name}")
+    manifest = read_json(source / "manifest.json")
+    if (
+        manifest.get("schema") != "drone-ai.new19.local-best/1"
+        or set(manifest.get("models", {})) != VARIANTS.keys()
+    ):
+        raise ValueError("Expected the sealed V0.2 model set")
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=output.parent) as temporary:
+        stage = Path(temporary) / "payload"
+        for name, target in files.items():
+            copy_regular(source / name, stage / target)
+            if digest(stage / target) != checksums[name]:
+                raise ValueError(f"V0.2 source changed during copy: {name}")
+        receipt = {
+            "schema": "drone.local-app.v02-models/1",
+            "models": sorted(VARIANTS),
+            "files": {target: checksums[name] for name, target in files.items()},
+        }
+        (stage / "MODEL_CONTENTS.json").write_text(
+            json.dumps(receipt, indent=2) + "\n", encoding="utf-8"
+        )
+        if output.exists() or output.is_symlink():
+            raise ValueError("Output appeared during staging")
+        stage.rename(output)
+    return {"path": str(output), "models": len(VARIANTS), "files": len(files)}
 
 
 def build(output, ui_packages):
@@ -364,8 +430,9 @@ def doctor():
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["build", "doctor"])
+    parser.add_argument("action", choices=["build", "doctor", "stage-v02-models"])
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--model-source", type=Path)
     parser.add_argument(
         "--ui-packages",
         type=Path,
@@ -373,13 +440,16 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
     try:
-        if args.action == "build" and args.output is None:
-            raise ValueError("--output is required")
-        result = (
-            build(args.output, args.ui_packages)
-            if args.action == "build"
-            else doctor()
-        )
+        if args.action == "stage-v02-models":
+            if args.model_source is None or args.output is None:
+                raise ValueError("--model-source and --output are required")
+            result = stage_v02_models(args.model_source, args.output)
+        elif args.action == "build":
+            if args.output is None:
+                raise ValueError("--output is required")
+            result = build(args.output, args.ui_packages)
+        else:
+            result = doctor()
         print(json.dumps(result, indent=2))
         return 0
     except (ValueError, OSError) as error:

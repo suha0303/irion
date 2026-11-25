@@ -15,6 +15,7 @@ from collections import defaultdict, deque
 from copy import deepcopy
 from pathlib import Path
 from statistics import median
+from struct import pack
 from threading import RLock
 
 from arion import npz_archive
@@ -930,6 +931,8 @@ class LiveSources:
         if c.kind == "normalized":
             run.state = "waiting"
             return
+        receiver = None
+        windows = os.name == "nt"
         try:
             if c.kind == "udp":
                 handle = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -940,6 +943,10 @@ class LiveSources:
                     handle.close()
                     raise
             else:
+                if windows:
+                    raise ValueError(
+                        "Windows에서는 MAVLink UDP 수신을 사용하세요."
+                    )
                 import serial
 
                 if not c.device.startswith("/dev/"):
@@ -963,12 +970,13 @@ class LiveSources:
                 sys.executable,
                 "-m",
                 "arion.transport_reader",
-                str(handle.fileno()),
+                "shared" if windows else str(handle.fileno()),
                 c.kind,
                 str(os.getpid()),
                 *wire_arg,
-                pass_fds=(handle.fileno(),),
-                stdin=asyncio.subprocess.DEVNULL,
+                stdin=asyncio.subprocess.PIPE
+                if windows
+                else asyncio.subprocess.DEVNULL,
                 stdout=(
                     asyncio.subprocess.DEVNULL
                     if run.raw_only
@@ -976,7 +984,12 @@ class LiveSources:
                 ),
                 stderr=asyncio.subprocess.PIPE,
                 limit=262144,
+                **({} if windows else {"pass_fds": (handle.fileno(),)}),
             )
+            if windows:
+                blob = handle.share(receiver.pid)
+                receiver.stdin.write(pack("!I", len(blob)) + blob)
+                await receiver.stdin.drain()
             self.receivers[run.run_id] = receiver
             self.tasks[run.run_id] = asyncio.create_task(
                 self._read(run, handle, receiver, wire_offset)
@@ -984,6 +997,9 @@ class LiveSources:
             run.state = "waiting"
             run.error = ""
         except (OSError, ValueError) as e:
+            if receiver and receiver.returncode is None:
+                receiver.terminate()
+                await receiver.wait()
             handle = self.handles.pop(run.run_id, None)
             if handle:
                 handle.close()
@@ -997,7 +1013,10 @@ class LiveSources:
         receiver = self.receivers.pop(run.run_id, None)
         self.stopping.add(run.run_id)
         if receiver and receiver.returncode is None:
-            receiver.terminate()
+            if os.name == "nt":
+                receiver.stdin.close()
+            else:
+                receiver.terminate()
         if task:
             try:
                 await asyncio.wait_for(asyncio.shield(task), 5)

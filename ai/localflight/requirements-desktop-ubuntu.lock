@@ -18,5 +18,5 @@ starlette==1.7.0
 typing-inspection==0.4.5
 typing_extensions==4.16.0
 uvicorn==0.41.0
-uvloop==0.23.0
+uvloop==0.23.0; sys_platform == "linux"
 websockets==16.1.1

@@ -19,20 +19,32 @@ UDP_MAGIC = b"MLUDP001"
 UDP_RECORD = Struct("!QQ4sHH")
 
 
-def record_udp(fd, parent_pid, path):
-    """Append each received datagram without waiting for the display to catch up."""
+def stop_event(parent_pipe):
+    """Stop cleanly on TERM or on Windows control-pipe shutdown."""
     stop = threading.Event()
+    if parent_pipe:
 
-    def terminate(unused_signal, unused_frame):
-        stop.set()
+        def wait_for_close():
+            sys.stdin.buffer.read(1)
+            stop.set()
 
-    signal.signal(signal.SIGTERM, terminate)
+        threading.Thread(target=wait_for_close, daemon=True).start()
+    else:
+        signal.signal(signal.SIGTERM, lambda *_: stop.set())
+    return stop
+
+
+def record_udp(handle, parent_pid, path, *, parent_pipe=False):
+    """Append each received datagram without waiting for the display to catch up."""
+    stop = stop_event(parent_pipe)
     with (
-        socket.socket(fileno=fd) as handle,
+        handle,
         open(path, "ab", buffering=0) as wire,
     ):
         try:
-            while not stop.is_set() and os.getppid() == parent_pid:
+            while not stop.is_set() and (
+                parent_pipe or os.getppid() == parent_pid
+            ):
                 try:
                     data, peer = handle.recvfrom(65535)
                 except BlockingIOError:
@@ -54,14 +66,11 @@ def record_udp(fd, parent_pid, path):
             os.fsync(wire.fileno())
 
 
-def receive(fd, kind, parent_pid):
+def receive(fd, parent_pid, *, handle=None, parent_pipe=False):
     """Drain a nonblocking descriptor until TERM, parent exit or explicit error."""
-    stop = threading.Event()
+    stop = stop_event(parent_pipe)
     packets = queue.Queue(maxsize=MAX_QUEUED_PACKETS)
     errors = []
-
-    def terminate(unused_signal, unused_frame):
-        stop.set()
 
     def write_packets():
         try:
@@ -77,12 +86,10 @@ def receive(fd, kind, parent_pid):
             errors.append(error)
             stop.set()
 
-    signal.signal(signal.SIGTERM, terminate)
-    handle = socket.socket(fileno=fd) if kind == "udp" else None
     writer = threading.Thread(target=write_packets, daemon=True)
     writer.start()
     try:
-        while not stop.is_set() and os.getppid() == parent_pid:
+        while not stop.is_set() and (parent_pipe or os.getppid() == parent_pid):
             try:
                 data, peer = (
                     handle.recvfrom(65535)
@@ -123,7 +130,17 @@ def receive(fd, kind, parent_pid):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 5:
-        record_udp(int(sys.argv[1]), int(sys.argv[3]), sys.argv[4])
+    descriptor, kind, parent = sys.argv[1:4]
+    shared = descriptor == "shared"
+    if shared:
+        size = Struct("!I").unpack(sys.stdin.buffer.read(4))[0]
+        handle = socket.fromshare(sys.stdin.buffer.read(size))
+        handle.setblocking(False)
+        fd = None
     else:
-        receive(int(sys.argv[1]), sys.argv[2], int(sys.argv[3]))
+        fd = int(descriptor)
+        handle = socket.socket(fileno=fd) if kind == "udp" else None
+    if len(sys.argv) == 5:
+        record_udp(handle, int(parent), sys.argv[4], parent_pipe=shared)
+    else:
+        receive(fd, int(parent), handle=handle, parent_pipe=shared)
