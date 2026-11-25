@@ -514,8 +514,13 @@
   padding: 8px 0;
   cursor: pointer;
 }
-.battery-trend {
-  margin-bottom: 18px;
+.monitor-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.monitor-chart-grid > .panel {
+  min-width: 0;
 }
 .balanced-workspace .muted {
   font-size: 11px;
@@ -664,6 +669,9 @@
   }
 }
 @media (max-width: 760px) {
+  .monitor-chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .balanced-workspace main {
     padding: 18px 16px 145px;
   }

@@ -772,11 +772,6 @@ main {
   width: 100%;
   min-width: 0;
 }
-.bottom-grid {
-  display: grid;
-  grid-template-columns: 0.9fr 1.1fr;
-  gap: 19px;
-}
 .empty-state {
   min-height: 177px;
   display: flex;
@@ -1642,9 +1637,6 @@ tr:last-child td {
   .flight-selector select {
     max-width: 240px;
   }
-  .bottom-grid {
-    grid-template-columns: 1fr 1.1fr;
-  }
   .events-layout {
     grid-template-columns: 1fr;
   }
@@ -1748,9 +1740,6 @@ tr:last-child td {
   }
   .panel-heading > .muted {
     font-size: 8px;
-  }
-  .bottom-grid {
-    grid-template-columns: 1fr;
   }
   .playback-dock {
     padding: 12px 14px 16px;

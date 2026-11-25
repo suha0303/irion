@@ -311,6 +311,13 @@ export function SourceDialog({
               <option value="serial">MAVLink 시리얼</option>
               <option value="normalized">공용 수집기 / 전처리 스트림</option>
             </select>
+            {isV02 && (
+              <small>
+                {kind === 'udp'
+                  ? 'PX4 MAVLink UDP에서 수신과 V0.2 실시간 분석을 사용할 수 있습니다.'
+                  : '이 방식은 수신·기록용입니다. V0.2 실시간 분석은 PX4 MAVLink UDP에서 지원합니다.'}
+              </small>
+            )}
           </label>
           {compatible.length > 1 && (
             <label className="form-label">
@@ -401,7 +408,6 @@ export function SourceDialog({
               <small>비워두면 첫 유효 기체를 사용합니다.</small>
             </label>
           )}
-          {isV02 && kind === 'udp' && <p>V0.2 모델은 PX4 MAVLink UDP 세션에서 연결합니다.</p>}
           {kind === 'serial' && <p>시리얼은 MAVLink 텔레메트리 수신에 사용합니다.</p>}
           {error && (
             <div className="notice error" role="alert">

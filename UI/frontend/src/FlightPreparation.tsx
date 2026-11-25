@@ -7,6 +7,7 @@ export default function FlightPreparation({
   profiles,
   sourceLog: log,
   onSourceLog,
+  onCreateProfile,
   disabled,
   submit,
   hidden,
@@ -16,8 +17,9 @@ export default function FlightPreparation({
   profiles: Profile[];
   sourceLog: string;
   onSourceLog: (id: string) => void;
+  onCreateProfile?: (id: string) => void;
   disabled: boolean;
-  submit: (path: string, body: unknown) => Promise<void>;
+  submit: (path: string, body: unknown) => Promise<Job | void>;
   hidden?: boolean;
   legacyRoles?: boolean;
 }) {
@@ -47,15 +49,23 @@ export default function FlightPreparation({
   const ready = (action: string) =>
     jobs.filter((j) => j.action === action && j.status === 'complete');
   const inspected = ready('inspect');
-  const profile = profiles.find((p) => p.version === version);
   const source = inspected.find((j) => j.id === log);
   const inspection = source?.result;
-  const previews = ready('timeline').filter(
-    (job) =>
-      source?.request?.path &&
-      job.request?.path === source.request.path &&
-      job.request?.profile?.id === profile?.profile.id,
+  const compatible = profiles.filter(
+    ({ profile, eligibility }) =>
+      (!inspection?.autopilot || profile.autopilot === inspection.autopilot) &&
+      eligibility.model_structure_compatible !== false &&
+      (eligibility.timeline_ready ?? eligibility.profile_complete),
   );
+  const profile = compatible.find((p) => p.version === version);
+  const previews = legacyRoles
+    ? ready('timeline').filter(
+        (job) =>
+          source?.request?.path &&
+          job.request?.path === source.request.path &&
+          job.request?.profile?.id === profile?.profile.id,
+      )
+    : [];
   const settings = JSON.stringify([
     log,
     version,
@@ -67,13 +77,17 @@ export default function FlightPreparation({
     corrections,
   ]);
   const previewId = previewChoice?.settings === settings ? previewChoice.id : '';
-  const preview = previews.find((job) => job.id === previewId)?.result?.timing;
+  const previewJob = (legacyRoles ? previews : jobs).find(
+    (job) => job.id === previewId && job.action === 'timeline',
+  );
+  const preview = previewJob?.status === 'complete' ? previewJob.result?.timing : undefined;
   const validRange =
     start !== '' && end !== '' && Number(start) >= 0 && Number(end) > Number(start);
   const validHealth =
     (role === 'evaluation' || health === 'confirmed_normal') &&
     (health === 'unknown' || Boolean(healthEvidence.trim()));
   useEffect(() => {
+    setVersion('');
     setFlightInterval('');
     setStart('');
     setEnd('');
@@ -93,6 +107,29 @@ export default function FlightPreparation({
     [clock.source1, clock.common1, clock.source2, clock.common2].every((v) =>
       Number.isFinite(Number(v)),
     );
+  async function inspectRange() {
+    const automatic = flightInterval === '' ? null : Number(flightInterval);
+    const row = await submit('/local-ai/timeline', {
+      log_job: log,
+      profile_id: profile?.profile.id,
+      profile_version: version,
+      ...(automatic !== null
+        ? { flight_interval: automatic }
+        : {
+            start_us: Math.round(Number(start) * 1e6),
+            end_us: Math.round(Number(end) * 1e6),
+          }),
+      fast_max_age_ms: fastAge,
+      battery_max_age_ms: batteryAge,
+      clock_corrections: corrections,
+    });
+    if (legacyRoles || row?.action !== 'timeline') return;
+    setPreviewChoice({ id: row.id, settings });
+    setSegments([]);
+    setEvidence(
+      inspection?.flight_events?.intervals.find((v) => v.index === automatic)?.evidence ?? '',
+    );
+  }
   return (
     <section className="panel" hidden={hidden}>
       <h2>보존 구간과 시간축 조정</h2>
@@ -146,15 +183,33 @@ export default function FlightPreparation({
       {inspection?.timing && <TimingResult timing={inspection.timing} />}
       <label className="form-label">
         입력 매핑에 사용할 프로파일 버전
-        <select className="text-input" value={version} onChange={(e) => setVersion(e.target.value)}>
+        <select
+          className="text-input"
+          value={profile?.version ?? ''}
+          onChange={(e) => setVersion(e.target.value)}
+          disabled={!source || !compatible.length}
+        >
           <option value="">선택</option>
-          {profiles.map((p) => (
+          {compatible.map((p) => (
             <option key={p.version} value={p.version}>
               {p.profile.name} · {p.version.slice(0, 8)}
             </option>
           ))}
         </select>
       </label>
+      {source && (
+        <>
+          {!compatible.length && <p>이 로그의 구간 검사에 사용할 수 있는 프로파일이 없습니다.</p>}
+          {onCreateProfile && (
+            <button className="button small" onClick={() => onCreateProfile(log)}>
+              이 로그로 프로파일 만들기
+            </button>
+          )}
+          {profile && !profile.eligibility.profile_complete && (
+            <p>구간은 검사할 수 있습니다. 저장 전 프로파일의 필수 입력을 확인하세요.</p>
+          )}
+        </>
+      )}
       <div className="local-form-grid">
         <label className="form-label">
           시작 (초)
@@ -294,52 +349,42 @@ export default function FlightPreparation({
       <button
         className="button primary"
         disabled={disabled || !log || !profile || !validRange}
-        onClick={() =>
-          submit('/local-ai/timeline', {
-            log_job: log,
-            profile_id: profile?.profile.id,
-            profile_version: version,
-            ...(flightInterval !== ''
-              ? { flight_interval: Number(flightInterval) }
-              : {
-                  start_us: Math.round(Number(start) * 1e6),
-                  end_us: Math.round(Number(end) * 1e6),
-                }),
-            fast_max_age_ms: fastAge,
-            battery_max_age_ms: batteryAge,
-            clock_corrections: corrections,
-          })
-        }
+        onClick={() => void inspectRange()}
       >
         사용 가능 구간 찾기{corrected ? ' · 시계 보정 적용' : ''}
       </button>
-      <label className="form-label">
-        완료된 구간 검사
-        <select
-          className="text-input"
-          value={previewId}
-          disabled={!previews.length}
-          onChange={(e) => {
-            setPreviewChoice({ id: e.target.value, settings });
-            setSegments([]);
-            setEvidence(jobs.find((j) => j.id === e.target.value)?.result?.interval_evidence ?? '');
-          }}
-        >
-          <option value="">선택</option>
-          {previews.map((j) => (
-            <option key={j.id} value={j.id}>
-              {jobLabel(j)} · {j.id.slice(0, 8)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {legacyRoles && (
+        <label className="form-label">
+          완료된 구간 검사
+          <select
+            className="text-input"
+            value={previewId}
+            disabled={!previews.length}
+            onChange={(e) => {
+              setPreviewChoice({ id: e.target.value, settings });
+              setSegments([]);
+              setEvidence(
+                jobs.find((j) => j.id === e.target.value)?.result?.interval_evidence ?? '',
+              );
+            }}
+          >
+            <option value="">선택</option>
+            {previews.map((j) => (
+              <option key={j.id} value={j.id}>
+                {jobLabel(j)} · {j.id.slice(0, 8)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {!legacyRoles && (previewJob?.status === 'queued' || previewJob?.status === 'running') && (
+        <p role="status">선택한 설정으로 구간을 검사하고 있습니다.</p>
+      )}
+      {!legacyRoles && previewJob?.error && <p role="alert">{previewJob.error}</p>}
       {preview && (
         <>
           <TimingResult timing={preview} />
-          <p>
-            이 검사에 사용한 프로파일·시간 설정으로 저장합니다. 설정을 바꿨다면 구간 검사를 새로
-            실행하세요.
-          </p>
+          <p>저장할 구간을 선택하세요. 시간이나 입력 설정을 바꾸면 구간을 다시 검사합니다.</p>
           {preview.candidate_segments?.map((s, i) => (
             <label className="local-segment" key={i}>
               <input
@@ -403,7 +448,13 @@ export default function FlightPreparation({
           </label>
           <button
             className="button primary"
-            disabled={disabled || !segments.length || !evidence.trim() || !validHealth}
+            disabled={
+              disabled ||
+              !profile?.eligibility.profile_complete ||
+              !segments.length ||
+              !evidence.trim() ||
+              !validHealth
+            }
             onClick={() =>
               submit('/local-ai/prepare', {
                 timeline_job: previewId,

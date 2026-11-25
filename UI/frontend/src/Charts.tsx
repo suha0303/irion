@@ -26,11 +26,17 @@ export function Chart({
   height,
   label,
   merge = false,
+  timeNavigation,
 }: {
   option: EChartsCoreOption;
   height: number;
   label: string;
   merge?: boolean;
+  timeNavigation?: {
+    cursor: number;
+    grids: readonly { top: number; height: number }[];
+    seek: (seconds: number) => void;
+  };
 }) {
   const element = useRef<HTMLDivElement>(null);
   const instance = useRef<echarts.EChartsType | null>(null);
@@ -48,8 +54,67 @@ export function Chart({
   useEffect(() => {
     instance.current?.setOption(option, { notMerge: !merge, lazyUpdate: false });
   }, [option, merge]);
-  return (
+  const cursorLines = useRef<(HTMLDivElement | null)[]>([]);
+  const cursor = useRef(timeNavigation?.cursor);
+  const seek = timeNavigation?.seek;
+  const grids = timeNavigation?.grids;
+  const positionCursor = useRef<() => void>(() => {});
+  useEffect(() => {
+    const chart = instance.current;
+    if (!chart || !seek || !grids) return;
+    const selectTime = (event: { offsetX: number; offsetY: number }) => {
+      const pixel = [event.offsetX, event.offsetY];
+      const index = grids.findIndex((_, gridIndex) => chart.containPixel({ gridIndex }, pixel));
+      if (index < 0) return;
+      const seconds = chart.convertFromPixel({ xAxisIndex: index }, event.offsetX);
+      if (typeof seconds === 'number' && Number.isFinite(seconds)) seek(seconds);
+    };
+    const draw = () => {
+      grids.forEach(({ top, height }, index) => {
+        const line = cursorLines.current[index];
+        if (!line) return;
+        const x = chart.convertToPixel({ xAxisIndex: index }, cursor.current ?? Number.NaN);
+        const visible =
+          typeof x === 'number' && chart.containPixel({ gridIndex: index }, [x, top + height / 2]);
+        line.hidden = !visible;
+        if (visible) line.style.left = `${x}px`;
+      });
+    };
+    positionCursor.current = draw;
+    draw();
+    chart.getZr().on('click', selectTime);
+    chart.on('rendered', draw);
+    return () => {
+      positionCursor.current = () => {};
+      chart.getZr()?.off('click', selectTime);
+      chart.off('rendered', draw);
+    };
+  }, [seek, grids]);
+  useEffect(() => {
+    cursor.current = timeNavigation?.cursor;
+    positionCursor.current();
+  }, [timeNavigation?.cursor]);
+  const canvas = (
     <div ref={element} className="chart-canvas" style={{ height }} role="img" aria-label={label} />
+  );
+  return grids ? (
+    <div className="chart-navigable">
+      {canvas}
+      {grids.map(({ top, height }, index) => (
+        <div
+          key={index}
+          ref={(line) => {
+            cursorLines.current[index] = line;
+          }}
+          className="chart-playback-cursor"
+          style={{ top, height }}
+          aria-hidden="true"
+          hidden
+        />
+      ))}
+    </div>
+  ) : (
+    canvas
   );
 }
 
@@ -202,7 +267,7 @@ export function PathChart({ points, cursor }: { points: Point[]; cursor: number 
   return (
     <Chart
       option={option}
-      height={206}
+      height={220}
       label="현재 재생 시점까지의 로컬 동·북 궤적. GPS 지도가 아닙니다."
     />
   );

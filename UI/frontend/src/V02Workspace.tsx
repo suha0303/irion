@@ -7,6 +7,7 @@ import LogInspectionResult from './LogInspectionResult';
 import V02Adaptation from './V02Adaptation';
 import ModelSelection, { modelIds, modelLabel } from './V02ModelSelection';
 import V02JobResult from './V02JobResult';
+import { CandidatePicker } from './V02FlightCandidates';
 import { jobFilename, type Job, type Profile, type V02Model } from './local-flight-types';
 import './local-flight.css';
 
@@ -24,6 +25,8 @@ const actionLabels: Record<string, string> = {
   admit_live: '비행 구간 등록',
   v02_analyze: '로그 분석',
   v02_adapt: '파인튜닝 · 보정',
+  v02_candidate_import: '기존 파인튜닝 후보 등록',
+  v02_candidate_replay: '저장 비행 후보 분석',
 };
 const statusLabels: Record<string, string> = {
   queued: '대기',
@@ -33,15 +36,22 @@ const statusLabels: Record<string, string> = {
   interrupted: '중단됨',
   failed: '실패',
 };
+const jobTime = new Intl.DateTimeFormat('ko-KR', {
+  timeZone: 'Asia/Seoul',
+  dateStyle: 'short',
+  timeStyle: 'short',
+});
 
 export default function V02Workspace({
   active,
   uploadedLog,
+  preparationLog,
   chooseLog,
   uploading,
 }: {
   active: boolean;
   uploadedLog: Job | null;
+  preparationLog?: Job | null;
   chooseLog: () => void;
   uploading: boolean;
 }) {
@@ -55,19 +65,25 @@ export default function V02Workspace({
   const [jobs, setJobs] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [catalogError, setCatalogError] = useState('');
+  const [jobsError, setJobsError] = useState('');
+  const [liveBusy, setLiveBusy] = useState(false);
   const [profileLog, setProfileLog] = useState('');
+  const [returnToPreparation, setReturnToPreparation] = useState(false);
   const [sourceLog, setSourceLog] = useState('');
   const [analysisLog, setAnalysisLog] = useState('');
+  const [analysisCandidate, setAnalysisCandidate] = useState('');
   const [model, setModel] = useState('inflight-lstm-128x4');
   const [selected, setSelected] = useState('');
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(12);
   const running = jobs.some((job) => job.status === 'queued' || job.status === 'running');
-  const unavailable = !catalog?.available || busy || running;
+  const unavailable = !active || !catalog?.available || busy || running || liveBusy;
   const models = catalog?.models ?? [];
   const selectedModels = modelIds(models, model);
 
   useEffect(() => {
+    if (!active) return;
     const controller = new AbortController();
     const options = { signal: controller.signal };
     Promise.all([
@@ -81,23 +97,29 @@ export default function V02Workspace({
         if (controller.signal.aborted) return;
         setCatalog(data);
         setProfiles(aircraft.profiles);
-        if (data.reason) setError(data.reason);
+        setCatalogError(data.reason ?? '');
       })
       .catch((failure) => {
-        if (!controller.signal.aborted) setError(String(failure));
+        if (!controller.signal.aborted) setCatalogError(String(failure));
       });
     return () => controller.abort();
-  }, []);
+  }, [active]);
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     async function refresh() {
       try {
-        const data = await api<{ jobs: Job[] }>('/local-ai/jobs', { signal: controller.signal });
-        if (!controller.signal.aborted) setJobs(data.jobs);
+        const data = await api<{ jobs: Job[]; live_busy?: boolean }>('/local-ai/jobs', {
+          signal: controller.signal,
+        });
+        if (!controller.signal.aborted) {
+          setJobs(data.jobs);
+          setLiveBusy(Boolean(data.live_busy));
+          setJobsError('');
+        }
       } catch (failure) {
-        if (!controller.signal.aborted) setError(String(failure));
+        if (!controller.signal.aborted) setJobsError(String(failure));
       }
       if (!controller.signal.aborted) timer = setTimeout(refresh, 1500);
     }
@@ -118,6 +140,15 @@ export default function V02Workspace({
     setLimit(12);
     setPage('results');
   }, [uploadedLog]);
+  useEffect(() => {
+    if (!preparationLog) return;
+    setJobs((rows) =>
+      rows.some((row) => row.id === preparationLog.id) ? rows : [preparationLog, ...rows],
+    );
+    setSourceLog(preparationLog.id);
+    setReturnToPreparation(false);
+    setPage('logs');
+  }, [preparationLog]);
 
   async function submit(path: string, body?: unknown) {
     setBusy(true);
@@ -131,6 +162,7 @@ export default function V02Workspace({
         setLimit(12);
         setPage('results');
       }
+      return row;
     } catch (failure) {
       setError(String(failure));
     } finally {
@@ -155,7 +187,8 @@ export default function V02Workspace({
     <section className="local-flight" aria-label="V0.2 로컬 AI">
       <header>
         <p role="status">
-          V0.2 · 연결 모델 {models.length}종 · {running ? '작업 실행 중' : '작업 대기'}
+          V0.2 · 연결 모델 {models.length}종 ·{' '}
+          {liveBusy ? '비행 분석에서 AI 사용 중' : running ? '작업 실행 중' : '작업 대기'}
         </p>
       </header>
       <nav className="local-task-nav" aria-label="로컬 AI 관리 메뉴">
@@ -170,9 +203,9 @@ export default function V02Workspace({
           </button>
         ))}
       </nav>
-      {error && (
+      {(error || catalogError || jobsError) && (
         <p role="alert" className="notice error">
-          {error}
+          {error || catalogError || jobsError}
         </p>
       )}
       <div className="local-flight-grid" data-page={page === 'logs' ? 'logs' : 'v02'}>
@@ -182,13 +215,19 @@ export default function V02Workspace({
             jobs={jobs}
             pendingLog={profileLog}
             disabled={unavailable}
-            onSaved={(item) =>
+            onSaved={(item) => {
               setProfiles((rows) => [
                 item,
                 ...rows.filter((profile) => profile.version !== item.version),
-              ])
-            }
-            reinspect={(id) => submit(`/local-ai/logs/${id}/reinspect`)}
+              ]);
+              if (returnToPreparation) {
+                setReturnToPreparation(false);
+                setPage('logs');
+              }
+            }}
+            reinspect={async (id) => {
+              await submit(`/local-ai/logs/${id}/reinspect`);
+            }}
           />
         </div>
         <section className="panel" hidden={page !== 'logs'}>
@@ -207,6 +246,11 @@ export default function V02Workspace({
           profiles={profiles}
           sourceLog={sourceLog}
           onSourceLog={setSourceLog}
+          onCreateProfile={(id) => {
+            setProfileLog(id);
+            setReturnToPreparation(true);
+            setPage('profile');
+          }}
           disabled={unavailable}
           submit={submit}
           hidden={page !== 'logs'}
@@ -219,7 +263,10 @@ export default function V02Workspace({
             <select
               className="text-input"
               value={analysisLog}
-              onChange={(e) => setAnalysisLog(e.target.value)}
+              onChange={(e) => {
+                setAnalysisLog(e.target.value);
+                setAnalysisCandidate('');
+              }}
             >
               <option value="">선택</option>
               {prepared.map((job) => (
@@ -230,7 +277,17 @@ export default function V02Workspace({
               ))}
             </select>
           </label>
-          <ModelSelection models={models} selected={model} onChange={setModel} />
+          {analysisLog && (
+            <CandidatePicker
+              active={active && page === 'analysis'}
+              profile={prepared.find((job) => job.id === analysisLog)?.request?.profile?.id}
+              value={analysisCandidate}
+              onChange={setAnalysisCandidate}
+            />
+          )}
+          {!analysisCandidate && (
+            <ModelSelection models={models} selected={model} onChange={setModel} />
+          )}
           {prepared.length === 0 && (
             <button className="button" onClick={() => setPage('logs')}>
               로그 준비 열기
@@ -238,15 +295,21 @@ export default function V02Workspace({
           )}
           <button
             className="button primary"
-            disabled={unavailable || !analysisLog || !selectedModels.length}
+            disabled={unavailable || !analysisLog || (!analysisCandidate && !selectedModels.length)}
             onClick={() =>
               void submit('/local-ai/v02/analyze', {
                 prepared_job: analysisLog,
-                models: selectedModels,
+                ...(analysisCandidate
+                  ? { candidate_job: analysisCandidate }
+                  : { models: selectedModels }),
               })
             }
           >
-            {selectedModels.length > 1 ? `${selectedModels.length}종 일괄 분석` : '로그 분석 실행'}
+            {analysisCandidate
+              ? '파인튜닝 모델로 분석'
+              : selectedModels.length > 1
+                ? `${selectedModels.length}종 일괄 분석`
+                : '로그 분석 실행'}
           </button>
         </section>
         <div hidden={page !== 'training'}>
@@ -255,7 +318,9 @@ export default function V02Workspace({
             models={models}
             disabled={unavailable}
             goToLogs={() => setPage('logs')}
-            submit={(logs, ids) => submit('/local-ai/v02/adapt', { logs, models: ids })}
+            submit={async (logs, ids) => {
+              await submit('/local-ai/v02/adapt', { logs, models: ids });
+            }}
           />
         </div>
         <section className="panel" hidden={page !== 'results'}>
@@ -282,9 +347,13 @@ export default function V02Workspace({
               >
                 <strong>
                   {[
-                    jobFilename(job) ?? job.result?.v02?.filename,
+                    jobFilename(job) ??
+                      job.result?.v02?.filename ??
+                      job.result?.v02?.candidates[0]?.profile_name,
                     actionLabels[job.action] ?? job.action,
-                    statusLabels[job.status] ?? job.status,
+                    job.status === 'complete' && Object.keys(job.result?.v02?.failures ?? {}).length
+                      ? '일부 모델 실패'
+                      : (statusLabels[job.status] ?? job.status),
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -293,6 +362,7 @@ export default function V02Workspace({
               </button>
               {selected === job.id && (
                 <div className="local-job-body">
+                  {job.created_at && <p>요청 시각 {jobTime.format(job.created_at * 1000)}</p>}
                   {job.error && <p role="alert">{job.error}</p>}
                   {job.progress?.model_id && (
                     <p role="status">
@@ -317,6 +387,7 @@ export default function V02Workspace({
                           className="button"
                           onClick={() => {
                             setProfileLog(job.id);
+                            setReturnToPreparation(false);
                             setPage('profile');
                           }}
                         >
@@ -344,6 +415,7 @@ export default function V02Workspace({
                         className="button"
                         onClick={() => {
                           setAnalysisLog(job.id);
+                          setAnalysisCandidate('');
                           setPage('analysis');
                         }}
                       >

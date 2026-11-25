@@ -55,7 +55,7 @@ export default function ModelSelection({
                 )}
                 {entries.map((model) => (
                   <option value={model.id} key={model.id}>
-                    {model.label}
+                    {label} · {model.label}
                   </option>
                 ))}
               </optgroup>

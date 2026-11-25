@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api, post } from './api';
 import type { Profile } from './local-flight-types';
 import type { LocalState } from './useLocalAI';
+import { CandidatePicker } from './V02FlightCandidates';
+import { FlightAnalysisPanel, FlightPostflight, FlightVerdictCards } from './FlightAnalysisViews';
 
 function label(id: string) {
   return id
@@ -11,46 +13,41 @@ function label(id: string) {
     .replace('x', ' × ');
 }
 
-function WholeRunResults({ state }: { state: LocalState }) {
+export function WholeRunCards({
+  state,
+  recordedDurationMs,
+}: {
+  state: LocalState;
+  recordedDurationMs?: number;
+}) {
   const summary = state.whole_summary;
+  if (!summary) return <p>비행 종료 후 판정이 표시됩니다.</p>;
   return (
-    <section className="panel local-live" aria-label="전체 런 모델 결과">
-      <div className="panel-heading">
-        <h2>전체 런 모델 4종</h2>
-      </div>
-      <p role={state.status === 'error' ? 'alert' : 'status'}>{state.message}</p>
-      {summary && (
-        <p>
-          {summary.duration_s.toFixed(1)}초 · 유효 프레임 {summary.valid_frames.toLocaleString()} /{' '}
-          {summary.frames.toLocaleString()}
-        </p>
-      )}
-      <div className="whole-run-model-grid">
-        {state.whole_run_models?.map((id) => {
-          const result = summary?.models.find((model) => model.model_id === id);
-          const verdict = !result
-            ? '비행 종료 후 분석'
-            : result.alarm === null
-              ? '판정 불가'
-              : result.alarm
-                ? '이상 의심'
-                : '정상 범위';
-          return (
-            <section className="panel provider-card" key={id}>
-              <h3>{label(id)}</h3>
-              <div className={`provider-status ${result?.alarm ? 'suspect' : ''}`}>{verdict}</div>
-              {result && result.score !== null && (
-                <p>
-                  점수 {result.score.toFixed(3)} · 기준 {result.threshold.toFixed(3)}
-                  <br />
-                  채점 범위 {((result.coverage ?? 0) * 100).toFixed(1)}%
-                </p>
-              )}
-            </section>
-          );
-        })}
-      </div>
-    </section>
+    <>
+      <p>
+        {recordedDurationMs != null && recordedDurationMs > 0
+          ? `전체 수신 기록 ${(recordedDurationMs / 1000).toFixed(1)}초 · `
+          : '전체 수신 범위 미확인 · '}
+        판정 입력 {summary.duration_s.toFixed(1)}초 · 유효 프레임{' '}
+        {summary.valid_frames.toLocaleString()} / {summary.frames.toLocaleString()}
+      </p>
+      <FlightVerdictCards
+        items={summary.models.map((model) => ({
+          key: model.model_id,
+          model: label(model.model_id),
+          candidate: Boolean(model.candidate_job),
+          alarm: model.alarm,
+          score: model.score,
+          threshold: model.threshold,
+          detail:
+            model.score == null
+              ? undefined
+              : model.coverage == null
+                ? undefined
+                : `판정 입력 내 채점률 ${(model.coverage * 100).toFixed(1)}%`,
+        }))}
+      />
+    </>
   );
 }
 
@@ -59,14 +56,17 @@ export default function WholeRunLive({
   live,
   state,
   onState,
+  recordedDurationMs,
 }: {
   runId: string;
   live: boolean;
   state: LocalState;
   onState: (state: LocalState) => void;
+  recordedDurationMs?: number;
 }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [version, setVersion] = useState('');
+  const [candidate, setCandidate] = useState('');
   const [scope, setScope] = useState('real_aircraft');
   const [system, setSystem] = useState(1);
   const [component, setComponent] = useState(1);
@@ -104,6 +104,7 @@ export default function WholeRunLive({
         await post<LocalState>(`/sessions/${runId}/local-ai`, {
           mode: 'px4_whole_run',
           profile_version: version,
+          ...(candidate ? { candidate_job: candidate } : {}),
           scope,
           source_system: system,
           source_component: component,
@@ -120,10 +121,7 @@ export default function WholeRunLive({
   return (
     <>
       {live && state.status === 'unconfigured' && (
-        <section className="panel local-live" aria-label="전체 런 모델 연결">
-          <div className="panel-heading">
-            <h2>PX4 · 전체 런 모델 연결</h2>
-          </div>
+        <FlightAnalysisPanel status="모델 연결 대기">
           {error && (
             <p className="notice error" role="alert">
               {error}
@@ -135,7 +133,10 @@ export default function WholeRunLive({
               <select
                 className="text-input"
                 value={version}
-                onChange={(e) => setVersion(e.target.value)}
+                onChange={(e) => {
+                  setVersion(e.target.value);
+                  setCandidate('');
+                }}
               >
                 <option value="">PX4 X500 프로파일 선택</option>
                 {profiles.map((p) => (
@@ -145,12 +146,24 @@ export default function WholeRunLive({
                 ))}
               </select>
             </label>
+            {version && (
+              <CandidatePicker
+                profile={profiles.find((profile) => profile.version === version)?.profile.id}
+                scope={scope}
+                models={state.whole_run_models}
+                value={candidate}
+                onChange={setCandidate}
+              />
+            )}
             <label className="form-label">
               연결 대상
               <select
                 className="text-input"
                 value={scope}
-                onChange={(e) => setScope(e.target.value)}
+                onChange={(e) => {
+                  setScope(e.target.value);
+                  setCandidate('');
+                }}
               >
                 <option value="real_aircraft">실기체</option>
                 <option value="simulation_test">시뮬레이터 통신 시험</option>
@@ -193,9 +206,16 @@ export default function WholeRunLive({
           <button className="button primary" onClick={start} disabled={busy || !version}>
             {busy ? '연결 중…' : '전체 런 모델 4종 연결'}
           </button>
-        </section>
+        </FlightAnalysisPanel>
       )}
-      {state.status !== 'unconfigured' && <WholeRunResults state={state} />}
+      {state.status !== 'unconfigured' && (
+        <FlightAnalysisPanel>
+          <p role={state.status === 'error' ? 'alert' : 'status'}>{state.message}</p>
+          <FlightPostflight>
+            <WholeRunCards state={state} recordedDurationMs={recordedDurationMs} />
+          </FlightPostflight>
+        </FlightAnalysisPanel>
+      )}
     </>
   );
 }

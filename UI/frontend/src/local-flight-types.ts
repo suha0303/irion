@@ -43,6 +43,7 @@ export type Profile = {
   version: string;
   eligibility: {
     profile_complete: boolean;
+    model_structure_compatible?: boolean;
     missing_fields: string[];
     log_missing_fields?: string[];
     timeline_ready?: boolean;
@@ -133,6 +134,11 @@ export type V02Task = 'inflight' | 'whole-run';
 export type V02Role = 'adaptation' | 'calibration' | 'evaluation';
 export type V02Model = { id: string; label: string; task: V02Task };
 export type V02Rule = 'original' | 'x500' | 'calibrated';
+export const V02_RULES = [
+  ['original', '원본 모델 · 기존 기준'],
+  ['x500', '파인튜닝 모델 · 원본 기준'],
+  ['calibrated', '파인튜닝 모델 · 전용 보정 기준'],
+] as const;
 export type V02Prediction = 'original' | 'adapted' | 'persistence';
 export type V02Threshold = {
   score: number | null;
@@ -141,6 +147,7 @@ export type V02Threshold = {
 };
 export type V02Evaluation = {
   prepared_sha256: string;
+  source_sha256?: string;
   filename: string;
   date: string | null;
   health: 'confirmed_normal' | 'abnormal' | 'unknown';
@@ -184,6 +191,7 @@ export type V02Candidate = V02ModelResult & {
 };
 export type V02Result = {
   filename?: string;
+  candidate_job?: string | null;
   coverage?: {
     context: RunSummary['context'];
     analyzed_us: number;
@@ -199,8 +207,14 @@ export type Job = {
   id: string;
   action: string;
   status: string;
+  created_at?: number;
   error?: string;
-  request?: { path?: string; profile?: { id?: string; name?: string } };
+  request?: {
+    path?: string;
+    profile?: { id?: string; name?: string };
+    candidate_job?: string;
+    models?: string[];
+  };
   progress?: {
     epoch?: number;
     train_loss?: number;
@@ -239,6 +253,7 @@ export type Job = {
       };
     }[];
     run_summary?: RunSummary;
+    sha256?: string;
     source_sha256?: string;
     profile_suggestion?: ProfileSuggestion;
     flight_events?: FlightEvents;

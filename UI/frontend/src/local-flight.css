@@ -116,17 +116,23 @@
   margin: 16px 0;
   padding: 20px;
 }
+.flight-analysis-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.whole-run-model-grid .provider-card > h4 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
 .buffered-chart {
   margin-top: 16px;
   padding-top: 12px;
   border-top: 1px solid #dce6ee;
 }
-.buffered-chart summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-.buffered-chart-body {
-  padding-top: 10px;
+.buffered-chart > h3 {
+  margin: 0 0 6px;
 }
 .buffered-chart-controls,
 .buffered-chart-legend {
@@ -484,4 +490,51 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+}
+.chart-navigable {
+  position: relative;
+}
+
+.chart-navigable canvas {
+  cursor: crosshair;
+}
+
+.chart-playback-cursor {
+  position: absolute;
+  width: 2px;
+  background: #087e73;
+  pointer-events: none;
+}
+
+.flight-chart-navigation {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  min-height: 2rem;
+}
+
+.flight-analysis-current {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #d8e5ec;
+  border-radius: 0.5rem;
+  background: #f4f8fb;
+}
+
+.flight-analysis-current h3 {
+  margin: 0 0 0.25rem;
+}
+
+.flight-new-analysis summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.flight-new-analysis-body {
+  padding-block: 0.5rem;
+}
+
+.flight-selector .flight-search {
+  margin-top: 0.4rem;
+  width: min(100%, 18rem);
 }

@@ -13,6 +13,8 @@ import type { Detection, Frame, Manifest, Metrics, Point } from './types';
 import { detectionKey, numeric, statusLabel, targetLabel, timeLabel } from './types';
 import { TimeChart, motorColors } from './Charts';
 import { ArchivePanel } from './ArchivePanel';
+import type { LocalState } from './useLocalAI';
+import { modelLabel } from './V02ModelSelection';
 
 export function EventList({
   events,
@@ -205,11 +207,13 @@ export function Diagnostics({
   run,
   frame,
   metrics,
+  localAI,
   connectAI,
 }: {
   run: Manifest;
   frame: Frame | null;
   metrics: Metrics | null;
+  localAI?: LocalState;
   connectAI?: () => void;
 }) {
   const valid = frame?.streams.filter((s) => s.status === 'valid').length ?? 0;
@@ -217,6 +221,9 @@ export function Diagnostics({
   const inputErrors = run.input_error_records ?? (run.excluded_records === 0 ? 0 : undefined);
   const recentErrors = run.input_issues?.slice(-20) ?? [];
   const rawUdp = run.storage === 'udp-wire/1';
+  const modelCounts = Object.entries(
+    localAI?.buffered_summary?.model_summaries ?? localAI?.buffered_model_states ?? {},
+  );
   return (
     <div className="diagnostics">
       <div className="diagnostic-kpis">
@@ -438,6 +445,35 @@ export function Diagnostics({
           </div>
         </details>
       </section>
+      {modelCounts.length > 0 && (
+        <section className="panel" aria-labelledby="model-processing-title">
+          <div className="panel-heading">
+            <h2 id="model-processing-title">비행 중 모델 처리량</h2>
+          </div>
+          <div className="table-scroll">
+            <table aria-labelledby="model-processing-title">
+              <thead>
+                <tr>
+                  <th scope="col">모델</th>
+                  <th scope="col">예측 횟수</th>
+                  <th scope="col">판정 프레임</th>
+                  <th scope="col">경보 프레임</th>
+                </tr>
+              </thead>
+              <tbody>
+                {modelCounts.map(([model, counts]) => (
+                  <tr key={model}>
+                    <th scope="row">{modelLabel(model)}</th>
+                    <td>{numeric(counts.forecasts, 0)}</td>
+                    <td>{numeric(counts.scored_frames, 0)}</td>
+                    <td>{numeric(counts.alarm_frames, 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
       {connectAI && (
         <section className="panel">
           <div className="panel-heading">

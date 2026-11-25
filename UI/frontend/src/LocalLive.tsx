@@ -6,7 +6,13 @@ import { api, post } from './api';
 import type { Profile } from './local-flight-types';
 import { DecisionResult } from './LocalPreparation';
 import { numeric } from './types';
-import WholeRunLive from './WholeRunLive';
+import WholeRunLive, { WholeRunCards } from './WholeRunLive';
+import { FlightAnalysisPanel, FlightPostflight } from './FlightAnalysisViews';
+import {
+  CandidatePicker,
+  CandidateReplayControls,
+  type CandidateReplay,
+} from './V02FlightCandidates';
 import './local-flight.css';
 
 const BufferedFlightChart = lazy(() => import('./BufferedFlightChart'));
@@ -18,6 +24,7 @@ type LiveProps = {
   manage: () => void;
   state: State;
   onState: (state: State) => void;
+  recordedDurationMs?: number;
 };
 
 export default function LocalLive(props: LiveProps) {
@@ -25,10 +32,12 @@ export default function LocalLive(props: LiveProps) {
   return <LegacyLocalLive {...props} />;
 }
 
-function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
+function LegacyLocalLive({ runId, live, manage, state, onState, recordedDurationMs }: LiveProps) {
   const [models, setModels] = useState<Model[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [version, setVersion] = useState('');
+  const [candidate, setCandidate] = useState('');
+  const [comparison, setComparison] = useState<CandidateReplay | null>(null);
   const [forecast, setForecast] = useState('forecast_lstm_h64_l2');
   const [postModel, setPostModel] = useState('run_health_lstm_h64_l2');
   const [system, setSystem] = useState(1),
@@ -40,12 +49,6 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
   const [buffered, setBuffered] = useState(false);
   const parallel = state.buffered_parallel === true || (state.forecast_models?.length ?? 0) > 1;
   const useBuffered = parallel || buffered;
-  const modelSummaries = state.buffered_summary?.model_summaries ?? state.buffered_model_states;
-  const [replay, setReplay] = useState<{
-    equal: boolean;
-    frames: number;
-    differing_frames: number;
-  }>();
   const [active, setActive] = useState(true),
     [autoRates, setAutoRates] = useState(true);
   const [evidence, setEvidence] = useState(''),
@@ -69,6 +72,7 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
       onState(
         await post<State>(`/sessions/${runId}/local-ai`, {
           profile_version: version,
+          ...(parallel && candidate ? { candidate_job: candidate } : {}),
           forecast_model: forecast,
           post_model: postModel,
           source_system: system,
@@ -88,20 +92,50 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
       setBusy(false);
     }
   }
+  const comparisonSummary = comparison?.result?.whole_summary;
+  const shownState = comparison
+    ? { ...state, whole_summary: comparisonSummary ?? undefined, whole_run_models: undefined }
+    : state;
+  const profileId = profiles.find((profile) => profile.version === version)?.profile.id;
   return (
-    <section className="panel local-live" aria-label="실기체 로컬 AI">
-      <div className="panel-heading">
-        <h2>기체별 로컬 AI · {statusNames[state.status] ?? state.status}</h2>
-        {live && (
+    <FlightAnalysisPanel
+      status={statusNames[state.status] ?? state.status}
+      action={
+        live && (
           <button className="button small" onClick={manage}>
             기체 프로파일 관리
           </button>
-        )}
-      </div>
+        )
+      }
+    >
       {error && (
         <p className="notice error" role="alert">
           {error}
         </p>
+      )}
+      {parallel && state.status !== 'unconfigured' && (
+        <p>
+          {(comparison?.candidate_job ?? state.candidate_job)
+            ? `후보 ${(comparison?.candidate_job ?? state.candidate_job)?.slice(0, 8)} · 파인튜닝 모델 + 전용 보정 기준`
+            : '원본 모델 · 기존 판정 기준'}
+        </p>
+      )}
+      {parallel &&
+        Object.values(state.buffered_model_states ?? {}).some(
+          (model) => model.scored_frames > 0,
+        ) && (
+          <p>
+            {live ? '현재 경보' : '비행 중 경보'} ·{' '}
+            {
+              Object.values(state.buffered_model_states ?? {}).filter((model) =>
+                live ? model.alarm : model.alarm_frames > 0,
+              ).length
+            }
+            개 모델
+          </p>
+        )}
+      {!live && state.status === 'finished' && state.mode === 'px4_buffered' && parallel && (
+        <CandidateReplayControls runId={runId} choose={setComparison} selection={comparison?.id} />
       )}
       {live && state.status === 'unconfigured' && (
         <details
@@ -109,7 +143,7 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
             if (e.currentTarget.open) void refresh().catch((e) => setError(String(e)));
           }}
         >
-          <summary>{parallel ? 'PX4 기체와 비행 중 모델 4종 연결' : '기체와 모델 연결'}</summary>
+          <summary>이 비행의 모델 선택</summary>
           {state.buffered_available && !parallel && (
             <label>
               <input
@@ -126,7 +160,10 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
               <select
                 className="text-input"
                 value={version}
-                onChange={(e) => setVersion(e.target.value)}
+                onChange={(e) => {
+                  setVersion(e.target.value);
+                  setCandidate('');
+                }}
               >
                 <option value="">등록된 버전 선택</option>
                 {profiles.map((p) => (
@@ -141,6 +178,14 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
                 ))}
               </select>
             </label>
+            {parallel && profileId && (
+              <CandidatePicker
+                profile={profileId}
+                scope={scope}
+                value={candidate}
+                onChange={setCandidate}
+              />
+            )}
             {!useBuffered && (
               <label className="form-label">
                 비행 중 예측 · 8종
@@ -182,7 +227,10 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
               <select
                 className="text-input"
                 value={scope}
-                onChange={(e) => setScope(e.target.value)}
+                onChange={(e) => {
+                  setScope(e.target.value);
+                  setCandidate('');
+                }}
               >
                 <option value="real_aircraft">실기체</option>
                 <option value="simulation_test">시뮬레이터 통신 시험</option>
@@ -270,12 +318,7 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
               종료합니다. 기체가 지상에서도 데이터를 계속 보내면 비행 종료 버튼으로 마감하세요.
             </small>
           )}
-          {useBuffered && (
-            <p>
-              100ms 간격으로 확정한 프레임을 10초 지연으로 평가합니다. 비행 종료 버튼을 누르면 저장
-              원문을 재생해 비교할 수 있습니다.
-            </p>
-          )}
+          {useBuffered && <p>100ms 간격으로 확정한 프레임을 10초 지연으로 평가합니다.</p>}
           <p>
             출력 port·배터리 ID·모터 채널과 출력 범위는 선택한 프로파일을 사용합니다. 필요한
             메시지가 없으면 예측을 보류합니다.
@@ -380,82 +423,68 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
       {!!state.missing_features?.length && (
         <p>미수신·오래된 입력: {state.missing_features.join(', ')}</p>
       )}
-      {modelSummaries && (
-        <table aria-label="비행 중 모델별 판정">
-          <thead>
-            <tr>
-              <th>모델</th>
-              <th>예측</th>
-              <th>판정</th>
-              <th>경보 프레임</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(modelSummaries).map(([model, summary]) => (
-              <tr key={model}>
-                <td>
-                  {model
-                    .replace('inflight-', '')
-                    .replace('lstm-', 'LSTM ')
-                    .replace('transformer-', 'Transformer ')
-                    .replace('x', '×')}
-                </td>
-                <td>{numeric(summary.forecasts, 0)}</td>
-                <td>{numeric(summary.scored_frames, 0)}</td>
-                <td>{numeric(summary.alarm_frames, 0)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {state.buffered_summary && !parallel && (
+        <p>
+          예측 {numeric(state.buffered_summary.forecasts, 0)}회 · 판정{' '}
+          {numeric(state.buffered_summary.scored_frames, 0)}건 · 이상 표시{' '}
+          {numeric(state.buffered_summary.alarm_frames, 0)}건
+        </p>
       )}
-      {state.buffered_summary && (
-        <div>
-          {!parallel && (
-            <p>
-              예측 {numeric(state.buffered_summary.forecasts, 0)}회 · 판정{' '}
-              {numeric(state.buffered_summary.scored_frames, 0)}건 · 이상 표시{' '}
-              {numeric(state.buffered_summary.alarm_frames, 0)}건
-            </p>
+      {(parallel ||
+        Boolean(state.whole_run_models?.length) ||
+        state.whole_available ||
+        state.whole_summary) && (
+        <FlightPostflight>
+          {shownState.whole_summary ? (
+            <WholeRunCards state={shownState} recordedDurationMs={recordedDurationMs} />
+          ) : (
+            <>
+              {state.whole_status === 'running' && (
+                <p role="status">비행 종료 후 모델을 계산하고 있습니다.</p>
+              )}
+              {state.whole_error && <p role="alert">{state.whole_error}</p>}
+              {state.whole_available ? (
+                <button
+                  className="button small"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    setError('');
+                    try {
+                      onState(await post<State>(`/sessions/${runId}/local-ai/postflight`));
+                    } catch (failure) {
+                      setError(String(failure));
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  {busy ? '비행 후 판정 계산 중…' : '이 비행의 종료 후 판정 계산'}
+                </button>
+              ) : (
+                state.whole_status !== 'running' && (
+                  <p>비행 종료 · 결과 분석을 누르면 전체 런 모델 4종의 판정이 표시됩니다.</p>
+                )
+              )}
+            </>
           )}
-          <button
-            className="button small"
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              setError('');
-              try {
-                setReplay(
-                  await post<{ equal: boolean; frames: number; differing_frames: number }>(
-                    `/sessions/${runId}/local-ai/replay-buffered`,
-                  ),
-                );
-              } catch (e) {
-                setError(String(e));
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            저장 UDP 재생 비교
-          </button>
-          {replay && (
-            <p role="status">
-              {replay.equal
-                ? `${replay.frames}개 프레임의 입력·예측·판정 일치`
-                : `${replay.differing_frames}개 프레임 차이 또는 기록 불일치`}
-            </p>
-          )}
-        </div>
+        </FlightPostflight>
       )}
-      {state.mode === 'px4_buffered' && (
+      {state.mode === 'px4_buffered' ? (
         <Suspense fallback={<p role="status">그래프 기능을 불러오는 중…</p>}>
           <BufferedFlightChart
-            key={runId}
+            key={comparison?.id ?? runId}
             runId={runId}
+            comparison={comparison?.id}
             live={!['finished', 'interrupted', 'error'].includes(state.status)}
           />
         </Suspense>
-      )}
+      ) : parallel ? (
+        <section className="buffered-chart">
+          <h3>실측·예측·이상 점수 그래프</h3>
+          <p role="status">모델 연결 후 그래프가 표시됩니다.</p>
+        </section>
+      ) : null}
       {state.result && (
         <div>
           <h3>비행 후 분석 결과</h3>
@@ -543,6 +572,6 @@ function LegacyLocalLive({ runId, live, manage, state, onState }: LiveProps) {
         전송하지 않습니다. 정상 범위·이상 의심은 보정된 잔차 기준이며 실기체 탐지 성능 검증과
         구분합니다.
       </p>
-    </section>
+    </FlightAnalysisPanel>
   );
 }

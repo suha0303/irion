@@ -11,7 +11,7 @@ export function Flight3D({
   points,
   connected,
 }: {
-  frame: Frame | null;
+  frame: Pick<Frame, 'run_id' | 'epoch' | 't_ms' | 'values'> | null;
   points: Point[];
   connected: boolean;
 }) {

@@ -11,7 +11,12 @@ export type LocalState = {
   finish_reason?: string;
   mode?: string;
   hold_ms?: number;
+  candidate_job?: string;
+  candidate_models?: string[];
   whole_run_models?: string[];
+  whole_available?: boolean;
+  whole_status?: 'running' | 'complete' | 'failed';
+  whole_error?: string;
   whole_summary?: {
     frames: number;
     valid_frames: number;
@@ -22,6 +27,7 @@ export type LocalState = {
       score: number | null;
       threshold: number;
       coverage?: number;
+      candidate_job?: string;
     }[];
   };
   buffered_available?: boolean;

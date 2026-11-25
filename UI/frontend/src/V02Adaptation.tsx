@@ -49,6 +49,7 @@ export default function V02Adaptation({
   const logs: V02Selection = { adaptation: [], calibration: [], evaluation: [] };
   const sources = new Map<string, string>();
   const days = new Map<string, V02Role>();
+  const aircraft = new Set<string>();
   let conflict = '';
   for (const [role] of roles) {
     for (const job of eligible) {
@@ -64,9 +65,11 @@ export default function V02Adaptation({
       }
       sources.set(source, grouping);
       if (day) days.set(day, role);
+      if (job.request?.profile?.id) aircraft.add(job.request.profile.id);
       logs[role].push({ job_id: job.id, date: day });
     }
   }
+  if (!conflict && aircraft.size > 1) conflict = '한 작업에는 같은 기체의 로그만 선택하세요.';
   const ready = roles.every(([role]) => logs[role].length && logs[role].every((row) => row.date));
 
   return (
