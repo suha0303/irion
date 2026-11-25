@@ -1,0 +1,145 @@
+name: ARION desktop release candidates
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Native build target
+        type: choice
+        default: all
+        options: [all, windows-x64, macos-arm64, macos-x64, windows-probe]
+
+permissions:
+  contents: read
+
+jobs:
+  windows-probe:
+    if: github.event.repository.private && inputs.target == 'windows-probe'
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Check loopback without installer packaging
+        env:
+          PYTHONPATH: 'UI/backend;ai;ai/src'
+        run: python -B UI/desktop/windows_loopback_probe.py
+  package:
+    if: github.event.repository.private && inputs.target != 'windows-probe'
+    name: ${{ matrix.target }}
+    runs-on: ${{ fromJSON('{"windows-x64":"windows-2025","macos-arm64":"macos-15","macos-x64":"macos-15-intel"}')[matrix.target] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.target == 'all' && '["windows-x64","macos-arm64","macos-x64"]' || format('["{0}"]', inputs.target)) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: UI/frontend/package-lock.json
+      - name: Build the bundled dashboard
+        working-directory: UI/frontend
+        run: |
+          npm ci --ignore-scripts
+          npm test
+          npm run build
+      - name: Build native installer
+        env:
+          PYTHONPATH: ai
+        run: >-
+          python -B -m localflight.desktop_native
+          --model-source release-inputs/models
+          --output .build/installers
+      - name: Install the Windows candidate
+        if: runner.os == 'Windows'
+        id: windows-install
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem .build/installers/*.exe | Select-Object -First 1
+          $appDir = Join-Path $env:RUNNER_TEMP 'arion-app'
+          $setup = Start-Process $installer.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', "/DIR=`"$appDir`"" -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { exit $setup.ExitCode }
+          if (!(Test-Path "$appDir/ARION.exe")) { throw 'The installed ARION executable is missing' }
+      - name: Launch the installed Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $app = Join-Path $env:RUNNER_TEMP 'arion-app/ARION.exe'
+          $env:ARION_DATA_DIR = Join-Path $env:RUNNER_TEMP 'arion-data'
+          $check = Start-Process $app -ArgumentList '--release-smoke', '--disable-gpu' -Wait -PassThru -RedirectStandardError .build/electron-stderr.log
+          if (Test-Path "$env:ARION_DATA_DIR/desktop.log") {
+            Copy-Item "$env:ARION_DATA_DIR/desktop.log" .build/desktop.log
+          }
+          if ($check.ExitCode -ne 0) {
+            Get-Content .build/desktop.log -ErrorAction SilentlyContinue
+            Get-Content .build/electron-stderr.log -ErrorAction SilentlyContinue
+            throw "ARION desktop smoke failed with exit code $($check.ExitCode)"
+          }
+          Get-Content .build/desktop.log | Select-String '"desktop":true'
+      - name: Verify Windows offline ULog analysis and MAVLink
+        if: ${{ !cancelled() && runner.os == 'Windows' && steps.windows-install.outcome == 'success' }}
+        timeout-minutes: 4
+        shell: pwsh
+        run: |
+          $core = Join-Path $env:RUNNER_TEMP 'arion-app/resources/arion-core'
+          $runtime = Join-Path $core 'runtime'
+          $python = Join-Path $runtime 'python.exe'
+          $group = 'ARION offline smoke'
+          $addresses = @('0.0.0.0-126.255.255.255','128.0.0.0-255.255.255.255','::2-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff')
+          try {
+            New-NetFirewallRule -DisplayName 'ARION offline Python' -Group $group -Direction Outbound -Action Block -Profile Any -Program $python -RemoteAddress $addresses | Out-Null
+            $env:PYTHONHOME = $runtime
+            & $python -s -B UI/desktop/release_check.py --core $core --output .build/verification
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          } finally {
+            Remove-NetFirewallRule -Group $group -ErrorAction SilentlyContinue
+          }
+      - name: Verify macOS disk image, offline ULog analysis and MAVLink
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mountpoint="$(mktemp -d)"
+          workdir="$(mktemp -d)"
+          workdir="$(cd "$workdir" && pwd -P)"
+          hdiutil attach .build/installers/*.dmg -nobrowse -readonly -mountpoint "$mountpoint"
+          trap 'hdiutil detach "$mountpoint"' EXIT
+          ditto "$mountpoint/ARION.app" "$workdir/ARION.app"
+          hdiutil detach "$mountpoint"
+          trap 'if [[ -f "$workdir/data/desktop.log" ]]; then cp "$workdir/data/desktop.log" .build/desktop.log; fi' EXIT
+          ARION_DATA_DIR="$workdir/data" "$workdir/ARION.app/Contents/MacOS/Electron" --release-smoke
+          core="$workdir/ARION.app/Contents/Resources/arion-core"
+          export PYTHONHOME="$core/runtime"
+          sandbox-exec -p '(version 1)(allow default)(deny network-outbound)(allow network-outbound (remote ip "localhost:*"))' "$core/runtime/bin/python3.10" -s -B UI/desktop/release_check.py --core "$core" --output .build/verification
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arion-${{ matrix.target }}
+          path: |
+            .build/installers/
+            .build/verification/release-check.json
+            .build/verification/release-smoke.ulg
+            .build/verification/release-smoke-profile.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure() && runner.os == 'Windows' && steps.windows-install.outcome == 'success'
+        with:
+          name: arion-windows-x64-unverified
+          path: |
+            .build/installers/
+            .build/verification/release-smoke.ulg
+            .build/verification/release-smoke-profile.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: arion-diagnostics-${{ matrix.target }}
+          path: |
+            .build/desktop.log
+            .build/electron-stderr.log
+            .build/verification/backend.log
+          if-no-files-found: ignore

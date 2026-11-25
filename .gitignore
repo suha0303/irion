@@ -73,6 +73,7 @@ core.[0-9]*
 /ai/outputs/
 /ai/runs/
 /ai/releases/
+/release-inputs/
 /ai/models/
 /simulation/data/public/*.csv
 /upload-branches/
