@@ -24,7 +24,7 @@ Windows·macOS 검증과 동일한 소스 `a27890a`로 Ubuntu 후보를 다시 �
 
 ## Windows와 macOS 빌드
 
-Windows x64와 macOS Apple Silicon·Intel 각각에서 네이티브 빌드를 실행한다. Windows는 Inno Setup 6을 사용하며 현 Windows 후보의 실시간 수신은 MAVLink UDP를 기준으로 한다. macOS 빌드는 `.app`과 Applications 바로가기를 담은 `.dmg`를 만든다. 공개용 Mac 릴리즈에 앞서 Developer ID 서명과 공증 티켓 첨부 및 Gatekeeper 시험을 진행한다. [Apple 공증 안내](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
+Windows x64와 macOS Apple Silicon·Intel 각각에서 네이티브 빌드를 실행한다. Windows는 Inno Setup 6을 사용하며 현 Windows 후보의 실시간 수신은 MAVLink UDP를 기준으로 한다. macOS 빌드는 `.app`과 Applications 바로가기를 담은 `.dmg`를 만든다. V0.2.0-rc.3의 Mac DMG는 ad-hoc 서명으로 만든 공증 전 테스트용이다. 일반 배포본에는 Developer ID 서명, 공증 티켓 첨부와 Gatekeeper 시험이 남아 있다. [Apple 공증 안내](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
 
 공개 저장소의 소스 구조에서는 `UI/frontend`에서 `npm ci --ignore-scripts` 및 `npm run build`를 실행한 후 루트에서 네이티브 빌더를 실행한다. `PYTHONPATH=ai`를 설정하고 다음 인자를 사용한다.
 

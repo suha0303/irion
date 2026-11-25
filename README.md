@@ -10,7 +10,7 @@ PX4·ArduPilot 비행 로그와 MAVLink 수신 데이터를 분석하는 오프�
 | --- | --- | --- |
 | Ubuntu x64 | `.deb`와 `.sha256`을 받은 뒤 아래 명령으로 설치합니다. 앱 메뉴에서 **ARION**을 엽니다. | Ubuntu 24.04.5 노트북 |
 | Windows x64 | `.exe`를 실행한 뒤 시작 메뉴에서 **ARION**을 엽니다. 설치본에는 코드 서명이 없습니다. | Windows Server 2025 GitHub Actions |
-| macOS | Apple Silicon·Intel DMG의 빌드와 실행 시험을 마쳤습니다. 공개 설치본은 Developer ID 서명과 공증을 기다리고 있습니다. | macOS 15 GitHub Actions |
+| macOS | Apple Silicon은 `macos-arm64.dmg`, Intel은 `macos-x64.dmg`로 끝나는 파일을 받습니다. DMG를 열고 ARION을 Applications로 옮깁니다. | macOS 15 GitHub Actions |
 
 ```bash
 sha256sum -c ARION-0.2.0-rc.3-ubuntu-amd64.deb.sha256
@@ -18,6 +18,8 @@ sudo apt install ./ARION-0.2.0-rc.3-ubuntu-amd64.deb
 ```
 
 Windows 설치본은 `Get-FileHash .\ARION-0.2.0-rc.3-windows-x64.exe -Algorithm SHA256`으로 첨부된 `.sha256`과 대조할 수 있습니다. 자세한 절차는 [설치 안내](docs/ai/DESKTOP_RELEASE.md)와 [검증 체크리스트](docs/ai/ARION_RELEASE_CHECKLIST.md)에 있습니다.
+
+Mac DMG는 Apple 공증 전 테스트용입니다. 같은 폴더에 DMG와 해당 `.sha256`을 두고 `shasum -a 256 -c ARION-0.2.0-rc.3-macos-arm64.dmg.sha256`을 실행합니다. Intel은 파일명에서 `arm64`를 `x64`로 바꿉니다. 해시가 일치하고 첫 실행이 차단되면 **시스템 설정 → 개인정보 보호 및 보안 → 그래도 열기**에서 ARION에 예외를 줄 수 있습니다. [Apple 첫 실행 안내](https://support.apple.com/ko-kr/102445)
 
 ## 사용 방법
 
