@@ -17,6 +17,7 @@ from capstone_ai.mapping import TARGETS
 from localflight.live import write
 from localflight.profiles import eligibility
 
+from .app_candidates import selected_paths
 from .buffered import HOLD_US, REVISION, BufferedPreprocessor
 from .calibration import load_calibration
 from .data import digest, read
@@ -42,8 +43,12 @@ def model_paths(request):
     return [
         (
             name,
-            root / name / "fit",
-            root / name / "calibration/calibration.json",
+            *selected_paths(
+                request,
+                name,
+                root / name / "fit",
+                root / name / "calibration/calibration.json",
+            ),
         )
         for name, variant in VARIANTS.items()
         if variant.task == "inflight"
@@ -88,6 +93,15 @@ def validate(request):
     # Replays without this binding keep their original journal format.
     if "binding" not in request or "frame_policy" in request["binding"]:
         binding["frame_policy"] = FRAME_POLICY
+    if request.get("whole_run_root"):
+        from .app_whole import load_models
+
+        binding["whole_models"] = [
+            identity
+            for identity, _, _ in load_models(
+                request["whole_run_root"], request
+            )
+        ]
     return binding
 
 
@@ -199,10 +213,17 @@ def analyze(request, output, *, replay=False):
         hold_ms=HOLD_US // 1000,
         message="PX4 MAVLink 수신 및 10초 버퍼 대기 중",
     )
+    if request.get("candidate_job"):
+        state["candidate_job"] = request["candidate_job"]
+        state["candidate_models"] = list(request["candidate_models"])
     if parallel:
         state["forecast_models"] = list(detectors)
     else:
         state["forecast_model"] = binding["model"]
+    if binding.get("whole_models"):
+        state["whole_run_models"] = [
+            identity["model_id"] for identity in binding["whole_models"]
+        ]
     if not replay:
         write(state_path, state)
 
@@ -305,14 +326,57 @@ def analyze(request, output, *, replay=False):
             else f"MAVLink 기록 종료 · 판정 {counts['scored_frames']}프레임 · 이상 표시 {counts['alarm_frames']}프레임"
         )
         state.update(
-            status="finished",
             prediction=None,
             decision=None,
             buffered_summary=summary,
             message=message,
         )
+        if binding.get("whole_models"):
+            from .app_whole import score_buffered
+
+            state.update(status="analyzing", whole_status="running")
+            write(state_path, state)
+            try:
+                state["whole_summary"] = score_buffered(
+                    output,
+                    request["whole_run_root"],
+                    expected=binding["whole_models"],
+                )
+                state["whole_status"] = "complete"
+            except (OSError, ValueError, KeyError, RuntimeError) as error:
+                state.update(whole_status="failed", whole_error=str(error))
+        state["status"] = "finished"
         write(state_path, state)
     return summary
+
+
+def replay_candidate(request):
+    """Record a separate candidate replay using the sealed UDP input."""
+    output = Path(request["output"])
+    if digest(request["wire"]) != request["wire_sha256"]:
+        raise ValueError("저장된 MAVLink 원문 해시가 일치하지 않습니다.")
+    request["binding"] = validate(request)
+    output.mkdir(parents=True, exist_ok=False)
+    write(output / "request.json", request)
+    summary = analyze(request, output, replay=True)
+    if summary["wire_sha256"] != request["wire_sha256"]:
+        raise ValueError("분석 중 MAVLink 원문이 바뀌었습니다.")
+    whole = None
+    if request["binding"].get("whole_models"):
+        from .app_whole import score_buffered
+
+        whole = score_buffered(
+            output,
+            request["whole_run_root"],
+            expected=request["binding"]["whole_models"],
+        )
+    write(output / "state.json", dict(status="finished"))
+    return dict(
+        candidate_job=request["candidate_job"],
+        candidate_models=list(request["candidate_models"]),
+        buffered_summary=summary,
+        whole_summary=whole,
+    )
 
 
 def update_state(state, results, totals, frame_time, parallel):

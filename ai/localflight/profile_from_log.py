@@ -7,11 +7,8 @@ import re
 
 from .profiles import eligibility
 
-REVISION = "logged-profile-v2"
-ARDU_MATRIX = (
-    "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.0/"
-    "libraries/AP_Motors/AP_MotorsMatrix.cpp"
-)
+REVISION = "logged-profile-v3"
+ARDU_MATRIX = "https://ardupilot.org/copter/docs/common-rcoutput-mapping.html#configuration"
 ARDU_PARAMS = (
     "https://ardupilot.org/copter/docs/parameters-Copter-stable-V4.4.0.html"
 )
@@ -89,17 +86,10 @@ def suggest(audit):
     if audit["autopilot"] == "ardupilot":
         if len(set(firmware)) == 1:
             put("firmware", firmware[0], "MSG.Message")
-        reviewed = bool(firmware) and all(
-            re.match(r"ArduCopter V4\.4\.0(?:\s|$)", m) for m in firmware
-        )
         if parameter("FRAME_CLASS") == 1:
             put("rotor_count", 4, "FRAME_CLASS=1 (Quad)", ARDU_PARAMS)
         functions = {i: parameter(f"SERVO{i}_FUNCTION") for i in range(1, 17)}
-        if (
-            reviewed
-            and parameter("FRAME_CLASS") == 1
-            and parameter("FRAME_TYPE") == 1
-        ):
+        if parameter("FRAME_CLASS") == 1 and parameter("FRAME_TYPE") == 1:
             # Standard Quad X: motor 1 FR, 2 RL, 3 FL, 4 RR. Never channel-count
             # inference.
             positions = dict(
@@ -123,7 +113,7 @@ def suggest(audit):
                     {pos: v[0] for pos, v in mapped.items()},
                     (
                         "FRAME_CLASS=1 / FRAME_TYPE=1 + SERVOx_FUNCTION; "
-                        "ArduCopter 4.4.0 표준 Quad X"
+                        "ArduCopter 표준 Quad X"
                     ),
                     ARDU_MATRIX,
                 )
@@ -131,8 +121,7 @@ def suggest(audit):
         primary = audit.get("selectors", {}).get("XKF4.PI", [])
         mask = parameter("EK3_IMU_MASK")
         if (
-            reviewed
-            and parameter("AHRS_EKF_TYPE") == 3
+            parameter("AHRS_EKF_TYPE") == 3
             and mask is not None
             and mask == int(mask)
             and 0 < mask < 65536
@@ -152,8 +141,8 @@ def suggest(audit):
                         f"EK3_IMU_MASK={int(mask)} / AHRS_EKF_TYPE=3"
                     ),
                     (
-                        "https://github.com/ArduPilot/ardupilot/blob/Copter-"
-                        "4.4.0/libraries/AP_NavEKF3/AP_NavEKF3.cpp"
+                        "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.1/"
+                        "libraries/AP_NavEKF3/AP_NavEKF3.cpp"
                     ),
                 )
             elif len(primary) > 1:
@@ -210,8 +199,7 @@ def suggest(audit):
         }
         settings = {key: parameter(key) for key in bounds}
         if (
-            reviewed
-            and instances("BAT") == [0]
+            instances("BAT") == [0]
             and parameter("MOT_BAT_IDX") == 0
             and audit.get("instances", {}).get("BAT", {}).get("0", 0) >= 100
             and audit.get("field_units", {}).get("BAT.Volt") == ["V"]

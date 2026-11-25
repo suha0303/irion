@@ -11,7 +11,7 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 WHOLE_MODELS = [
     (f"whole-run-{kind}-{size}", f"{label} · {size.replace('x', ' × ')}")
@@ -23,20 +23,23 @@ FLIGHT_MODELS = [
     for model, label in WHOLE_MODELS
 ]
 V02_ROLES = ("adaptation", "calibration", "evaluation")
+V02_CANDIDATE_ACTIONS = {"v02_adapt", "v02_candidate_import"}
 V02_JOB_ACTIONS = {
     "inspect",
     "timeline",
     "prepare",
     "admit_live",
     "v02_analyze",
-    "v02_adapt",
-}
+    "v02_candidate_replay",
+} | V02_CANDIDATE_ACTIONS
 V02_WORKER_ACTIONS = V02_JOB_ACTIONS | {
     "profiles",
     "save_profile",
     "whole_live_validate",
     "buffered_live_validate",
     "buffered_live_replay",
+    "buffered_whole_score",
+    "log_monitor",
 }
 V02_API_SECTIONS = {
     "catalog",
@@ -137,6 +140,7 @@ class LocalFlight:
             str(self.project / p) for p in ("ai", "ai/src", "Data/generation")
         )
         env["PYTHONDONTWRITEBYTECODE"] = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
         python = self.python
         if request.get("device") == "cuda":
             if request["action"] not in {"adapt", "tune", "device_info"}:
@@ -175,7 +179,13 @@ class LocalFlight:
                 timeout=3610
                 if job and request["action"] in {"adapt", "tune"}
                 else 1800
-                if job or request["action"] == "buffered_live_replay"
+                if job
+                or request["action"]
+                in {
+                    "buffered_live_replay",
+                    "buffered_whole_score",
+                    "log_monitor",
+                }
                 else 30,
             )
             if process.returncode:
@@ -203,7 +213,11 @@ class LocalFlight:
     def create_job(self, request):
         if self.v02 and request["action"] not in V02_JOB_ACTIONS:
             raise HTTPException(404, "V0.2에서 제공하는 기능이 아닙니다.")
-        if self.active or self.live_busy:
+        if self.live_busy:
+            raise HTTPException(
+                409, "실시간 비행 분석이 끝나면 새 로컬 AI 작업을 시작할 수 있습니다."
+            )
+        if self.active:
             raise HTTPException(
                 409, "다른 로컬 작업이 실행 중입니다. 완료하거나 중지해 주세요."
             )
@@ -284,6 +298,71 @@ class LocalFlight:
                         dict(id=model, task=task, label=label, root=str(root))
                     )
         return models
+
+    def v02_candidate(self, row):
+        """Resolve a completed job to its server-owned candidate artifacts."""
+        entries = row.get("result", {}).get("v02", {}).get("candidates", [])
+        if (
+            row["action"] not in V02_CANDIDATE_ACTIONS
+            or row["status"] != "complete"
+            or not entries
+        ):
+            raise ValueError("완료된 V0.2 파인튜닝 후보를 선택하세요.")
+        output = Path(row["request"]["output"])
+        if (
+            output.parent != self.root / "v02-jobs"
+            or not re.fullmatch(r"[a-f0-9]{32}", output.name)
+            or output.is_symlink()
+        ):
+            raise ValueError("후보 모델의 저장 경로를 확인하세요.")
+        known = {model["id"] for model in self.v02_catalog()}
+        models = {}
+        for entry in entries:
+            model = entry["model_id"]
+            if model not in known:
+                continue
+            folder = output / model
+            files = (
+                folder / "candidate/bundle.json",
+                folder / "candidate/model.safetensors",
+                folder / "calibration.json",
+                folder / "split.json",
+            )
+            if (
+                not folder.is_symlink()
+                and not (folder / "candidate").is_symlink()
+                and all(p.is_file() and not p.is_symlink() for p in files)
+            ):
+                models[model] = str(folder)
+        if not models:
+            raise ValueError("후보 번들과 보정값을 찾을 수 없습니다.")
+        first = entries[0]
+        origin = first.get("input_origin")
+        if not origin:
+            source = row["request"]["logs"]["adaptation"][0]["manifest"]
+            origin = json.loads(Path(source).read_text(encoding="utf-8"))[
+                "origin"
+            ]
+        return dict(
+            id=row["id"],
+            profile_id=first["profile_id"],
+            profile_name=first["profile_name"],
+            origin=origin,
+            models=list(models),
+            paths=models,
+            created_at=row["created_at"],
+        )
+
+    def v02_candidate_selection(self, job_id):
+        if not isinstance(job_id, str):
+            raise ValueError("후보 작업 ID를 확인하세요.")
+        row = json.loads(self.job_path(job_id).read_text(encoding="utf-8"))
+        choice = self.v02_candidate(row)
+        return dict(
+            candidate_job=choice["id"],
+            candidate_origin=choice["origin"],
+            candidate_models=choice["paths"],
+        )
 
 
 def attach(app, root=None):
@@ -399,6 +478,43 @@ def attach(app, root=None):
         return service.create_job(
             dict(action="inspect", path=previous["request"]["path"])
         )
+
+    view_lock = asyncio.Lock()
+    view_cache = None
+
+    @app.get("/api/local-ai/logs/{job_id}/monitor")
+    async def log_monitor(job_id: str):
+        nonlocal view_cache
+        source = completed(job_id, "inspect")
+        path = Path(source["request"]["path"])
+        evidence = source["result"]
+        try:
+            async with view_lock:
+                stat = path.stat()
+                key = (path, stat.st_size, stat.st_mtime_ns, evidence["sha256"])
+                if view_cache is None or view_cache[0] != key:
+                    autopilot = evidence["autopilot"]
+                    view = await service.call(
+                        dict(
+                            action="log_monitor",
+                            path=str(path),
+                            sha256=evidence["sha256"],
+                            clocks=evidence["clocks"],
+                            battery_instances=evidence.get("instances", {}).get(
+                                "BAT"
+                                if autopilot == "ardupilot"
+                                else "battery_status",
+                                {},
+                            ),
+                            primary_cores=evidence.get("selectors", {}).get(
+                                "XKF4.PI", []
+                            ),
+                        )
+                    )
+                    view_cache = (key, view)
+                return JSONResponse(view_cache[1])
+        except (KeyError, ValueError, OSError, asyncio.TimeoutError) as error:
+            raise HTTPException(422, str(error)) from error
 
     @app.post("/api/local-ai/timeline")
     async def timeline(request: dict):
@@ -524,7 +640,19 @@ def attach(app, root=None):
 
     @app.post("/api/local-ai/v02/analyze")
     async def v02_analyze(request: dict):
-        options = v02_selection(request)
+        selected = {}
+        if request.get("candidate_job"):
+            try:
+                selected = service.v02_candidate_selection(
+                    request["candidate_job"]
+                )
+            except (KeyError, ValueError, OSError) as error:
+                raise HTTPException(422, str(error)) from error
+        options = v02_selection(
+            {"models": list(selected["candidate_models"])}
+            if selected
+            else request
+        )
         job_id = request.get("prepared_job")
         if not isinstance(job_id, str):
             raise HTTPException(422, "준비된 로그를 선택하세요.")
@@ -535,7 +663,32 @@ def attach(app, root=None):
                 manifest=source["result"]["manifest"],
                 path=source["request"].get("path"),
                 **options,
+                **selected,
             )
+        )
+
+    @app.get("/api/local-ai/v02/candidates")
+    async def v02_candidates():
+        rows = []
+        for path in (service.root / "jobs").glob("*.json"):
+            job = json.loads(path.read_text(encoding="utf-8"))
+            if (
+                job["action"] not in V02_CANDIDATE_ACTIONS
+                or job["status"] != "complete"
+            ):
+                continue
+            try:
+                choice = service.v02_candidate(job)
+            except (KeyError, ValueError, OSError):
+                continue
+            choice.pop("paths")
+            rows.append(choice)
+        return JSONResponse(
+            {
+                "candidates": sorted(
+                    rows, key=lambda r: r["created_at"], reverse=True
+                )
+            }
         )
 
     @app.post("/api/local-ai/v02/adapt")
@@ -1088,7 +1241,9 @@ def attach(app, root=None):
             if (
                 row["action"] in V02_JOB_ACTIONS
                 if service.v02
-                else row["action"] not in {"v02_analyze", "v02_adapt"}
+                else row["action"]
+                not in {"v02_analyze", "v02_candidate_replay"}
+                | V02_CANDIDATE_ACTIONS
             )
         ]
         for row in rows:
@@ -1101,8 +1256,11 @@ def attach(app, root=None):
                 p = Path(row["request"]["output"]) / "progress.json"
                 if p.is_file():
                     row["progress"] = json.loads(p.read_text(encoding="utf-8"))
-        return dict(
-            jobs=sorted(rows, key=lambda r: r["created_at"], reverse=True)
+        return JSONResponse(
+            {
+                "jobs": sorted(rows, key=lambda r: r["created_at"], reverse=True),
+                "live_busy": service.live_busy,
+            }
         )
 
     @app.post("/api/local-ai/jobs/{job_id}/cancel")

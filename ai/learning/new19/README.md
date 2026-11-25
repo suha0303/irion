@@ -1,6 +1,6 @@
 # X500 V0.2 AI 모델 8종 실행
 
-비행 중과 전체 런에서 각각 LSTM·Transformer `64×2`, `128×4`를 학습한다. 숫자는 hidden 크기와 스택별 층수다. 모델 ID는 `inflight-lstm-64x2` 또는 `whole-run-transformer-128x4`와 같은 형태다. [학습·예측](#학습과-예측)
+비행 중과 전체 런에서 각각 LSTM·Transformer `64×2`, `128×4`를 학습한다. 숫자는 hidden 크기와 스택별 층수다. 모델 ID는 `inflight-lstm-64x2` 또는 `whole-run-transformer-128x4`와 같은 형태다. [설계](../../../docs/ai/NEW_EIGHT_MODEL_DESIGN.md)
 
 ```bash
 ./ai/drone-ai train new19 models
@@ -70,14 +70,16 @@
 ```bash
 ARION_PORT=8880 ARION_AI_ROOT="$PWD" \
   ARION_V02_INFLIGHT_ROOT="$PWD/ai/artifacts/new19-best-models-20261121" \
-  ./UI/start.sh
+  ./irion-upload/UI/start.sh
 ```
 
 앱에서 UDP 세션을 열고 등록된 PX4 기체 프로파일을 선택한다. MAVLink 시스템·컴포넌트 ID와 HIGHRES_IMU ID를 설정한 뒤 `비행 중 모델 4종 시작`을 누른다. 네 모델은 하나의 10초 버퍼가 확정한 같은 프레임으로 각자 예측하고 해당 모델의 보정 기준으로 판정한다. 그래프의 `모델` 선택은 표시할 결과를 바꾸며 네 모델의 계산은 계속된다. PX4 SITL의 프로젝트 수집 설정은 인스턴스 `i`에 UDP `14700+i`, 시스템 ID `1+i`를 사용한다. 시험은 `simulation/capstone-sim run --configuration collection --mavlink-only`로 실행한다. 기체 송신 주기가 준비된 링크를 사용한다.
 
 한 모델을 실행하려면 `ARION_V02_INFLIGHT_ROOT` 대신 `ARION_NEW19_BUNDLE`과 `ARION_NEW19_CALIBRATION`을 지정하고 앱에서 `PX4 MAVLink · 10초 버퍼 모델 사용`을 켠다.
 
-앱의 UDP 수신기가 받은 바이트와 수신 시각을 원문 파일 `.mavlink.bin`에 보존한다. 10초 버퍼의 100 ms 프레임으로 예측하고, 유효한 실측과 비교해 판정한다. 새 세션의 분석 기록은 첫 유효 프레임에서 시작해 마지막 유효 프레임으로 끝난다. 학습 전처리와 같이 양끝의 결측 프레임을 제외하고 비행 도중의 공백은 무효로 표시한다. 비행 종료 뒤 `저장 UDP 재생 비교`를 누르면 세션에 저장한 프레임 규칙과 모델·스케일러·보정값으로 입력, 예측, 잔차와 판정을 대조한다. 실행 중 확정한 실제 발행 시각은 세션 기록에 보존한다.
+앱의 UDP 수신기가 받은 바이트와 수신 시각을 원문 파일 `.mavlink.bin`에 보존한다. 10초 버퍼의 100 ms 프레임으로 예측하고, 유효한 실측과 비교해 판정한다. 새 세션의 분석 기록은 첫 유효 프레임에서 시작해 마지막 유효 프레임으로 끝난다. 양끝의 결측 프레임을 제외하고 비행 도중의 공백은 무효로 표시한다. 실행 중 확정한 실제 발행 시각은 세션 기록에 보존한다.
+
+같은 번들 경로에 종료 후 모델 4종도 있으면 **비행 종료 · 결과 분석** 뒤 확정된 관측 프레임으로 비행 후 판정을 자동 계산한다. 메인 모니터링에서 비행 중 결과와 종료 후 점수·임계값을 함께 볼 수 있다. 업데이트 전에 저장한 PX4 기록은 **이 비행의 종료 후 판정 계산**으로 결과를 한 번 저장할 수 있다. 개발 검증에서는 세션의 `replay-buffered` API로 저장 원문과 실시간 처리의 재현성을 확인한다.
 
 ## 전체 런 모델 4종을 연결한 앱
 
@@ -87,7 +89,7 @@ ARION_PORT=8880 ARION_AI_ROOT="$PWD" \
 ARION_PORT=8879 ARION_AI_ROOT="$PWD" \
   ARION_DATA_DIR="$PWD/ai/.local/new19-whole-live-20261120" \
   ARION_V02_WHOLE_ROOT="$PWD/ai/reports/new19-production-20261120/attempt-01/finished" \
-  ./UI/start.sh
+  ./irion-upload/UI/start.sh
 ```
 
 이 모드에서 앱은 등록된 PX4 X500 UDP 세션에 네 전체 런 모델을 함께 연결한다. 비행 중에는 관측을 표시한다. `비행 종료 · 결과 분석`을 누르면 원문 기록을 마감하고, 10초 버퍼를 정리한 뒤 네 모델의 점수·보정 기준·판정을 표시한다. 원시 UDP와 분석 배열 및 모델별 예측은 세션 데이터 경로에 보존한다.
@@ -103,5 +105,5 @@ ARION_PORT=8879 ARION_AI_ROOT="$PWD" \
 env -u ARION_V02_INFLIGHT_ROOT -u ARION_V02_WHOLE_ROOT \
   -u ARION_NEW19_INFLIGHT_ROOT -u ARION_NEW19_WHOLE_ROOT \
   ARION_PORT=8878 ARION_AI_ROOT="$PWD" ARION_DATA_DIR="$PWD/ai/.local/legacy-ui" \
-  ./UI/start.sh
+  ./irion-upload/UI/start.sh
 ```

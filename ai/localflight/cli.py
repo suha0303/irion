@@ -145,12 +145,31 @@ def execute(request):
         from learning.new19.app_live import compare_replay
 
         return compare_replay(request["output"])
+    if action == "v02_candidate_replay":
+        from learning.new19.app_live import replay_candidate
+
+        return replay_candidate(request)
+    if action == "buffered_whole_score":
+        import torch
+
+        from learning.new19.app_whole import score_buffered
+
+        torch.set_num_threads(1)
+        return score_buffered(
+            request["folder"],
+            request["whole_run_root"],
+            expected=request.get("expected"),
+        )
     if action == "catalog":
         return dict(
             models=Catalog(bundle).list(), device="cpu", external_server=False
         )
     if action == "inspect":
         return inspect_log(request["path"])
+    if action == "log_monitor":
+        from .log_monitor import view
+
+        return view(request)
     if action == "profiles":
         return dict(profiles=list_profiles(request["data_root"]))
     if action == "save_profile":

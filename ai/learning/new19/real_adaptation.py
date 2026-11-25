@@ -11,10 +11,10 @@ from safetensors.torch import save_file
 
 from capstone_ai.mapping import TARGETS
 from localflight.prepared import load, observed_targets, segment_ranges
-from localflight.profiles import ANALYSIS_FIELDS
 from localflight.run_summary import evidence, partition
 
 from . import real_whole
+from .app_candidates import PROFILE_KEYS, selected_paths
 from .calibration import decisions_from_scores, load_calibration
 from .data import STEP_US, TARGET_INDICES, Batches, Run, digest, read, write
 from .inference import Runtime, replay_forecasts
@@ -25,14 +25,6 @@ MODEL = "inflight-lstm-128x4"
 ROLES = ("adaptation", "calibration", "evaluation")
 RIDGE = 0.01
 QUANTILE = 0.99
-PROFILE_KEYS = (
-    "id",
-    "firmware",
-    "battery_id",
-    "battery_instance",
-    "actuator_instance",
-    *ANALYSIS_FIELDS,
-)
 
 
 @dataclass
@@ -325,6 +317,7 @@ def evaluate(log, original, baseline, *, candidate=None, calibrated=None):
             )
             decisions[key] = dict(
                 threshold=threshold,
+                raw_score=nullable(scores),
                 ema=[row.get("ema", [None, None]) for row in rows],
                 domains=[row.get("domains", [None, None]) for row in rows],
             )
@@ -397,6 +390,7 @@ def train_candidate(model_root, model_id, inputs, output):
         split,
         dict(
             profile=profile,
+            input_origin=inputs["adaptation"][0].metadata["origin"],
             logs=selected,
             original_bundle_sha256=digest(bundle / "bundle.json"),
             original_calibration_sha256=digest(baseline_path),
@@ -438,6 +432,7 @@ def train_candidate(model_root, model_id, inputs, output):
         task=task,
         profile_id=profile["id"],
         profile_name=profile["name"],
+        input_origin=inputs["adaptation"][0].metadata["origin"],
         output=str(output),
         active=False,
         review_status="pending",
@@ -481,6 +476,12 @@ def execute_v02(request):
     torch.set_num_threads(2)
     analysis = request["action"] == "v02_analyze"
     if analysis:
+        if request.get("candidate_job") and not set(models).issubset(
+            request.get("candidate_models", {})
+        ):
+            raise ValueError(
+                "선택한 후보에 모델과 전용 보정 기준이 모두 필요합니다."
+            )
         log = read_prepared(request["manifest"])
     else:
         inputs = load_inputs(request["logs"])
@@ -501,11 +502,31 @@ def execute_v02(request):
             model_root = request["model_roots"][model_id]
             task = VARIANTS[model_id].task
             if analysis:
-                original, _, _, baseline = load_original(model_root, model_id)
+                original, bundle, baseline_path, baseline = load_original(
+                    model_root, model_id
+                )
                 assess = (
                     real_whole.evaluate if task == "whole-run" else evaluate
                 )
-                report, chart = assess(log, original, baseline)
+                candidate_options = {}
+                if model_id in request.get("candidate_models", {}):
+                    chosen, calibration_path = selected_paths(
+                        dict(
+                            request,
+                            profile=log.metadata["profile"],
+                            log_origin=log.metadata["origin"],
+                        ),
+                        model_id,
+                        bundle,
+                        baseline_path,
+                    )
+                    candidate_options = dict(
+                        candidate=Runtime(chosen),
+                        calibrated=load_calibration(chosen, calibration_path),
+                    )
+                report, chart = assess(
+                    log, original, baseline, **candidate_options
+                )
                 model_output.mkdir()
                 write(model_output / "0.json", chart)
                 results.append(
@@ -523,7 +544,11 @@ def execute_v02(request):
         failures=failures,
     )
     if analysis:
-        state.update(filename=log.binding["filename"], coverage=log.coverage)
+        state.update(
+            filename=log.binding["filename"],
+            coverage=log.coverage,
+            candidate_job=request.get("candidate_job"),
+        )
     write(output / "result.json", state)
     if not results:
         raise ValueError(

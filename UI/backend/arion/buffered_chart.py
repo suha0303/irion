@@ -86,8 +86,11 @@ def chart(primary, model=None, additional=None, *, wire_sha=None):
         selected = model or models[0]
         if selected not in models:
             raise ValueError("이 비행에 기록된 모델을 선택하세요.")
+        candidate = primary_request.get("candidate_models", {}).get(selected)
         calibration = (
-            Path(primary_request["inflight_root"])
+            Path(candidate) / "calibration.json"
+            if candidate
+            else Path(primary_request["inflight_root"])
             / selected
             / "calibration/calibration.json"
         )
@@ -99,6 +102,7 @@ def chart(primary, model=None, additional=None, *, wire_sha=None):
             binding["models"][selected],
             binding["hold_us"],
             selector=selected,
+            candidate_models=primary_request.get("candidate_models", {}),
         )
     primary_model = binding["model"]
     workers = (additional or {}) | {primary_model: primary}
@@ -134,7 +138,15 @@ def chart(primary, model=None, additional=None, *, wire_sha=None):
 
 
 def _chart_data(
-    folder, selected, models, calibration, binding, hold_us, *, selector=None
+    folder,
+    selected,
+    models,
+    calibration,
+    binding,
+    hold_us,
+    *,
+    selector=None,
+    candidate_models=(),
 ):
     thresholds = _thresholds(calibration, binding["calibration_sha256"])
     state = read_json(folder / "state.json")
@@ -152,6 +164,7 @@ def _chart_data(
     return dict(
         model=selected,
         models=models,
+        candidate_models=list(candidate_models),
         live=live,
         hold_ms=hold_us // 1000,
         thresholds=thresholds,

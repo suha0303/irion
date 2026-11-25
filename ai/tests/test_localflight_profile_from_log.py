@@ -139,9 +139,18 @@ def test_parameter_and_sensor_conflicts_require_confirmation():
     changed = audit()
     changed["parameter_values"]["SERVO5_FUNCTION"] = [33]
     assert not suggest(changed)["profile"]["motor_channels"]
-    changed = audit()
-    changed["messages"] = ["Custom firmware"]
-    assert not suggest(changed)["profile"]["motor_channels"]
+
+
+def test_motor_mapping_requires_frame_evidence_even_without_firmware_banner():
+    row = audit()
+    row["messages"] = ["Custom firmware"]
+    expected = suggest(audit())["profile"]["motor_channels"]
+    profile = suggest(row)["profile"]
+    assert profile["motor_channels"] == expected
+    assert "firmware" not in profile
+
+    del row["parameter_values"]["FRAME_TYPE"]
+    assert not suggest(row)["profile"]["motor_channels"]
 
 
 def test_missing_and_zero_values_are_not_inferred_from_voltage_or_defaults():

@@ -1,13 +1,10 @@
-"""Version-bound flight boundaries and operational events, never health
-labels.
-"""
+"""Read Copter flight boundaries and operational events from BIN evidence."""
 
 import math
-import re
 from collections import Counter
 
 REFERENCE = (
-    "https://github.com/ArduPilot/ardupilot/blob/Copter-4.4.0/"
+    "https://github.com/ArduPilot/ardupilot/blob/Copter-4.6.3/"
     "libraries/AP_Logger/AP_Logger.h"
 )
 LABELS = {
@@ -23,11 +20,13 @@ LABELS = {
 
 def summarize(audit):
     rows = audit.get("operational_events", [])
-    firmware = [
-        m for m in audit.get("messages", []) if m.startswith("ArduCopter V")
-    ]
-    reviewed = bool(firmware) and all(
-        re.match(r"ArduCopter V4\.4\.0(?:\s|$)", m) for m in firmware
+    histories = audit.get("parameter_values", {})
+    supported = any(
+        message.startswith(("ArduCopter ", "Frame: QUAD/X"))
+        for message in audit.get("messages", [])
+    ) or (
+        histories.get("FRAME_CLASS") == [1]
+        and histories.get("FRAME_TYPE") == [1]
     )
     errors = [
         r
@@ -39,7 +38,7 @@ def summarize(audit):
     counts = Counter((r.get("Subsys"), r.get("ECode")) for r in errors)
     result = dict(
         reference=REFERENCE,
-        supported=reviewed,
+        supported=supported,
         health="unknown",
         intervals=[],
         error_counts=[
@@ -48,7 +47,7 @@ def summarize(audit):
                 code=k[1],
                 count=n,
                 label=LABELS.get(k[0], "기타 기록")
-                if reviewed
+                if supported
                 else "의미 미확인",
             )
             for k, n in sorted(counts.items())
@@ -56,9 +55,9 @@ def summarize(audit):
         events=rows,
         notes=[],
     )
-    if not reviewed:
+    if not supported:
         result["notes"].append(
-            "검토한 펌웨어 버전이 아니므로 이벤트 기반 구간을 자동 지정하지 않습니다."
+            "Copter 기록을 확인할 수 없어 이착륙 구간을 수동으로 선택해야 합니다."
         )
         return result
     if audit.get("operational_events_truncated") or any(
@@ -87,7 +86,8 @@ def summarize(audit):
         result["notes"].append(
             "착륙 이벤트가 없는 마지막 비행은 수동 구간 검사가 필요합니다."
         )
-    histories = audit.get("parameter_values", {})
+    if not flights and start is None:
+        result["notes"].append("짝이 맞는 이륙·착륙 이벤트가 없습니다.")
     masks, ekf = (
         histories.get("EK3_IMU_MASK", []),
         histories.get("AHRS_EKF_TYPE", []),

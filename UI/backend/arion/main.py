@@ -217,11 +217,12 @@ def _create_app(data_dir=None):
         ):
             raise HTTPException(422, "시각은 유한한 숫자여야 합니다.")
         run = store.get(run_id)
-        return (
+        data = (
             run.series(start_ms, end_ms)
             if isinstance(run, NpzReplay)
             else run.series()
         )
+        return JSONResponse(data)
 
     @application.get("/api/runs/{run_id}/npz/chunks")
     def npz_chunks(run_id: str):

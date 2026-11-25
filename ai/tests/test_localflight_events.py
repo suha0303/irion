@@ -39,11 +39,20 @@ def test_split_primary_zero_and_preserve_unknown_health():
     )
 
 
-@pytest.mark.parametrize("change", ["version", "reversal", "truncated"])
+def test_copter_event_detection_is_independent_of_firmware_version():
+    current = audit()
+    current["messages"] = ["ArduCopter V4.5.0"]
+    expected = summarize(audit())
+    result = summarize(current)
+    assert result["supported"]
+    assert result["intervals"] == expected["intervals"]
+
+
+@pytest.mark.parametrize("change", ["unknown", "reversal", "truncated"])
 def test_ambiguous_events_never_auto_admitted(change):
     a = audit()
-    if change == "version":
-        a["messages"] = ["ArduCopter V4.5.0"]
+    if change == "unknown":
+        a["messages"] = ["Custom firmware"]
     if change == "reversal":
         a["timing"]["streams"]["IMU"] = {"reversals": 1}
     if change == "truncated":

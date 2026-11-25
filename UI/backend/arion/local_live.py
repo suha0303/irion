@@ -6,6 +6,7 @@ import os
 import re
 import time
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
@@ -32,6 +33,20 @@ class LocalLive:
         self.delayed_calibration = os.getenv("ARION_NEW19_CALIBRATION")
         self.inflight_root = (
             str(service.inflight_root) if service.inflight_root else None
+        )
+        whole_models = (
+            [
+                model
+                for model in service.v02_catalog()
+                if model["task"] == "whole-run"
+            ]
+            if self.inflight_root
+            else []
+        )
+        self.whole_run_root = (
+            self.inflight_root
+            if not service.whole_root and len(whole_models) == len(WHOLE_MODELS)
+            else None
         )
         for path in self.root.glob("*/state.json"):
             state = json.loads(path.read_text(encoding="utf-8"))
@@ -80,6 +95,19 @@ class LocalLive:
                 ),
             )
         state = json.loads(path.read_text(encoding="utf-8"))
+        if (
+            self.whole_run_root
+            and state.get("mode") == "px4_buffered"
+            and state["status"] == "finished"
+        ):
+            state["whole_available"] = (
+                path.parent / "buffered-results.jsonl"
+            ).is_file()
+            summary = path.parent / "whole-summary.json"
+            if "whole_summary" not in state and summary.is_file():
+                state["whole_summary"] = json.loads(
+                    summary.read_text(encoding="utf-8")
+                )
         if (
             state.get("status") == "predicting"
             and time.time() - state.get("updated_at", 0) > 3
@@ -146,6 +174,16 @@ class LocalLive:
                 "V0.2 모델을 사용하려면 PX4 MAVLink UDP 세션을 연결하세요."
             )
         delayed = not whole and (parallel or body.get("mode") == "px4_buffered")
+        if body.get("candidate_job"):
+            if not (whole or parallel):
+                raise ValueError("V0.2 UDP 세션에서 후보를 선택하세요.")
+            choice = self.service.v02_candidate_selection(body["candidate_job"])
+            if (whole or not self.whole_run_root) and not any(
+                model.startswith("whole-run-" if whole else "inflight-")
+                for model in choice["candidate_models"]
+            ):
+                raise ValueError("이 세션에서 실행할 모델의 후보를 선택하세요.")
+            request.update(choice)
         if whole:
             if body.get("mode") != "px4_whole_run" or run.config.kind != "udp":
                 raise ValueError(
@@ -177,6 +215,8 @@ class LocalLive:
             )
             if parallel:
                 request["inflight_root"] = self.inflight_root
+                if self.whole_run_root:
+                    request["whole_run_root"] = self.whole_run_root
             else:
                 request.update(
                     new19_bundle=str(Path(self.delayed_bundle).resolve()),
@@ -224,6 +264,11 @@ class LocalLive:
         if delayed and parallel:
             initial.update(
                 mode="px4_buffered", forecast_models=list(admitted["models"])
+            )
+        if request.get("candidate_job"):
+            initial.update(
+                candidate_job=request["candidate_job"],
+                candidate_models=list(request["candidate_models"]),
             )
         write(folder / "state.json", initial)
         env = dict(os.environ)
@@ -353,7 +398,7 @@ def attach(app, service, store):
             "px4_whole_run",
             "px4_buffered",
         }:
-            return result
+            return JSONResponse(result)
         result["insights"] = insights(service.root, run_id, result)
         result["rates"] = app.state.sources.rates.status(run_id)
         saved = store.get(run_id).path.with_suffix(".rates.json")
@@ -376,18 +421,33 @@ def attach(app, service, store):
             raise HTTPException(422, str(error)) from error
 
     @app.get("/api/sessions/{run_id}/local-ai/buffered-chart")
-    def buffered_chart(run_id: str, model: str | None = None):
+    def buffered_chart(
+        run_id: str, model: str | None = None, comparison: str | None = None
+    ):
         session = store.catalog["sessions"].get(run_id)
         folder = live.root / run_id
         if not session or not (folder / "request.json").is_file():
             raise HTTPException(404, "이 비행에 분석 그래프 기록이 없습니다.")
         workers = getattr(app.state, "buffered_chart_workers", {})
         try:
+            if comparison:
+                row = json.loads(
+                    service.job_path(comparison).read_text(encoding="utf-8")
+                )
+                if (
+                    row["action"] != "v02_candidate_replay"
+                    or row["status"] != "complete"
+                    or row["request"]["run_id"] != run_id
+                    or row["result"]["buffered_summary"]["wire_sha256"]
+                    != session.get("sha")
+                ):
+                    raise ValueError("이 비행의 완료된 후보 분석을 선택하세요.")
+                folder = Path(row["request"]["output"])
             return JSONResponse(
                 chart(
                     folder,
                     model,
-                    workers.get(run_id),
+                    workers.get(run_id) if not comparison else None,
                     wire_sha=session.get("sha"),
                 )
             )
@@ -397,6 +457,82 @@ def attach(app, service, store):
             raise HTTPException(
                 422, "저장된 그래프 자료를 읽지 못했습니다."
             ) from error
+
+    @app.get("/api/sessions/{run_id}/local-ai/candidate-replays")
+    def candidate_replays(run_id: str):
+        try:
+            folder = live.folder(run_id)
+            saved = json.loads(
+                (folder / "request.json").read_text(encoding="utf-8")
+            )
+        except (OSError, KeyError, ValueError) as error:
+            raise HTTPException(
+                404, "이 비행의 저장된 분석 설정이 없습니다."
+            ) from error
+        rows = []
+        for path in (service.root / "jobs").glob("*.json"):
+            row = json.loads(path.read_text(encoding="utf-8"))
+            request = row["request"]
+            if (
+                row["action"] == "v02_candidate_replay"
+                and request.get("run_id") == run_id
+            ):
+                rows.append(
+                    dict(
+                        id=row["id"],
+                        candidate_job=request["candidate_job"],
+                        status=row["status"],
+                        error=row.get("error"),
+                        result=row.get("result"),
+                        created_at=row["created_at"],
+                    )
+                )
+        return JSONResponse(
+            dict(
+                profile_id=saved["profile"]["id"],
+                scope=saved["scope"],
+                recorded_candidate=saved.get("candidate_job"),
+                replays=sorted(
+                    rows, key=lambda row: row["created_at"], reverse=True
+                ),
+            )
+        )
+
+    @app.post("/api/sessions/{run_id}/local-ai/candidate-replays")
+    async def candidate_replay(run_id: str, request: dict):
+        state = live.state(run_id)
+        if (
+            not live.inflight_root
+            or state.get("mode") != "px4_buffered"
+            or state["status"] != "finished"
+        ):
+            raise HTTPException(422, "종료된 PX4 UDP 비행 기록을 선택하세요.")
+        session = store.catalog["sessions"].get(run_id, {})
+        if not session.get("sha"):
+            raise HTTPException(422, "비행의 확정 UDP 원문이 필요합니다.")
+        try:
+            folder = live.folder(run_id)
+            saved = json.loads(
+                (folder / "request.json").read_text(encoding="utf-8")
+            )
+            choice = service.v02_candidate_selection(
+                request.get("candidate_job")
+            )
+            output = service.root / "v02-replays" / uuid4().hex
+            return service.create_job(
+                {
+                    **saved,
+                    **choice,
+                    "action": "v02_candidate_replay",
+                    "run_id": run_id,
+                    "inflight_root": live.inflight_root,
+                    "whole_run_root": live.whole_run_root,
+                    "wire_sha256": session["sha"],
+                    "output": str(output),
+                }
+            )
+        except (KeyError, ValueError, OSError) as error:
+            raise HTTPException(422, str(error)) from error
 
     @app.post("/api/sessions/{run_id}/local-ai/replay-buffered")
     async def replay_buffered(run_id: str):
@@ -414,6 +550,35 @@ def attach(app, service, store):
                 )
             )
         except (ValueError, KeyError) as error:
+            raise HTTPException(422, str(error)) from error
+        finally:
+            service.live_busy = False
+
+    @app.post("/api/sessions/{run_id}/local-ai/postflight")
+    async def compute_postflight(run_id: str):
+        state = live.state(run_id)
+        if not state.get("whole_available"):
+            raise HTTPException(422, "종료된 PX4 비행 기록을 선택하세요.")
+        if state.get("whole_summary"):
+            return state
+        if service.active or service.live_busy:
+            raise HTTPException(409, "다른 로컬 AI 작업이 실행 중입니다.")
+        folder = live.folder(run_id)
+        service.live_busy = True
+        try:
+            saved = json.loads(
+                (folder / "request.json").read_text(encoding="utf-8")
+            )
+            await service.call(
+                dict(
+                    action="buffered_whole_score",
+                    folder=str(folder),
+                    whole_run_root=live.whole_run_root,
+                    expected=saved["binding"].get("whole_models"),
+                )
+            )
+            return live.state(run_id)
+        except (ValueError, KeyError, OSError) as error:
             raise HTTPException(422, str(error)) from error
         finally:
             service.live_busy = False
