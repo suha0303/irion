@@ -1,5 +1,7 @@
 # 드론 시뮬레이션·데이터와 X500 이상탐지
 
+[ARION V0.2 릴리즈 전 체크리스트와 Windows 실행 시험](docs/ai/ARION_RELEASE_CHECKLIST.md)
+
 PX4·Gazebo에서 X500 비행로그를 수집하고, 정상 train 기준 공통 scaler를 사용하는 학습용 데이터셋으로 정제한다. 수집부터 독립 품질 검산·압축까지 로컬 프로그램이 실행하며 LLM 연결은 필요하지 않다.
 
 | 폴더 | 목적 |
